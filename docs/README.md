@@ -15,6 +15,8 @@ Welcome to the FinSight documentation hub. This library is structured to help yo
     *   The "Free Core" vs. "Smart Advisor" value proposition.
 *   **[Strategic SWOT Analysis](SWOT.md)**
     *   An executive-level look at our strengths, weaknesses, opportunities, and threats.
+*   **[Roadmap & Milestones](MILESTONES.md)**
+    *   The path from "Ledger" to "Advisor": Phases, timeline, and deliverables.
 
 ## 💡 **Product & Capabilities**
 *How FinSight acts as your intelligent financial advisor.*
