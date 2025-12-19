@@ -1,23 +1,41 @@
-# FinSight Documentation Home
+# FinSight Knowledge Base
 
-Welcome to the FinSight documentation. This index organizes product, strategy, and technical resources for fast onboarding and deep understanding.
+> **"Understand your money. Understand yourself."**
 
-## Product
-- Overview: `../README.md`
-- Features: `features.md`
-- Design & Branding: `BRANDING.md`
+Welcome to the FinSight documentation hub. This library is structured to help you understand not just *how* to use FinSight, but *why* it exists and *where* it is going.
 
-## Strategy
-- Manifesto: `MANIFESTO.md`
-- Strategic SWOT Analysis: `SWOT.md`
-- Business Model: `BUSINESS_MODEL.md`
+## 🧭 **Strategy & Philosophy**
+*Start here to understand the soul of the project.*
 
-## Technical
-- Technical Guide: `TECHNICAL.md`
+*   **[The Manifesto](MANIFESTO.md)**
+    *   Why we reject "cloud-first" finance.
+    *   The philosophy of "Financial Empathy" and "Data Sovereignty".
+*   **[Business Model & Sustainability](BUSINESS_MODEL.md)**
+    *   How we stay sustainable without selling your data.
+    *   The "Free Core" vs. "Smart Advisor" value proposition.
+*   **[Strategic SWOT Analysis](SWOT.md)**
+    *   An executive-level look at our strengths, weaknesses, opportunities, and threats.
 
-## Contributing
-- Submit issues and PRs with clear scope and tests where possible.
-- Follow the existing Java/Spring Boot code style.
+## 💡 **Product & Capabilities**
+*How FinSight acts as your intelligent financial advisor.*
 
-## License
-- Apache License. See `../LICENSE`.
+*   **[Product Guide](PRODUCT_GUIDE.md)**
+    *   **The Intelligence Engine**: How we turn raw transactions into wisdom.
+    *   **Core Capabilities**: Deep dives into Spending Analysis, Wealth Tracking, and Forecasting.
+    *   **The "Local-First" Advantage**: Why local processing is faster and safer.
+*   **[Design & Branding](BRANDING.md)**
+    *   Our visual identity, color system, and UI philosophy.
+
+## 🛠️ **Technical & Engineering**
+*For developers and contributors.*
+
+*   **[Technical Documentation](TECHNICAL.md)**
+    *   Architecture Overview (Spring Boot + MyBatis + Thymeleaf).
+    *   Database Schema & Data Flow.
+    *   Contribution Guidelines.
+
+---
+
+### **Quick Links**
+*   [🏠 Project Home](../README.md)
+*   [🐛 Issue Tracker](https://github.com/finsight/issues)

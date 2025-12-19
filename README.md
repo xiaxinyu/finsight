@@ -28,28 +28,22 @@ No cloud. No tracking. Just pure insight.
 
 ## 📚 Documentation
 
-We have separated our documentation to keep things clean:
+Explore our full documentation hub at **[docs/README.md](docs/README.md)**, or jump directly to:
+
+- **[Product Guide](docs/PRODUCT_GUIDE.md)** 🧠
+  *How FinSight acts as your intelligent financial advisor.*
+
+- **[The Manifesto](docs/MANIFESTO.md)** 🧭
+  *Why we reject "cloud-first" finance. Our philosophy.*
+
+- **[Business Model](docs/BUSINESS_MODEL.md)** 💎
+  *The "Internet Free" core and the path to sustainability.*
 
 - **[Technical Documentation](docs/TECHNICAL.md)** 🛠️
-  *For developers: Installation, Architecture, Contributing Guide.*
+  *For developers: Installation, Architecture, Contributing.*
 
-- **[Documentation Home](docs/README.md)**
-  *Centralized index for product, strategy, and technical docs.*
-
-- **[Features Overview](docs/features.md)**
-  *Detailed breakdown of modules like Transaction Bill, Salary, Insurance, etc.*
-
-- **[The FinSight Manifesto](docs/MANIFESTO.md)**
-  *Our philosophy on money and privacy.*
-
-- **[Design & Branding](docs/BRANDING.md)**
-  *Logo concepts and visual identity.*
-
-- **[Strategic SWOT Analysis](docs/SWOT.md)**
-  *Executive-level market, product, and risk analysis; strategic priorities.*
-  
-- **[Business Model](docs/BUSINESS_MODEL.md)**
-  *Open-source core for trust; value-added services for Pro/Enterprise.*
+- **[Strategic SWOT Analysis](docs/SWOT.md)** 📊
+  *Executive strategy, risks, and market opportunities.*
 
 ---
 
