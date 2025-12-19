@@ -47,6 +47,9 @@ We have separated our documentation to keep things clean:
 
 - **[Strategic SWOT Analysis](docs/SWOT.md)**
   *Executive-level market, product, and risk analysis; strategic priorities.*
+  
+- **[Business Model](docs/BUSINESS_MODEL.md)**
+  *Open-source core for trust; value-added services for Pro/Enterprise.*
 
 ---
 
