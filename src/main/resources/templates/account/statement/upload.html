@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Statement Upload</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/datasource/statement-datasource.js"></script>
+    <script type="text/javascript" src="/js/statement/upload.js"></script>
+    <style>
+        .page { display: flex; flex-direction: column; height: 100vh; }
+        .work-area { padding: 10px; background: #fff; }
+        .form-row { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
+        .grid-area { padding: 0; flex: 1; min-height: 0; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="work-area">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="hidden" id="currentStatementId" name="statementId" />
+                <div class="form-row">
+                    <input id="cmbBank" name="bankCode" style="width:200px;">
+                    <input id="cmbCardType" name="cardTypeCode" style="width:150px;">
+                    <input id="cmbCardNo" name="cardNo" style="width:200px;">
+                </div>
+                <div class="form-row">
+                    <input id="fileBill" class="easyui-filebox" name="file" data-options="prompt:'Select statement file', buttonText:'Browse'" style="width:400px;">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-redo" onclick="submitUpload()">Upload & Parse</a>
+                    <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-save" onclick="saveAll()">Commit Transactions</a>
+                    <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-print" onclick="exportPreview()">Export</a>
+                </div>
+            </form>
+        </div>
+        <div class="grid-area">
+            <table id="dgTempUpload" class="easyui-datagrid" style="width:100%;height:100%;">
+            </table>
+        </div>
+    </div>
+</body>
+</html>

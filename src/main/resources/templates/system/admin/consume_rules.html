@@ -1,0 +1,233 @@
+<html>
+<head>
+    <title>== Category Rules ==</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <style>
+        .rules-toolbar { padding:8px; border-bottom:1px solid #eee; }
+        .rules-toolbar .row { display:flex; align-items:center; gap:8px; }
+        .rules-toolbar .row + .row { margin-top:6px; }
+        .rules-toolbar label { min-width:80px; color:#222; font-size:12px; font-weight:600; }
+        .rules-toolbar #keywords { width:100%; height:28px; max-height:60px; overflow:auto; }
+        .rules-toolbar .tagbox .textbox { height:28px; }
+        .rules-toolbar .tagbox .textbox .textbox-text { height:28px; line-height:28px; font-size:12px; }
+        .rules-toolbar .tagbox .tagbox-item { margin:2px 4px; padding:0 6px; font-size:12px; }
+        .rules-toolbar .l-btn { height:26px; line-height:26px; padding:0 10px; }
+        .rules-toolbar .l-btn .l-btn-text { padding:0 8px; white-space:nowrap; }
+        .rules-toolbar .numberbox { height:26px; }
+        .rules-toolbar .numberbox .textbox-text { height:26px; line-height:26px; font-size:12px; }
+    </style>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north'" style="height: 40px;padding:6px 8px;">
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="addRule()">Add</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveRule()">Save</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="deleteRule()">Delete</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="reloadCache()">Reload Cache</a>
+    <span id="hint" style="margin-left:12px;color:#888;">Select a category on the left</span>
+</div>
+
+<div data-options="region:'west'" style="width: 320px; border-right: 1px solid #ddd; padding:6px;">
+    <ul id="tree" class="easyui-tree" data-options="url:'/api/v1/consume/tree',method:'get'"></ul>
+    <div style="margin-top:6px;color:#888;">No delete actions for the tree here</div>
+    <div style="margin-top:6px;">
+        <a class="easyui-linkbutton" data-options="iconCls:'icon-reload'" style="width:100%;" onclick="reloadTree()">Reload</a>
+    </div>
+</div>
+
+<div data-options="region:'center'">
+    <div class="rules-toolbar">
+        <div class="row">
+            <label>Keywords</label>
+            <input id="keywords" class="easyui-tagbox">
+        </div>
+        <div class="row">
+            <label>Weight</label>
+            <input id="defaultWeight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:100px;" value="100">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveKeywords()">Apply</a>
+        </div>
+    </div>
+    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:160,hidden:true">ID</th>
+            <th data-options="field:'categoryId',width:220,formatter:fmt.categoryCode">Category Code</th>
+            <th data-options="field:'pattern',width:260,editor:{type:'textbox'}">Pattern</th>
+            <th data-options="field:'patternType',width:120,editor:{type:'combobox',options:{data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}],valueField:'id',textField:'text'}}">Type</th>
+            <th data-options="field:'priority',width:80,editor:{type:'numberbox'}">Weight</th>
+            <th data-options="field:'active',width:80,editor:{type:'checkbox',options:{on:1,off:0}}">Active</th>
+            <th data-options="field:'bankCode',width:100,hidden:true,editor:{type:'textbox'}">Bank</th>
+            <th data-options="field:'cardTypeCode',width:120,hidden:true,editor:{type:'textbox'}">Card Type</th>
+            <th data-options="field:'remark',width:220,editor:{type:'textbox'}">Remark</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+
+<script type="text/javascript">
+var tree = '#tree';
+var dg = '#dg';
+var editIndex;
+var selectedCategoryId = '';
+var currentKeywords = [];
+var categoryMap = {};
+var fmt = { categoryCode:function(v){ return categoryMap[v] || v; } };
+
+$(function(){
+    $(tree).tree({
+        url:'/api/v1/consume/tree',
+        method:'get',
+        onLoadSuccess:function(){ $(tree).tree('collapseAll'); },
+        onSelect:function(node){
+            selectedCategoryId = node.id;
+            loadRules();
+        }
+    });
+    $(dg).datagrid({
+        method:'get',
+        url:'/api/v1/consume/rules',
+        queryParams:{categoryId:''},
+        loadFilter:pagerFilter,
+        pageSize:50,
+        pageList:[20,50,100,200]
+    });
+    $('#keywords').tagbox({onRemoveTag:onRemoveTag});
+    $.get('/api/v1/consume/categories', function(res){
+        var rows = (res && res.rows) ? res.rows : [];
+        for(var i=0;i<rows.length;i++){ categoryMap[rows[i].id] = rows[i].code; }
+    });
+});
+
+function loadRules(){
+    var grid = $(dg);
+    var opts = grid.datagrid('options') || {};
+    opts.pageNumber = 1;
+    grid.datagrid('options').pageNumber = 1;
+    $(dg).datagrid('load', {categoryId:selectedCategoryId});
+    loadKeywords();
+}
+
+function endEditing(){
+    if (editIndex == undefined){return true}
+    if ($(dg).datagrid('validateRow', editIndex)){
+        $(dg).datagrid('endEdit', editIndex);
+        editIndex = undefined;
+        return true;
+    } else {return false}
+}
+
+function addRule(){
+    if (!selectedCategoryId) return;
+    if (endEditing()){
+        $(dg).datagrid('appendRow',{categoryId:selectedCategoryId,priority:100,active:1,patternType:'contains'});
+        editIndex = $(dg).datagrid('getRows').length-1;
+        $(dg).datagrid('selectRow', editIndex).datagrid('beginEdit', editIndex);
+    }
+}
+
+function saveRule(){
+    if (!endEditing()) return;
+    var row = $(dg).datagrid('getSelected');
+    if (!row) return;
+    row.categoryId = selectedCategoryId || row.categoryId;
+    var method = row.id ? 'PUT' : 'POST';
+    var url = '/api/v1/consume/rules' + (row.id ? '/' + row.id : '');
+    $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(row)}).done(function(){
+        loadRules();
+    });
+}
+
+function deleteRule(){
+    var row = $(dg).datagrid('getSelected');
+    if (!row || !row.id) return;
+    var msg = 'Confirm deleting keyword '+(row.pattern||'')+'?';
+    $.messager.confirm('Confirm', msg, function(r){
+        if(!r) return;
+        $.ajax({url:'/api/v1/consume/rules/'+row.id,type:'DELETE'}).done(function(){
+            loadRules();
+            $.messager.show({title:'OK',msg:'Deleted successfully'});
+        }).fail(function(xhr){ $.messager.alert('Error', xhr.responseText || 'Error'); });
+    });
+}
+
+function reloadCache(){
+    $.post('/api/v1/consume/rules/reload').done(function(){
+        $.messager.show({title:'OK',msg:'Rules cache reloaded'});
+    });
+}
+
+function reloadTree(){ $(tree).tree('reload'); }
+
+function pagerFilter(data){
+    var grid = $(dg);
+    var opts = grid.datagrid('options');
+    var pager = grid.datagrid('getPager');
+    pager.pagination({
+        pageList: [20,50,100,200],
+        onSelectPage:function(pageNum,pageSize){
+            opts.pageNumber = pageNum;
+            opts.pageSize = pageSize;
+            pager.pagination('refresh',{pageNumber:pageNum,pageSize:pageSize});
+            var all = grid.data('allRows') || [];
+            grid.datagrid('loadData', all);
+        }
+    });
+    if ($.isArray(data)){
+        grid.data('allRows', data);
+        data = { total: data.length, rows: data };
+    } else {
+        var rows = data && data.rows ? data.rows : [];
+        grid.data('allRows', rows);
+        data.total = rows.length;
+    }
+    var all = grid.data('allRows') || [];
+    var start = (opts.pageNumber - 1) * opts.pageSize;
+    var end = start + opts.pageSize;
+    data.rows = all.slice(start, end);
+    return data;
+}
+
+function loadKeywords(){
+    $.get('/api/v1/consume/rules', {categoryId:selectedCategoryId}, function(res){
+        var list = $.isArray(res) ? res : (res && res.rows) ? res.rows : [];
+        var tags = [];
+        currentKeywords = [];
+        for(var i=0;i<list.length;i++){
+            var r = list[i];
+            if((r.patternType||'').toLowerCase()==='contains' && r.active===1){
+                tags.push(r.pattern);
+                currentKeywords.push({id:r.id,pattern:r.pattern});
+            }
+        }
+        $('#keywords').tagbox('setValues', tags);
+    });
+}
+
+function saveKeywords(){
+    var tags = $('#keywords').tagbox('getValues');
+    var weight = parseInt($('#defaultWeight').numberbox('getValue')||'0');
+    var existing = {};
+    for(var i=0;i<currentKeywords.length;i++){ existing[currentKeywords[i].pattern]=currentKeywords[i].id; }
+    var toAdd = [];
+    for(var j=0;j<tags.length;j++){ if(!existing[tags[j]]) toAdd.push(tags[j]); }
+    for(var k=0;k<toAdd.length;k++){
+        var row = {categoryId:selectedCategoryId,pattern:toAdd[k],patternType:'contains',priority:weight,active:1};
+        $.ajax({url:'/api/v1/consume/rules',type:'POST',contentType:'application/json',data:JSON.stringify(row)});
+    }
+    setTimeout(function(){ loadRules(); }, 200);
+}
+
+function onRemoveTag(value){
+    var id = null;
+    for(var i=0;i<currentKeywords.length;i++){ if(currentKeywords[i].pattern===value){ id = currentKeywords[i].id; break; } }
+    if(!id) return;
+    $.messager.confirm('Confirm','Confirm deleting keyword '+value+' ?',function(r){
+        if(!r) return;
+        $.ajax({url:'/api/v1/consume/rules/'+id,type:'DELETE'}).done(function(){ loadRules(); });
+    });
+}
+</script>
+</body>
+</html>

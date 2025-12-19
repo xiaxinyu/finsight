@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Statement History</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <style>
+        body { margin: 0; padding: 10px; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom:10px;">
+        <a href="/statement/upload.html" class="easyui-linkbutton" iconCls="icon-add">Upload New Statement</a>
+    </div>
+    <table id="dgStatement" class="easyui-datagrid" title="Statement History" style="width:100%;height:500px"
+           data-options="url:'/statement/api/list',method:'get',singleSelect:true,fitColumns:true,pagination:true">
+        <thead>
+            <tr>
+                <th data-options="field:'fileName',width:200">File Name</th>
+                <th data-options="field:'source',width:100">Bank/Source</th>
+                <th data-options="field:'itemCount',width:100,align:'right'">Items</th>
+                <th data-options="field:'status',width:100,align:'center'">Status</th>
+                <th data-options="field:'createtime',width:150,align:'center'">Upload Time</th>
+                <th data-options="field:'createuser',width:100">User</th>
+            </tr>
+        </thead>
+    </table>
+</body>
+</html>

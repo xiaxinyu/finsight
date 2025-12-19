@@ -1,0 +1,267 @@
+<html>
+<head>
+    <title>== Category Breakdown ==</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/scripts/transaction.js"></script>
+    <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <script type="text/javascript"></script>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north'" style="height: 52px">
+    <div style="margin-top: 3px;">
+			<span class="item_intervel">
+	           	<label>Transaction date:</label> 
+	           	<input id="dateStart" class="easyui-datebox" style="width: 100px;" data-options="onSelect:statistic"/>
+	           	~ 
+	           	<input id="dateEnd" class="easyui-datebox" style="width: 100px;" data-options="onSelect:statistic"/>
+			</span>
+
+        <span class="item_intervel">
+				<label>Card type：</label>
+                <input id="cmbCardTypes" class="easyui-combobox"
+                       data-options="url:'/api/v1/cards/list',method:'get',valueField:'key',textField:'value',editable:false,prompt:'All cards',onSelect:statistic"
+                       style="width: 160px;">
+			</span>
+
+        <span class="item_intervel">
+	          	<label>Consume type：</label> 
+            <select id="cmbConsume" class="easyui-combotree"
+                        data-options="url:'/api/v1/consume/tree',method:'get',onChange:statistic" multiple
+                        style="width:200px;"></select>
+	          </span>
+
+        <span class="item_intervel">
+	          	<input id="txtDemo" class="easyui-textbox" style="width:120px"> 
+	          </span>
+
+        <span class="item_intervel">
+	              <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="statistic()">Statistic</a>
+	          </span>
+    </div>
+</div>
+<div id="chartArea" data-options="region:'center',border:false">
+    <div id="main" style="width:100%; min-height: 380px;"></div>
+</div>
+
+<div id="dialog" style='display: none;'>
+    <table id="datagrid" fit="true"
+           data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,border:false">
+        <thead>
+        <tr>
+            <th data-options="field:'id',hidden:true">ID</th>
+            <th data-options="field:'bankCardName',width:160">Card</th>
+            <th data-options="field:'transactionDate',width:80,align:'center',formatter:app.date.format">Book date</th>
+            <th data-options="field:'transactionDesc',width:260,align:'left'">Narration</th>
+            <th data-options="field:'balanceMoney',width:100,formatter:app.money.rmb">Balance money</th>
+            <th data-options="field:'demoArea',width:420,align:'left'">Description</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+</body>
+<script type="text/javascript">
+$(function(){
+    $.parser.onComplete = function(){
+        setTimeout(function(){
+            ensureMainSize();
+            statistic();
+        }, 50);
+    };
+    $(window).on('resize', function(){
+        ensureMainSize();
+        try{ if(window.pieChart){ window.pieChart.resize(); } }catch(e){}
+    });
+});
+
+function getParams(){
+    function safeDateboxValue(sel){ var jq=$(sel); try{ var v=jq.datebox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    var dateStart = safeDateboxValue('#dateStart');
+    var dateEnd = safeDateboxValue('#dateEnd');
+    var cardtype = safeComboboxValue('#cmbCardTypes');
+    if(cardtype==='0') cardtype='';
+    var consume = safeCombotreeValues('#cmbConsume');
+    var demoArea = (function(){ var jq=$('#txtDemo'); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } })();
+    var params = {'transactionDateStartStr':dateStart,'transactionDateEndStr':dateEnd,'txnTypes':'expense','consumeID':consume,'cardTypeName':cardtype,'demoArea':demoArea};
+    return params;
+}
+
+function statistic() {
+	var params = getParams();
+	transaction.consumeReport(params, show, ajaxError);
+}
+
+function show(data){
+	if(data && (data.returnCode == 'success' || data.returnCode == 20000)){
+		var json = null;
+		try{
+			json = $.parseJSON(data.returnMessage);
+		}catch(e){
+			json = null;
+			app.messager.show({title:'Fail', msg: 'Parse return data fail!'});
+			return;
+		}
+		if(json != null){
+			var rows = json;
+			var list = [];
+			for (var i = 0; i < rows.length; i++) {
+				var r = rows[i];
+				var v = parseFloat(r.value);
+				list.push({name: r.key, value: isNaN(v)?0:v});
+			}
+			list.sort(function(a,b){ return b.value - a.value; });
+			var topN = 12;
+			var agg = [];
+			var others = 0;
+			for(var i=0;i<list.length;i++){
+				if(i<topN){ agg.push(list[i]); } else { others += list[i].value; }
+			}
+			if(list.length>topN && others>0){ agg.push({name:'Others', value: others}); }
+			var names = []; for(var i=0;i<agg.length;i++){ names.push(agg[i].name); }
+			var subtitle = list.length>topN ? 'Money · Top12+Others · Legend scroll' : (agg.length? 'Money' : 'No data');
+			render(names, agg, subtitle);
+		} else {
+			app.messager.show({title : 'Fail', msg : data.returnMessage});
+		}
+	} else {
+		var msg = data && data.returnMessage ? data.returnMessage : 'Request failed';
+		app.messager.show({title:'Fail', msg: msg});
+	}
+}
+
+function ajaxError(xhr){
+    var msg = (xhr && xhr.responseText) ? xhr.responseText : 'Network error';
+    app.messager.show({title:'Fail', msg: msg});
+}
+
+function render(weekNames,rowDatas,subtitle){
+        ensureMainSize();
+        if(!window.pieChart){ window.pieChart = echarts.init(document.getElementById('main')); }
+
+        var option = {
+            title : {
+                text: 'Consume Pie Statistic',
+                subtext: subtitle || 'Money',
+                left:'center'
+            },
+		    tooltip : {
+		        trigger: 'item',
+		        formatter: "{a} <br/>{b} : ¥{c} ({d}%)"
+		    },
+		    legend: {
+		        type: 'scroll',
+		        orient: 'vertical',
+		        left: 10,
+		        top: 20,
+		        data: weekNames
+		    },
+		    toolbox: {
+		        show : true,
+		        feature : {
+		            mark : {show: true},
+		            dataView : {show: true, readOnly: false},
+		            magicType : {
+		                show: true, 
+		                type: ['pie', 'funnel'],
+		                option: {
+		                    funnel: {
+		                        x: '25%',
+		                        width: '50%',
+		                        funnelAlign: 'left',
+		                        max: 1548
+		                    }
+		                }
+		            },
+		            restore : {show: true},
+		            saveAsImage : {show: true}
+		        }
+            },
+		    series : [
+		        {
+		            name:'Category',
+		            type:'pie',
+		            selectedMode: 'single',
+		            minAngle: 2,
+		            avoidLabelOverlap: true,
+		            radius : ['50%', '70%'],
+		            center: ['60%', '55%'],
+		            label: { formatter: '{b}\n¥{c} ({d}%)' },
+		            labelLine: { length: 10, length2: 6 },
+		            data:rowDatas
+		        }
+		    ]
+		};
+		
+        window.pieChart.clear();
+        window.pieChart.setOption(option);
+        window.pieChart.resize();
+        window.pieChart.off('click');
+        window.pieChart.on('click', function (param) {
+            openDialog(param.name);
+        });
+}
+
+function ensureMainSize(){
+    var $area = $('#chartArea');
+    var $main = $('#main');
+    var w = $area.width();
+    var h = $area.height();
+    if(!h || h <= 40){ h = $(window).height() - 80; }
+    if(h && h > 120){ $main.height(h - 20); }
+    if(w && w > 120){ $main.width(w - 10); }
+}
+
+var dialog = "#dialog";
+var datagrid = "#datagrid";
+var dialogFlag = false;
+
+function openDialog(consumeName){
+	$(dialog).css('display','');
+	var title = 'Detail - ' + consumeName;
+	if(!dialogFlag){
+		$(dialog).dialog({    
+		    title: title,    
+		    width: 800,    
+		    height: 480,    
+		    closed: false,    
+		    cache: false,    
+		    modal: true   
+		});
+		getTransactions(consumeName);
+		dialogFlag = true;
+	}else{
+		refreshTransactions(consumeName);
+		$(dialog).dialog({title:title});
+		$(dialog).dialog('refresh');  
+	}
+}
+
+function getTransactions(consumeName){
+	var week = {'consumeName': consumeName}
+	var params = getParams();
+	var newParams = $.extend(week,params);
+	$(datagrid).datagrid({
+		method: 'post',
+		queryParams : newParams,
+		url: '/transaction/getTransactions'
+	});
+}
+
+function refreshTransactions(consumeName){
+	var week = {'consumeName': consumeName}
+	var params = getParams();
+	var newParams = $.extend(week,params);
+	$(datagrid).datagrid('load',newParams);
+}
+
+</script>
+</html>

@@ -1,0 +1,33 @@
+.item_intervel{ margin-left: 1px; margin-right: 1px; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; height: 100%; padding: 0 2px; }
+.toolbar label { margin-right: 4px; color: #222; min-width: 26px; font-size: 12px; font-weight: 600; }
+.toolbar .item_intervel { display: flex; align-items: center; margin-bottom: 0; }
+.toolbar .easyui-datebox,
+.toolbar .easyui-combobox,
+.toolbar .easyui-combotree,
+.toolbar .easyui-textbox { margin-right: 2px; }
+.toolbar .combo, .toolbar .datebox, .toolbar .textbox { height: 24px; }
+.toolbar .textbox .textbox-text { height: 24px; line-height: 24px; font-size: 12px; }
+.toolbar .l-btn { height: 24px; line-height: 24px; padding: 0 10px; flex-shrink: 0; }
+.toolbar .l-btn .l-btn-text { padding: 0 8px; margin: 0 0; white-space: nowrap; }
+.toolbar .l-btn-icon-left .l-btn-text { margin-left: 6px; }
+
+/* datagrid visual tweaks */
+#datagrid .datagrid-header .datagrid-cell { white-space: nowrap; }
+#datagrid .datagrid-cell { overflow: hidden; text-overflow: ellipsis; }
+.toolbar .combo-panel { border: 1px solid #aac5e7; }
+.app-font, body, button, input, select, textarea { font-family: "Segoe UI", Arial, Helvetica, sans-serif; }
+
+/* dialog blue header + white content */
+.blue-dialog .panel-header { background: #1579ff; color: #fff; border-color: #1579ff; }
+.blue-dialog .panel-title { color: #fff; font-weight: 600; }
+.blue-dialog .panel-body { background: #ffffff; }
+.blue-dialog .dialog-button { border-top: 1px solid #eaeaea; }
+
+.window .window-header { background: #ffffff; color: #222; border-color: #eaeaea; }
+.window .panel-header { background: #ffffff; color: #222; border-color: #eaeaea; }
+.window .panel-header { border-bottom: 1px solid #eaeaea; }
+.window .panel-title { color: #222; font-weight: 600; }
+.window .window-body { background: #ffffff; }
+.dialog-button { background: #ffffff; border-top: 1px solid #eaeaea; }

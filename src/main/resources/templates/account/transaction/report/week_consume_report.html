@@ -1,0 +1,239 @@
+<html>
+<head>
+    <title>== Weekly Summary ==</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/scripts/transaction.js"></script>
+    <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    	<script type="text/javascript"></script>
+</head>
+<body class="easyui-layout">
+    <div data-options="region:'north'" style="height: 52px">
+		<div style="margin-top: 3px;">
+			<span class="item_intervel">
+	           	<label>Transaction date:</label> 
+	           	<input id="dateStart" class="easyui-datebox" style="width: 100px;"  data-options="onSelect:statistic"/>
+	           	~ 
+	           	<input id="dateEnd" class="easyui-datebox" style="width: 100px;" data-options="onSelect:statistic" />
+			</span>
+	          
+	        <span class="item_intervel">
+				<label>Card type：</label>
+				<input id="cmbCardTypes" class="easyui-combobox" 
+					data-options="data:transaction_datasource.cardTypes,valueField:'id',textField:'text',onSelect:statistic"
+					style="width: 130px;">
+			</span>
+	
+	          <span class="item_intervel">
+	          	<label>Consume type：</label> 
+              <select id="cmbConsume" class="easyui-combotree" data-options="url:'/api/v1/consume/tree',method:'get',onChange:statistic" multiple 
+	          	style="width:200px;"></select>
+	          </span>
+	          
+	          <span class="item_intervel">
+	          	<input id="txtDemo" class="easyui-textbox" style="width:120px"> 
+	          </span>
+	          
+	          <span class="item_intervel">
+	              <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="statistic()">Statistic</a>  
+	          </span>
+          </div>
+	</div>
+	<div id="chartArea" data-options="region:'center',border:false">
+		<div class="easyui-layout" fit="true">
+	        <div data-options="region:'west',split:true" title="Pie" style="width:720px;">
+            <div id="main" style="margin-top: 20px; width:100%; height: 360px;"></div>
+	        </div>
+	        <div id="detailGridArea" data-options="region:'center',title:'Detail - Monday'">
+	        	<table id="datagrid"  fit="true"
+					data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,border:false">
+					<thead>
+						<tr>
+							<th data-options="field:'id',hidden:true">ID</th>
+                            <th data-options="field:'bankCardName',width:160">Card</th>
+							<th data-options="field:'transactionDate',width:80,align:'center',formatter:app.date.format">Book date</th>
+							<th data-options="field:'balanceMoney',width:100,formatter:app.money.rmb">Balance money</th>
+							<th data-options="field:'demoArea',width:420,align:'left'">Description</th>
+						</tr>
+					</thead>
+				</table>
+	        </div>
+        </div>
+	</div>
+</body>	
+<script type="text/javascript">
+$(function(){
+    $.parser.onComplete = function(){
+        $('#main').height($('#chartArea').height()-80);
+        statistic();
+        getTransactions(0);
+    };
+});
+
+function getParams(){
+    function safeDateboxValue(sel){ var jq=$(sel); try{ var v=jq.datebox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    var dateStart = safeDateboxValue('#dateStart');
+    var dateEnd = safeDateboxValue('#dateEnd');
+    var cardtype = safeComboboxValue('#cmbCardTypes');
+    if(cardtype==='0') cardtype='';
+    var consume = safeCombotreeValues('#cmbConsume');
+    var demoArea = (function(){ var jq=$('#txtDemo'); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } })();
+    var params = {'transactionDateStartStr':dateStart,'transactionDateEndStr':dateEnd,'txnTypes':'expense','consumeID':consume,'cardTypeName':cardtype,'demoArea':demoArea};
+    return params;
+}
+
+function statistic() {
+	var params = getParams();
+	transaction.weekConsumeReport(params, show, ajaxError);
+}
+</script>
+
+<script type="text/javascript">
+function weekName(n){
+    var arr=['星期一','星期二','星期三','星期四','星期五','星期六','星期日'];
+    var idx = parseInt(n);
+    if(isNaN(idx) || idx<0 || idx>6) return '';
+    return arr[idx];
+}
+
+function nameToIndex(name){
+    var map={'星期一':0,'星期二':1,'星期三':2,'星期四':3,'星期五':4,'星期六':5,'星期日':6};
+    return map[name];
+}
+
+function show(data){
+    if(data && (data.returnCode == 'success' || data.returnCode == 20000)){
+        var json = null;
+        try{
+            json = $.parseJSON(data.returnMessage);
+        }catch(e){
+            json = null;
+            app.messager.show({title:'Fail', msg: 'Parse return data fail!'});
+            return;
+        }
+        if(json != null){
+            var rows = json;
+            var weekNames = new Array();
+            var rowDatas = new Array();
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var key = parseInt(row.key);
+                var value = parseFloat(row.value);
+                var name = weekName(key);
+                weekNames.push(name);
+                rowDatas.push({name: name, value: value});
+            }
+            render(weekNames,rowDatas);
+        } else {
+            app.messager.show({title : 'Fail', msg : data.returnMessage});
+        }
+    } else {
+        var msg = data && data.returnMessage ? data.returnMessage : 'Request failed';
+        app.messager.show({title:'Fail', msg: msg});
+    }
+}
+
+function ajaxError(xhr){
+    var msg = (xhr && xhr.responseText) ? xhr.responseText : 'Network error';
+    app.messager.show({title:'Fail', msg: msg});
+}
+
+function render(weekNames,rowDatas){
+        ensureMainSize();
+        var myChart = echarts.init(document.getElementById('main'));
+
+        var option = {
+            title : {
+                text: 'Week Consume Statistic',
+                subtext: 'Money',
+                x:'center'
+            },
+		    tooltip : {
+		        trigger: 'item',
+		        formatter: "{a} <br/>{b} : {c} ({d}%)"
+		    },
+		    legend: {
+		        orient : 'vertical',
+		        x : 'left',
+		        data: weekNames
+		    },
+		    toolbox: {
+		        show : true,
+		        feature : {
+		            mark : {show: true},
+		            dataView : {show: true, readOnly: false},
+		            magicType : {
+		                show: true, 
+		                type: ['pie', 'funnel'],
+		                option: {
+		                    funnel: {
+		                        x: '25%',
+		                        width: '50%',
+		                        funnelAlign: 'left',
+		                        max: 1548
+		                    }
+		                }
+		            },
+		            restore : {show: true},
+		            saveAsImage : {show: true}
+		        }
+            },
+		    series : [
+		        {
+		            name:'Week',
+		            type:'pie',
+		            radius : '55%',
+		            center: ['50%', '60%'],
+		            data:rowDatas
+		        }
+		    ]
+		};
+		
+        myChart.setOption(option);
+        myChart.on('click', function (param) {
+            var idx = nameToIndex(param.name);
+            refreshTransactions(idx);
+            $("#detailGridArea").panel({'title':'Detail - ' + param.name});
+        });
+}
+
+function ensureMainSize(){
+    var $area = $('#chartArea');
+    var $main = $('#main');
+    var h = $area.height();
+    if(!h || h <= 80){ h = $(window).height() - 160; }
+    if(h && h > 120){ $main.height(h - 80); }
+}
+</script>
+
+<script type="text/javascript">
+var datagrid = '#datagrid';
+function getTransactions(weekName){
+	var week = {'weekName': weekName}
+	var params = getParams();
+	var newParams = $.extend(week,params);
+	$(datagrid).datagrid({
+		method: 'post',
+		queryParams : newParams,
+		url: '/transaction/getTransactions'
+	});
+}
+
+function refreshTransactions(weekName){
+	var week = {'weekName': weekName}
+	var params = getParams();
+	var newParams = $.extend(week,params);
+	$(datagrid).datagrid('load',newParams);
+	$("#detailGridArea").panel({'title':'Detail - ' + weekName});
+}
+</script>
+</html>

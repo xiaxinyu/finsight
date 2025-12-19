@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.finsight.infrastructure.mapper.TransactionMapper">
+
+    <insert id="addTransactionList">
+        insert into transaction
+        (createuser,
+        updateuser,
+        id,
+        card_id,
+        bank_card_id,
+        bank_card_name,
+        transaction_date,
+        bookkeeping_date,
+        transaction_desc,
+        balance_currency,
+        balance_money,
+        card_type_id,
+        card_type_name,
+        consumption_type,
+        consume_id,
+        consume_code,
+        consume_name,
+        demoarea,
+        recordid,
+        income_money,
+        opponent_account,
+        opponent_name,
+        transaction_time,
+        account_balance)
+        <foreach collection="transactions" item="transaction" index="index" separator="union">
+            select
+            #{transaction.createuser,jdbcType=VARCHAR},
+            #{transaction.updateuser,jdbcType=VARCHAR},
+            #{transaction.id,jdbcType=VARCHAR},
+            #{transaction.cardId,jdbcType=VARCHAR},
+            #{transaction.bankCardId,jdbcType=VARCHAR},
+            #{transaction.bankCardName,jdbcType=VARCHAR},
+            #{transaction.transactionDate,jdbcType=DATE},
+            #{transaction.bookKeepingDate,jdbcType=DATE},
+            #{transaction.transactionDesc,jdbcType=VARCHAR},
+            #{transaction.balanceCurrency,jdbcType=VARCHAR},
+            #{transaction.balanceMoney,jdbcType=NUMERIC},
+            #{transaction.cardTypeId,jdbcType=NUMERIC},
+            #{transaction.cardTypeName,jdbcType=VARCHAR},
+            #{transaction.consumptionType,jdbcType=NUMERIC},
+            #{transaction.consumeID,jdbcType=VARCHAR},
+            #{transaction.consumeCode,jdbcType=VARCHAR},
+            #{transaction.consumeName,jdbcType=VARCHAR},
+            #{transaction.demoArea,jdbcType=VARCHAR},
+            #{transaction.recordID,jdbcType=VARCHAR},
+            #{transaction.incomeMoney,jdbcType=NUMERIC},
+            #{transaction.opponentAccount,jdbcType=VARCHAR},
+            #{transaction.opponentName,jdbcType=VARCHAR},
+            #{transaction.transactionTime,jdbcType=VARCHAR},
+            #{transaction.accountBalance,jdbcType=NUMERIC}
+            from dual
+        </foreach>
+    </insert>
+
+    <update id="updateTransaction" parameterType="com.finsight.domain.model.Transaction">
+        update transaction
+        set version = version+1,
+        <if test="updateUser != null">
+            updateuser = #{updateUser,jdbcType=VARCHAR},
+        </if>
+        <if test="consumptionType != null">
+            consumption_type = #{consumptionType,jdbcType=NUMERIC},
+        </if>
+        <if test="consumeID != null">
+            consume_id = #{consumeID,jdbcType=VARCHAR},
+        </if>
+        <if test="consumeCode != null">
+            consume_code = #{consumeCode,jdbcType=VARCHAR},
+        </if>
+        <if test="consumeName != null">
+            consume_name = #{consumeName,jdbcType=VARCHAR},
+        </if>
+        <if test="demoArea != null">
+            demoarea = #{demoArea,jdbcType=VARCHAR},
+        </if>
+        updatetime = current_timestamp
+        where id = #{id,jdbcType=VARCHAR}
+    </update>
+
+    <delete id="deleteTransaction" parameterType="java.lang.String">
+        delete from transaction where id = #{id,jdbcType=VARCHAR}
+    </delete>
+
+    <resultMap type="com.finsight.domain.model.Transaction" id="baseTransactionResultMap">
+        <id column="id" property="id" jdbcType="VARCHAR"/>
+        <result column="card_id" property="cardId" jdbcType="VARCHAR"/>
+        <result column="bank_card_id" property="bankCardId" jdbcType="VARCHAR"/>
+        <result column="bank_card_name" property="bankCardName" jdbcType="VARCHAR"/>
+        <result column="transaction_date" property="transactionDate" jdbcType="DATE"/>
+        <result column="bookkeeping_date" property="bookKeepingDate" jdbcType="DATE"/>
+        <result column="transaction_desc" property="transactionDesc" jdbcType="VARCHAR"/>
+        <result column="balance_currency" property="balanceCurrency" jdbcType="VARCHAR"/>
+        <result column="balance_money" property="balanceMoney" jdbcType="NUMERIC"/>
+        <result column="card_type_id" property="cardTypeId" jdbcType="NUMERIC"/>
+        <result column="card_type_name" property="cardTypeName" jdbcType="VARCHAR"/>
+        <result column="consumption_type" property="consumptionType" jdbcType="NUMERIC"/>
+        <result column="consume_id" property="consumeID" jdbcType="VARCHAR"/>
+        <result column="consume_code" property="consumeCode" jdbcType="VARCHAR"/>
+        <result column="consume_name" property="consumeName" jdbcType="VARCHAR"/>
+        <result column="demoarea" property="demoArea" jdbcType="VARCHAR"/>
+        <result column="income_money" property="incomeMoney" jdbcType="NUMERIC"/>
+        <result column="opponent_account" property="opponentAccount" jdbcType="VARCHAR"/>
+        <result column="opponent_name" property="opponentName" jdbcType="VARCHAR"/>
+        <result column="transaction_time" property="transactionTime" jdbcType="VARCHAR"/>
+        <result column="account_balance" property="accountBalance" jdbcType="NUMERIC"/>
+    </resultMap>
+
+    <select id="getTransactions" resultMap="baseTransactionResultMap">
+        select * from (
+        select
+        t.id,
+        t.card_id,
+        t.bank_card_id,
+        t.bank_card_name,
+        t.transaction_date,
+        t.bookkeeping_date,
+        t.transaction_desc,
+        t.balance_currency,
+        t.balance_money,
+        t.card_type_id,
+        t.card_type_name,
+        t.consumption_type,
+        t.consume_id,
+        t.consume_code,
+        t.consume_name,
+        t.demoarea,
+        t.recordid,
+        t.income_money,
+        t.opponent_account,
+        t.opponent_name,
+        t.transaction_time,
+        t.account_balance
+        from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where 1 = 1
+        <if test="transaction != null">
+            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="transaction.transactionDateStart != null">
+                and t.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="transaction.transactionDateEnd != null">
+                and t.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <if test="transaction.consumptionType != null">
+                and t.consumption_type = #{transaction.consumptionType,jdbcType=NUMERIC}
+            </if>
+            <if test="transaction.bankCardId != null">
+                and t.bank_card_id = #{transaction.bankCardId,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.cardTypeName != null">
+                and t.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumeID != null">
+                and t.consume_id = #{transaction.consumeID,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumeCode != null">
+                and t.consume_code = #{transaction.consumeCode,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumes != null">
+                and t.consume_code in
+                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                    #{consumeID,jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="transaction.emptyConsume != null and transaction.emptyConsume == true">
+                and (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
+            </if>
+            <if test="transaction.consumeName != null">
+                and t.consume_name = #{transaction.consumeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.demoArea != null">
+                and (
+                    t.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                    or t.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                )
+            </if>
+            <if test="transaction.weekName != null">
+                and weekday(t.bookkeeping_date) = #{transaction.weekName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.year != null">
+                and year(t.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.month != null">
+                and month(t.transaction_date) = #{transaction.month,jdbcType=VARCHAR}
+            </if>
+        </if>
+        order by t.transaction_date desc
+        ) t limit #{page.recordBegin,jdbcType=NUMERIC}, #{page.pageSize,jdbcType=NUMERIC}
+    </select>
+
+    <select id="countTransaction" resultType="java.lang.Integer">
+        select count(t.id) from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where 1 = 1
+        <if test="transaction != null">
+            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="transaction.transactionDateStart != null">
+                and t.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="transaction.transactionDateEnd != null">
+                and t.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <if test="transaction.consumptionType != null">
+                and t.consumption_type = #{transaction.consumptionType,jdbcType=NUMERIC}
+            </if>
+            <if test="transaction.bankCardId != null">
+                and t.bank_card_id = #{transaction.bankCardId,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.cardTypeName != null">
+                and t.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumeID != null">
+                and t.consume_id = #{transaction.consumeID,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumeCode != null">
+                and t.consume_code = #{transaction.consumeCode,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumes != null">
+                and t.consume_code in
+                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                    #{consumeID,jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="transaction.emptyConsume != null and transaction.emptyConsume == true">
+                and (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
+            </if>
+            <if test="transaction.consumeName != null">
+                and t.consume_name = #{transaction.consumeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.demoArea != null">
+                and (t.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
+                or t.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+            </if>
+            <if test="transaction.weekName != null">
+                and weekday(t.bookkeeping_date) = #{transaction.weekName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.year != null">
+                and year(t.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.month != null">
+                and month(t.transaction_date) = #{transaction.month,jdbcType=VARCHAR}
+            </if>
+        </if>
+    </select>
+
+    <select id="consumeReport" resultType="com.finsight.domain.model.KeyValue">
+        select round(abs(sum(c.balance_money))) as `value`,
+        case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end as `key`
+        from transaction c
+        left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+        where 1 = 1
+        <if test="transaction != null">
+            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="transaction.txnTypes == null or transaction.txnTypes == ''">
+                and cat.txn_types like '%expense%'
+            </if>
+            <if test="transaction.transactionDateStart != null">
+                and c.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="transaction.transactionDateEnd != null">
+                and c.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <if test="transaction.cardTypeName != null">
+                and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumes != null">
+                and c.consume_code in
+                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                    #{consumeID,jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="transaction.demoArea != null">
+                and (c.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
+                or c.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+            </if>
+        </if>
+        group by case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end
+        order by `key`
+    </select>
+
+    <select id="weekConsumeReport" resultType="com.finsight.domain.model.KeyValue">
+        select round(abs(sum(balance_money))) as `value`, wday as `key` from (
+        select weekday(c.bookkeeping_date) wday, c.balance_money
+        from transaction c
+        left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+        where 1 = 1
+        <if test="transaction != null">
+            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="transaction.txnTypes == null or transaction.txnTypes == ''">
+                and cat.txn_types like '%expense%'
+            </if>
+            <if test="transaction.transactionDateStart != null">
+                and c.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="transaction.transactionDateEnd != null">
+                and c.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <if test="transaction.cardTypeName != null">
+                and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumes != null">
+                and c.consume_code in
+                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                    #{consumeID,jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="transaction.demoArea != null">
+                and (c.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
+                or c.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+            </if>
+        </if>
+        ) view1
+        group by wday
+        order by wday
+    </select>
+
+    <select id="monthConsumeReport" resultType="com.finsight.domain.model.KeyValue">
+        select round(abs(balance_money)) 'value',
+        case when cmonth = 1 then 'Janunary'
+        when cmonth = 2 then 'February'
+        when cmonth = 3 then 'March'
+        when cmonth = 4 then 'April'
+        when cmonth = 5 then 'May'
+        when cmonth = 6 then 'June'
+        when cmonth = 7 then 'July'
+        when cmonth = 8 then 'August'
+        when cmonth = 9 then 'September'
+        when cmonth = 10 then 'October'
+        when cmonth = 11 then 'November'
+        when cmonth = 12 then 'December' else cmonth end 'key'
+        from (select sum(balance_money) balance_money,cmonth
+        from (select c.balance_money, month(c.transaction_date) cmonth from transaction c
+        left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+        where 1 = 1
+        <if test="transaction != null">
+            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="transaction.txnTypes == null or transaction.txnTypes == ''">
+                and cat.txn_types like '%expense%'
+            </if>
+            <if test="transaction.year != null">
+                and year(c.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.cardTypeName != null">
+                and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="transaction.consumes != null">
+                and c.consume_code in
+                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                    #{consumeID,jdbcType=VARCHAR}
+                </foreach>
+            </if>
+            <if test="transaction.demoArea != null">
+                and (c.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
+                or c.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+            </if>
+        </if>
+        ) t1 group by cmonth) t2 order by cmonth
+    </select>
+</mapper>

@@ -1,0 +1,280 @@
+<html>
+<head>
+    <title>== Transaction Trend ==</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/scripts/transaction.js"></script>
+    <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <script type="text/javascript"></script>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north'" style="height: 52px">
+    <div style="margin-top: 3px;">
+			<span class="item_intervel">
+	           	<label>Transaction date:</label> 
+	           	<input id="dateStart" class="easyui-datebox" style="width: 100px;" data-options="onSelect:statistic"/>
+	           	~ 
+	           	<input id="dateEnd" class="easyui-datebox" style="width: 100px;" data-options="onSelect:statistic"/>
+			</span>
+
+        <span class="item_intervel">
+				<label>Card type：</label>
+                <input id="cmbCardTypes" class="easyui-combobox"
+                       data-options="url:'/api/v1/cards/list',method:'get',valueField:'key',textField:'value',editable:false,prompt:'All cards',onSelect:statistic"
+                       style="width: 160px;">
+			</span>
+
+        <span class="item_intervel">
+	          	<label>Consume type：</label> 
+              <select id="cmbConsume" class="easyui-combotree"
+                        data-options="url:'/api/v1/consume/tree',method:'get',onChange:statistic" multiple
+                        style="width:200px;"></select>
+	          </span>
+
+        <span class="item_intervel">
+	          	<input id="txtDemo" class="easyui-textbox" style="width:120px"> 
+	          </span>
+
+        <span class="item_intervel">
+	              <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="statistic()">Statistic</a>  
+	          </span>
+    </div>
+</div>
+<div id="chartArea" data-options="region:'center',border:false">
+    <div id="main" style="margin-top: 20px; width:100%; height: 360px;"></div>
+</div>
+<div id="dialog" style='display: none;'>
+    <table id="datagrid" fit="true"
+           data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,border:false">
+        <thead>
+        <tr>
+            <th data-options="field:'id',hidden:true">ID</th>
+            <th data-options="field:'bankCardName',width:160">Card</th>
+            <th data-options="field:'transactionDate',width:80,align:'center',formatter:app.date.format">Book date</th>
+            <th data-options="field:'transactionDesc',width:260,align:'left'">Narration</th>
+            <th data-options="field:'balanceMoney',width:100,formatter:app.money.rmb">Balance money</th>
+            <th data-options="field:'demoArea',width:420,align:'left'">Description</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+</body>
+<script type="text/javascript">
+var pieX = 320;
+$(function(){
+    $.parser.onComplete = function(){
+        $('#main').height($('#chartArea').height()-40);
+        pieX = $('#chartArea').width() - pieX;
+        statistic();
+    };
+    try{ statistic(); }catch(e){ if(window.console){ console.error('statistic call failed:', e); } }
+});
+
+function getParams(){
+    function safeDateboxValue(sel){ var jq=$(sel); try{ var v=jq.datebox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    var dateStart = safeDateboxValue('#dateStart');
+    var dateEnd = safeDateboxValue('#dateEnd');
+    var cardtype = safeComboboxValue('#cmbCardTypes');
+    if(cardtype==='0') cardtype='';
+    var consume = safeCombotreeValues('#cmbConsume');
+    var demoArea = (function(){ var jq=$('#txtDemo'); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } })();
+    var params = {'transactionDateStartStr':dateStart,'transactionDateEndStr':dateEnd,'txnTypes':'expense','consumeID':consume,'cardTypeName':cardtype,'demoArea':demoArea};
+    return params;
+}
+
+function statistic() {
+	var params = getParams();
+	transaction.consumeReport(params, show, ajaxError);
+}
+
+
+</script>
+
+<script type="text/javascript">
+function show(data){
+	if(data && (data.returnCode == 'success' || data.returnCode == 20000)){
+		var json = null;
+		try{
+			json = $.parseJSON(data.returnMessage);
+		}catch(e){
+			json = null;
+			app.messager.show({title:'Fail', msg: 'Parse return data fail!'});
+			return;
+		}
+		if(json != null){
+			var rows = json;
+			var keys = new Array();
+			var values = new Array();
+			var markPoints = new Array();
+			for (var i = 0; i < rows.length; i++) {
+				var row = rows[i];
+				var key = row.key;
+				var value = parseFloat(row.value);
+				keys.push(key);
+				values.push(value);
+				markPoints.push({name: key, value: value ,xAxis: i, yAxis: value});
+			}
+			render(keys,values,markPoints);
+		} else {
+			app.messager.show({title : 'Fail', msg : data.returnMessage});
+		}
+	} else {
+		var msg = data && data.returnMessage ? data.returnMessage : 'Request failed';
+		app.messager.show({title:'Fail', msg: msg});
+	}
+}
+
+function ajaxError(xhr){
+    var msg = (xhr && xhr.responseText) ? xhr.responseText : 'Network error';
+    app.messager.show({title:'Fail', msg: msg});
+}
+
+function render(keys,values,markPoints){
+        ensureMainSize();
+        var myChart = echarts.init(document.getElementById('main'));
+
+        var option = {
+            title : {
+                text: 'Consume Line Statistic',
+                subtext: 'Money',
+                x:'left'
+            },
+            tooltip : {
+                trigger : 'axis'
+            },
+            legend : {
+                data : [ 'Money' ]
+            },
+            toolbox : {
+                show : true,
+                feature : {
+                    dataView : {
+                        show : true,
+                        readOnly : false
+                    },
+                    magicType : {
+                        show : true,
+                        type : [ 'line', 'bar' ]
+                    },
+                    restore : {
+                        show : true
+                    },
+                    saveAsImage : {
+                        show : true
+                    }
+                }
+            },
+            dataZoom: [
+                {type: 'slider', start: 0, end: 50},
+                {type: 'inside'}
+            ],
+            xAxis : [ {
+                type : 'category',
+                boundaryGap : false,
+                data : keys,
+                axisLabel: {
+                    rotate: 45,
+                    hideOverlap: true,
+                    textStyle : {
+                        color : '#0000FF',
+                        align : 'left',
+                        fontWeight : 'bold',
+                        fontFamily : 'Arial'
+                    }
+                }
+            } ],
+			grid: {
+			    x: 40,
+			    x2: 20,
+			    y2: 100,
+			},
+			yAxis : [ {
+				type : 'value',
+			} ],
+			series : [ {
+				name : 'Money',
+				type : 'line',
+				data : values,
+				markPoint : {
+					data : markPoints
+				},
+				markLine : {
+					data : [ {
+						type : 'average',
+						name : 'Average'
+					} ]
+				}
+			} ]
+        };
+        
+        myChart.setOption(option);
+        myChart.on('click', function (param) {
+            var name = param && param.name ? param.name : '';
+            if(name){ openDialog(name); }
+        });
+}
+
+function ensureMainSize() {
+    var chartArea = $('#chartArea');
+    var main = $('#main');
+    var w = chartArea.width();
+    var h = chartArea.height() - 40; 
+    if (h < 300) h = 300;
+    main.width(w);
+    main.height(h);
+}
+</script>
+<script type="text/javascript">
+var dialog = "#dialog";
+var datagrid = "#datagrid";
+var dialogFlag = false;
+
+function openDialog(consumeName){
+    $(dialog).css('display','');
+    var title = 'Detail - ' + consumeName;
+    if(!dialogFlag){
+        $(dialog).dialog({
+            title: title,
+            width: 800,
+            height: 480,
+            closed: false,
+            cache: false,
+            modal: true
+        });
+        getTransactions(consumeName);
+        dialogFlag = true;
+    }else{
+        refreshTransactions(consumeName);
+        $(dialog).dialog({title:title});
+        $(dialog).dialog('refresh');
+    }
+}
+
+function getTransactions(consumeName){
+    var filter = {'consumeName': consumeName};
+    var params = getParams();
+    var newParams = $.extend(filter, params);
+    $(datagrid).datagrid({
+        method: 'post',
+        queryParams: newParams,
+        url: '/transaction/getTransactions'
+    });
+}
+
+function refreshTransactions(consumeName){
+    var filter = {'consumeName': consumeName};
+    var params = getParams();
+    var newParams = $.extend(filter, params);
+    $(datagrid).datagrid('load', newParams);
+}
+</script>
+</html>

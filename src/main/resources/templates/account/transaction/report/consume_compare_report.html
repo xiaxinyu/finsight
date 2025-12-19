@@ -1,0 +1,291 @@
+<html>
+<head>
+    <title>== Category Comparison ==</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/scripts/transaction.js"></script>
+    <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
+    
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <script type="text/javascript"></script>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north'" style="height: 52px">
+    <div style="margin-top: 3px;">
+        <span class="item_intervel">
+            <label>Year A:</label>
+            <select id="yearA" class="easyui-combobox" style="width:80px;">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+                <option value="2020">2020</option>
+                <option value="2019">2019</option>
+                <option value="2018">2018</option>
+                <option value="2017">2017</option>
+                <option value="2016">2016</option>
+            </select>
+        </span>
+        <span class="item_intervel">
+            <label>Year B:</label>
+            <select id="yearB" class="easyui-combobox" style="width:80px;">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+                <option value="2020">2020</option>
+                <option value="2019">2019</option>
+                <option value="2018">2018</option>
+                <option value="2017">2017</option>
+                <option value="2016">2016</option>
+            </select>
+        </span>
+
+        <span class="item_intervel">
+				<label>Card type：</label>
+                <input id="cmbCardTypes" class="easyui-combobox"
+                       data-options="url:'/api/v1/cards/list',method:'get',valueField:'key',textField:'value',editable:false,prompt:'All cards',onSelect:compareYears"
+                       style="width: 160px;">
+			</span>
+
+        <span class="item_intervel">
+	          	<label>Consume type：</label> 
+            <select id="cmbConsume" class="easyui-combotree"
+                        data-options="url:'/api/v1/consume/tree',method:'get',onChange:compareYears" multiple
+                        style="width:200px;"></select>
+	          </span>
+
+        <span class="item_intervel">
+	          	<input id="txtDemo" class="easyui-textbox" style="width:120px"> 
+	          </span>
+
+        <span class="item_intervel">
+	              <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="compareYears()">Compare</a>
+	          </span>
+    </div>
+</div>
+<div id="chartArea" data-options="region:'center',border:false">
+    <div id="main" style="width:100%; min-height: 380px;"></div>
+</div>
+
+<div id="dialog" style='display: none;'>
+    <table id="datagrid" fit="true"
+           data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,border:false">
+        <thead>
+        <tr>
+            <th data-options="field:'id',hidden:true">ID</th>
+            <th data-options="field:'bankCardName',width:160">Card</th>
+            <th data-options="field:'transactionDate',width:80,align:'center',formatter:app.date.format">Book date</th>
+            <th data-options="field:'transactionDesc',width:260,align:'left'">Narration</th>
+            <th data-options="field:'balanceMoney',width:100,formatter:app.money.rmb">Balance money</th>
+            <th data-options="field:'demoArea',width:420,align:'left'">Description</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+</body>
+<script type="text/javascript">
+$(function(){
+    var nowY = new Date().getFullYear();
+    $('#yearA').combobox('setValue', nowY);
+    $('#yearB').combobox('setValue', nowY-1);
+
+    $.parser.onComplete = function(){
+        setTimeout(function(){
+            ensureMainSize();
+            compareYears();
+        }, 50);
+    };
+    $(window).on('resize', function(){
+        ensureMainSize();
+        try{ if(window.pieChart){ window.pieChart.resize(); } }catch(e){}
+    });
+});
+
+function getParamsBase(){
+    function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+    var cardtype = safeComboboxValue('#cmbCardTypes');
+    if(cardtype==='0') cardtype='';
+    var consume = safeCombotreeValues('#cmbConsume');
+    var demoArea = (function(){ var jq=$('#txtDemo'); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } })();
+    return {'txnTypes':'expense','consumeID':consume,'cardTypeName':cardtype,'demoArea':demoArea};
+}
+
+function compareYears(){
+    var a = ($('#yearA').combobox('getValue')||'').trim();
+    var b = ($('#yearB').combobox('getValue')||'').trim();
+    
+    var paramsBase = getParamsBase();
+    var cardtype = paramsBase.cardTypeName||'';
+    var consume = paramsBase.consumeID||'';
+    var demoArea = paramsBase.demoArea||'';
+    
+    function buildParams(year){
+        if(!year) return null;
+        return {
+            transactionDateStartStr: '01/01/'+year,
+            transactionDateEndStr: '12/31/'+year,
+            txnTypes:'expense',
+            consumeID: consume,
+            cardTypeName: cardtype,
+            demoArea: demoArea
+        };
+    }
+    var pa = buildParams(a), pb = buildParams(b);
+    var da = null, db = null;
+    var done = 0;
+    function maybeRender(){
+        if(done>=((pa?1:0)+(pb?1:0))){
+            renderComparePies(da, db, a, b);
+        }
+    }
+    if(pa){
+        transaction.consumeReport(pa, function(res){
+            try{ da = $.parseJSON(res.returnMessage||'[]'); }catch(e){ da = []; }
+            done++; maybeRender();
+        }, function(){ done++; maybeRender(); });
+    }
+    if(pb){
+        transaction.consumeReport(pb, function(res){
+            try{ db = $.parseJSON(res.returnMessage||'[]'); }catch(e){ db = []; }
+            done++; maybeRender();
+        }, function(){ done++; maybeRender(); });
+    }
+}
+
+function ajaxError(xhr){
+    var msg = (xhr && xhr.responseText) ? xhr.responseText : 'Network error';
+    app.messager.show({title:'Fail', msg: msg});
+}
+
+function renderComparePies(listA, listB, yearA, yearB){
+    var namesA=[], dataA=[], namesB=[], dataB=[];
+    function build(list,names,data){
+        var arr=[]; for(var i=0;i<(list||[]).length;i++){ var r=list[i]||{}; var v=parseFloat(r.value); arr.push({name:r.key,value:isNaN(v)?0:v}); }
+        arr.sort(function(a,b){ return b.value-a.value; });
+        var top=12, others=0; var agg=[];
+        for(var i=0;i<arr.length;i++){ if(i<top){ agg.push(arr[i]); } else { others += arr[i].value; } }
+        if(arr.length>top && others>0){ agg.push({name:'Others',value:others}); }
+        for(var i=0;i<agg.length;i++){ names.push(agg[i].name); data.push(agg[i]); }
+    }
+    if(listA){ build(listA,namesA,dataA); }
+    if(listB){ build(listB,namesB,dataB); }
+    var totalA = dataA.reduce(function(t,x){ return t+(x.value||0); },0);
+    var totalB = dataB.reduce(function(t,x){ return t+(x.value||0); },0);
+    
+    ensureMainSize();
+    if(!window.pieChart){ window.pieChart = echarts.init(document.getElementById('main')); }
+    
+    var option = {
+        title: { text: 'Year Structure Comparison', subtext: (yearA?('A '+yearA+' ¥'+totalA):'') + (yearB?('  ·  B '+yearB+' ¥'+totalB):''), left:'center' },
+        tooltip: { trigger:'item', formatter: "{a} <br/>{b} : ¥{c} ({d}%)" },
+        legend: { type:'scroll', orient:'vertical', left:'left', top:'middle', data: (namesA.length?namesA:namesB) },
+        toolbox: { show:true, feature:{ dataView:{show:true}, saveAsImage:{show:true} } },
+        series: [
+            { 
+                name: (yearA?('Year '+yearA):'Year A'), 
+                type:'pie', 
+                radius:['45%','72%'], 
+                center:['30%','55%'], 
+                label:{ formatter:'{b}\n{d}%' }, 
+                data:dataA 
+            },
+            { 
+                name: (yearB?('Year '+yearB):'Year B'), 
+                type:'pie', 
+                radius:['45%','72%'], 
+                center:['75%','55%'], 
+                label:{ formatter:'{b}\n{d}%' }, 
+                data:dataB 
+            }
+        ]
+    };
+    
+    window.pieChart.clear();
+    window.pieChart.setOption(option);
+    window.pieChart.resize();
+    
+    window.pieChart.off('click');
+    window.pieChart.on('click', function (param) {
+        var seriesName = param.seriesName; // "Year 2025" or "Year 2024"
+        var year = null;
+        if(seriesName && seriesName.indexOf('Year ')===0){
+            year = seriesName.substring(5).trim();
+        }
+        openDialog(param.name, year);
+    });
+}
+
+function ensureMainSize(){
+    var $area = $('#chartArea');
+    var $main = $('#main');
+    var w = $area.width();
+    var h = $area.height();
+    if(!h || h <= 40){ h = $(window).height() - 80; }
+    if(h && h > 120){ $main.height(h - 20); }
+    if(w && w > 120){ $main.width(w - 10); }
+}
+
+var dialog = "#dialog";
+var datagrid = "#datagrid";
+var dialogFlag = false;
+
+function openDialog(consumeName, year){
+	$(dialog).css('display','');
+	var title = 'Detail - ' + consumeName + (year ? (' ('+year+')') : '');
+	if(!dialogFlag){
+		$(dialog).dialog({    
+		    title: title,    
+		    width: 800,    
+		    height: 480,    
+		    closed: false,    
+		    cache: false,    
+		    modal: true   
+		});
+		getTransactions(consumeName, year);
+		dialogFlag = true;
+	}else{
+		refreshTransactions(consumeName, year);
+		$(dialog).dialog({title:title});
+		$(dialog).dialog('refresh');  
+	}
+}
+
+function getTransactions(consumeName, year){
+	var p = {'consumeName': consumeName};
+	var paramsBase = getParamsBase();
+    if(year){
+        paramsBase.transactionDateStartStr = '01/01/'+year;
+        paramsBase.transactionDateEndStr = '12/31/'+year;
+    }
+	var newParams = $.extend(p, paramsBase);
+	$(datagrid).datagrid({
+		method: 'post',
+		queryParams : newParams,
+		url: '/transaction/getTransactions'
+	});
+}
+
+function refreshTransactions(consumeName, year){
+	var p = {'consumeName': consumeName};
+	var paramsBase = getParamsBase();
+    if(year){
+        paramsBase.transactionDateStartStr = '01/01/'+year;
+        paramsBase.transactionDateEndStr = '12/31/'+year;
+    }
+	var newParams = $.extend(p, paramsBase);
+	$(datagrid).datagrid('load',newParams);
+}
+
+</script>
+</html>
