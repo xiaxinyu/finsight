@@ -33,6 +33,9 @@ We have separated our documentation to keep things clean:
 - **[Technical Documentation](docs/TECHNICAL.md)** 🛠️
   *For developers: Installation, Architecture, Contributing Guide.*
 
+- **[Documentation Home](docs/README.md)**
+  *Centralized index for product, strategy, and technical docs.*
+
 - **[Features Overview](docs/features.md)**
   *Detailed breakdown of modules like Transaction Bill, Salary, Insurance, etc.*
 
@@ -41,6 +44,9 @@ We have separated our documentation to keep things clean:
 
 - **[Design & Branding](docs/BRANDING.md)**
   *Logo concepts and visual identity.*
+
+- **[Strategic SWOT Analysis](docs/SWOT.md)**
+  *Executive-level market, product, and risk analysis; strategic priorities.*
 
 ---
 
