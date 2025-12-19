@@ -17,4 +17,9 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     List<KeyValue> consumeReport(@Param("transaction") Transaction transaction);
     List<KeyValue> weekConsumeReport(@Param("transaction") Transaction transaction);
     List<KeyValue> monthConsumeReport(@Param("transaction") Transaction transaction);
+    List<KeyValue> homeSummaryExpenseBuckets(@Param("year") Integer year);
+    Double sumIncomeByYear(@Param("year") Integer year);
+    Double sumDebtPaymentsByYear(@Param("year") Integer year);
+    Integer countRefundsByYear(@Param("year") Integer year);
+    List<KeyValue> homeSummaryExpenseBucketsPrev(@Param("year") Integer year);
 }

@@ -209,4 +209,127 @@ public class TransactionServiceImpl implements ITransactionService {
         }
         return result;
     }
+
+    @Override
+    public String homeSummary(Integer year) throws AppServiceException {
+        try {
+            if (year == null) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                year = cal.get(java.util.Calendar.YEAR);
+            }
+            List<KeyValue> buckets = transactionMapper.homeSummaryExpenseBuckets(year);
+            List<KeyValue> bucketsPrev = transactionMapper.homeSummaryExpenseBucketsPrev(year);
+            double income = transactionMapper.sumIncomeByYear(year) == null ? 0.0 : transactionMapper.sumIncomeByYear(year);
+            double debt = transactionMapper.sumDebtPaymentsByYear(year) == null ? 0.0 : transactionMapper.sumDebtPaymentsByYear(year);
+            int refunds = transactionMapper.countRefundsByYear(year) == null ? 0 : transactionMapper.countRefundsByYear(year);
+
+            java.util.Map<String, Double> bm = new java.util.LinkedHashMap<>();
+            double expenseTotal = 0.0;
+            if (buckets != null) {
+                for (KeyValue kv : buckets) {
+                    String k = kv.getKey();
+                    double v = asDouble(kv.getValue());
+                    bm.put(k, v);
+                    expenseTotal += v;
+                }
+            }
+            double life = bm.getOrDefault("life", 0.0);
+            double fixed = bm.getOrDefault("fixed", 0.0);
+            double shopping = bm.getOrDefault("shopping", 0.0);
+            double entertainment = bm.getOrDefault("entertainment", 0.0);
+            double investment = bm.getOrDefault("investment", 0.0);
+            double other = bm.getOrDefault("other", 0.0);
+            double edu = bm.getOrDefault("edu", 0.0);
+
+            double div = income <= 0 ? 1.0 : income;
+            java.util.Map<String, Double> ratios = new java.util.LinkedHashMap<>();
+            ratios.put("life_vs_income", life / div);
+            ratios.put("fixed_vs_income", fixed / div);
+            ratios.put("shopping_vs_income", shopping / div);
+            ratios.put("entertainment_vs_income", entertainment / div);
+            ratios.put("investment_vs_income", investment / div);
+
+            double savingsRate = income <= 0 ? 0.0 : Math.max(0, (income - expenseTotal) / income);
+            double spendControl = Math.max(0, 100.0 - (expenseTotal > income ? 30.0 : 0.0) - (fixed / (expenseTotal <= 0 ? 1.0 : expenseTotal) > 0.35 ? 10.0 : 0.0));
+            double savingsScore = Math.min(100.0, savingsRate * 100.0);
+            double investAwareness = Math.min(100.0, (investment / (expenseTotal <= 0 ? 1.0 : expenseTotal)) * 120.0);
+            double debtRisk = Math.max(0, 100.0 - Math.min(100.0, (debt / (income <= 0 ? 1.0 : income)) * 150.0));
+            double rationality = Math.max(0, 100.0 - Math.min(40.0, refunds * 2.0));
+            double growthTrend = 50.0;
+            if (bucketsPrev != null && !bucketsPrev.isEmpty()) {
+                java.util.Map<String, Double> prev = new java.util.HashMap<>();
+                double prevTotal = 0.0;
+                for (KeyValue kv : bucketsPrev) {
+                    double v = asDouble(kv.getValue());
+                    prev.put(kv.getKey(), v);
+                    prevTotal += v;
+                }
+                double invCurrPct = investment / (expenseTotal <= 0 ? 1.0 : expenseTotal);
+                double invPrevPct = prev.getOrDefault("investment", 0.0) / (prevTotal <= 0 ? 1.0 : prevTotal);
+                double fixedCurrPct = fixed / (expenseTotal <= 0 ? 1.0 : expenseTotal);
+                double fixedPrevPct = prev.getOrDefault("fixed", 0.0) / (prevTotal <= 0 ? 1.0 : prevTotal);
+                growthTrend = 50.0 + (invCurrPct - invPrevPct) * 100.0 - (fixedCurrPct - fixedPrevPct) * 100.0;
+                if (growthTrend < 0) growthTrend = 0;
+                if (growthTrend > 100) growthTrend = 100;
+            }
+
+            double totalScore =
+                    (spendControl * 0.30) +
+                    (savingsScore * 0.20) +
+                    (investAwareness * 0.15) +
+                    (debtRisk * 0.15) +
+                    (rationality * 0.10) +
+                    (growthTrend * 0.10);
+
+            java.util.Map<String, Object> json = new java.util.LinkedHashMap<>();
+            json.put("year", year);
+            java.util.Map<String, Double> bucketsOut = new java.util.LinkedHashMap<>();
+            bucketsOut.put("life", roundPct(life, expenseTotal));
+            bucketsOut.put("fixed", roundPct(fixed, expenseTotal));
+            bucketsOut.put("shopping", roundPct(shopping, expenseTotal));
+            bucketsOut.put("entertainment", roundPct(entertainment, expenseTotal));
+            bucketsOut.put("investment", roundPct(investment, expenseTotal));
+            bucketsOut.put("edu", roundPct(edu, expenseTotal));
+            bucketsOut.put("other", roundPct(other, expenseTotal));
+            json.put("buckets_pct", bucketsOut);
+            json.put("income_total", income);
+            json.put("expense_total", expenseTotal);
+            json.put("ratios", ratios);
+            java.util.Map<String, Object> score = new java.util.LinkedHashMap<>();
+            score.put("total", Math.round(totalScore));
+            java.util.Map<String, Object> dims = new java.util.LinkedHashMap<>();
+            dims.put("spend_control", Math.round(spendControl));
+            dims.put("savings_rate", Math.round(savingsScore));
+            dims.put("invest_awareness", Math.round(investAwareness));
+            dims.put("debt_risk", Math.round(debtRisk));
+            dims.put("rationality", Math.round(rationality));
+            dims.put("growth_trend", Math.round(growthTrend));
+            score.put("dimensions", dims);
+            json.put("health_score", score);
+
+            String summaryText = String.format("📌 %d Consumption Structure: Life %.0f%% · Fixed %.0f%% · Shopping %.0f%% · Entertainment %.0f%% · Investment %.0f%% · Education %.0f%% · Other %.0f%%",
+                    year,
+                    bucketsOut.get("life"),
+                    bucketsOut.get("fixed"),
+                    bucketsOut.get("shopping"),
+                    bucketsOut.get("entertainment"),
+                    bucketsOut.get("investment"),
+                    bucketsOut.get("edu"),
+                    bucketsOut.get("other"));
+            json.put("summary_text", summaryText);
+            return com.alibaba.fastjson.JSONObject.toJSONString(json);
+        } catch (Exception e) {
+            throw new AppServiceException(e);
+        }
+    }
+
+    private double roundPct(double part, double total){
+        if (total <= 0) return 0.0;
+        return Math.round((part / total) * 100.0);
+    }
+
+    private double asDouble(String s){
+        if (s == null) return 0.0;
+        try { return Double.parseDouble(s); } catch (Exception e){ return 0.0; }
+    }
 }

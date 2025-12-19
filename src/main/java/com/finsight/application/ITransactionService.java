@@ -26,4 +26,6 @@ public interface ITransactionService {
     String weekConsumeReport(Transaction transaction) throws AppServiceException;
 
     String monthConsumeReport(Transaction transaction) throws AppServiceException;
+
+    String homeSummary(Integer year) throws AppServiceException;
 }

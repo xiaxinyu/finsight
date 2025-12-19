@@ -54,4 +54,20 @@ public class TransactionReportController {
 			return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
 		}
 	}
+
+	@RequestMapping("/transaction-report/home-summary")
+	@ResponseBody
+	public CommonResult homeSummary(String year){
+		try{
+			Integer y = null;
+			if (year != null && year.trim().length() > 0){
+				try { y = Integer.parseInt(year.trim()); } catch (Exception ignore){}
+			}
+			String result = transactionService.homeSummary(y);
+			return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), result);
+		} catch (AppServiceException e){
+			logger.error("home summary failed. params[year = " + year + "]", e);
+			return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
+		}
+	}
 }

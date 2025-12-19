@@ -1,41 +1,351 @@
 <html lang="en">
 <head>
     <title>FinSight Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="/plugins/echarts-6.0.0/echarts.min.js"></script>
     <style>
+        :root {
+            --primary-color: #2563EB;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-secondary: #6b7280;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f0f2f5;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            color: #333;
         }
-        .welcome-container {
+
+        .header-section {
             text-align: center;
-            padding: 40px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
+
         h1 {
-            color: #2563EB;
+            color: var(--primary-color);
             font-size: 2.5rem;
-            margin: 0;
-            font-weight: 600;
+            margin: 0 0 10px 0;
+            font-weight: 700;
         }
-        p {
-            color: #6B7280;
-            margin-top: 10px;
+
+        .slogan {
+            color: var(--text-secondary);
             font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 300px;
+        }
+
+        /* Health Score Specifics */
+        .score-badge {
+            background: #ecfdf5;
+            color: #059669;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .insight-list {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .insight-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px dashed #f0f0f0;
+        }
+        
+        .insight-value {
+            font-weight: 600;
+            color: var(--text-main);
         }
     </style>
 </head>
 <body>
-    <div class="welcome-container">
+
+    <div class="header-section">
         <h1>Welcome to FinSight</h1>
-        <p>Understand your money. Understand yourself.</p>
+        <p class="slogan">Understand your money. Understand yourself.</p>
     </div>
+
+    <div class="dashboard-grid">
+        <!-- Module 3: Consumption Structure -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" id="consumptionTitle">📌 Consumption Structure</h2>
+            </div>
+            <div id="consumptionChart" class="chart-container"></div>
+            <div class="insight-list">
+                <div class="insight-item">
+                    <span>Life Essentials</span>
+                    <span class="insight-value" id="lifePct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Fixed Costs</span>
+                    <span class="insight-value" id="fixedPct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Shopping</span>
+                    <span class="insight-value" id="shoppingPct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Entertainment</span>
+                    <span class="insight-value" id="entertainmentPct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Investment</span>
+                    <span class="insight-value" id="investmentPct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Education</span>
+                    <span class="insight-value" id="eduPct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Other</span>
+                    <span class="insight-value" id="otherPct">--%</span>
+                </div>
+                <div class="insight-item">
+                    <span>Summary</span>
+                    <span class="insight-value" id="summaryText">Loading…</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module 4: Behavior Insight -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🛡️ Financial Health Score</h2>
+                <span class="score-badge" id="scoreBadge">--</span>
+            </div>
+            <div id="behaviorChart" class="chart-container"></div>
+            <div class="insight-list">
+                <div class="insight-item">
+                    <span>💸 Spend Control (30%)</span>
+                    <span class="insight-value" id="spendControlText">--</span>
+                </div>
+                <div class="insight-item">
+                    <span>🔄 Savings Rate (20%)</span>
+                    <span class="insight-value" id="savingsRateText">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Initialize Charts
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHomeSummary();
+        });
+
+        async function loadHomeSummary(){
+            const year = new Date().getFullYear();
+            const url = `/transaction-report/home-summary?year=${year}`;
+            try{
+                const resp = await fetch(url, { method: 'GET' });
+                const data = await resp.json();
+                if (!data || (data.returnCode !== 'success' && data.returnCode !== 20000)) {
+                    initConsumptionChart();
+                    initBehaviorChart();
+                    return;
+                }
+                const payload = JSON.parse(data.returnMessage || '{}');
+                const buckets = payload.buckets_pct || {};
+                const arr = [
+                    { value: buckets.life || 0, name: 'Life (Essentials)' },
+                    { value: buckets.fixed || 0, name: 'Fixed Costs' },
+                    { value: buckets.shopping || 0, name: 'Shopping' },
+                    { value: buckets.entertainment || 0, name: 'Entertainment' },
+                    { value: buckets.investment || 0, name: 'Investment' },
+                    { value: buckets.edu || 0, name: 'Education' },
+                    { value: buckets.other || 0, name: 'Other' }
+                ];
+                initConsumptionChart(arr);
+                document.getElementById('consumptionTitle').innerText = `📌 ${payload.year} Consumption Structure`;
+                document.getElementById('lifePct').innerText = `${buckets.life || 0}%`;
+                document.getElementById('fixedPct').innerText = `${buckets.fixed || 0}%`;
+                document.getElementById('shoppingPct').innerText = `${buckets.shopping || 0}%`;
+                document.getElementById('entertainmentPct').innerText = `${buckets.entertainment || 0}%`;
+                document.getElementById('investmentPct').innerText = `${buckets.investment || 0}%`;
+                document.getElementById('eduPct').innerText = `${buckets.edu || 0}%`;
+                document.getElementById('otherPct').innerText = `${buckets.other || 0}%`;
+                document.getElementById('summaryText').innerText = (payload.summary_text || '').replace('📌 ', '');
+
+                const hs = payload.health_score || {};
+                const dims = hs.dimensions || {};
+                const radarValues = [
+                    toNumber(dims.spend_control),
+                    toNumber(dims.savings_rate),
+                    toNumber(dims.invest_awareness),
+                    toNumber(dims.debt_risk),
+                    toNumber(dims.rationality),
+                    toNumber(dims.growth_trend)
+                ];
+                initBehaviorChart(radarValues);
+                document.getElementById('scoreBadge').innerText = `Score: ${hs.total ?? '--'}`;
+                document.getElementById('spendControlText').innerText = `${Math.round(dims.spend_control ?? 0)} / 100`;
+                document.getElementById('savingsRateText').innerText = `${Math.round(dims.savings_rate ?? 0)} / 100`;
+            }catch(e){
+                initConsumptionChart();
+                initBehaviorChart();
+            }
+        }
+
+        function toNumber(v){ var n = Number(v); return isNaN(n)?0:n; }
+
+        function initConsumptionChart(dataArr) {
+            var chartDom = document.getElementById('consumptionChart');
+            var myChart = echarts.init(chartDom);
+            var option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c}%'
+                },
+                legend: {
+                    bottom: '0%',
+                    left: 'center'
+                },
+                color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#14B8A6', '#6366F1'],
+                series: [
+                    {
+                        name: 'Consumption',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 10,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: false,
+                            position: 'center'
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: 20,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        data: dataArr || [
+                            { value: 58, name: 'Life (Essentials)' },
+                            { value: 15, name: 'Fixed Costs' },
+                            { value: 12, name: 'Shopping' },
+                            { value: 8, name: 'Entertainment' },
+                            { value: 7, name: 'Investment' }
+                        ]
+                    }
+                ]
+            };
+            myChart.setOption(option);
+            
+            // Handle Resize
+            window.addEventListener('resize', function() {
+                myChart.resize();
+            });
+        }
+
+        function initBehaviorChart(values) {
+            var chartDom = document.getElementById('behaviorChart');
+            var myChart = echarts.init(chartDom);
+            var option = {
+                radar: {
+                    indicator: [
+                        { name: 'Spend Control', max: 100 },
+                        { name: 'Savings Rate', max: 100 },
+                        { name: 'Invest Awareness', max: 100 },
+                        { name: 'Debt Risk', max: 100 },
+                        { name: 'Rationality', max: 100 },
+                        { name: 'Growth Trend', max: 100 }
+                    ],
+                    radius: '65%',
+                    splitNumber: 4,
+                    axisName: {
+                        color: '#666'
+                    }
+                },
+                series: [
+                    {
+                        name: 'Health Score',
+                        type: 'radar',
+                        data: [
+                            {
+                                value: values || [90, 85, 70, 95, 80, 88],
+                                name: 'Current Status',
+                                areaStyle: {
+                                    color: 'rgba(37, 99, 235, 0.2)'
+                                },
+                                lineStyle: {
+                                    color: '#2563EB'
+                                },
+                                itemStyle: {
+                                    color: '#2563EB'
+                                }
+                            }
+                        ]
+                    }
+                ]
+            };
+            myChart.setOption(option);
+
+            window.addEventListener('resize', function() {
+                myChart.resize();
+            });
+        }
+    </script>
 </body>
 </html>

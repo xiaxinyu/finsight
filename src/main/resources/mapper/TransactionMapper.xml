@@ -372,4 +372,87 @@
         </if>
         ) t1 group by cmonth) t2 order by cmonth
     </select>
+
+    <!-- Home summary: bucketized expense by heuristics for a given year -->
+    <select id="homeSummaryExpenseBuckets" resultType="com.finsight.domain.model.KeyValue">
+        select round(sum(abs(t.balance_money))) as `value`, bucket as `key`
+        from (
+             select c.balance_money,
+             case
+                 when (cat.txn_types like '%invest%' or cat.parentId = 'INVEST' or cat.code like 'INVEST%') then 'investment'
+                 when (cat.parentId = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
+                 when (cat.parentId = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
+                 when (cat.parentId = 'ENT' or cat.code like 'ENT%') then 'entertainment'
+                 when (cat.parentId = 'EDU' or cat.code like 'EDU%') then 'edu'
+                 when (cat.parentId = 'OTHER' or cat.code like 'OTHER%') then 'other'
+                 when (cat.parentId = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 else 'life'
+             end as bucket
+             from transaction c
+             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+             where 1 = 1
+             and cat.txn_types like '%expense%'
+             and year(c.transaction_date) = #{year,jdbcType=NUMERIC}
+        ) t
+        group by bucket
+    </select>
+
+    <!-- Previous year buckets for growth comparison -->
+    <select id="homeSummaryExpenseBucketsPrev" resultType="com.finsight.domain.model.KeyValue">
+        select round(sum(abs(t.balance_money))) as `value`, bucket as `key`
+        from (
+             select c.balance_money,
+             case
+                 when (cat.txn_types like '%invest%' or cat.parentId = 'INVEST' or cat.code like 'INVEST%') then 'investment'
+                 when (cat.parentId = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
+                 when (cat.parentId = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
+                 when (cat.parentId = 'ENT' or cat.code like 'ENT%') then 'entertainment'
+                 when (cat.parentId = 'EDU' or cat.code like 'EDU%') then 'edu'
+                 when (cat.parentId = 'OTHER' or cat.code like 'OTHER%') then 'other'
+                 when (cat.parentId = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 else 'life'
+             end as bucket
+             from transaction c
+             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+             where 1 = 1
+             and cat.txn_types like '%expense%'
+             and year(c.transaction_date) = (#{year,jdbcType=NUMERIC} - 1)
+        ) t
+        group by bucket
+    </select>
+
+    <!-- Home summary: total income by year -->
+    <select id="sumIncomeByYear" resultType="java.lang.Double">
+        select round(sum(
+            coalesce(
+                case when (coalesce(t.income_money,0) &lt;&gt; 0) then t.income_money
+                     when (cat.parentId = 'INC' or cat.code like 'INC%') then t.balance_money
+                     else 0 end
+            ,0)
+        ))
+        from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+    </select>
+
+    <!-- Home summary: debt-related payments (repayments/loans) by year -->
+    <select id="sumDebtPaymentsByYear" resultType="java.lang.Double">
+        select round(sum(abs(t.balance_money)))
+        from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+          and (
+              cat.parentId = 'LIABILITY'
+              or cat.code like 'LIABILITY-%'
+              or cat.code in ('FIN-14','FIN-15')
+              or t.transaction_desc like '%还款%' or t.transaction_desc like '%贷款%'
+          )
+    </select>
+
+    <!-- Home summary: refund count heuristic by year -->
+    <select id="countRefundsByYear" resultType="java.lang.Integer">
+        select count(1) from transaction t
+        where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+          and (t.transaction_desc like '%退款%' or t.demoarea like '%退款%')
+    </select>
 </mapper>
