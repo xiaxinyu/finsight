@@ -97,6 +97,12 @@ public class StatementController {
             if (suffix.endsWith(".xls") || suffix.endsWith(".xlsx")) {
                 dataRows = parseExcelEasy(file);
                 content = toCsv(dataRows);
+            } else if (suffix.endsWith(".pdf")) {
+                content = readPdf(file);
+                if (StringUtils.isBlank(content)) {
+                    return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "File is empty or unreadable");
+                }
+                dataRows = parsePlainTable(content);
             } else {
                 content = readText(file);
                 if (StringUtils.isBlank(content)) {
@@ -174,6 +180,61 @@ public class StatementController {
 
         } catch (Exception e) {
             log.error("Upload failed", e);
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "系统出现错误");
+        }
+    }
+
+    @PostMapping("/import-pdf-local")
+    @ResponseBody
+    public CommonResult importPdfLocal(@RequestParam("path") String path,
+                                       @RequestParam(value = "bankCode", defaultValue = "CMB") String bankCode,
+                                       @RequestParam(value = "cardTypeCode", defaultValue = "debit") String cardTypeCode,
+                                       @RequestParam(value = "cardNo", required = false) String cardNo){
+        String userName = authenticationFacade.getUserName();
+        try{
+            File f = new File(path);
+            if(!f.exists() || !f.isFile()){
+                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "file_not_found");
+            }
+            org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.pdmodel.PDDocument.load(f);
+            String content;
+            try{
+                org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+                stripper.setSortByPosition(true);
+                content = stripper.getText(doc);
+            } finally {
+                doc.close();
+            }
+            List<String[]> dataRows = parsePlainTable(content);
+            List<Transaction> transactions = StatementImporterFactory
+                    .get(org.apache.commons.lang3.StringUtils.trimToEmpty(bankCode), org.apache.commons.lang3.StringUtils.trimToEmpty(cardTypeCode))
+                    .parse(dataRows, bankCode, cardTypeCode, cardNo);
+            BankCard bankCard = bankCardService.getByBankTypeNo(org.apache.commons.lang3.StringUtils.trimToEmpty(bankCode), org.apache.commons.lang3.StringUtils.trimToEmpty(cardTypeCode), org.apache.commons.lang3.StringUtils.trimToEmpty(cardNo));
+            if (bankCard == null && org.apache.commons.lang3.StringUtils.isNotBlank(cardNo)) {
+                bankCard = bankCardService.getByCardNo(org.apache.commons.lang3.StringUtils.trimToEmpty(cardNo));
+            }
+            String bankCardId = bankCard == null ? null : bankCard.getId();
+            String bankCardName = bankCard == null ? null : bankCard.getCardName();
+            for (Transaction t : transactions) {
+                if (org.apache.commons.lang3.StringUtils.isNotBlank(bankCardId)) {
+                    t.setBankCardId(bankCardId);
+                    t.setBankCardName(bankCardName);
+                }
+                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode);
+                if (r != null) {
+                    t.setConsumeCode(r.id);
+                    t.setConsumeName(r.name);
+                }
+            }
+            int imported = transactionService.addTransactions(transactions, userName);
+            java.util.Map<String,Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("path", path);
+            payload.put("rows", dataRows.size());
+            payload.put("parsed", transactions == null ? 0 : transactions.size());
+            payload.put("imported", imported);
+            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), com.alibaba.fastjson.JSON.toJSONString(payload));
+        }catch(Exception e){
+            log.error("import-pdf-local failed", e);
             return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "系统出现错误");
         }
     }
@@ -360,6 +421,31 @@ public class StatementController {
             } else {
                 cols = line.split(delimiter);
             }
+            rows.add(cols);
+        }
+        return rows;
+    }
+
+    private String readPdf(MultipartFile file) throws Exception {
+        try (java.io.InputStream in = file.getInputStream()) {
+            org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.pdmodel.PDDocument.load(in);
+            try {
+                org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+                stripper.setSortByPosition(true);
+                return stripper.getText(doc);
+            } finally {
+                doc.close();
+            }
+        }
+    }
+
+    private List<String[]> parsePlainTable(String content) {
+        String[] lines = content.split("\n");
+        List<String[]> rows = new ArrayList<>();
+        for(String line : lines){
+            String ln = org.apache.commons.lang3.StringUtils.trimToEmpty(line);
+            if(org.apache.commons.lang3.StringUtils.isBlank(ln)) continue;
+            String[] cols = ln.split("\\s+");
             rows.add(cols);
         }
         return rows;
