@@ -1,4 +1,5 @@
 # Product Roadmap & Milestones
+Language: English | [中文](MILESTONES.zh-CN.md)
 
 > **Vision**: From a "Digital Ledger" to a "Local, Intelligent Financial Advisor".
 > **Execution Strategy**: Agile development powered by AI-augmented coding (1 Engineer + AI Pair Programmer).

@@ -1,4 +1,5 @@
 # Technical Documentation
+Language: English | [中文](TECHNICAL.zh-CN.md)
 
 ## 🏗 Project Structure
 

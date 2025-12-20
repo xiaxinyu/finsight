@@ -1,4 +1,5 @@
 # FinSight Product Guide: Your Intelligent Financial Advisor
+Language: English | [中文](PRODUCT_GUIDE.zh-CN.md)
 
 > **Core Philosophy**: We don't just record numbers. We interpret them.
 

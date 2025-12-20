@@ -1,4 +1,5 @@
 # FinSight — Personal Finance Intelligence Engine
+Language: English | [中文](README.zh-CN.md)
 
 > **Understand your money. Understand yourself.**
 

@@ -1,4 +1,5 @@
 # FinSight Design & Branding
+Language: English | [中文](BRANDING.zh-CN.md)
 
 ## 🎨 Logo Concept
 

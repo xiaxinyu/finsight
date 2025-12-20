@@ -1,4 +1,5 @@
 # FinSight — Strategic SWOT Analysis
+Language: English | [中文](SWOT.zh-CN.md)
 
 > Compiled from executive strategic notes. This document distills the privacy-first positioning, market realities, and execution risks into an actionable view.
 

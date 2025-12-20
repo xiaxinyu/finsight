@@ -1,4 +1,5 @@
 # The FinSight Manifesto
+Language: English | [中文](MANIFESTO.zh-CN.md)
 
 > **"Understand your money. Understand yourself."**
 

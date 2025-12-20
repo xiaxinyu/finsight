@@ -1,4 +1,5 @@
 # FinSight Business Model
+Language: English | [中文](BUSINESS_MODEL.zh-CN.md)
 
 > **Sustainable. Transparent. Value-Driven.**
 
