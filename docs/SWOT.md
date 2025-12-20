@@ -3,6 +3,16 @@ Language: English | [中文](SWOT.zh-CN.md)
 
 > Compiled from executive strategic notes. This document distills the privacy-first positioning, market realities, and execution risks into an actionable view.
 
+## Positioning Principle: Efficiency > Free > Convenience
+
+FinSight invites users to trade a little convenience for absolute privacy and deep financial efficiency — and the core capabilities are free.
+
+- Value trade: minimal convenience → maximum privacy and measurable efficiency.
+- Target segment: privacy-sensitive, efficiency-driven users who value control and transparency.
+- Retention & growth: tangible efficiency gains + zero cloud risk + open/free core → strong stickiness and word-of-mouth.
+- Product strategy: prioritize local performance, automated consolidation, and visual insights; keep friction low without compromising privacy.
+- Messaging: consistently state “privacy-first, efficiency-first, core free forever” to reduce decision friction.
+
 ## Strengths
 
 - Unique Value Proposition
