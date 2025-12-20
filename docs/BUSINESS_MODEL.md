@@ -1,68 +1,77 @@
 # FinSight Business Model
+
 Language: English | [中文](BUSINESS_MODEL.zh-CN.md)
 
 > **Sustainable. Transparent. Value-Driven.**
 
-FinSight is built on a simple premise: **Trust is our most valuable asset.** We do not sell user data. We do not show ads. We do not lock your data behind a paywall. Our business model is aligned with your financial success.
+FinSight is built on a simple premise: **Trust is our most valuable asset.** Our business model is designed to align with your financial success, not exploit your data. We do not sell data, show ads, or lock you into a service you can't leave.
 
 ---
 
-## 💎 **Core Positioning**
+## The User Ladder: From Free to Pro
 
-**FinSight is not just a "prettier ledger."**
-It is a local, automated, privacy-preserving financial advisor that understands you.
+Our monetization strategy is built on a "user ladder" designed to deliver increasing value at each step. We guide users from basic financial awareness (Free) to advanced control (Plus) and finally to automated intelligence (Pro).
 
-*   **The Problem**: Most financial tools are either simple trackers (too dumb) or cloud-based platforms that sell your data (too invasive).
-*   **The Solution**: An intelligent, local-first engine that turns data into wisdom.
-*   **The Philosophy**: Real financial wisdom comes from deep understanding of one’s own behaviors—not from chasing market trends.
+- **Free (The Observer)**: Establishes a foundation of trust and data sovereignty.
+- **Plus (The Analyst)**: For users who want deeper control and efficiency.
+- **Pro (The Strategist)**: For users who want a fully automated, intelligent financial partner.
 
----
-
-## 🎁 **The "Internet Free" Promise (Community Edition)**
-*The foundation of our ecosystem.*
-
-We believe that basic financial literacy and data sovereignty are human rights. Therefore, the core of FinSight will **always be free and open source**.
-
-### **What is Free Forever?**
-*   **Core Intelligence**: Transaction classification, rule engine, and tagging.
-*   **Visualization**: All standard charts, trends, and breakdown reports.
-*   **Data Sovereignty**: 100% local database, export capabilities, and zero cloud tracking.
-*   **Unlimited Usage**: No limits on transactions, accounts, or years of history.
+This tiered approach avoids the pitfalls of a purely free model (no revenue) or a hard paywall (slow adoption). It creates a sustainable path for the project while keeping the core promise of data ownership intact.
 
 ---
 
-## 🚀 **Value-Added Services (Professional & Enterprise)**
-*For those who need higher-order intelligence and convenience.*
+## Feature Tiers at a Glance
 
-Our revenue comes from users who want to upgrade from "tracking" to "optimizing" and "automating".
+| Category | Feature | Free | Plus | Pro |
+| :--- | :--- | :---: | :---: | :---: |
+| **Core Engine** | Rule/Regex-based Categorization | ✅ | ✅ | ✅ |
+| | Multi-source Data Import (CSV/Excel) | ✅ | ✅ | ✅ |
+| | End-to-end Encrypted Sync | ✅ | ✅ | ✅ |
+| | Privacy-preserving Local AI | ✅ | ✅ | ✅ |
+| **Efficiency Tools** | Rule/Regex Editor with Smart Suggestions | | ✅ | ✅ |
+| | Advanced Search & Filtering | | ✅ | ✅ |
+| | Multi-dimensional Tagging & Analysis | | ✅ | ✅ |
+| **Automation** | Automated Data Import (Connectors) | | | ✅ |
+| | Scheduled Tasks & Alerts | | | ✅ |
+| **Intelligence** | AI-powered Insights & Recommendations | | | ✅ |
+| | Financial Goal Setting & Tracking | | | ✅ |
+| | "What-if" Scenario Simulation | | | ✅ |
 
-### **1. Advanced Analytics & Forecasting (The "CFO" Suite)**
-*Turn hindsight into foresight.*
-*   **AI Financial Health Score**: A dynamic score based on savings rate, liquidity, and debt-to-income ratio.
-*   **Cashflow Simulation**: "What if" scenario planning (e.g., "Can I afford a house in 3 years?").
-*   **Retirement Simulator**: Monte Carlo simulations based on your actual spending habits.
-*   **Debt Avalanche/Snowball**: Optimized payoff strategies.
+---
 
-### **2. Professional Reporting (The "Auditor" Suite)**
-*For freelancers, contractors, and power users.*
-*   **Tax-Ready Exports**: Reports formatted for tax filing.
-*   **Custom Dashboards**: Build your own KPI views.
-*   **Executive Presentation Mode**: One-click generation of PDF/PPT summaries.
+## Tier Breakdown
 
-### **3. Automation & Connectivity (The "Time Saver" Suite)**
-*Seamless data ingestion.*
-*   **Secure Connectors**: Optional, user-authorized API connectors to major banks and brokerages.
-    *   *Note*: Keys are stored locally. FinSight servers never see your credentials.
-*   **Auto-Sync**: Background fetching of new transactions.
+### 🎁 **Free: The Foundation of Trust**
+*The core of FinSight will always be free and open source.*
 
-### **4. Priority Support**
-*   Dedicated support channel with guaranteed SLAs.
-*   One-on-one setup assistance.
+The Free tier is designed to solve the most fundamental problem: giving users full ownership and basic insight into their financial data.
+
+- **Core Intelligence**: Manual transaction classification, rule engine, and tagging.
+- **Visualization**: All standard charts, trends, and breakdown reports.
+- **Data Sovereignty**: 100% local database, export capabilities, and zero cloud tracking.
+- **Unlimited Usage**: No limits on transactions, accounts, or years of history.
+
+### ✨ **Plus: The Efficiency Upgrade**
+*For power users who value granular control and time-saving tools.*
+
+The Plus tier bridges the gap between basic tracking and advanced analysis. It is for the user who says, "I want to not only see my data, but master it."
+
+- **Advanced Rule Engine**: A powerful editor for rules and regex with smart suggestions and testing capabilities.
+- **Deeper Analysis**: Advanced search, multi-dimensional tagging, and custom reporting views.
+
+### 🚀 **Pro: The Intelligent Advisor**
+*For users who want to put their finances on auto-pilot.*
+
+The Pro tier represents the ultimate vision of FinSight: a true cognitive assistant that automates, anticipates, and advises.
+
+- **Seamless Automation**: Optional, secure connectors to banks and brokerages for auto-syncing transactions.
+- **Proactive Intelligence**: AI-driven insights, cash flow forecasting, and personalized recommendations.
+- **Strategic Planning**: Tools for goal setting, retirement simulation, and debt management.
 
 ---
 
 ## ⚖️ **Pricing Philosophy**
 
 1.  **No Data Monetization**: We will never sell, share, or analyze your data for third parties. You are the customer, not the product.
-2.  **Free at the Core**: We do not cripple the free version. The Pro version adds *new* capabilities, it does not subtract existing ones.
-3.  **Local-First**: Even paid features run locally whenever possible.
+2.  **Value, Not Walls**: We do not cripple the free version. Paid tiers add powerful new capabilities, they do not remove existing ones.
+3.  **Local-First Always**: Even paid features, like AI analysis, are designed to run locally whenever possible, respecting your data sovereignty.
