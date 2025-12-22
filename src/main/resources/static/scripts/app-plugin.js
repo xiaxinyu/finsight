@@ -68,15 +68,22 @@ $(function(){
                     if(obj && typeof obj === 'object'){
                         var bizCode = obj.code;
                         var retCode = obj.returnCode;
-                        // 只展示错误代码，不展示详细信息
                         if(typeof bizCode !== 'undefined'){
-                            if(bizCode === 30000){
-                                $.messager.alert('Error', 'ERR-' + bizCode, 'error');
+                            if(bizCode === 20000){
+                                return;
                             } else if(bizCode === 40000){
-                                $.messager.alert('Error', 'ERR-' + bizCode, 'warning');
+                                var m1 = obj.message || '未授权，请登录';
+                                app.messager.show({title:'Error', msg:m1});
+                                window.top.location.href = '/login.html';
+                            } else {
+                                var m2 = obj.message || '操作失败';
+                                app.messager.show({title:'Error', msg:m2});
                             }
-                        } else if(retCode === 'fail'){
-                            $.messager.alert('Error', 'BIZ-FAIL', 'error');
+                        } else if(typeof retCode !== 'undefined'){
+                            if(retCode !== 'success'){
+                                var m3 = obj.returnMessage || '操作失败';
+                                app.messager.show({title:'Error', msg:m3});
+                            }
                         }
                     }
                 }catch(e){}
@@ -95,7 +102,6 @@ $(function(){
             if((ct && ct.indexOf('text/html') >= 0) && (rt.indexOf('id=\"login-form\"') >= 0)){
                 window.top.location.href = '/login.html';
             }
-            // 在 ajaxSuccess 已经处理业务错误，这里不再重复弹出内容
         }catch(e){}
     });
     $(document).ajaxError(function(event, xhr){
@@ -106,21 +112,23 @@ $(function(){
                 window.top.location.href = '/login.html';
                 return;
             }
-            // 只展示错误代码
             var msg = 'HTTP-' + st;
             try{
                 var ct = xhr.getResponseHeader ? xhr.getResponseHeader('Content-Type') : '';
                 if(ct && ct.indexOf('application/json') >= 0){
                     var obj = JSON.parse(rt || '{}');
                     if(obj){
-                        if(typeof obj.code !== 'undefined'){ msg = 'ERR-' + obj.code; }
-                        else if(obj.returnCode === 'fail'){ msg = 'BIZ-FAIL'; }
+                        if(typeof obj.code !== 'undefined'){
+                            msg = obj.message || ('ERR-' + obj.code);
+                        } else if(obj.returnCode === 'fail'){
+                            msg = obj.returnMessage || '操作失败';
+                        }
                     }
                 } else {
                     if(st >= 500){ msg = 'HTTP-' + st; }
                 }
             }catch(e){}
-            $.messager.alert('Error', msg, 'error');
+            app.messager.show({title:'Error', msg: msg});
         }catch(e){}
     });
 });

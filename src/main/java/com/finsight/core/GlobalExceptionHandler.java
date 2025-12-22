@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.util.Locale;
 import java.util.Objects;
 
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.http.HttpStatus;
+
 @org.springframework.web.bind.annotation.RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -25,6 +28,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = Exception.class)
+    @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity catchExceptionHandler(Exception exception) {
         log.error(exception.getMessage(), exception);
 
@@ -55,6 +59,22 @@ public class GlobalExceptionHandler {
                     }
                 }
             }
+        }
+        
+        if (tempEx instanceof TypeMismatchException) {
+            TypeMismatchException ex = (TypeMismatchException) tempEx;
+            String propertyName = ex.getPropertyName();
+            Class<?> requiredType = ex.getRequiredType();
+            String typeName = requiredType != null ? requiredType.getSimpleName() : "unknown";
+            
+            if ("Date".equalsIgnoreCase(typeName)) {
+                message = String.format("日期格式错误: 参数 [%s] 必须是有效的日期格式", propertyName);
+            } else if ("Integer".equalsIgnoreCase(typeName) || "Long".equalsIgnoreCase(typeName) || "Double".equalsIgnoreCase(typeName)) {
+                message = String.format("数字格式错误: 参数 [%s] 必须是有效的数字", propertyName);
+            } else {
+                message = String.format("参数格式错误: 参数 [%s] 类型应为 %s", propertyName, typeName);
+            }
+            return ResponseEntity.error(message);
         }
 
         if (exception instanceof DataIntegrityViolationException){

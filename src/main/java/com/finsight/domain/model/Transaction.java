@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 
@@ -27,6 +28,7 @@ public class Transaction extends BaseEntity {
     private String bankCardName;
     private Date transactionDate;
 
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     @TableField(value = "bookkeeping_date")
     private Date bookKeepingDate;
 

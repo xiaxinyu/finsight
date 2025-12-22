@@ -18,6 +18,10 @@
         .rules-toolbar .l-btn .l-btn-text { padding:0 8px; white-space:nowrap; }
         .rules-toolbar .numberbox { height:26px; }
         .rules-toolbar .numberbox .textbox-text { height:26px; line-height:26px; font-size:12px; }
+        /* Fix: keep selected row text readable under bootstrap theme */
+        .datagrid-row-selected { background-color:#e6f2ff !important; }
+        .datagrid-row-selected .datagrid-cell { color:#333 !important; }
+        .datagrid-row-over .datagrid-cell { color:#333 !important; }
     </style>
 </head>
 <body class="easyui-layout">

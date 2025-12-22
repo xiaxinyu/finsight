@@ -13,17 +13,17 @@ public class ResponseEntity<T> {
     /**
      * 响应成功业务编码
      */
-    public static final Integer SUCCESS_CODE = 20000;
+    public static final Integer SUCCESS_CODE = 200;
 
     /**
      * 响应失败业务编码
      */
-    public static final Integer ERROR_CODE = 30000;
+    public static final Integer ERROR_CODE = 500;
 
     /**
      * 无权限编码
      */
-    public static final Integer NO_AUTHORIZATION_CODE = 40000;
+    public static final Integer NO_AUTHORIZATION_CODE = 401;
 
     private T data;
 

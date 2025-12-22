@@ -10,17 +10,17 @@ public class Constants {
     /**
      * 处理成功
      */
-    public static final Integer SUCCESS = 20000;
+    public static final Integer SUCCESS = 200;
 
     /**
      * 处理失败
      */
-    public static final Integer FAILURE = 30000;
+    public static final Integer FAILURE = 500;
 
     /**
      * 无权限
      */
-    public static final Integer UNAUTHORIZED = 40000;
+    public static final Integer UNAUTHORIZED = 401;
 
     /**
      * 字符串分隔符
