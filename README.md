@@ -1,5 +1,7 @@
 # FinSight — Personal Finance Intelligence Engine
 
+Language: English | [中文](README.zh-CN.md)
+
 > **Understand your money. Understand yourself.**
 
 FinSight transforms raw bank transaction data into deep personal insights.
