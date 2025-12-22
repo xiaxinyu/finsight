@@ -139,7 +139,11 @@ public class StatementController {
                     t.setBankCardName(bankCardName);
                 }
                 // Classification
-                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode);
+                Double amount = t.getBalanceMoney();
+                if(amount != null){ amount = Math.abs(amount); }
+                java.util.Date txnDate = t.getTransactionDate();
+                if(txnDate == null){ txnDate = t.getBookKeepingDate(); }
+                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode, amount, txnDate);
                 if (r != null) {
                     t.setConsumeCode(r.id);
                     t.setConsumeName(r.name);
@@ -220,7 +224,11 @@ public class StatementController {
                     t.setBankCardId(bankCardId);
                     t.setBankCardName(bankCardName);
                 }
-                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode);
+                Double amount = t.getBalanceMoney();
+                if(amount != null){ amount = Math.abs(amount); }
+                java.util.Date txnDate = t.getTransactionDate();
+                if(txnDate == null){ txnDate = t.getBookKeepingDate(); }
+                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode, amount, txnDate);
                 if (r != null) {
                     t.setConsumeCode(r.id);
                     t.setConsumeName(r.name);
@@ -281,7 +289,11 @@ public class StatementController {
                     t.setBankCardId(bankCardId);
                     t.setBankCardName(bankCardName);
                 }
-                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), payload.bankCode, payload.cardTypeCode);
+                Double amount = t.getBalanceMoney();
+                if(amount != null){ amount = Math.abs(amount); }
+                java.util.Date txnDate = t.getTransactionDate();
+                if(txnDate == null){ txnDate = t.getBookKeepingDate(); }
+                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), payload.bankCode, payload.cardTypeCode, amount, txnDate);
                 if (r != null) {
                     t.setConsumeCode(r.id);
                     t.setConsumeName(r.name);

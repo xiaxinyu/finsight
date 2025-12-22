@@ -222,7 +222,26 @@ public class TransactionController {
             if(org.apache.commons.lang3.StringUtils.isNotBlank(cardTypeCode)){
                 cardTypeCode = cardTypeCode.trim().toLowerCase();
             }
-            java.util.List<com.finsight.application.consume.ClassificationService.Result> rs = classificationService.classifyTopN(narration, bankCode, cardTypeCode, 5);
+            Double amount = transaction.getBalanceMoney();
+            if(amount != null){ amount = Math.abs(amount); }
+            java.util.Date txnDate = transaction.getTransactionDate();
+            if(txnDate == null){ txnDate = transaction.getBookKeepingDate(); }
+            if(txnDate == null){
+                String dt = org.apache.commons.lang3.StringUtils.trimToEmpty(transaction.getTransactionDateTime());
+                if(org.apache.commons.lang3.StringUtils.isNotBlank(dt)){
+                    try{
+                        java.text.ParsePosition pos = new java.text.ParsePosition(0);
+                        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        java.util.Date d = f.parse(dt, pos);
+                        if(d == null){
+                            f = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                            d = f.parse(dt, new java.text.ParsePosition(0));
+                        }
+                        txnDate = d;
+                    }catch(Exception ignore){}
+                }
+            }
+            java.util.List<com.finsight.application.consume.ClassificationService.Result> rs = classificationService.classifyTopN(narration, bankCode, cardTypeCode, amount, txnDate, 5);
             if(rs == null || rs.isEmpty()){
                 return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "no_match");
             }

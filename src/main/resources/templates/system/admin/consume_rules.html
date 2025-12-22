@@ -26,10 +26,16 @@
     <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveRule()">Save</a>
     <a class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="deleteRule()">Delete</a>
     <a class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="reloadCache()">Reload Cache</a>
+    <span style="margin-left:8px;"></span>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="batchEnable()">批量启用</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-cancel'" onclick="batchDisable()">批量禁用</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-copy'" onclick="batchCopy()">复制选中</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="batchDelete()">删除选中</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="openRegexTester()">正则测试</a>
     <span id="hint" style="margin-left:12px;color:#888;">Select a category on the left</span>
 </div>
 
-<div data-options="region:'west'" style="width: 320px; border-right: 1px solid #ddd; padding:6px;">
+<div data-options="region:'west'" style="width: 220px; border-right: 1px solid #ddd; padding:6px;">
     <ul id="tree" class="easyui-tree" data-options="url:'/api/v1/consume/tree',method:'get'"></ul>
     <div style="margin-top:6px;color:#888;">No delete actions for the tree here</div>
     <div style="margin-top:6px;">
@@ -57,22 +63,84 @@
             <a class="easyui-linkbutton" data-options="iconCls:'icon-edit'" onclick="applyToSelected()">Apply to Selected</a>
         </div>
     </div>
-    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14">
+    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14,checkOnSelect:true,selectOnCheck:true,striped:true">
         <thead>
         <tr>
+            <th data-options="field:'ck',checkbox:true"></th>
             <th data-options="field:'id',width:160,hidden:true">ID</th>
-            <th data-options="field:'categoryId',width:220,formatter:fmt.categoryCode">Category Code</th>
-            <th data-options="field:'tags',width:200,formatter:fmt.tags,editor:{type:'tagbox',options:{hasDownArrow:true}}">Tags</th>
-            <th data-options="field:'pattern',width:260,editor:{type:'textbox'}">Pattern</th>
+            <th data-options="field:'pattern',width:260,formatter:fmt.pattern,editor:{type:'textbox'}">Pattern</th>
             <th data-options="field:'patternType',width:120,editor:{type:'combobox',options:{data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}],valueField:'id',textField:'text'}}">Type</th>
-            <th data-options="field:'priority',width:80,editor:{type:'numberbox'}">Weight</th>
-            <th data-options="field:'active',width:80,editor:{type:'checkbox',options:{on:1,off:0}}">Active</th>
+            <th data-options="field:'tags',width:200,formatter:fmt.tags,editor:{type:'tagbox',options:{hasDownArrow:true}}">Tags</th>
+            <th data-options="field:'priority',width:120,formatter:fmt.weight,editor:{type:'numberbox'}">Weight</th>
+            <th data-options="field:'active',width:80,formatter:fmt.active,editor:{type:'checkbox',options:{on:1,off:0}}">Active</th>
             <th data-options="field:'bankCode',width:100,hidden:true,editor:{type:'textbox'}">Bank</th>
             <th data-options="field:'cardTypeCode',width:120,hidden:true,editor:{type:'textbox'}">Card Type</th>
             <th data-options="field:'remark',width:220,editor:{type:'textbox'}">Remark</th>
         </tr>
         </thead>
     </table>
+</div>
+
+<div data-options="region:'east'" style="width: 360px; border-left: 1px solid #ddd;">
+    <div style="padding:10px;">
+        <div style="margin-bottom:8px;font-weight:600;">Rule Detail</div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Category</label>
+            <input id="detail_category" class="easyui-textbox" style="width:230px" readonly>
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Pattern</label>
+            <input id="detail_pattern" class="easyui-textbox" style="width:230px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Type</label>
+            <input id="detail_type" class="easyui-combobox" style="width:130px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Weight</label>
+            <input id="detail_weight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:130px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Active</label>
+            <input id="detail_active" class="easyui-switchbutton" data-options="onText:'ON',offText:'OFF'">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Bank</label>
+            <input id="detail_bank" class="easyui-textbox" style="width:230px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Card Type</label>
+            <input id="detail_card" class="easyui-textbox" style="width:230px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Min Amount</label>
+            <input id="detail_min" class="easyui-numberbox" data-options="precision:2,min:0" style="width:130px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Max Amount</label>
+            <input id="detail_max" class="easyui-numberbox" data-options="precision:2,min:0" style="width:130px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Start Date</label>
+            <input id="detail_start" class="easyui-datebox" style="width:130px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">End Date</label>
+            <input id="detail_end" class="easyui-datebox" style="width:130px">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="display:inline-block;width:90px;">Remark</label>
+            <input id="detail_remark" class="easyui-textbox" style="width:230px">
+        </div>
+        <div style="margin-top:10px;">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveDetail()">Save Detail</a>
+        </div>
+        <div style="margin-top:12px;font-weight:600;">Recommendations</div>
+        <div id="detail_recs" style="margin-top:6px;max-height:140px;overflow:auto;border:1px solid #eee;padding:6px;"></div>
+        <div style="margin-top:8px;">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="loadRecommendations()">Refresh</a>
+        </div>
+    </div>
 </div>
 
 <script type="text/javascript">
@@ -87,8 +155,31 @@ var fmt = {
     tags: function(value){
         if (!value || value.length == 0) return '';
         return value.join(', ');
+    },
+    pattern: function(v,r){
+        var t = (r.patternType||'contains').toLowerCase();
+        var txt = $.trim(v||'');
+        if(!txt) return '';
+        if(t==='regex'){ return '<span style="font-weight:600;color:#0052d4;">'+escapeHtml(txt)+'</span>'; }
+        if(t==='equals'){ return '<span style="font-weight:600;color:#333;">'+escapeHtml(txt)+'</span>'; }
+        return '<span>'+escapeHtml(txt)+'</span>';
+    },
+    weight: function(v){
+        var w = parseInt(v||0);
+        var stars = Math.max(0, Math.min(5, Math.round(w/20)));
+        var on = '★', off = '☆'; var s=''; for(var i=0;i<stars;i++){ s+=on; } for(var j=stars;j<5;j++){ s+=off; }
+        var color = w>=90?'#0066ff':(w>=80?'#ff9800':'#999');
+        return '<span style="color:'+color+';font-size:14px;letter-spacing:1px;">'+s+'</span> <span style="color:#888;">('+w+')</span>';
+    },
+    active: function(v){
+        var on = parseInt(v||0)===1;
+        return on ? '<span style="color:#10b981;">🟢</span>' : '<span style="color:#ef4444;">🔴</span>';
     }
 };
+
+function escapeHtml(str){
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/\'/g,'&#39;');
+}
 
 $(function(){
     $(tree).tree({
@@ -106,13 +197,26 @@ $(function(){
         queryParams:{categoryId:''},
         loadFilter:pagerFilter,
         pageSize:50,
-        pageList:[20,50,100,200]
+        pageList:[20,50,100,200],
+        rowStyler:function(index,row){
+            var w = parseInt(row.priority||0);
+            var a = parseInt(row.active||0);
+            if(a!==1) return 'color:#999;text-decoration:line-through;background:#f9f9f9;';
+            if(w>=90) return 'background:#f0f7ff;';
+            if(w>=80) return 'background:#fff7e6;';
+            return '';
+        },
+        onClickRow:function(index,row){ renderDetail(row); }
     });
     $('#keywords').tagbox({onRemoveTag:onRemoveTag});
     $.get('/api/v1/consume/categories', function(res){
         var rows = (res && res.rows) ? res.rows : [];
         for(var i=0;i<rows.length;i++){ categoryMap[rows[i].id] = rows[i].code; }
     });
+    try{
+        $('#detail_type').combobox({editable:false,valueField:'id',textField:'text',data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}]});
+        $('#detail_active').switchbutton();
+    }catch(e){}
 });
 
 function loadRules(){
@@ -123,6 +227,7 @@ function loadRules(){
     var tagVal = $('#filterTag').textbox('getValue');
     $(dg).datagrid('load', {categoryId:selectedCategoryId, tag:tagVal});
     loadKeywords();
+    loadRecommendations();
 }
 
 function endEditing(){
@@ -151,9 +256,22 @@ function saveRule(){
     var row = $(dg).datagrid('getSelected');
     if (!row) return;
     row.categoryId = selectedCategoryId || row.categoryId;
+    var dup = hasConflict(row);
+    if(dup){
+        $.messager.confirm('冲突警告','检测到可能的规则重复或冲突，仍然保存？',function(ok){
+            if(!ok) return;
+            doSaveRow(row);
+        });
+        return;
+    }
+    doSaveRow(row);
+}
+
+function doSaveRow(row){
+    var merged = $.extend({}, row, readDetail());
     var method = row.id ? 'PUT' : 'POST';
     var url = '/api/v1/consume/rules' + (row.id ? '/' + row.id : '');
-    $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(row)}).done(function(){
+    $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(merged)}).done(function(){
         loadRules();
     });
 }
@@ -237,6 +355,7 @@ function saveKeywords(){
         var ruleTags = [];
         if(newTag && newTag.trim().length > 0) ruleTags.push(newTag.trim());
         var row = {categoryId:selectedCategoryId,pattern:toAdd[k],patternType:'contains',priority:weight,active:1,tags:ruleTags};
+        if(hasConflict(row)){ continue; }
         $.ajax({url:'/api/v1/consume/rules',type:'POST',contentType:'application/json',data:JSON.stringify(row)});
     }
     setTimeout(function(){ loadRules(); }, 200);
@@ -253,13 +372,11 @@ function applyToSelected(){
     for(var i=0; i<rows.length; i++){
         var row = rows[i];
         var tags = row.tags || [];
-        // Avoid duplicate
         var exists = false;
         for(var t=0; t<tags.length; t++){ if(tags[t] == newTag) { exists = true; break; } }
         if(!exists){
             tags.push(newTag);
             row.tags = tags;
-            // Update
             $.ajax({url:'/api/v1/consume/rules/'+row.id, type:'PUT', contentType:'application/json', data:JSON.stringify(row)})
              .always(function(){
                  completed++;
@@ -283,6 +400,161 @@ function onRemoveTag(value){
         if(!r) return;
         $.ajax({url:'/api/v1/consume/rules/'+id,type:'DELETE'}).done(function(){ loadRules(); });
     });
+}
+
+function hasConflict(row){
+    var list = $(dg).datagrid('getRows')||[];
+    var pat = $.trim(row.pattern||'');
+    var type = $.trim(row.patternType||'contains').toLowerCase();
+    var cat = $.trim(row.categoryId||'');
+    if(!pat || !cat) return false;
+    for(var i=0;i<list.length;i++){
+        var r = list[i]||{};
+        var sameCat = $.trim(r.categoryId||'')===cat;
+        var sameType = $.trim((r.patternType||'contains')).toLowerCase()===type;
+        var samePat = $.trim(r.pattern||'')===pat;
+        var sameId = $.trim(r.id||'')===$.trim(row.id||'');
+        if(!sameId && sameCat && sameType && samePat && parseInt(r.active||0)===1) return true;
+        if(!sameId && sameCat && type==='contains' && ($.trim(r.patternType||'').toLowerCase()==='equals') && $.trim(r.pattern||'')===pat) return true;
+    }
+    return false;
+}
+
+function getSelections(){ return $(dg).datagrid('getSelections')||[]; }
+
+function batchEnable(){
+    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=1; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
+}
+function batchDisable(){
+    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=0; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
+}
+function batchCopy(){
+    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; var cp=$.extend({},r); delete cp.id; cp.priority=parseInt(r.priority||0); $.ajax({url:'/api/v1/consume/rules',type:'POST',contentType:'application/json',data:JSON.stringify(cp)}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
+}
+function batchDelete(){
+    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    $.messager.confirm('Confirm','确认删除选中的规则？',function(ok){
+        if(!ok) return;
+        var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'DELETE'}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
+    });
+}
+
+function openRegexTester(){
+    var row = $(dg).datagrid('getSelected')||{};
+    var pat = $.trim(row.pattern||'');
+    var type = $.trim(row.patternType||'contains').toLowerCase();
+    var html = '<div id="regexTesterDlg" style="padding:12px;width:460px;">'+
+        '<div style="margin-bottom:10px;"><label style="display:inline-block;width:120px;">Pattern</label><input id="rt_pattern" class="easyui-textbox" style="width:300px;" value="'+escapeHtml(pat)+'"></div>'+
+        '<div style="margin-bottom:10px;"><label style="display:inline-block;width:120px;">Type</label><input id="rt_type" class="easyui-combobox" style="width:160px;"></div>'+
+        '<div style="margin-bottom:10px;"><label style="display:inline-block;width:120px;">Test Text</label><input id="rt_text" class="easyui-textbox" style="width:300px;"></div>'+
+        '<div><a class="easyui-linkbutton" onclick="rt_run()">Test</a> <span id="rt_result" style="margin-left:12px;color:#333;"></span></div>'+
+        '</div>';
+    var dlg = $(html).appendTo('body');
+    try{
+        $('#rt_type').combobox({editable:false,valueField:'id',textField:'text',data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}], onLoadSuccess:function(){ try{$('#rt_type').combobox('setValue', type);}catch(e){} }});
+    }catch(e){}
+    $(dlg).dialog({title:'正则测试', modal:true, width:520, height:220, onClose:function(){ try{$(dlg).dialog('destroy'); $(dlg).remove();}catch(e){} }});
+}
+function rt_run(){
+    var pat = $.trim($('#rt_pattern').textbox('getValue')||'');
+    var type = $.trim($('#rt_type').combobox('getValue')||'contains').toLowerCase();
+    var text = $.trim($('#rt_text').textbox('getValue')||'');
+    var ok = false;
+    if(type==='equals'){ ok = text===pat; }
+    else if(type==='regex'){ try{ ok = new RegExp(pat).test(text); }catch(e){ ok=false; } }
+    else { ok = text.indexOf(pat)>=0; }
+    $('#rt_result').text(ok ? '✅ Match' : '❌ Not match');
+}
+
+function fmtDateValue(d){
+    if(!d) return '';
+    if(d instanceof Date){
+        var y=d.getFullYear(); var m=('0'+(d.getMonth()+1)).slice(-2); var day=('0'+d.getDate()).slice(-2);
+        return y+'-'+m+'-'+day;
+    }
+    var s = String(d);
+    var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m){ return m[1]+'-'+m[2]+'-'+m[3]; }
+    return '';
+}
+function renderDetail(row){
+    $('#detail_category').textbox('setValue', categoryMap[row.categoryId] || row.categoryId || '');
+    $('#detail_pattern').textbox('setValue', row.pattern || '');
+    $('#detail_type').combobox('setValue', (row.patternType||'contains'));
+    $('#detail_weight').numberbox('setValue', parseInt(row.priority||0));
+    try{ $('#detail_active').switchbutton(row.active===1?'check':'uncheck'); }catch(e){}
+    $('#detail_bank').textbox('setValue', row.bankCode || '');
+    $('#detail_card').textbox('setValue', row.cardTypeCode || '');
+    $('#detail_min').numberbox('setValue', row.minAmount || null);
+    $('#detail_max').numberbox('setValue', row.maxAmount || null);
+    try{ $('#detail_start').datebox('setValue', fmtDateValue(row.startDate)); }catch(e){ $('#detail_start').datebox('setValue',''); }
+    try{ $('#detail_end').datebox('setValue', fmtDateValue(row.endDate)); }catch(e){ $('#detail_end').datebox('setValue',''); }
+    $('#detail_remark').textbox('setValue', row.remark || '');
+}
+function readDetail(){
+    var activeOn = false;
+    try{ activeOn = $('#detail_active').switchbutton('options').checked; }catch(e){}
+    return {
+        categoryId: selectedCategoryId,
+        pattern: $('#detail_pattern').textbox('getValue'),
+        patternType: $('#detail_type').combobox('getValue'),
+        priority: parseInt($('#detail_weight').numberbox('getValue')||'0'),
+        active: activeOn?1:0,
+        bankCode: $('#detail_bank').textbox('getValue'),
+        cardTypeCode: $('#detail_card').textbox('getValue'),
+        minAmount: (function(){ var v=$('#detail_min').numberbox('getValue'); return v?Number(v):null; })(),
+        maxAmount: (function(){ var v=$('#detail_max').numberbox('getValue'); return v?Number(v):null; })(),
+        startDate: (function(){ return $('#detail_start').datebox('getValue'); })(),
+        endDate: (function(){ return $('#detail_end').datebox('getValue'); })(),
+        remark: $('#detail_remark').textbox('getValue')
+    };
+}
+function saveDetail(){
+    var row = $(dg).datagrid('getSelected');
+    if(!row) return;
+    var payload = $.extend({}, row, readDetail());
+    var method = row.id ? 'PUT' : 'POST';
+    var url = '/api/v1/consume/rules' + (row.id ? '/' + row.id : '');
+    $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(payload)}).done(function(){
+        loadRules();
+    });
+}
+function loadRecommendations(){
+    if(!selectedCategoryId){ $('#detail_recs').html(''); return; }
+    var $box = $('#detail_recs');
+    $box.html('<span style="color:#999;">Loading...</span>');
+    $.get('/api/v1/consume/rules/recommend', {categoryId:selectedCategoryId}, function(arr){
+        var list = $.isArray(arr)?arr:[];
+        if(!list.length){
+            $.get('/api/v1/consume/rules/suggest', {categoryId:selectedCategoryId}, function(arr2){
+                renderRecs($.isArray(arr2)?arr2:[]);
+            });
+            return;
+        }
+        renderRecs(list);
+    }).fail(function(){
+        $.get('/api/v1/consume/rules/suggest', {categoryId:selectedCategoryId}, function(arr2){
+            renderRecs($.isArray(arr2)?arr2:[]);
+        });
+    });
+}
+function renderRecs(list){
+    var html = '';
+    for(var i=0;i<Math.min(20, list.length);i++){
+        var t = list[i]||'';
+        html += '<div style="padding:6px 8px;border:1px solid #eee;border-radius:4px;margin-bottom:6px;cursor:pointer;" onclick="applyRec(\''+String(t).replace(/'/g,'&#39;')+'\')">'+String(t)+'</div>';
+    }
+    if(!html) html = '<div style="color:#999;">No recommendations</div>';
+    $('#detail_recs').html(html);
+}
+function applyRec(t){
+    var v = $('#detail_pattern').textbox('getValue');
+    if(!v){ $('#detail_pattern').textbox('setValue', t); return; }
+    var merged = v + '|' + t;
+    $('#detail_pattern').textbox('setValue', merged);
 }
 </script>
 </body>

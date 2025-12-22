@@ -77,6 +77,10 @@ public class DecisionTreeClassifier {
             e.pattern = pat;
             e.bankCode = s(r.getBankCode());
             e.cardTypeCode = s(r.getCardTypeCode());
+            e.minAmount = r.getMinAmount() == null ? null : r.getMinAmount();
+            e.maxAmount = r.getMaxAmount() == null ? null : r.getMaxAmount();
+            e.startDate = r.getStartDate();
+            e.endDate = r.getEndDate();
             if (!StringUtils.hasText(pat)) continue;
             if ("equals".equals(type)){
                 equalsIndex.computeIfAbsent(pat, k -> new ArrayList<>()).add(e);
@@ -93,7 +97,7 @@ public class DecisionTreeClassifier {
         }
     }
 
-    public Result classify(String narration, String bankCode, String cardTypeCode){
+    public Result classify(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate){
         if (rules == null) reload();
         String text = normalize(narration);
         if (!StringUtils.hasText(text)) return null;
@@ -103,20 +107,20 @@ public class DecisionTreeClassifier {
         RuleEntry bestEq = null;
         List<RuleEntry> eqs = equalsIndex.get(text);
         if (eqs != null && !eqs.isEmpty()){
-            for(RuleEntry e : eqs){ if(matchBankCard(e,b,c)){ if(bestEq==null || scoreFor(e)>scoreFor(bestEq)) bestEq=e; } }
+            for(RuleEntry e : eqs){ if(matchContext(e,b,c,amount,txnDate)){ if(bestEq==null || scoreFor(e)>scoreFor(bestEq)) bestEq=e; } }
             if (bestEq != null) return toResult(bestEq);
         }
 
         RuleEntry bestRegex = null;
         for (RuleEntry e : regexEntries){
-            if (!matchBankCard(e,b,c)) continue;
+            if (!matchContext(e,b,c,amount,txnDate)) continue;
             try{ if(e.compiled.matcher(text).find()){ if(bestRegex==null || scoreFor(e)>scoreFor(bestRegex)) bestRegex=e; } }catch(Exception ignore){}
         }
         if (bestRegex != null) return toResult(bestRegex);
 
         RuleEntry bestContains = null;
         for (RuleEntry e : containsPhrases){
-            if (!matchBankCard(e,b,c)) continue;
+            if (!matchContext(e,b,c,amount,txnDate)) continue;
             try{
                 String p = normalize(e.pattern);
                 if(StringUtils.hasText(p) && text.contains(p)){
@@ -137,7 +141,7 @@ public class DecisionTreeClassifier {
             if(tokenSet.contains(token) && !isStopword(token)){
                 seen.add(token);
                 for(RuleEntry e : en.getValue()){
-                    if(!matchBankCard(e,b,c)) continue;
+                    if(!matchContext(e,b,c,amount,txnDate)) continue;
                     int s = scores.getOrDefault(e.categoryId, 0);
                     scores.put(e.categoryId, s + scoreForContains(e));
                     hits.put(e.categoryId, hits.getOrDefault(e.categoryId, 0) + 1);
@@ -173,9 +177,23 @@ public class DecisionTreeClassifier {
         return r;
     }
 
-    private boolean matchBankCard(RuleEntry e, String b, String c){
+    private boolean matchContext(RuleEntry e, String b, String c, Double amount, java.util.Date txnDate){
         if (StringUtils.hasText(b) && StringUtils.hasText(e.bankCode) && !e.bankCode.equalsIgnoreCase(b)) return false;
         if (StringUtils.hasText(c) && StringUtils.hasText(e.cardTypeCode) && !e.cardTypeCode.equalsIgnoreCase(c)) return false;
+        if (amount != null){
+            Double min = e.minAmount;
+            Double max = e.maxAmount;
+            double a = amount.doubleValue();
+            if (min != null && a < min.doubleValue()) return false;
+            if (max != null && a > max.doubleValue()) return false;
+        }
+        if (txnDate != null){
+            java.util.Date s = e.startDate;
+            java.util.Date eDate = e.endDate;
+            long ts = txnDate.getTime();
+            if (s != null && ts < s.getTime()) return false;
+            if (eDate != null && ts > eDate.getTime()) return false;
+        }
         return true;
     }
 
@@ -382,9 +400,13 @@ public class DecisionTreeClassifier {
         String bankCode;
         String cardTypeCode;
         Pattern compiled;
+        Double minAmount;
+        Double maxAmount;
+        java.util.Date startDate;
+        java.util.Date endDate;
     }
 
-    public List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, int topN){
+    public List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate, int topN){
         if (rules == null) reload();
         String text = normalize(narration);
         if (!StringUtils.hasText(text)) return java.util.Collections.emptyList();
@@ -400,7 +422,7 @@ public class DecisionTreeClassifier {
         List<RuleEntry> eqs = equalsIndex.get(text);
         if (eqs != null && !eqs.isEmpty()){
             for(RuleEntry e : eqs){
-                if(!matchBankCard(e,b,c)) continue;
+                if(!matchContext(e,b,c,amount,txnDate)) continue;
                 int sc = scoreFor(e);
                 int ps = aggScore.getOrDefault(e.categoryId, 0);
                 int pp = aggPriority.getOrDefault(e.categoryId, Integer.MIN_VALUE);
@@ -411,7 +433,7 @@ public class DecisionTreeClassifier {
         }
 
         for (RuleEntry e : regexEntries){
-            if (!matchBankCard(e,b,c)) continue;
+            if (!matchContext(e,b,c,amount,txnDate)) continue;
             try{
                 if(e.compiled.matcher(text).find()){
                     int sc = scoreFor(e);
@@ -425,7 +447,7 @@ public class DecisionTreeClassifier {
         }
 
         for (RuleEntry e : containsPhrases){
-            if (!matchBankCard(e,b,c)) continue;
+            if (!matchContext(e,b,c,amount,txnDate)) continue;
             try{
                 String p = normalize(e.pattern);
                 if(StringUtils.hasText(p) && text.contains(p)){
@@ -447,7 +469,7 @@ public class DecisionTreeClassifier {
             if(tokenSet.contains(token) && !isStopword(token)){
                 seen.add(token);
                 for(RuleEntry e : en.getValue()){
-                    if(!matchBankCard(e,b,c)) continue;
+                    if(!matchContext(e,b,c,amount,txnDate)) continue;
                     int s = aggScore.getOrDefault(e.categoryId, 0);
                     aggScore.put(e.categoryId, s + scoreForContains(e));
                     int pp = aggPriority.getOrDefault(e.categoryId, Integer.MIN_VALUE);

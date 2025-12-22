@@ -36,9 +36,9 @@ public class ClassificationService {
         decisionTreeClassifier.reload();
     }
 
-    public Result classify(String narration, String bankCode, String cardTypeCode){
+    public Result classify(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate){
         if (rules == null) reload();
-        DecisionTreeClassifier.Result r = decisionTreeClassifier.classify(narration, bankCode, cardTypeCode);
+        DecisionTreeClassifier.Result r = decisionTreeClassifier.classify(narration, bankCode, cardTypeCode, amount, txnDate);
         if (r == null) return null;
         Result res = new Result();
         res.id = r.id;
@@ -46,9 +46,9 @@ public class ClassificationService {
         return res;
     }
 
-    public java.util.List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, int topN){
+    public java.util.List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate, int topN){
         if (rules == null) reload();
-        java.util.List<DecisionTreeClassifier.Result> list = decisionTreeClassifier.classifyTopN(narration, bankCode, cardTypeCode, topN);
+        java.util.List<DecisionTreeClassifier.Result> list = decisionTreeClassifier.classifyTopN(narration, bankCode, cardTypeCode, amount, txnDate, topN);
         java.util.List<Result> out = new java.util.ArrayList<>();
         if(list == null) list = java.util.Collections.emptyList();
         for(DecisionTreeClassifier.Result r : list){

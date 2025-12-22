@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
+import java.util.Date;
 
 @TableName("consume_rule")
 @Getter
@@ -28,6 +29,15 @@ public class ConsumeRule extends BaseEntity {
     
     @TableField(exist = false)
     private List<String> tags;
+    
+    @TableField(value = "minAmount")
+    private Double minAmount;
+    @TableField(value = "maxAmount")
+    private Double maxAmount;
+    @TableField(value = "startDate")
+    private Date startDate;
+    @TableField(value = "endDate")
+    private Date endDate;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -49,4 +59,12 @@ public class ConsumeRule extends BaseEntity {
     public void setRemark(String remark) { this.remark = remark; }
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }
+    public Double getMinAmount() { return minAmount; }
+    public void setMinAmount(Double minAmount) { this.minAmount = minAmount; }
+    public Double getMaxAmount() { return maxAmount; }
+    public void setMaxAmount(Double maxAmount) { this.maxAmount = maxAmount; }
+    public Date getStartDate() { return startDate; }
+    public void setStartDate(Date startDate) { this.startDate = startDate; }
+    public Date getEndDate() { return endDate; }
+    public void setEndDate(Date endDate) { this.endDate = endDate; }
 }

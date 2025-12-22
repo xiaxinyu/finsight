@@ -276,7 +276,7 @@ function autoClassify(){
     if(row){
         var idx = $(datagrid).datagrid('getRowIndex', row);
         try{ $(datagrid).datagrid('selectRow', idx); }catch(e){}
-        var params = { transactionDesc: row.transactionDesc, cardTypeName: row.cardTypeName };
+        var params = { transactionDesc: row.transactionDesc, cardTypeName: row.cardTypeName, balanceMoney: row.balanceMoney, bookKeepingDate: row.bookKeepingDate };
         transaction.classify(params, function(res){
             if(res && res.returnCode === 'success'){
                 var arr = [];
@@ -396,7 +396,7 @@ function autoClassify(){
             if(stop) return;
             if(idx >= total){ $(datagrid).datagrid('reload'); return; }
             var it = targets[idx++]; $('#'+dlgId+'_pending').text(total - idx);
-            var params = { transactionDesc: it.transactionDesc, cardTypeName: it.cardTypeName };
+            var params = { transactionDesc: it.transactionDesc, cardTypeName: it.cardTypeName, balanceMoney: it.balanceMoney, bookKeepingDate: it.bookKeepingDate };
             transaction.classify(params, function(res){
                 var arr = [];
                 try{ if(res && res.returnCode==='success'){ arr = JSON.parse(res.returnMessage||'[]'); } }catch(ex){ arr = []; }
@@ -450,7 +450,7 @@ function genKeywords(){
         }
         
         // 2. Fetch Recommendations
-        var params = { transactionDesc: row.transactionDesc, cardTypeName: row.cardTypeName };
+        var params = { transactionDesc: row.transactionDesc, cardTypeName: row.cardTypeName, balanceMoney: row.balanceMoney, bookKeepingDate: row.bookKeepingDate };
         transaction.classify(params, function(resClassify){
             var recs = [];
             try{ if(resClassify && resClassify.returnCode==='success'){ recs = JSON.parse(resClassify.returnMessage||'[]'); } }catch(ex){}
@@ -685,7 +685,7 @@ function batchSetCategory(){
             sample = currentRows[0];
         }
         if(sample){
-            var params = { transactionDesc: sample.transactionDesc, cardTypeName: sample.cardTypeName };
+            var params = { transactionDesc: sample.transactionDesc, cardTypeName: sample.cardTypeName, balanceMoney: sample.balanceMoney, bookKeepingDate: sample.bookKeepingDate };
             transaction.classify(params, function(res){
                 var arr = [];
                 try{ if(res && res.returnCode==='success'){ arr = JSON.parse(res.returnMessage||'[]'); } }catch(ex){ arr = []; }
