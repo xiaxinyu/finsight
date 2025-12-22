@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.List;
 
 @TableName("consume_rule")
 @Getter
@@ -24,6 +25,9 @@ public class ConsumeRule extends BaseEntity {
     @TableField(value = "cardTypeCode")
     private String cardTypeCode;
     private String remark;
+    
+    @TableField(exist = false)
+    private List<String> tags;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -43,4 +47,6 @@ public class ConsumeRule extends BaseEntity {
     public void setCardTypeCode(String cardTypeCode) { this.cardTypeCode = cardTypeCode; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
+    public List<String> getTags() { return tags; }
+    public void setTags(List<String> tags) { this.tags = tags; }
 }

@@ -40,20 +40,29 @@
 <div data-options="region:'center'">
     <div class="rules-toolbar">
         <div class="row">
-            <label>Keywords</label>
-            <input id="keywords" class="easyui-tagbox">
+            <label>Filter Tag</label>
+            <input id="filterTag" class="easyui-textbox" style="width:200px">
+            <a class="easyui-linkbutton" iconCls="icon-search" onclick="loadRules()">Search</a>
         </div>
         <div class="row">
+            <label>Quick Add</label>
+            <input id="keywords" class="easyui-tagbox" prompt="Enter patterns and press Enter">
+        </div>
+        <div class="row">
+            <label>New Rule Tag</label>
+            <input id="newRuleTag" class="easyui-textbox" style="width:120px">
             <label>Weight</label>
-            <input id="defaultWeight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:100px;" value="100">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveKeywords()">Apply</a>
+            <input id="defaultWeight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:80px;" value="100">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveKeywords()">Apply to New Rules</a>
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-edit'" onclick="applyToSelected()">Apply to Selected</a>
         </div>
     </div>
-    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14">
+    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14">
         <thead>
         <tr>
             <th data-options="field:'id',width:160,hidden:true">ID</th>
             <th data-options="field:'categoryId',width:220,formatter:fmt.categoryCode">Category Code</th>
+            <th data-options="field:'tags',width:200,formatter:fmt.tags,editor:{type:'tagbox',options:{hasDownArrow:true}}">Tags</th>
             <th data-options="field:'pattern',width:260,editor:{type:'textbox'}">Pattern</th>
             <th data-options="field:'patternType',width:120,editor:{type:'combobox',options:{data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}],valueField:'id',textField:'text'}}">Type</th>
             <th data-options="field:'priority',width:80,editor:{type:'numberbox'}">Weight</th>
@@ -73,7 +82,13 @@ var editIndex;
 var selectedCategoryId = '';
 var currentKeywords = [];
 var categoryMap = {};
-var fmt = { categoryCode:function(v){ return categoryMap[v] || v; } };
+var fmt = {
+    categoryCode: function(v){ return categoryMap[v] || v; },
+    tags: function(value){
+        if (!value || value.length == 0) return '';
+        return value.join(', ');
+    }
+};
 
 $(function(){
     $(tree).tree({
@@ -105,7 +120,8 @@ function loadRules(){
     var opts = grid.datagrid('options') || {};
     opts.pageNumber = 1;
     grid.datagrid('options').pageNumber = 1;
-    $(dg).datagrid('load', {categoryId:selectedCategoryId});
+    var tagVal = $('#filterTag').textbox('getValue');
+    $(dg).datagrid('load', {categoryId:selectedCategoryId, tag:tagVal});
     loadKeywords();
 }
 
@@ -121,7 +137,10 @@ function endEditing(){
 function addRule(){
     if (!selectedCategoryId) return;
     if (endEditing()){
-        $(dg).datagrid('appendRow',{categoryId:selectedCategoryId,priority:100,active:1,patternType:'contains'});
+        var newTag = $('#newRuleTag').textbox('getValue');
+        var ruleTags = [];
+        if(newTag && newTag.trim().length > 0) ruleTags.push(newTag.trim());
+        $(dg).datagrid('appendRow',{categoryId:selectedCategoryId,priority:100,active:1,patternType:'contains',tags:ruleTags});
         editIndex = $(dg).datagrid('getRows').length-1;
         $(dg).datagrid('selectRow', editIndex).datagrid('beginEdit', editIndex);
     }
@@ -190,7 +209,8 @@ function pagerFilter(data){
 }
 
 function loadKeywords(){
-    $.get('/api/v1/consume/rules', {categoryId:selectedCategoryId}, function(res){
+    var tagVal = $('#filterTag').textbox('getValue');
+    $.get('/api/v1/consume/rules', {categoryId:selectedCategoryId, tag:tagVal}, function(res){
         var list = $.isArray(res) ? res : (res && res.rows) ? res.rows : [];
         var tags = [];
         currentKeywords = [];
@@ -208,15 +228,51 @@ function loadKeywords(){
 function saveKeywords(){
     var tags = $('#keywords').tagbox('getValues');
     var weight = parseInt($('#defaultWeight').numberbox('getValue')||'0');
+    var newTag = $('#newRuleTag').textbox('getValue');
     var existing = {};
     for(var i=0;i<currentKeywords.length;i++){ existing[currentKeywords[i].pattern]=currentKeywords[i].id; }
     var toAdd = [];
     for(var j=0;j<tags.length;j++){ if(!existing[tags[j]]) toAdd.push(tags[j]); }
     for(var k=0;k<toAdd.length;k++){
-        var row = {categoryId:selectedCategoryId,pattern:toAdd[k],patternType:'contains',priority:weight,active:1};
+        var ruleTags = [];
+        if(newTag && newTag.trim().length > 0) ruleTags.push(newTag.trim());
+        var row = {categoryId:selectedCategoryId,pattern:toAdd[k],patternType:'contains',priority:weight,active:1,tags:ruleTags};
         $.ajax({url:'/api/v1/consume/rules',type:'POST',contentType:'application/json',data:JSON.stringify(row)});
     }
     setTimeout(function(){ loadRules(); }, 200);
+}
+
+function applyToSelected(){
+    var rows = $(dg).datagrid('getSelections');
+    if(rows.length == 0){ $.messager.alert('Tip','Please select rules first'); return; }
+    var newTag = $('#newRuleTag').textbox('getValue');
+    if(!newTag || newTag.trim().length == 0){ $.messager.alert('Tip','Please enter a tag'); return; }
+    newTag = newTag.trim();
+    
+    var completed = 0;
+    for(var i=0; i<rows.length; i++){
+        var row = rows[i];
+        var tags = row.tags || [];
+        // Avoid duplicate
+        var exists = false;
+        for(var t=0; t<tags.length; t++){ if(tags[t] == newTag) { exists = true; break; } }
+        if(!exists){
+            tags.push(newTag);
+            row.tags = tags;
+            // Update
+            $.ajax({url:'/api/v1/consume/rules/'+row.id, type:'PUT', contentType:'application/json', data:JSON.stringify(row)})
+             .always(function(){
+                 completed++;
+                 if(completed == rows.length){
+                     loadRules();
+                     $.messager.show({title:'OK', msg:'Tag applied to '+rows.length+' rules'});
+                 }
+             });
+        } else {
+            completed++;
+            if(completed == rows.length) loadRules();
+        }
+    }
 }
 
 function onRemoveTag(value){

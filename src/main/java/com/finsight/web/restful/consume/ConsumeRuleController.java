@@ -23,6 +23,7 @@ public class ConsumeRuleController {
 
     @GetMapping
     public List<ConsumeRule> list(@RequestParam(value = "categoryId", required = false) String categoryId,
+                                  @RequestParam(value = "tag", required = false) String tag,
                                   @RequestParam(value = "active", required = false) Integer active){
         LambdaQueryWrapper<ConsumeRule> qw = Wrappers.lambdaQuery();
         if (categoryId != null && !categoryId.trim().isEmpty()){
@@ -34,7 +35,18 @@ public class ConsumeRuleController {
             qw.eq(ConsumeRule::getActive, 1);
         }
         qw.orderByAsc(ConsumeRule::getPriority);
-        return ruleService.list(qw);
+        
+        // Filter by tag if provided
+        List<ConsumeRule> list = ruleService.list(qw);
+        ruleService.loadTags(list);
+        
+        if (tag != null && !tag.trim().isEmpty()){
+            String filterTag = tag.trim();
+            return list.stream()
+                .filter(r -> r.getTags() != null && r.getTags().contains(filterTag))
+                .collect(java.util.stream.Collectors.toList());
+        }
+        return list;
     }
 
     @PostMapping
