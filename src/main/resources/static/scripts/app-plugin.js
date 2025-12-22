@@ -57,6 +57,32 @@ var app = {
 }
 
 $(function(){
+    $(document).ajaxSuccess(function(event, xhr){
+        try{
+            var ct = xhr.getResponseHeader ? xhr.getResponseHeader('Content-Type') : '';
+            var st = xhr.status;
+            var rt = xhr.responseText || '';
+            if(st === 200 && ct && ct.indexOf('application/json') >= 0){
+                try{
+                    var obj = JSON.parse(rt);
+                    if(obj && typeof obj === 'object'){
+                        var bizCode = obj.code;
+                        var retCode = obj.returnCode;
+                        // 只展示错误代码，不展示详细信息
+                        if(typeof bizCode !== 'undefined'){
+                            if(bizCode === 30000){
+                                $.messager.alert('Error', 'ERR-' + bizCode, 'error');
+                            } else if(bizCode === 40000){
+                                $.messager.alert('Error', 'ERR-' + bizCode, 'warning');
+                            }
+                        } else if(retCode === 'fail'){
+                            $.messager.alert('Error', 'BIZ-FAIL', 'error');
+                        }
+                    }
+                }catch(e){}
+            }
+        }catch(e){}
+    });
     $(document).ajaxComplete(function(event, xhr){
         try{
             var ct = xhr.getResponseHeader ? xhr.getResponseHeader('Content-Type') : '';
@@ -66,18 +92,35 @@ $(function(){
                 window.top.location.href = '/login.html';
                 return;
             }
-            if((ct && ct.indexOf('text/html') >= 0) && (rt.indexOf('id="login-form"') >= 0)){
+            if((ct && ct.indexOf('text/html') >= 0) && (rt.indexOf('id=\"login-form\"') >= 0)){
                 window.top.location.href = '/login.html';
             }
+            // 在 ajaxSuccess 已经处理业务错误，这里不再重复弹出内容
         }catch(e){}
     });
     $(document).ajaxError(function(event, xhr){
         try{
             var st = xhr.status;
             var rt = xhr.responseText || '';
-            if(st === 401 || st === 403 || rt.indexOf('id="login-form"') >= 0){
+            if(st === 401 || st === 403 || rt.indexOf('id=\"login-form\"') >= 0){
                 window.top.location.href = '/login.html';
+                return;
             }
+            // 只展示错误代码
+            var msg = 'HTTP-' + st;
+            try{
+                var ct = xhr.getResponseHeader ? xhr.getResponseHeader('Content-Type') : '';
+                if(ct && ct.indexOf('application/json') >= 0){
+                    var obj = JSON.parse(rt || '{}');
+                    if(obj){
+                        if(typeof obj.code !== 'undefined'){ msg = 'ERR-' + obj.code; }
+                        else if(obj.returnCode === 'fail'){ msg = 'BIZ-FAIL'; }
+                    }
+                } else {
+                    if(st >= 500){ msg = 'HTTP-' + st; }
+                }
+            }catch(e){}
+            $.messager.alert('Error', msg, 'error');
         }catch(e){}
     });
 });

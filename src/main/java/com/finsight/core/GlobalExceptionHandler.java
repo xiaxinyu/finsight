@@ -30,6 +30,13 @@ public class GlobalExceptionHandler {
 
         String message;
         Throwable tempEx = getCause(exception);
+        String lower = (exception == null || exception.getMessage() == null) ? "" : exception.getMessage().toLowerCase();
+        Throwable walker = exception;
+        while(walker != null){
+            String m = walker.getMessage();
+            if(m != null){ lower = lower + " " + m.toLowerCase(); }
+            walker = walker.getCause();
+        }
         if (tempEx instanceof AppException) {
             AppException appEx = (AppException) tempEx;
             message = messageSource.getMessage(appEx.getDescription(), appEx.getParameters(), appEx.getMessage(), Locale.getDefault());
@@ -52,6 +59,23 @@ public class GlobalExceptionHandler {
 
         if (exception instanceof DataIntegrityViolationException){
 
+        }
+
+        if (exception instanceof org.springframework.jdbc.CannotGetJdbcConnectionException
+                || lower.contains("cannot get jdbc connection")
+                || lower.contains("communications link failure")
+                || lower.contains("failed to obtain jdbc connection")
+                || (lower.contains("jdbc") && lower.contains("connect"))) {
+            message = "数据库连接失败，请确认数据库服务已启动，并检查网络与配置。";
+            return ResponseEntity.error(message);
+        }
+        if (lower.contains("access denied for user") || lower.contains("authentication")){
+            message = "数据库认证失败，请检查数据库用户名和密码是否正确。";
+            return ResponseEntity.error(message);
+        }
+        if (lower.contains("unknown database")){
+            message = "数据库不存在，请检查数据库名称配置。";
+            return ResponseEntity.error(message);
         }
 
         message = messageSource.getMessage("error.system.error", null, "System error", Locale.getDefault());

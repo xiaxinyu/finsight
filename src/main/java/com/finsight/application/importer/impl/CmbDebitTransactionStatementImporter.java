@@ -25,9 +25,25 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
         }
         
         log.info("Starting CMB parsing, total rows: {}", rows.size());
+        int summaryCol = -1;
 
         for (String[] row : rows) {
             if (row == null || row.length == 0) continue;
+            boolean headerDetected = false;
+            if (summaryCol == -1) {
+                for (int i = 0; i < row.length; i++) {
+                    String col = StringTool.cleanStr(row[i]);
+                    String lower = col.toLowerCase();
+                    if (col.contains("交易摘要") || lower.contains("transaction type")) {
+                        summaryCol = i;
+                        headerDetected = true;
+                        break;
+                    }
+                }
+                if (headerDetected) {
+                    continue;
+                }
+            }
             String line = StringUtils.join(row, " ").trim();
             // 预处理：确保日期和CNY前后有空格，避免粘连
             line = line.replaceAll("(\\d{4}-\\d{2}-\\d{2})", " $1 ");
@@ -155,7 +171,18 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
                 log.warn("Date parse error: {} or {}", postingDateStr, txnDateStr);
                 continue;
             }
-            t.setTransactionDesc(narration);
+            String summaryCandidate = getValue(row, summaryCol);
+            String desc = org.apache.commons.lang3.StringUtils.isNotBlank(summaryCandidate)
+                    ? summaryCandidate
+                    : org.apache.commons.lang3.StringUtils.trimToEmpty(narration);
+            if (org.apache.commons.lang3.StringUtils.isBlank(desc)) {
+                if (org.apache.commons.lang3.StringUtils.isNotBlank(opponentName)) {
+                    desc = opponentName;
+                } else if (org.apache.commons.lang3.StringUtils.isNotBlank(opponentAcc)) {
+                    desc = opponentAcc;
+                }
+            }
+            t.setTransactionDesc(desc);
             t.setBalanceCurrency("CNY");
             t.setIncomeMoney(income == null ? 0.0 : income);
             t.setBalanceMoney(expense == null ? 0.0 : expense);

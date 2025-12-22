@@ -180,7 +180,7 @@ public class StatementController {
 
         } catch (Exception e) {
             log.error("Upload failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "系统出现错误");
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), friendlyError(e));
         }
     }
 
@@ -235,7 +235,7 @@ public class StatementController {
             return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), com.alibaba.fastjson.JSON.toJSONString(payload));
         }catch(Exception e){
             log.error("import-pdf-local failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "系统出现错误");
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), friendlyError(e));
         }
     }
 
@@ -316,7 +316,7 @@ public class StatementController {
             return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), JSON.toJSONString(resp));
         }catch(Exception e){
             log.error("Upload parsed failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "系统出现错误");
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), friendlyError(e));
         }
     }
 
@@ -326,6 +326,32 @@ public class StatementController {
         public String cardTypeCode;
         public String cardNo;
         public java.util.List<java.util.List<String>> rows;
+    }
+
+    private String friendlyError(Exception e){
+        String msg = e == null ? "" : String.valueOf(e.getMessage());
+        String lower = msg == null ? "" : msg.toLowerCase();
+        Throwable cause = e;
+        while(cause != null){
+            String cm = String.valueOf(cause.getMessage());
+            String cl = cm == null ? "" : cm.toLowerCase();
+            lower = lower + " " + cl;
+            cause = cause.getCause();
+        }
+        if (e instanceof org.springframework.jdbc.CannotGetJdbcConnectionException
+                || lower.contains("cannot get jdbc connection")
+                || lower.contains("communications link failure")
+                || lower.contains("failed to obtain jdbc connection")
+                || (lower.contains("jdbc") && lower.contains("connect"))) {
+            return "数据库连接失败，请确认数据库服务已启动，并检查网络与配置。";
+        }
+        if (lower.contains("access denied for user") || lower.contains("authentication")){
+            return "数据库认证失败，请检查数据库用户名和密码是否正确。";
+        }
+        if (lower.contains("unknown database")){
+            return "数据库不存在，请检查数据库名称配置。";
+        }
+        return "系统出现错误";
     }
 
     @GetMapping("/preview")
