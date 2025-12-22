@@ -35,6 +35,9 @@ FinSight 将原始的银行交易数据转化为深度的个人洞察。
 - **[产品指南](docs/PRODUCT_GUIDE.zh-CN.md)** 🧠  
   FinSight 如何成为你的智能财务顾问。
 
+- **[详细功能清单](docs/FUNCTION_LIST.zh-CN.md)** 📋  
+  基于开发历史的功能与能力详单。
+
 - **[宣言](docs/MANIFESTO.zh-CN.md)** 🧭  
   我们为何拒绝“云优先”金融；我们的哲学。
 

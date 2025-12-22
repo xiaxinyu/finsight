@@ -33,6 +33,9 @@ Explore our full documentation hub at **[docs/README.md](docs/README.md)**, or j
 - **[Product Guide](docs/PRODUCT_GUIDE.md)** 🧠
   *How FinSight acts as your intelligent financial advisor.*
 
+- **[Detailed Function List](docs/FUNCTION_LIST.md)** 📋
+  *A comprehensive list of features and capabilities based on development history.*
+
 - **[The Manifesto](docs/MANIFESTO.md)** 🧭
   *Why we reject "cloud-first" finance. Our philosophy.*
 
