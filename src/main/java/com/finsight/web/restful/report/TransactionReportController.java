@@ -1,6 +1,5 @@
 package com.finsight.web.restful.report;
 
-import com.finsight.web.restful.model.CommonResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,9 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.finsight.domain.model.Transaction;
+import com.finsight.web.restful.model.CommonResult;
+import com.finsight.web.restful.model.ResultCode;
 import com.finsight.core.AppServiceException;
 import com.finsight.application.service.ITransactionService;
-import com.finsight.web.restful.model.ResultCode;
 
 @Controller
 public class TransactionReportController {

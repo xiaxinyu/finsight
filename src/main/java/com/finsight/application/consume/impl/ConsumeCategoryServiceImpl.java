@@ -1,9 +1,9 @@
 package com.finsight.application.consume.impl;
 
 import com.finsight.infrastructure.mapper.ConsumeCategoryMapper;
+import com.finsight.web.restful.model.TreeNode;
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.application.consume.ConsumeCategoryService;
-import com.finsight.web.restful.model.TreeNode;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
