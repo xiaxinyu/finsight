@@ -35,7 +35,16 @@
 </head>
 <body>
     <h1>Login Failed</h1>
-    <p>Invalid username or password.</p>
+    <p id="reason">Invalid username or password.</p>
     <a href="/" class="btn">Try Again</a>
+    <script>
+        (function(){
+            var params = new URLSearchParams(window.location.search);
+            var msg = params.get('msg');
+            if (msg && msg.trim().length > 0) {
+                document.getElementById('reason').innerText = msg;
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -1,0 +1,132 @@
+<html>
+<head>
+    <title>User Management</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <style>
+        body { font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #f5f7fa; }
+        .page { padding: 10px; }
+        .toolbar { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="toolbar">
+        <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-add" onclick="openCreate()">Create</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-edit" onclick="openEdit()">Edit</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-remove" onclick="doDelete()">Delete</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-reload" onclick="$('#dg').datagrid('reload')">Reload</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-man" onclick="openRoles()">Assign Roles</a>
+    </div>
+    <table id="dg" class="easyui-datagrid" style="width:100%;height:480px"
+           data-options="url:'/api/v1/users',method:'get',singleSelect:true,fitColumns:true,rownumbers:true,pagination:false, onDblClickRow: function(){openEdit();}">
+        <thead>
+        <tr>
+            <th data-options="field:'id',width:80">ID</th>
+            <th data-options="field:'username',width:180">Username</th>
+            <th data-options="field:'displayName',width:220">Display Name</th>
+            <th data-options="field:'enabled',width:80,formatter:function(v){return v==1?'Enabled':'Disabled';}">Enabled</th>
+            <th data-options="field:'createdAt',width:160">Created</th>
+            <th data-options="field:'updatedAt',width:160">Updated</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+
+<div id="dlg" class="easyui-dialog" closed="true" modal="true" title="User" style="width:420px;padding:15px;">
+    <form id="fm" style="display:flex;flex-direction:column;gap:10px;">
+        <input class="easyui-textbox" name="username" style="width:100%" data-options="label:'Username:',required:true">
+        <input class="easyui-passwordbox" name="password" style="width:100%" data-options="label:'Password:'">
+        <input class="easyui-textbox" name="displayName" style="width:100%" data-options="label:'Display Name:'">
+        <select class="easyui-combobox" name="enabled" style="width:100%" data-options="label:'Enabled:',editable:false">
+            <option value="1">Enabled</option>
+            <option value="0">Disabled</option>
+        </select>
+    </form>
+    <div style="text-align:right;margin-top:10px;">
+        <a class="easyui-linkbutton" onclick="saveUser()">Save</a>
+        <a class="easyui-linkbutton" onclick="$('#dlg').dialog('close')">Cancel</a>
+    </div>
+</div>
+
+<div id="dlgRoles" class="easyui-dialog" closed="true" modal="true" title="Assign Roles" style="width:420px;padding:15px;">
+    <div id="roles"></div>
+    <div style="text-align:right;margin-top:10px;">
+        <a class="easyui-linkbutton" onclick="saveRoles()">Save</a>
+        <a class="easyui-linkbutton" onclick="$('#dlgRoles').dialog('close')">Cancel</a>
+    </div>
+</div>
+
+<script type="text/javascript">
+    function getSelected(){
+        return $('#dg').datagrid('getSelected');
+    }
+    function openCreate(){
+        $('#fm').form('clear');
+        $('#dlg').dialog('open').dialog('setTitle','Create User');
+        $('#fm input[name=password]').passwordbox('setValue','');
+    }
+    function openEdit(){
+        var row = getSelected();
+        if(!row){ $.messager.alert('Tip','Please select a row'); return; }
+        $('#fm').form('clear');
+        $('#fm').form('load', row);
+        $('#dlg').dialog('open').dialog('setTitle','Edit User');
+        $('#fm input[name=password]').passwordbox('setValue','');
+    }
+    function saveUser(){
+        var row = getSelected();
+        var data = $('#fm').serializeArray().reduce(function(m,i){ m[i.name]=i.value; return m; }, {});
+        if(row && row.id){
+            $.ajax({url:'/api/v1/users/'+row.id, method:'PUT', contentType:'application/json', data: JSON.stringify(data)})
+                .done(function(){ $('#dlg').dialog('close'); $('#dg').datagrid('reload'); })
+                .fail(function(){ $.messager.alert('Error','Update failed'); });
+        }else{
+            $.ajax({url:'/api/v1/users', method:'POST', contentType:'application/json', data: JSON.stringify(data)})
+                .done(function(){ $('#dlg').dialog('close'); $('#dg').datagrid('reload'); })
+                .fail(function(){ $.messager.alert('Error','Create failed'); });
+        }
+    }
+    function doDelete(){
+        var row = getSelected();
+        if(!row){ $.messager.alert('Tip','Please select a row'); return; }
+        $.messager.confirm('Confirm','Delete this user?', function(ok){
+            if(!ok) return;
+            $.ajax({url:'/api/v1/users/'+row.id, method:'DELETE'})
+                .done(function(){ $('#dg').datagrid('reload'); })
+                .fail(function(){ $.messager.alert('Error','Delete failed'); });
+        });
+    }
+    function openRoles(){
+        var row = getSelected();
+        if(!row){ $.messager.alert('Tip','Please select a row'); return; }
+        $('#dlgRoles').dialog('open').dialog('setTitle','Assign Roles');
+        $.getJSON('/api/v1/users/roles', function(all){
+            $.getJSON('/api/v1/users/'+row.id+'/roles', function(owned){
+                var ownedIds = (owned||[]).map(function(r){ return r.id; });
+                var html = '';
+                for(var i=0;i<all.length;i++){
+                    var r = all[i];
+                    var checked = ownedIds.indexOf(r.id)>=0 ? 'checked' : '';
+                    html += '<div><label><input type="checkbox" value="'+r.id+'" '+checked+'> '+r.code+' ('+r.name+')</label></div>';
+                }
+                $('#roles').html(html);
+            });
+        });
+    }
+    function saveRoles(){
+        var row = getSelected();
+        if(!row){ return; }
+        var ids = [];
+        $('#roles input[type=checkbox]').each(function(){
+            if(this.checked){ ids.push(parseInt(this.value)); }
+        });
+        $.ajax({url:'/api/v1/users/'+row.id+'/roles', method:'POST', contentType:'application/json', data: JSON.stringify(ids)})
+            .done(function(){ $('#dlgRoles').dialog('close'); $.messager.show({title:'Info', msg:'Roles updated'}); })
+            .fail(function(){ $.messager.alert('Error','Assign failed'); });
+    }
+</script>
+</body>
+</html>

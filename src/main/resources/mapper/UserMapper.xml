@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.finsight.infrastructure.mapper.UserMapper" >
+    <resultMap id="UserResultMap" type="com.finsight.domain.model.User" >
+        <id column="id" property="id" jdbcType="BIGINT" />
+        <result column="username" property="username" jdbcType="VARCHAR" />
+        <result column="password" property="password" jdbcType="VARCHAR" />
+        <result column="display_name" property="displayName" jdbcType="VARCHAR" />
+        <result column="enabled" property="enabled" jdbcType="INTEGER" />
+        <result column="createTime" property="createdAt" jdbcType="TIMESTAMP" />
+        <result column="updateTime" property="updatedAt" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <select id="findByUsername" parameterType="string" resultMap="UserResultMap">
+        select id, username, password, display_name, enabled, createTime, updateTime
+        from app_user
+        where username = #{username}
+        limit 1
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="UserResultMap">
+        select id, username, password, display_name, enabled, createTime, updateTime
+        from app_user
+        where id = #{id}
+        limit 1
+    </select>
+
+    <select id="listAll" resultMap="UserResultMap">
+        select id, username, display_name, enabled, createTime, updateTime, password
+        from app_user
+        order by id desc
+    </select>
+
+    <insert id="insert" parameterType="com.finsight.domain.model.User" useGeneratedKeys="true" keyProperty="id">
+        insert into app_user(username, password, display_name, enabled, createTime, updateTime)
+        values(#{username}, #{password}, #{displayName}, #{enabled}, now(), now())
+    </insert>
+
+    <update id="update" parameterType="com.finsight.domain.model.User">
+        update app_user
+        set display_name = #{displayName},
+            enabled = #{enabled},
+            password = #{password},
+            updateTime = now()
+        where id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="long">
+        delete from app_user where id = #{id}
+    </delete>
+
+    <resultMap id="RoleResultMap" type="com.finsight.domain.model.Role" >
+        <id column="id" property="id" jdbcType="BIGINT" />
+        <result column="code" property="code" jdbcType="VARCHAR" />
+        <result column="name" property="name" jdbcType="VARCHAR" />
+        <result column="description" property="description" jdbcType="VARCHAR" />
+    </resultMap>
+
+    <select id="findRolesByUserId" parameterType="long" resultMap="RoleResultMap">
+        select r.id, r.code, r.name, r.description
+        from app_role r
+        inner join app_user_role ur on ur.role_id = r.id
+        where ur.user_id = #{userId}
+    </select>
+
+    <delete id="deleteRolesByUserId" parameterType="long">
+        delete from app_user_role where user_id = #{userId}
+    </delete>
+
+    <insert id="addUserRole">
+        insert into app_user_role(user_id, role_id) values(#{userId}, #{roleId})
+    </insert>
+</mapper>

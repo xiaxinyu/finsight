@@ -20,6 +20,7 @@
                 <div class="brand-subtitle">Understand your money. Understand yourself.</div>
             </div>
         </div>
+        <div id="error-tip" class="error-tip" role="alert" aria-live="polite"></div>
         <form id="login-form" class="form-signin" method="post" action="/authentication/form">
             <div class="login-center clearfix">
                 <div class="login-center-img"><img src="plugins/login/img/name.png"/></div>
@@ -33,7 +34,12 @@
                 <div class="login-center-input">
                     <input type="password" id="password" name="password" value="" placeholder="Please enter your password" onfocus="this.placeholder=''"
                            onblur="this.placeholder='Please enter your password'"/>
-                    <span class="toggle-password" onclick="togglePassword()">Show</span>
+                    <span id="togglePwd" class="toggle-password" onclick="togglePassword()">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12z"></path>
+                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </span>
                 </div>
             </div>
         </form>
@@ -76,15 +82,30 @@
 
     function togglePassword(){
         var p = document.getElementById('password');
-        var t = document.querySelector('.toggle-password');
-        if(p.type === 'password'){
+        var t = document.getElementById('togglePwd');
+        var eye = '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12z\"></path><path d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg>';
+        var eyeOff = '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5 2.053 0 3.99.5 5.707 1.36\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M21.75 12c-1.5 4.5-5.25 7.5-9.75 7.5-2.053 0-3.99-.5-5.707-1.36\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M9 9a3 3 0 104.5 4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M3 3l18 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path></svg>';
+        if (p.type === 'password') {
             p.type = 'text';
-            t.innerText = 'Hide';
-        }else{
+            t.innerHTML = eyeOff;
+        } else {
             p.type = 'password';
-            t.innerText = 'Show';
+            t.innerHTML = eye;
         }
     }
+
+    (function(){
+        fetch('/login-error.json', { credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                if (d && d.msg && String(d.msg).trim().length > 0) {
+                    var tip = document.getElementById('error-tip');
+                    tip.textContent = d.msg;
+                    tip.classList.add('visible');
+                }
+            })
+            .catch(function(){});
+    })();
 
 </script>
 </body>

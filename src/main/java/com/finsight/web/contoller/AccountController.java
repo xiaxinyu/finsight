@@ -146,6 +146,12 @@ public class AccountController {
         return "system/admin/cards";
     }
 
+    @RequestMapping("/system/admin/users.html")
+    public String users(ModelMap model) {
+        log.info("************ Hello, Users in Private Account ************");
+        return "system/admin/users";
+    }
+
     @RequestMapping("/account/statement/upload.html")
     public String statementUpload(ModelMap model) {
         log.info("************ Hello, Statement Upload in Private Account ************");

@@ -1,10 +1,10 @@
-package com.finsight.domain.user;
+package com.finsight.domain.model;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.finsight.core.StringTool;
-import com.finsight.domain.model.User;
+
 import org.springframework.stereotype.Component;
 
 /**

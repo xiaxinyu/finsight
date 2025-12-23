@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.finsight.infrastructure.mapper.RoleMapper" >
+    <resultMap id="RoleResultMap" type="com.finsight.domain.model.Role" >
+        <id column="id" property="id" jdbcType="BIGINT" />
+        <result column="code" property="code" jdbcType="VARCHAR" />
+        <result column="name" property="name" jdbcType="VARCHAR" />
+        <result column="description" property="description" jdbcType="VARCHAR" />
+    </resultMap>
+
+    <select id="findByCode" parameterType="string" resultMap="RoleResultMap">
+        select id, code, name, description
+        from app_role
+        where code = #{code}
+        limit 1
+    </select>
+
+    <select id="findAll" resultMap="RoleResultMap">
+        select id, code, name, description
+        from app_role
+        order by code
+    </select>
+</mapper>
