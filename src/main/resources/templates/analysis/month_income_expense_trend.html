@@ -1,0 +1,423 @@
+<html>
+<head>
+    <title>Income vs Expense · Monthly Trend</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/scripts/transaction.js"></script>
+    <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <style>
+        body { font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #f5f7fa; }
+        .filter-bar { background: #fff; padding: 10px 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; flex-wrap: wrap; border-bottom: 1px solid #eee; }
+        .filter-item { display: flex; align-items: center; font-size: 13px; color: #333; }
+        .filter-item label { margin-right: 6px; font-weight: 500; color: #555; white-space: nowrap; }
+        
+        .content-area { padding: 15px; background-color: #f5f7fa; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: 15px; }
+        .chart-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 20px; flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #eef2f7; }
+        .grid-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 0; height: 300px; overflow: hidden; border: 1px solid #eef2f7; }
+        
+        /* Popup Styling */
+        #popup { background: #fff; }
+        .popup-pie-container { border-right: 1px solid #f0f0f0; padding: 10px; background: #fff; }
+        .popup-grid-container { padding: 0; background: #fff; }
+        
+        /* Popup Datagrid Tweaks */
+        #popup .datagrid-header { background: #f9fafb !important; border-bottom: 1px solid #eee; }
+        #popup .datagrid-header-row { height: 40px; }
+        #popup .datagrid-row { height: 36px; }
+        #popup .datagrid-header .datagrid-cell { font-weight: 600; color: #444; }
+    </style>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north',border:false" style="height: auto; overflow: visible;">
+    <div class="filter-bar">
+        <span class="filter-item">
+            <label>Year</label>
+            <select id="cmbYear" class="easyui-combobox" style="width:90px;" data-options="onSelect:scheduleStatistic">
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+                <option value="2020">2020</option>
+                <option value="2019">2019</option>
+                <option value="2018">2018</option>
+                <option value="2017">2017</option>
+                <option value="2016">2016</option>
+                <option value="2015">2015</option>
+                <option value="2014">2014</option>
+                <option value="2013">2013</option>
+            </select>
+        </span>
+        <span class="filter-item">
+            <input type="checkbox" id="chkYoY" onchange="toggleYoY()">
+            <label for="chkYoY" style="cursor:pointer;">YoY</label>
+        </span>
+        <span class="filter-item">
+            <label>Year B</label>
+            <select id="cmbYear2" class="easyui-combobox" style="width:90px;" data-options="onSelect:scheduleStatistic">
+                <option value="">None</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+                <option value="2020">2020</option>
+                <option value="2019">2019</option>
+                <option value="2018">2018</option>
+                <option value="2017">2017</option>
+                <option value="2016">2016</option>
+                <option value="2015">2015</option>
+                <option value="2014">2014</option>
+                <option value="2013">2013</option>
+            </select>
+        </span>
+        <span class="filter-item">
+            <label>Card</label>
+            <input id="cmbCardTypes" class="easyui-combobox"
+                   data-options="url:'/api/v1/cards/list',method:'get',valueField:'key',textField:'value',editable:false,prompt:'All cards',onSelect:scheduleStatistic"
+                   style="width: 160px;">
+        </span>
+        <span class="filter-item">
+            <label>Consume type</label>
+            <select id="cmbConsume" class="easyui-combotree"
+                    data-options="url:'/api/v1/consume/tree',method:'get',onChange:scheduleStatistic" multiple
+                    style="width:200px;"></select>
+        </span>
+        <span class="filter-item">
+            <label>Description</label>
+            <input id="txtDemo" class="easyui-textbox" style="width:160px">
+        </span>
+        <span class="filter-item">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-search',plain:true" onclick="statistic()">Compare</a>
+        </span>
+    </div>
+</div>
+<div id="chartArea" data-options="region:'center',border:false" class="content-area">
+    <div class="chart-card">
+        <div id="main" style="width:100%; flex:1;"></div>
+    </div>
+    <div class="grid-card">
+        <table id="summaryGrid" class="easyui-datagrid" fit="true"
+               data-options="rownumbers:true,singleSelect:true,border:false,fitColumns:true">
+            <thead>
+            <tr>
+                <th data-options="field:'month',width:120">Month</th>
+                <th data-options="field:'income',width:120,align:'right',formatter:app.money.rmb">Income</th>
+                <th data-options="field:'expense',width:120,align:'right',formatter:app.money.rmb">Expense</th>
+                <th data-options="field:'surplus',width:120,align:'right',formatter:app.money.rmb">Surplus</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<div id="dialog" style="display:none;">
+    <div id="popup" style="display:flex;gap:0;align-items:stretch;height:100%;">
+        <div id="pie" class="popup-pie-container" style="width:360px;height:100%;"></div>
+        <div class="popup-grid-container" style="flex:1;height:100%;overflow:hidden;">
+            <table id="datagrid" fit="true"
+                   data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,border:false">
+                <thead>
+                <tr>
+                    <th data-options="field:'id',hidden:true">ID</th>
+                    <th data-options="field:'bankCardName',width:160">Card</th>
+                    <th data-options="field:'transactionDate',width:120,align:'center',formatter:app.date.format">TXN Date</th>
+                    <th data-options="field:'incomeMoney',width:120,align:'right',formatter:app.money.rmb">income</th>
+                    <th data-options="field:'balanceMoney',width:120,align:'right',formatter:function(v,r,i){return app.money.rmb(Math.abs(v),r,i);}">expense</th>
+                    <th data-options="field:'consumeName',width:160,align:'left'">Category</th>
+                    <th data-options="field:'demoArea',width:420,align:'left'">Description</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function(){
+    var initialized = false;
+    $.parser.onComplete = function(){
+        if(initialized) return;
+        initialized = true;
+        ensureMainSize();
+        scheduleStatistic();
+        $(window).on('resize', ensureMainSize);
+    };
+});
+
+function ensureMainSize(){
+    var chart = echarts.getInstanceByDom(document.getElementById('main'));
+    if(chart){ chart.resize(); }
+}
+
+function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+function safeTextboxValue(sel){ var jq=$(sel); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } }
+function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+
+function getParamsBase(){
+    var year = safeComboboxValue('#cmbYear');
+    var cardtype = safeComboboxValue('#cmbCardTypes'); if(cardtype==='0') cardtype='';
+    var demoArea = safeTextboxValue('#txtDemo');
+    var consume = safeCombotreeValues('#cmbConsume');
+    return {'year':year,'cardTypeName':cardtype,'demoArea':demoArea,'consumeID':consume};
+}
+
+var statTimer = null;
+function scheduleStatistic(){
+    if(statTimer){ clearTimeout(statTimer); }
+    statTimer = setTimeout(function(){ statTimer = null; statistic(); }, 300);
+}
+
+function toggleYoY(){
+    var checked = $('#chkYoY').prop('checked');
+    $('#cmbYear2').combobox(checked ? 'disable' : 'enable');
+    scheduleStatistic();
+}
+
+function statistic(){
+    var base = getParamsBase();
+    var y2 = safeComboboxValue('#cmbYear2');
+    if($('#chkYoY').prop('checked')){
+        var y1 = parseInt(base.year);
+        if(!isNaN(y1)){
+            y2 = (y1 - 1).toString();
+        }
+    }
+    var pIncomeA = $.extend({}, base, {'txnTypes':'income'});
+    var pExpenseA = $.extend({}, base, {'txnTypes':'expense'});
+    transaction.monthConsumeReport(pIncomeA, function(diA){
+        transaction.monthConsumeReport(pExpenseA, function(deA){
+            var arrIA = []; var arrEA = [];
+            if(diA && diA.returnCode==='success'){ try{ arrIA = $.parseJSON(diA.returnMessage||'[]')||[]; }catch(e){} }
+            if(deA && deA.returnCode==='success'){ try{ arrEA = $.parseJSON(deA.returnMessage||'[]')||[]; }catch(e){} }
+            if(y2){
+                var baseB = $.extend({}, base, {'year': y2});
+                var pIncomeB = $.extend({}, baseB, {'txnTypes':'income'});
+                var pExpenseB = $.extend({}, baseB, {'txnTypes':'expense'});
+                transaction.monthConsumeReport(pIncomeB, function(diB){
+                    transaction.monthConsumeReport(pExpenseB, function(deB){
+                        var arrIB = []; var arrEB = [];
+                        if(diB && diB.returnCode==='success'){ try{ arrIB = $.parseJSON(diB.returnMessage||'[]')||[]; }catch(e){} }
+                        if(deB && deB.returnCode==='success'){ try{ arrEB = $.parseJSON(deB.returnMessage||'[]')||[]; }catch(e){} }
+                        renderTrend(arrIA, arrEA, arrIB, arrEB);
+                    }, function(){ renderTrend(arrIA, arrEA); });
+                }, function(){ renderTrend(arrIA, arrEA); });
+            } else {
+                renderTrend(arrIA, arrEA);
+            }
+        }, function(){ app.messager.show({title:'错误',msg:'支出统计请求失败'}); });
+    }, function(){ app.messager.show({title:'错误',msg:'收入统计请求失败'}); });
+}
+
+function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','10','11','12']; }
+function monthNameList(){ return ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月']; }
+function getMonthCodeByName(en){
+    var map = {
+        'Janunary':'01','January':'01','一月':'01',
+        'February':'02','二月':'02',
+        'March':'03','三月':'03',
+        'April':'04','四月':'04',
+        'May':'05','五月':'05',
+        'June':'06','六月':'06',
+        'July':'07','七月':'07',
+        'August':'08','八月':'08',
+        'September':'09','九月':'09',
+        'October':'10','十月':'10',
+        'November':'11','十一月':'11',
+        'December':'12','十二月':'12'
+    };
+    return map[en]||'';
+}
+
+function lastDayOfMonth(y,m){
+    var yy = parseInt(y,10), mm = parseInt(m,10);
+    var d = new Date(yy, mm, 0);
+    var dd = d.getDate();
+    return (dd<10?('0'+dd):(''+dd));
+}
+
+function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
+    var mapI = {}; for(var i=0;i<arrIncome.length;i++){ var it=arrIncome[i]; mapI[getMonthCodeByName(it.key)||''] = parseFloat(it.value)||0; }
+    var mapE = {}; for(var j=0;j<arrExpense.length;j++){ var jt=arrExpense[j]; mapE[getMonthCodeByName(jt.key)||''] = parseFloat(jt.value)||0; }
+    var mapIB = {}; var mapEB = {};
+    if($.isArray(arrIncomeB)){ for(var i2=0;i2<arrIncomeB.length;i2++){ var it2=arrIncomeB[i2]; mapIB[getMonthCodeByName(it2.key)||''] = parseFloat(it2.value)||0; } }
+    if($.isArray(arrExpenseB)){ for(var j2=0;j2<arrExpenseB.length;j2++){ var jt2=arrExpenseB[j2]; mapEB[getMonthCodeByName(jt2.key)||''] = parseFloat(jt2.value)||0; } }
+    var codes = monthCodeList();
+    var names = monthNameList();
+    var incomes = []; var expenses = []; var incomesB = []; var expensesB = []; var surplus = []; var rows = [];
+    for(var k=0;k<codes.length;k++){
+        var c = codes[k];
+        var i = mapI[c]||0;
+        var e = mapE[c]||0;
+        var iB = mapIB[c]||0;
+        var eB = mapEB[c]||0;
+        var s = i - e;
+        incomes.push(i);
+        expenses.push(e);
+        if(arrIncomeB){ incomesB.push(iB); }
+        if(arrExpenseB){ expensesB.push(eB); }
+        surplus.push(s);
+        rows.push({month:names[k], income:i, expense:e, surplus:s});
+    }
+    $('#summaryGrid').datagrid('loadData', rows);
+    echarts.dispose(document.getElementById('main'));
+    var chart = echarts.init(document.getElementById('main'));
+    var yearSel = safeComboboxValue('#cmbYear');
+    var yearSel2 = safeComboboxValue('#cmbYear2');
+    if($('#chkYoY').prop('checked')){
+         var y1 = parseInt(yearSel);
+         if(!isNaN(y1)) yearSel2 = (y1 - 1).toString();
+    }
+    var titleText = 'Income vs Expense · ' + (yearSel||'');
+    if(arrIncomeB && yearSel2){
+        titleText += ' vs ' + yearSel2;
+    }
+    var option = {
+        title: { text: titleText, left: 'left' },
+        tooltip: {
+            trigger: 'axis',
+            formatter: function(params){
+                var pI = params.find(function(p){ return p.seriesName==='收入'; });
+                var pE = params.find(function(p){ return p.seriesName==='支出'; });
+                var pS = params.find(function(p){ return p.seriesName==='差额'; });
+                var pIB = params.find(function(p){ return p.seriesName==='收入(B)'; });
+                var pEB = params.find(function(p){ return p.seriesName==='支出(B)'; });
+                var n = params[0].name;
+                var i = pI ? pI.value : 0;
+                var e = pE ? pE.value : 0;
+                var s = pS ? pS.value : (i-e);
+                var i2 = pIB ? pIB.value : null;
+                var e2 = pEB ? pEB.value : null;
+                var extra = '';
+                if(i2!=null || e2!=null){
+                    extra = '<br/>收入(B)：¥'+(i2||0)+'<br/>支出(B)：¥'+(e2||0);
+                }
+                return '月份：'+n+'<br/>收入：¥'+i+'<br/>支出：¥'+e+'<br/>差额：¥'+s+extra;
+            }
+        },
+        legend: { data: ['收入','支出','差额'].concat(arrIncomeB?['收入(B)']:[]).concat(arrExpenseB?['支出(B)']:[]) },
+        toolbox: {
+            show: true,
+            feature: { dataView:{show:true,readOnly:false}, magicType:{show:true,type:['line','bar']}, restore:{show:true}, saveAsImage:{show:true} }
+        },
+        xAxis: [{ type:'category', boundaryGap:false, data: names }],
+        yAxis: [{ type:'value', axisLabel:{ formatter:'¥{value}' }, splitArea:{ show:true } }],
+        grid: { left: 40, right: 20, bottom: 80 },
+        series: [
+            { name:'收入', type:'line', data: incomes, itemStyle:{ color:'#10B981' }, smooth:true },
+            { name:'支出', type:'line', data: expenses, itemStyle:{ color:'#EF4444' }, smooth:true },
+            { name:'差额', type:'bar', data: surplus, itemStyle:{ color:'#2563EB' } }
+        ]
+    };
+    if(arrIncomeB){ option.series.push({ name:'收入(B)', type:'line', data: incomesB, itemStyle:{ color:'#06b6d4' }, smooth:true }); }
+    if(arrExpenseB){ option.series.push({ name:'支出(B)', type:'line', data: expensesB, itemStyle:{ color:'#f59e0b' }, smooth:true }); }
+    chart.setOption(option);
+    chart.on('click', function (param) {
+        var idx = (typeof param.dataIndex === 'number') ? param.dataIndex : 0;
+        var code = (idx>=0 && idx<codes.length) ? codes[idx] : getMonthCodeByName(param.name);
+        var series = param.seriesName || '';
+        var yearA = safeComboboxValue('#cmbYear');
+        var yearB = safeComboboxValue('#cmbYear2');
+        if($('#chkYoY').prop('checked')){
+             var y1 = parseInt(yearA);
+             if(!isNaN(y1)) yearB = (y1 - 1).toString();
+        }
+        var year = (series && series.indexOf('(B)')>=0 && yearB) ? yearB : yearA;
+        var type = (series && series.indexOf('收入')>=0) ? 'income' : 'expense';
+        openDialog(param.name + ' · ' + (type==='income'?'收入':'支出'));
+        getCategoryPie(code, year, type);
+        getTransactions(code, year, type);
+    });
+}
+
+var dialog = "#dialog";
+var datagrid = "#datagrid";
+var dialogFlag = false;
+var pieChart = null;
+
+function openDialog(monthName){
+    $(dialog).css('display','');
+    var title = 'Detail - ' + (monthName||'');
+    var $area = $('#chartArea');
+    var w = Math.max(800, Math.floor(($area.width()||$(window).width()) * 0.9));
+    var h = Math.max(500, Math.floor(($area.height()||($(window).height()-100)) * 0.9));
+    
+    var resizeFunc = function(nw, nh){
+        try{
+            var pieW = Math.floor(nw * 0.6);
+            var gridW = nw - pieW;
+            $('#pie').css({width: pieW + 'px'});
+            if(pieChart){ pieChart.resize(); }
+            $('#datagrid').datagrid('resize', {width: gridW - 2, height: nh});
+        }catch(e){}
+    };
+
+    if(!dialogFlag){
+        $(dialog).dialog({ title:title, width: w, height: h, closed:false, cache:false, modal:true, onResize: resizeFunc });
+        dialogFlag = true;
+    }else{
+        $(dialog).dialog({title:title, width:w, height:h});
+        if($(dialog).dialog('options').closed){ $(dialog).dialog('open'); }
+        resizeFunc(w, h);
+    }
+}
+
+function getTransactions(monthCode, year, txnTypes){
+    var y = year || safeComboboxValue('#cmbYear');
+    var lastDay = lastDayOfMonth(y, monthCode);
+    var start = monthCode+'/01/'+y;
+    var end = monthCode+'/'+lastDay+'/'+y;
+    var week = {'transactionDateStartStr': start, 'transactionDateEndStr': end, 'txnTypes': txnTypes||''};
+    var base = getParamsBase();
+    var newParams = $.extend(week, base);
+    $(datagrid).datagrid({
+        method: 'post',
+        queryParams : newParams,
+        url: '/transaction/getTransactions'
+    });
+}
+
+function getCategoryPie(monthCode, year, txnTypes){
+    var y = year || safeComboboxValue('#cmbYear');
+    var lastDay = lastDayOfMonth(year, monthCode);
+    var start = monthCode+'/01/'+y;
+    var end = monthCode+'/'+lastDay+'/'+y;
+    var base = getParamsBase();
+    var params = $.extend({}, base, {'transactionDateStartStr': start, 'transactionDateEndStr': end, 'txnTypes': txnTypes});
+    transaction.consumeReport(params, function(data){
+        var list = [];
+        if(data && (data.returnCode==='success' || data.returnCode===20000)){
+            try{
+                var rows = $.parseJSON(data.returnMessage||'[]')||[];
+                for(var i=0;i<rows.length;i++){
+                    var r = rows[i]; var v = parseFloat(r.value); list.push({name:r.key, value:isNaN(v)?0:v});
+                }
+                list.sort(function(a,b){ return b.value - a.value; });
+            }catch(e){}
+        }
+        var topN = 12;
+        var agg = []; var others = 0;
+        for(var i=0;i<list.length;i++){ if(i<topN){ agg.push(list[i]); } else { others += list[i].value||0; } }
+        if(list.length>topN && others>0){ agg.push({name:'Others', value: others}); }
+        var names = []; for(var j=0;j<agg.length;j++){ names.push(agg[j].name); }
+        if(!pieChart){ pieChart = echarts.init(document.getElementById('pie')); }
+        var option = {
+            title:{ text:'Category Breakdown', left:'center' },
+            tooltip:{ trigger:'item', formatter:'{b} : ¥{c} ({d}%)' },
+            legend:{ type:'scroll', orient:'vertical', left:10, top:20, data:names },
+            series:[{ name:'Category', type:'pie', minAngle:2, avoidLabelOverlap:true, radius:['55%','78%'], center:['68%','52%'], label:{ formatter:'{b}\n¥{c} ({d}%)' }, labelLine:{ length:12, length2:8 }, data:agg }]
+        };
+        pieChart.clear();
+        pieChart.setOption(option);
+        try{ pieChart.resize(); }catch(e){}
+    }, function(){ });
+}
+</script>
+</body>
+</html>
