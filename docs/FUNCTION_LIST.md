@@ -10,7 +10,7 @@ The core engine for importing and normalizing raw financial data.
     *   **Debit Card Support**:
         *   China Construction Bank (CCB) Debit Card (建设银行借记卡).
         *   China Resources Bank (CR Bank) Debit Card (华润银行借记卡).
-        *   *Note: Support for CMB (招商银行) is in active development.*
+        *   China Merchants Bank (CMB) Debit Card (招商银行借记卡) — added.
     *   **Credit Card Support**:
         *   Generic Credit Statement Import capabilities.
     *   **Data Handling**:
@@ -38,12 +38,14 @@ Automated tools to organize your financial data into meaningful categories.
 Visualizing your financial health.
 
 *   **Reporting (报表)**
+    *   **Income vs Expense Trend**: Monthly trend chart with interactive drill-down to "Category Pie + Transactions" (added).
     *   **Consumption Comparison**: Compare spending across different Years and Months (YoY, MoM).
     *   **Transaction Reports**: Detailed breakdown of transaction history.
     *   **ECharts Integration**: High-performance interactive charts (upgraded to ECharts 6.0.0).
 *   **Assets & Income (资产与收入)**
     *   **Salary Management**: Dedicated module for tracking salary income.
     *   **Bank Card Management**: Manage bank cards and query transactions by card ID.
+*   **Home Statistics**: Added overview statistics component (added).
 
 ## 4. System & Architecture (系统与架构)
 
@@ -54,7 +56,9 @@ The technical foundation of FinSight.
     *   **JDK 21**: Built on the latest Java LTS version.
 *   **User Interface**:
     *   **jQuery EasyUI**: Integrated EasyUI 1.11.4 for a responsive and rich desktop-like web experience.
-    *   **Layout Optimization**: Continuous improvements to login, upload, and dashboard layouts.
+    *   **Layout Optimization**: Continuous improvements to login, upload, and dashboard layouts; multiple page & style refinements (added).
+*   **Project Structure**:
+    *   Optimized FinSight/FinSight2 directory structure (added).
 *   **Database**:
     *   **Migration**: Robust database migration scripts to handle schema changes.
 

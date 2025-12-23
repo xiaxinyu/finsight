@@ -52,6 +52,7 @@ FinSight builds a profile of your financial behavior:
     *   **Monthly Comparison**: Year-over-Year (YoY) and Month-over-Month (MoM) growth.
     *   **Category Breakdown**: Interactive Pie and Sunburst charts.
     *   **Drill-Down Analysis**: Click any bar in a chart to see the specific transactions behind it.
+*   **Rules & Regex Guide**: See **[Rules Guide](RULES_GUIDE.md)** for best practices on writing and maintaining classification rules.
 
 ---
 

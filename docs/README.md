@@ -36,6 +36,16 @@ Welcome to the FinSight documentation hub. This library is structured to help yo
     *   Database Schema & Data Flow.
     *   Contribution Guidelines.
 
+## 📦 **Recent Updates**
+- Added: Monthly Income vs Expense trend with interactive drill-down (click to view categories and transactions)
+- Added: Home statistics overview
+- Refactor: Rules page
+- Added: Rule tag system
+- Import Enhancements: CMB debit data import
+- Structure: Optimized project layout for FinSight/FinSight2
+- Frontend: Multiple page and style optimizations
+- Docs: Expanded and updated Chinese/English docs; refreshed product and business model; consolidated function list
+
 ---
 
 ### **Quick Links**
