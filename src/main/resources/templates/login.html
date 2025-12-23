@@ -36,8 +36,9 @@
                            onblur="this.placeholder='Please enter your password'"/>
                     <span id="togglePwd" class="toggle-password" onclick="togglePassword()">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12z"></path>
-                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path d="M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5 2.053 0 3.99.5 5.707 1.36" fill="none" stroke="currentColor" stroke-width="1.8"></path>
+                            <path d="M21.75 12c-1.5 4.5-5.25 7.5-9.75 7.5-2.053 0-3.99-.5-5.707-1.36" fill="none" stroke="currentColor" stroke-width="1.8"></path>
+                            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
                         </svg>
                     </span>
                 </div>
@@ -83,7 +84,7 @@
     function togglePassword(){
         var p = document.getElementById('password');
         var t = document.getElementById('togglePwd');
-        var eye = '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5s8.25 3 9.75 7.5c-1.5 4.5-5.25 7.5-9.75 7.5S3.75 16.5 2.25 12z\"></path><path d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg>';
+        var eye = '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5 2.053 0 3.99.5 5.707 1.36\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M21.75 12c-1.5 4.5-5.25 7.5-9.75 7.5-2.053 0-3.99-.5-5.707-1.36\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></circle></svg>';
         var eyeOff = '<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M2.25 12c1.5-4.5 5.25-7.5 9.75-7.5 2.053 0 3.99.5 5.707 1.36\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M21.75 12c-1.5 4.5-5.25 7.5-9.75 7.5-2.053 0-3.99-.5-5.707-1.36\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M9 9a3 3 0 104.5 4.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path><path d=\"M3 3l18 18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"></path></svg>';
         if (p.type === 'password') {
             p.type = 'text';

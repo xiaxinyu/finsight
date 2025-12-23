@@ -57,13 +57,23 @@ The technical foundation of FinSight.
 *   **User Interface**:
     *   **jQuery EasyUI**: Integrated EasyUI 1.11.4 for a responsive and rich desktop-like web experience.
     *   **Layout Optimization**: Continuous improvements to login, upload, and dashboard layouts; multiple page & style refinements (added).
+    *   **Login Page Optimization**: Fixed error tip jitter, unified English error messages, tuned password “eye” icon contrast and style (added).
 *   **Project Structure**:
     *   Optimized FinSight/FinSight2 directory structure (added).
 *   **Database**:
     *   **Migration**: Robust database migration scripts to handle schema changes.
+*   **Authentication**:
+    *   **Database-backed Authentication**: Spring Security integrated with `app_user` table (added).
+    *   **Password Encryption**: Unified `BCrypt` hashing; encryption endpoint `/encrypt/bcrypt?key=...` (added).
+    *   **Auth Configuration**: Explicit `DaoAuthenticationProvider` binding to `UserDetailsService` and `BCryptPasswordEncoder` (added).
+    *   **Failure Handling**: Custom failure messages surfaced via `/login-error.json` for frontend display (added).
+*   **Administration**:
+    *   **Administration Group**: New “Administration” section in navigation, placed at the end (added).
+    *   **User Management**: List, create/update/delete users, assign roles; passwords auto-hashed with `BCrypt` (added).
 
 ## 5. Release History (版本历史)
 
+*   **v1.6.0** (2025-12-23): Added Administration module (section and user management with role assignment); switched authentication to Database + BCrypt, improved failure handling and login page style; fixed UserMapper time column alignment.
 *   **v1.5.0** (2025-12-19): Added Year/Month comparison, CRBank import, Delete Category.
 *   **v1.4.0** (2025-12-18): Optimized Debit import, recovered automation keywords.
 *   **v1.3.0** (2025-12-16): Batch category, Upload layout optimization.

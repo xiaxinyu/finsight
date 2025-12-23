@@ -114,8 +114,8 @@ canvas{
 .login-center-input-text{background: white;padding: 0 5px;position: absolute;z-index: 0;opacity: 0;height: 20px;top: 50%;margin-top: -10px;font-size: 14px;left: 5px;color: dodgerblue;line-height: 20px;transition: all 0.5s;-moz-transition: all 0.5s;	/* Firefox 4 */-webkit-transition: all 0.5s;	/* Safari 和 Chrome */-o-transition: all 0.5s;	/* Opera */}
 .login-center-input input:focus~.login-center-input-text{top: 0;z-index: 3;opacity: 1;margin-top: -15px;}
 .login.active{-webkit-animation: login-small 0.8s ; animation: login-small 0.8s ;animation-fill-mode:forwards;-webkit-animation-fill-mode:forwards}
-.toggle-password{position:absolute;right: 10px;top: 8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#6b7280;cursor:pointer;user-select:none;border-radius:6px;background:#f8fafc;}
-.toggle-password:hover{color:#374151;}
+.toggle-password{position:absolute;right: 10px;top: 8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:#9ca3af;cursor:pointer;user-select:none;border-radius:6px;background:#ffffff;}
+.toggle-password:hover{color:#6b7280;background:#f3f4f6;}
 .toggle-password svg{width:18px;height:18px}
 .login-button{cursor: pointer;width: calc(100% - 64px);text-align: center;height: 44px;line-height: 44px;background-image: linear-gradient(90deg,#2563eb,#1d4ed8);border-radius: 10px;margin: 14px 32px 20px;color: white;font-size:16px;font-weight:600;box-shadow: 0 6px 14px rgba(29,78,216,0.25);transition: transform 0.08s ease, box-shadow 0.2s ease;}
 .login-button:hover{box-shadow: 0 8px 18px rgba(29,78,216,0.35);}

@@ -21,14 +21,16 @@
         .icon-fs-accumulation { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310B981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10h18'/><path d='M5 6h14'/><path d='M7 14h10'/><rect x='3' y='4' width='18' height='16' rx='2'/></svg>"); }
         .icon-fs-medical { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563EB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='4' width='16' height='16' rx='2'/><line x1='12' y1='8' x2='12' y2='16'/><line x1='8' y1='12' x2='16' y2='12'/></svg>"); }
         .icon-fs-unemployment { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EF4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3l9 16H3L12 3z'/><line x1='12' y1='9' x2='12' y2='13'/><circle cx='12' cy='16' r='1'/></svg>"); }
+        .icon-fs-users { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563EB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='8' cy='8' r='3'/><circle cx='16' cy='8' r='3'/><path d='M2 20c0-3.5 3-6 6-6s6 2.5 6 6'/><path d='M10 20c0-3.5 3-6 6-6s6 2.5 6 6'/></svg>"); }
+        .icon-fs-admin { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310B981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a7 7 0 0 0 .1-6l2.1-2.1-2.1-2.1L17.4 4a7 7 0 0 0-6-.1L9 1.8 6.9 3.9 8.6 6A7 7 0 0 0 8.5 13l-2.1 2.1 2.1 2.1L10.6 18a7 7 0 0 0 6 .1l2.3 2.1 2.1-2.1L19.4 15z'/></svg>"); }
     </style>
   <div title="Transactions" data-options="iconCls:'icon-fs icon-fs-transactions'" style="overflow:auto;">
    	   <div class="menuspace"></div>
    	   <div style="width: 100%;text-align: center;">
         	<a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-transactions'"
         	onclick="selectTab(this)" title="Transactions - Detail" url="account/transaction/transaction_bill.html" >Detail</a>
-     </div>
-       <div class="menuspace"></div>
+    	</div>
+      <div class="menuspace"></div>
    	   <div style="width: 100%;text-align: center;">
         	<a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-import'"
         	onclick="selectTab(this)" title="Import" url="account/statement/upload.html" >Import</a>
@@ -48,7 +50,8 @@
         	<a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-categories'"
         	onclick="selectTab(this)" title="Category Types" url="system/admin/consume_categories.html" >Category Types</a>
       </div>
-   </div>
+       <div class="menuspace"></div>
+    </div>
   <div title="Reports" data-options="iconCls:'icon-fs icon-fs-reports'" style="overflow:auto;">
        <div class="menuspace"></div>
        <div style="width: 100%;text-align: center;"> 
@@ -130,6 +133,13 @@
         	<a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-unemployment'"
         	onclick="selectTab(this)" title="Unemployment - Ledger" url="account/unemployment" >Ledger</a>
       </div>
+   </div>
+   <div title="Administration" data-options="iconCls:'icon-fs icon-fs-admin'" style="overflow:auto;">
+       <div class="menuspace"></div>
+       <div style="width: 100%;text-align: center;">
+           <a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-users'"
+              onclick="selectTab(this)" title="User Management" url="system/admin/users.html" >User Management</a>
+       </div>
    </div>
 </div>
 <script type="text/javascript">
