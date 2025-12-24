@@ -1,30 +1,120 @@
-<div class="northArea"
+<div class="northArea" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
      style="width: 100%;height: 82px;background-size: 100% auto;background-repeat:no-repeat;background-position:left 0;background-image: url('/images/system/mainPage.jpg'); position: relative;">
     <style>
-        .brand-wrap {
+        .right-container {
             position: absolute;
             right: 20px;
-            top: 16px;
-            color: #0f172a;
-            text-shadow: 0 1px 2px rgba(255,255,255,0.6);
-            text-align: right;
+            bottom: 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 40px; /* Moves the slogan/title group to the left */
         }
+
+        .brand-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+            margin-bottom: 2px;
+            animation: fadeInRight 0.6s ease-out;
+        }
+
         .brand-title {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 22px;
-            font-weight: 700;
-            color: #2563EB;
+            font-size: 26px;
+            font-weight: 800;
             letter-spacing: 0.5px;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            line-height: 1.1;
+            margin-bottom: 4px;
         }
+
         .brand-slogan {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 12px;
-            color: #0ea5e9;
-            margin-top: 2px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.95);
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        .user-panel {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255,255,255,0.6);
+            transition: all 0.3s ease;
+            height: 32px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        .user-panel:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .user-welcome {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .user-welcome span {
+            color: #2563EB;
+            font-weight: 700;
+        }
+        .divider {
+            width: 1px;
+            height: 12px;
+            background: #cbd5e1;
+        }
+        .logout-btn {
+            color: #ef4444;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            color: #dc2626;
+            text-shadow: 0 0 1px rgba(220, 38, 38, 0.2);
+        }
+        
+        @keyframes fadeInRight {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
-    <div class="brand-wrap">
-        <div class="brand-title">FinSight</div>
-        <div class="brand-slogan">Understand your money. Understand yourself.</div>
+
+    <div class="right-container">
+        <!-- Brand Group: Title above Slogan -->
+        <div class="brand-group">
+            <div class="brand-title">FinSight</div>
+            <div class="brand-slogan">Understand your money. Understand yourself.</div>
+        </div>
+
+        <!-- User Panel -->
+        <div class="user-panel">
+            <div class="user-welcome">
+                Hi, <span sec:authentication="name">User</span>
+            </div>
+            <div class="divider"></div>
+            <a href="/logout" class="logout-btn" title="Sign out">
+                Logout
+            </a>
+        </div>
     </div>
 </div>

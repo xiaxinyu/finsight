@@ -54,7 +54,7 @@
 		<if test="demoArea != null">
 			demoarea = #{demoArea,jdbcType=VARCHAR},
 		</if>
-		updatetime = SYSDATE
+		updatetime = NOW()
 		where id = #{id,jdbcType=VARCHAR}
     </update>
     
@@ -76,26 +76,23 @@
     </resultMap>
     
     <select id="getEndowments" resultMap="baseEndowmentsResultMap">
-    	select b.*
-		  from (select a.*, rownum rn
-		          from (select id,
-						       unit_no,
-						       unit_name,
-						       time,
-						       pay_base,
-						       personal_pay,
-						       unit_pay,
-						       total_pay,
-						       personal_reserved,
-						       demoarea
-						  from endowment
-		                  where 1 = 1
-		                  <if test="endowment != null">
-			                 	                  
-		                  </if>
-		                 order by time desc) a
-		         where rownum &lt;= #{page.recordEnd,jdbcType=NUMERIC}) b
-		 where b.rn &gt; #{page.recordBegin,jdbcType=NUMERIC}
+    	select id,
+               unit_no,
+               unit_name,
+               time,
+               pay_base,
+               personal_pay,
+               unit_pay,
+               total_pay,
+               personal_reserved,
+               demoarea
+          from endowment
+          where 1 = 1
+          <if test="endowment != null">
+                                  
+          </if>
+         order by time desc
+         limit #{page.recordBegin}, #{page.pageSize}
     </select>
     
     <select id="countEndowments" resultType="java.lang.Integer">

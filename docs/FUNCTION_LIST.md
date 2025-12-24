@@ -42,9 +42,12 @@ Visualizing your financial health.
     *   **Consumption Comparison**: Compare spending across different Years and Months (YoY, MoM).
     *   **Transaction Reports**: Detailed breakdown of transaction history.
     *   **ECharts Integration**: High-performance interactive charts (upgraded to ECharts 6.0.0).
-*   **Assets & Income (资产与收入)**
-    *   **Salary Management**: Dedicated module for tracking salary income.
-    *   **Bank Card Management**: Manage bank cards and query transactions by card ID.
+*   **Management Groups (管理分组)**
+    *   **Income Management**: Dedicated module for tracking salary income (Renamed from Payroll).
+    *   **Expense Management**: Tracking fixed expenses like Rent (Renamed from Rent).
+    *   **Benefit**: Consolidated management for Pension, Provident Fund, Medical, and Unemployment insurance.
+    *   **Investment**: Placeholder for future investment tracking.
+*   **Bank Card Management**: Manage bank cards and query transactions by card ID.
 *   **Home Statistics**: Added overview statistics component (added).
 
 ## 4. System & Architecture (系统与架构)
@@ -55,6 +58,7 @@ The technical foundation of FinSight.
     *   **DDD Upgrade**: Refactored to Domain-Driven Design principles for better maintainability.
     *   **JDK 21**: Built on the latest Java LTS version.
 *   **User Interface**:
+    *   **Navigation Structure**: Restructured menu into Transactions, Reports, Income/Expense Management, Benefit, Investment, and Administration (v1.6.0).
     *   **jQuery EasyUI**: Integrated EasyUI 1.11.4 for a responsive and rich desktop-like web experience.
     *   **Layout Optimization**: Continuous improvements to login, upload, and dashboard layouts; multiple page & style refinements (added).
     *   **Login Page Optimization**: Fixed error tip jitter, unified English error messages, tuned password “eye” icon contrast and style (added).
@@ -73,7 +77,7 @@ The technical foundation of FinSight.
 
 ## 5. Release History (版本历史)
 
-*   **v1.6.0** (2025-12-23): Added Administration module (section and user management with role assignment); switched authentication to Database + BCrypt, improved failure handling and login page style; fixed UserMapper time column alignment.
+*   **v1.6.0** (2025-12-23): Restructured navigation menu (Income/Expense Management, Benefit, Investment); Added Administration module (section and user management with role assignment); switched authentication to Database + BCrypt, improved failure handling and login page style; fixed UserMapper time column alignment.
 *   **v1.5.0** (2025-12-19): Added Year/Month comparison, CRBank import, Delete Category.
 *   **v1.4.0** (2025-12-18): Optimized Debit import, recovered automation keywords.
 *   **v1.3.0** (2025-12-16): Batch category, Upload layout optimization.
