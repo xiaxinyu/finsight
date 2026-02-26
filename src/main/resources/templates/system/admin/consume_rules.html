@@ -501,8 +501,7 @@ function renderDetail(row){
 function readDetail(){
     var activeOn = false;
     try{ activeOn = $('#detail_active').switchbutton('options').checked; }catch(e){}
-    return {
-        categoryId: selectedCategoryId,
+    var data = {
         pattern: $('#detail_pattern').textbox('getValue'),
         patternType: $('#detail_type').combobox('getValue'),
         priority: parseInt($('#detail_weight').numberbox('getValue')||'0'),
@@ -515,6 +514,8 @@ function readDetail(){
         endDate: (function(){ return $('#detail_end').datebox('getValue'); })(),
         remark: $('#detail_remark').textbox('getValue')
     };
+    if(selectedCategoryId){ data.categoryId = selectedCategoryId; }
+    return data;
 }
 function saveDetail(){
     var row = $(dg).datagrid('getSelected');
