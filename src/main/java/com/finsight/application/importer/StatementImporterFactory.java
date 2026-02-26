@@ -4,6 +4,7 @@ import com.finsight.application.importer.impl.CcbTransactionStatementImporter;
 import com.finsight.application.importer.impl.CcbDebitTransactionStatementImporter;
 import com.finsight.application.importer.impl.CrbankDebitTransactionStatementImporter;
 import com.finsight.application.importer.impl.CmbDebitTransactionStatementImporter;
+import com.finsight.application.importer.impl.CgbCreditTransactionStatementImporter;
 
 public class StatementImporterFactory {
     public static StatementImporter get(String bankCode, String cardTypeCode) {
@@ -12,6 +13,10 @@ public class StatementImporterFactory {
                 return new CcbTransactionStatementImporter();
             } else if ("debit".equalsIgnoreCase(cardTypeCode)) {
                 return new CcbDebitTransactionStatementImporter();
+            }
+        } else if ("CGB".equalsIgnoreCase(bankCode) || "GFB".equalsIgnoreCase(bankCode) || "GDB".equalsIgnoreCase(bankCode) || "广发银行".equalsIgnoreCase(bankCode)) {
+            if ("credit".equalsIgnoreCase(cardTypeCode)) {
+                return new CgbCreditTransactionStatementImporter();
             }
         } else if ("CRBANK".equalsIgnoreCase(bankCode)) {
             if ("debit".equalsIgnoreCase(cardTypeCode)) {
