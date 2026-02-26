@@ -143,9 +143,41 @@ function reloadTemp(statementId){
         try{ console.log('[upload] preview grid ready, no statementId'); }catch(e){}
         return;
     }
-    $('#dgTempUpload').datagrid({ url: '/statement/preview?statementId=' + sid });
-    $('#dgTempUpload').datagrid('reload');
+    // Update URL and reload, preserving other options like loadFilter
+    var opts = $('#dgTempUpload').datagrid('options');
+    opts.url = '/statement/preview?statementId=' + sid;
+    $('#dgTempUpload').datagrid('load');
     try{ console.log('[upload] preview grid reload with statementId', sid); }catch(e){}
+}
+
+function clientSideFilter(data){
+    if (typeof data.length == 'number' && typeof data.splice == 'function'){    // is array
+        data = {
+            total: data.length,
+            rows: data
+        }
+    }
+    var dg = $(this);
+    var opts = dg.datagrid('options');
+    var pager = dg.datagrid('getPager');
+    pager.pagination({
+        onSelectPage:function(pageNum, pageSize){
+            opts.pageNumber = pageNum;
+            opts.pageSize = pageSize;
+            pager.pagination('refresh',{
+                pageNumber:pageNum,
+                pageSize:pageSize
+            });
+            dg.datagrid('loadData',data);
+        }
+    });
+    if (!data.originalRows){
+        data.originalRows = (data.rows);
+    }
+    var start = (opts.pageNumber-1)*parseInt(opts.pageSize);
+    var end = start + parseInt(opts.pageSize);
+    data.rows = (data.originalRows.slice(start, end));
+    return data;
 }
 
 function initTempGrid(){
@@ -153,7 +185,10 @@ function initTempGrid(){
         fit: true,
         striped: true,
         rownumbers: true,
-        pagination: false,
+        pagination: true,
+        pageSize: 20,
+        pageList: [10, 20, 50, 100],
+        loadFilter: clientSideFilter,
         nowrap: false,
         method: 'get',
         singleSelect: true,
@@ -161,15 +196,15 @@ function initTempGrid(){
         remoteSort: false,
         onDblClickRow: function(i,r){ $(this).datagrid('beginEdit',i); },
         columns: [[
-            {field:'bankCardName', title:'Card Name', width:160},
-            {field:'bookKeepingDate', title:'Posting Date', width:100, align:'center', formatter: formatDateOnly, sortable:true, sorter: dateSorter},
-            {field:'transactionDateTime', title:'TXN Date', width:160, align:'center', sortable:true, sorter: dateSorter},
-            {field:'transactionDesc', title:'Narration', width:260},
-            {field:'balanceCurrency', title:'Currency', width:80, align:'center'},
-            {field:'incomeMoney', title:'Income', width:100, align:'right'},
-            {field:'balanceMoney', title:'Expense', width:100, align:'right'},
-            {field:'accountBalance', title:'Balance', width:120, align:'right'},
-            {field:'consumeCode', title:'Category', width:220, 
+            {field:'bankCardName', title:'Card Name', width:160, halign:'center'},
+            {field:'bookKeepingDate', title:'Posting Date', width:100, align:'center', halign:'center', formatter: formatDateOnly, sortable:true, sorter: dateSorter},
+            {field:'transactionDateTime', title:'TXN Date', width:160, align:'center', halign:'center', sortable:true, sorter: dateSorter},
+            {field:'transactionDesc', title:'Narration', width:260, halign:'center'},
+            {field:'balanceCurrency', title:'Currency', width:80, align:'center', halign:'center'},
+            {field:'incomeMoney', title:'Income', width:100, align:'right', halign:'center'},
+            {field:'balanceMoney', title:'Expense', width:100, align:'right', halign:'center'},
+            {field:'accountBalance', title:'Balance', width:120, align:'right', halign:'center'},
+            {field:'consumeCode', title:'Category', width:220, halign:'center',
                 formatter: function(v,r){ return r.consumeName || v; },
                 editor:{
                     type:'combotree',
@@ -180,8 +215,8 @@ function initTempGrid(){
                     }
                 }
             },
-            {field:'opponentName', title:'Opponent Name', width:180},
-            {field:'opponentAccount', title:'Opponent Acc', width:220}
+            {field:'opponentName', title:'Opponent Name', width:180, halign:'center'},
+            {field:'opponentAccount', title:'Opponent Acc', width:220, halign:'center'}
         ]]
     });
     $('#dgTempUpload').datagrid('loadData', []);
