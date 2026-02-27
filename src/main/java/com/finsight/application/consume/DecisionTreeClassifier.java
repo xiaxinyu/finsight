@@ -107,14 +107,26 @@ public class DecisionTreeClassifier {
         RuleEntry bestEq = null;
         List<RuleEntry> eqs = equalsIndex.get(text);
         if (eqs != null && !eqs.isEmpty()){
-            for(RuleEntry e : eqs){ if(matchContext(e,b,c,amount,txnDate)){ if(bestEq==null || scoreFor(e)>scoreFor(bestEq)) bestEq=e; } }
+            for(RuleEntry e : eqs){
+                if(matchContext(e,b,c,amount,txnDate)){
+                    if(bestEq==null || betterThan(e, bestEq)){
+                        bestEq = e;
+                    }
+                }
+            }
             if (bestEq != null) return toResult(bestEq);
         }
 
         RuleEntry bestRegex = null;
         for (RuleEntry e : regexEntries){
             if (!matchContext(e,b,c,amount,txnDate)) continue;
-            try{ if(e.compiled.matcher(text).find()){ if(bestRegex==null || scoreFor(e)>scoreFor(bestRegex)) bestRegex=e; } }catch(Exception ignore){}
+            try{
+                if(e.compiled.matcher(text).find()){
+                    if(bestRegex==null || betterThan(e, bestRegex)){
+                        bestRegex = e;
+                    }
+                }
+            }catch(Exception ignore){}
         }
         if (bestRegex != null) return toResult(bestRegex);
 
@@ -124,7 +136,9 @@ public class DecisionTreeClassifier {
             try{
                 String p = normalize(e.pattern);
                 if(StringUtils.hasText(p) && text.contains(p)){
-                    if(bestContains==null || scoreFor(e)>scoreFor(bestContains)) bestContains=e;
+                    if(bestContains==null || betterThan(e, bestContains)){
+                        bestContains = e;
+                    }
                 }
             }catch(Exception ignore){}
         }
@@ -225,6 +239,38 @@ public class DecisionTreeClassifier {
 
     private int scoreForContains(RuleEntry e){
         return 40 + e.priority;
+    }
+    
+    private boolean betterThan(RuleEntry candidate, RuleEntry current){
+        int cs = scoreFor(candidate);
+        int os = scoreFor(current);
+        if (cs != os) return cs > os;
+        int cl = normalizedPatternLen(candidate);
+        int ol = normalizedPatternLen(current);
+        if (cl != ol) return cl > ol;
+        int cx = specificity(candidate);
+        int ox = specificity(current);
+        if (cx != ox) return cx > ox;
+        return false;
+    }
+    
+    private int normalizedPatternLen(RuleEntry e){
+        try{
+            String p = normalize(e == null ? null : e.pattern);
+            return p == null ? 0 : p.length();
+        }catch(Exception ignore){
+            return 0;
+        }
+    }
+    
+    private int specificity(RuleEntry e){
+        if (e == null) return 0;
+        int s = 0;
+        if (StringUtils.hasText(e.bankCode)) s++;
+        if (StringUtils.hasText(e.cardTypeCode)) s++;
+        if (e.minAmount != null || e.maxAmount != null) s++;
+        if (e.startDate != null || e.endDate != null) s++;
+        return s;
     }
 
     private List<String> splitTokens(String pat){
