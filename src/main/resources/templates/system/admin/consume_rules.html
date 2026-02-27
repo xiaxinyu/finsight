@@ -90,26 +90,18 @@
     </div>
 </div>
 
-<div data-options="region:'center',border:false">
-    <div class="rules-toolbar">
-        <div class="row" style="margin-bottom: 12px;">
-            <input id="keywords" class="easyui-tagbox" style="width:100%; height:32px;" prompt="Quick Add: Enter patterns and press Enter...">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveKeywords()" style="margin-left:8px; height:32px; padding:0 10px;">Generate</a>
-        </div>
+<div data-options="region:'center',border:false" style="display:flex; flex-direction:column; overflow:hidden;">
+    <div class="rules-toolbar" style="flex:0 0 auto;">
         <div class="row" style="justify-content: space-between;">
             <div>
                 <input id="filterTag" class="easyui-textbox" style="width:200px; height:28px;" prompt="Filter by tag...">
                 <a class="easyui-linkbutton" iconCls="icon-search" plain="true" onclick="loadRules()" style="height:28px;"></a>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="color:#868e96; font-size:12px; font-weight:500;">Bulk Set:</span>
-                <input id="newRuleTag" class="easyui-textbox" style="width:110px; height:28px;" prompt="Tag">
-                <input id="defaultWeight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:60px; height:28px;" value="100">
-                <a class="easyui-linkbutton" data-options="iconCls:'icon-edit',plain:true" onclick="applyToSelected()" title="Apply to Selected" style="height:28px;">Apply</a>
-            </div>
+            <!-- Removed Bulk Set as requested -->
         </div>
     </div>
-    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14,checkOnSelect:true,selectOnCheck:true,striped:true,border:false">
+    <div style="flex:1; position:relative;">
+        <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14,checkOnSelect:true,selectOnCheck:true,striped:true,border:false,remoteSort:false">
         <thead>
         <tr>
             <th data-options="field:'ck',checkbox:true"></th>
@@ -125,6 +117,7 @@
         </tr>
         </thead>
     </table>
+    </div>
 </div>
 
 <div data-options="region:'east',split:true,border:false" class="detail-panel" style="width: 300px;">
@@ -212,7 +205,6 @@ var tree = '#tree';
 var dg = '#dg';
 var editIndex;
 var selectedCategoryId = '';
-var currentKeywords = [];
 var categoryMap = {};
 var fmt = {
     categoryCode: function(v){ return categoryMap[v] || v; },
@@ -272,7 +264,6 @@ $(function(){
         },
         onClickRow:function(index,row){ renderDetail(row); }
     });
-    $('#keywords').tagbox({onRemoveTag:onRemoveTag});
     $.get('/api/v1/consume/categories', function(res){
         var rows = (res && res.rows) ? res.rows : [];
         for(var i=0;i<rows.length;i++){ categoryMap[rows[i].id] = rows[i].code; }
@@ -283,14 +274,20 @@ $(function(){
     }catch(e){}
 });
 
-function loadRules(){
+function loadRules(stayOnPage){
     var grid = $(dg);
-    var opts = grid.datagrid('options') || {};
-    opts.pageNumber = 1;
-    grid.datagrid('options').pageNumber = 1;
+    // Clear previous allRows cache to ensure fresh data is loaded
+    var state = grid.data('datagrid');
+    if(state && state.allRows) state.allRows = null;
+
     var tagVal = $('#filterTag').textbox('getValue');
-    $(dg).datagrid('load', {categoryId:selectedCategoryId, tag:tagVal});
-    loadKeywords();
+    var param = {categoryId:selectedCategoryId, tag:tagVal};
+    
+    if(stayOnPage){
+        grid.datagrid('reload', param);
+    } else {
+        grid.datagrid('load', param);
+    }
     loadRecommendations();
 }
 
@@ -304,12 +301,12 @@ function endEditing(){
 }
 
 function addRule(){
-    if (!selectedCategoryId) return;
+    if (!selectedCategoryId) {
+        $.messager.alert('Tip', 'Please select a category on the left first');
+        return;
+    }
     if (endEditing()){
-        var newTag = $('#newRuleTag').textbox('getValue');
-        var ruleTags = [];
-        if(newTag && newTag.trim().length > 0) ruleTags.push(newTag.trim());
-        $(dg).datagrid('appendRow',{categoryId:selectedCategoryId,priority:100,active:1,patternType:'contains',tags:ruleTags});
+        $(dg).datagrid('appendRow',{categoryId:selectedCategoryId,priority:100,active:1,patternType:'contains',tags:[]});
         editIndex = $(dg).datagrid('getRows').length-1;
         $(dg).datagrid('selectRow', editIndex).datagrid('beginEdit', editIndex);
     }
@@ -344,7 +341,7 @@ function doSaveRow(row){
     var method = row.id ? 'PUT' : 'POST';
     var url = '/api/v1/consume/rules' + (row.id ? '/' + row.id : '');
     $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(merged)}).done(function(){
-        loadRules();
+        loadRules(true);
     });
 }
 
@@ -370,112 +367,54 @@ function reloadCache(){
 function reloadTree(){ $(tree).tree('reload'); }
 
 function pagerFilter(data){
-    var grid = $(dg);
-    var opts = grid.datagrid('options');
-    var pager = grid.datagrid('getPager');
-    pager.pagination({
-        pageList: [20,50,100,200],
-        onSelectPage:function(pageNum,pageSize){
-            opts.pageNumber = pageNum;
-            opts.pageSize = pageSize;
-            pager.pagination('refresh',{pageNumber:pageNum,pageSize:pageSize});
-            var all = grid.data('allRows') || [];
-            grid.datagrid('loadData', all);
-        }
-    });
     if ($.isArray(data)){
-        grid.data('allRows', data);
-        data = { total: data.length, rows: data };
-    } else {
-        var rows = data && data.rows ? data.rows : [];
-        grid.data('allRows', rows);
-        data.total = rows.length;
+        data = {
+            total: data.length,
+            rows: data
+        }
     }
-    var all = grid.data('allRows') || [];
-    var start = (opts.pageNumber - 1) * opts.pageSize;
-    var end = start + opts.pageSize;
-    data.rows = all.slice(start, end);
+    var target = this;
+    var dg = $(target);
+    var state = dg.data('datagrid');
+    var opts = dg.datagrid('options');
+    if (!state.allRows){
+        state.allRows = (data.rows || []);
+    }
+    if (!opts.remoteSort && opts.sortName){
+        var names = opts.sortName.split(',');
+        var orders = opts.sortOrder.split(',');
+        state.allRows.sort(function(r1,r2){
+            var r = 0;
+            for(var i=0; i<names.length; i++){
+                var sn = names[i];
+                var so = orders[i];
+                var col = dg.datagrid('getColumnOption', sn);
+                var sortFunc = col.sorter || function(a,b){
+                    return a==b ? 0 : (a>b?1:-1);
+                };
+                r = sortFunc(r1[sn], r2[sn]) * (so=='asc'?1:-1);
+                if (r != 0){
+                    return r;
+                }
+            }
+            return r;
+        });
+    }
+    var start = (opts.pageNumber-1)*parseInt(opts.pageSize);
+    var end = start + parseInt(opts.pageSize);
+    data.rows = state.allRows.slice(start, end);
     return data;
 }
 
-function loadKeywords(){
-    var tagVal = $('#filterTag').textbox('getValue');
-    $.get('/api/v1/consume/rules', {categoryId:selectedCategoryId, tag:tagVal}, function(res){
-        var list = $.isArray(res) ? res : (res && res.rows) ? res.rows : [];
-        var tags = [];
-        currentKeywords = [];
-        for(var i=0;i<list.length;i++){
-            var r = list[i];
-            if((r.patternType||'').toLowerCase()==='contains' && r.active===1){
-                tags.push(r.pattern);
-                currentKeywords.push({id:r.id,pattern:r.pattern});
-            }
-        }
-        $('#keywords').tagbox('setValues', tags);
-    });
-}
 
-function saveKeywords(){
-    var tags = $('#keywords').tagbox('getValues');
-    var weight = parseInt($('#defaultWeight').numberbox('getValue')||'0');
-    var newTag = $('#newRuleTag').textbox('getValue');
-    var existing = {};
-    for(var i=0;i<currentKeywords.length;i++){ existing[currentKeywords[i].pattern]=currentKeywords[i].id; }
-    var toAdd = [];
-    for(var j=0;j<tags.length;j++){ if(!existing[tags[j]]) toAdd.push(tags[j]); }
-    for(var k=0;k<toAdd.length;k++){
-        var ruleTags = [];
-        if(newTag && newTag.trim().length > 0) ruleTags.push(newTag.trim());
-        var row = {categoryId:selectedCategoryId,pattern:toAdd[k],patternType:'contains',priority:weight,active:1,tags:ruleTags};
-        if(hasConflict(row)){ continue; }
-        $.ajax({url:'/api/v1/consume/rules',type:'POST',contentType:'application/json',data:JSON.stringify(row)});
-    }
-    setTimeout(function(){ loadRules(); }, 200);
-}
 
-function applyToSelected(){
-    var rows = $(dg).datagrid('getSelections');
-    if(rows.length == 0){ $.messager.alert('Tip','Please select rules first'); return; }
-    var newTag = $('#newRuleTag').textbox('getValue');
-    if(!newTag || newTag.trim().length == 0){ $.messager.alert('Tip','Please enter a tag'); return; }
-    newTag = newTag.trim();
-    
-    var completed = 0;
-    for(var i=0; i<rows.length; i++){
-        var row = rows[i];
-        var tags = row.tags || [];
-        var exists = false;
-        for(var t=0; t<tags.length; t++){ if(tags[t] == newTag) { exists = true; break; } }
-        if(!exists){
-            tags.push(newTag);
-            row.tags = tags;
-            $.ajax({url:'/api/v1/consume/rules/'+row.id, type:'PUT', contentType:'application/json', data:JSON.stringify(row)})
-             .always(function(){
-                 completed++;
-                 if(completed == rows.length){
-                     loadRules();
-                     $.messager.show({title:'OK', msg:'Tag applied to '+rows.length+' rules'});
-                 }
-             });
-        } else {
-            completed++;
-            if(completed == rows.length) loadRules();
-        }
-    }
-}
 
-function onRemoveTag(value){
-    var id = null;
-    for(var i=0;i<currentKeywords.length;i++){ if(currentKeywords[i].pattern===value){ id = currentKeywords[i].id; break; } }
-    if(!id) return;
-    $.messager.confirm('Confirm','Confirm deleting keyword '+value+' ?',function(r){
-        if(!r) return;
-        $.ajax({url:'/api/v1/consume/rules/'+id,type:'DELETE'}).done(function(){ loadRules(); });
-    });
-}
 
 function hasConflict(row){
-    var list = $(dg).datagrid('getRows')||[];
+    var grid = $(dg);
+    var state = grid.data('datagrid');
+    var list = (state && state.allRows) ? state.allRows : (grid.datagrid('getRows')||[]);
+
     var pat = $.trim(row.pattern||'');
     var type = $.trim(row.patternType||'contains').toLowerCase();
     var cat = $.trim(row.categoryId||'');
@@ -496,11 +435,11 @@ function getSelections(){ return $(dg).datagrid('getSelections')||[]; }
 
 function batchEnable(){
     var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
-    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=1; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
+    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=1; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(true); }}); }
 }
 function batchDisable(){
     var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
-    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=0; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
+    var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=0; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(true); }}); }
 }
 function batchCopy(){
     var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
