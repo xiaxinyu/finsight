@@ -11,11 +11,13 @@
 .toolbar .textbox .textbox-text { height: 24px; line-height: 24px; font-size: 12px; }
 .toolbar .l-btn { height: 24px; line-height: 24px; padding: 0 10px; flex-shrink: 0; }
 .toolbar .l-btn .l-btn-text { padding: 0 8px; margin: 0 0; white-space: nowrap; }
-.toolbar .l-btn-icon-left .l-btn-text { margin-left: 6px; }
+.toolbar .l-btn-icon-left .l-btn-text { margin-left: 24px; }
 
 /* datagrid visual tweaks */
-#datagrid .datagrid-header .datagrid-cell { white-space: nowrap; }
-#datagrid .datagrid-cell { overflow: hidden; text-overflow: ellipsis; }
+#datagrid .datagrid-header .datagrid-cell,
+#dgTempUpload .datagrid-header .datagrid-cell { white-space: nowrap; }
+#datagrid .datagrid-cell,
+#dgTempUpload .datagrid-cell { overflow: hidden; text-overflow: ellipsis; }
 .toolbar .combo-panel { border: 1px solid #aac5e7; }
 .app-font, body, button, input, select, textarea { font-family: "Segoe UI", Arial, Helvetica, sans-serif; }
 
