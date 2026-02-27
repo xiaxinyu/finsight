@@ -74,8 +74,16 @@
             <th data-options="field:'transactionDateTime',width:140,align:'center'">TXN Date</th>
             <th data-options="field:'transactionDesc',width:250,align:'left'">Narration</th>
             <th data-options="field:'balanceCurrency',width:80,align:'center'">Currency</th>
-            <th data-options="field:'incomeMoney',width:100,align:'right',formatter:app.money.rmb">Income</th>
-            <th data-options="field:'balanceMoney',width:100,align:'right',formatter:function(v,r,i){return app.money.rmb(Math.abs(v),r,i);}">Expense</th>
+            <th data-options="field:'incomeMoney',width:100,align:'right',formatter:function(v,r,i){
+                var income = v || 0;
+                if(r.balanceMoney < 0){ income += Math.abs(r.balanceMoney); }
+                return app.money.rmb(income,r,i);
+            }">Income</th>
+            <th data-options="field:'balanceMoney',width:100,align:'right',formatter:function(v,r,i){
+                var expense = 0;
+                if(v > 0){ expense = v; }
+                return app.money.rmb(expense,r,i);
+            }">Expense</th>
             <th data-options="field:'accountBalance',width:120,align:'right',formatter:app.money.rmb">Balance</th>
             
             <th data-options="field:'consumeCode',width:220,align:'left',formatter:function(v,r){return r.consumeName||'';},editor:{type:'combotree',options:{url:'/api/v1/consume/tree',method:'get',loadFilter:function(data){function mapNode(n){if(!n) return n;var code=n.id||'';var name=n.text||'';n.text=(code?code:'')+(name?('  '+name):'');if(n.children&&n.children.length){for(var i=0;i<n.children.length;i++){n.children[i]=mapNode(n.children[i]);}}return n;}if($.isArray(data)){for(var i=0;i<data.length;i++){data[i]=mapNode(data[i]);}}else{data=mapNode(data);}return data;},onShowPanel:function(){try{$(this).combotree('tree').tree('collapseAll');}catch(e){}},onLoadSuccess:function(){try{$(this).combotree('tree').tree('collapseAll');}catch(e){}}}}">
@@ -113,7 +121,12 @@ $(function() {
 			if(rowDatas != undefined && rowDatas.length > 0){
 				var total = 0;
 				for(var i=0;i<rowDatas.length;i++){
-					total += rowDatas[i].balanceMoney;
+                    var expense = 0;
+                    var b = rowDatas[i].balanceMoney || 0;
+                    if(b > 0){
+                        expense = b;
+                    }
+					total += expense;
 				}
 				$("#totalConsume").html(Math.abs(Math.round(total)));
 			}
