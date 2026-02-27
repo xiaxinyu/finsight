@@ -6,144 +6,170 @@
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
     <style>
-        .rules-toolbar { padding:8px; border-bottom:1px solid #eee; }
-        .rules-toolbar .row { display:flex; align-items:center; gap:8px; }
-        .rules-toolbar .row + .row { margin-top:6px; }
-        .rules-toolbar label { min-width:80px; color:#222; font-size:12px; font-weight:600; }
-        .rules-toolbar #keywords { width:100%; height:28px; max-height:60px; overflow:auto; }
-        .rules-toolbar .tagbox .textbox { height:28px; }
-        .rules-toolbar .tagbox .textbox .textbox-text { height:28px; line-height:28px; font-size:12px; }
-        .rules-toolbar .tagbox .tagbox-item { margin:2px 4px; padding:0 6px; font-size:12px; }
-        .rules-toolbar .l-btn { height:26px; line-height:26px; padding:0 10px; }
-        .rules-toolbar .l-btn .l-btn-text { padding:0 8px; white-space:nowrap; }
-        .rules-toolbar .numberbox { height:26px; }
-        .rules-toolbar .numberbox .textbox-text { height:26px; line-height:26px; font-size:12px; }
-        /* Fix: keep selected row text readable under bootstrap theme */
-        .datagrid-row-selected { background-color:#e6f2ff !important; }
-        .datagrid-row-selected .datagrid-cell { color:#333 !important; }
-        .datagrid-row-over .datagrid-cell { color:#333 !important; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .rules-toolbar { padding:10px; border-bottom:1px solid #ddd; background-color: #fcfcfc; }
+        .rules-toolbar .row { display:flex; align-items:center; gap:10px; flex-wrap: wrap; }
+        .rules-toolbar .row + .row { margin-top:8px; }
+        .rules-toolbar label { color:#555; font-size:12px; font-weight:600; }
+        .rules-toolbar #keywords { width:100%; height:30px; }
+        
+        /* Modernize inputs and buttons */
+        .easyui-linkbutton { border-radius: 3px; }
+        
+        /* Tree area styling */
+        .tree-panel { background-color: #f8f9fa; border-right: 1px solid #e0e0e0; }
+        
+        /* Detail area styling */
+        .detail-panel { background-color: #f8f9fa; border-left: 1px solid #e0e0e0; padding: 15px; }
+        .detail-item { margin-bottom: 10px; }
+        .detail-item label { display: block; color: #666; font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+        .detail-item .easyui-textbox, .detail-item .easyui-combobox, .detail-item .easyui-numberbox, .detail-item .easyui-datebox { width: 100%; }
+        
+        /* Datagrid refinements */
+        .datagrid-header .datagrid-cell { font-weight: 600; color: #444; }
+        .datagrid-row-selected { background-color:#e6f2ff !important; color: #333 !important; }
     </style>
 </head>
 <body class="easyui-layout">
-<div data-options="region:'north'" style="height: 40px;padding:6px 8px;">
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="addRule()">Add</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveRule()">Save</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="deleteRule()">Delete</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-reload'" onclick="reloadCache()">Reload Cache</a>
-    <span style="margin-left:8px;"></span>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="batchEnable()">批量启用</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-cancel'" onclick="batchDisable()">批量禁用</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-copy'" onclick="batchCopy()">复制选中</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="batchDelete()">删除选中</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="openRegexTester()">正则测试</a>
-    <span id="hint" style="margin-left:12px;color:#888;">Select a category on the left</span>
+<div data-options="region:'north',border:false" style="height: 42px; padding:6px 10px; background:#f0f2f5; border-bottom:1px solid #ccc;">
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true" onclick="addRule()">Add</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-save',plain:true" onclick="saveRule()">Save</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-remove',plain:true" onclick="deleteRule()">Delete</a>
+    <span class="separator" style="border-left:1px solid #ccc; margin:0 5px; height:16px; display:inline-block; vertical-align:middle;"></span>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-reload',plain:true" onclick="reloadCache()">Reload Cache</a>
+    <span class="separator" style="border-left:1px solid #ccc; margin:0 5px; height:16px; display:inline-block; vertical-align:middle;"></span>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-ok',plain:true" onclick="batchEnable()">批量启用</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-cancel',plain:true" onclick="batchDisable()">批量禁用</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-copy',plain:true" onclick="batchCopy()">复制选中</a>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-remove',plain:true" onclick="batchDelete()">删除选中</a>
+    <span class="separator" style="border-left:1px solid #ccc; margin:0 5px; height:16px; display:inline-block; vertical-align:middle;"></span>
+    <a class="easyui-linkbutton" data-options="iconCls:'icon-search',plain:true" onclick="openRegexTester()">正则测试</a>
+    <span id="hint" style="margin-left:12px;color:#888;font-style:italic;">Select a category on the left</span>
 </div>
 
-<div data-options="region:'west'" style="width: 220px; border-right: 1px solid #ddd; padding:6px;">
-    <ul id="tree" class="easyui-tree" data-options="url:'/api/v1/consume/tree',method:'get'"></ul>
-    <div style="margin-top:6px;color:#888;">No delete actions for the tree here</div>
-    <div style="margin-top:6px;">
-        <a class="easyui-linkbutton" data-options="iconCls:'icon-reload'" style="width:100%;" onclick="reloadTree()">Reload</a>
+<div data-options="region:'west',split:true,border:false" class="tree-panel" style="width: 200px; padding:10px;">
+    <ul id="tree" class="easyui-tree" data-options="url:'/api/v1/consume/tree',method:'get',animate:true,lines:true"></ul>
+    <div style="margin-top:10px; text-align:center;">
+        <a class="easyui-linkbutton" data-options="iconCls:'icon-reload',plain:true" style="width:100%; color:#666;" onclick="reloadTree()">Refresh Tree</a>
     </div>
 </div>
 
-<div data-options="region:'center'">
+<div data-options="region:'center',border:false">
     <div class="rules-toolbar">
         <div class="row">
-            <label>Filter Tag</label>
-            <input id="filterTag" class="easyui-textbox" style="width:200px">
+            <label>Filter:</label>
+            <input id="filterTag" class="easyui-textbox" style="width:180px" prompt="Filter by tag...">
             <a class="easyui-linkbutton" iconCls="icon-search" onclick="loadRules()">Search</a>
+            
+            <span style="border-left:1px solid #ddd; height:20px; margin:0 10px;"></span>
+            
+            <label>New Rule Tag:</label>
+            <input id="newRuleTag" class="easyui-textbox" style="width:120px" prompt="Tag for new rules">
+            <label>Weight:</label>
+            <input id="defaultWeight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:60px;" value="100">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-edit'" onclick="applyToSelected()">Apply Tag</a>
         </div>
         <div class="row">
-            <label>Quick Add</label>
-            <input id="keywords" class="easyui-tagbox" prompt="Enter patterns and press Enter">
-        </div>
-        <div class="row">
-            <label>New Rule Tag</label>
-            <input id="newRuleTag" class="easyui-textbox" style="width:120px">
-            <label>Weight</label>
-            <input id="defaultWeight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:80px;" value="100">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveKeywords()">Apply to New Rules</a>
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-edit'" onclick="applyToSelected()">Apply to Selected</a>
+            <label>Quick Add:</label>
+            <input id="keywords" class="easyui-tagbox" style="width:400px; flex-grow:1;" prompt="Enter patterns and press Enter to quick add...">
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveKeywords()">Add All</a>
         </div>
     </div>
-    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14,checkOnSelect:true,selectOnCheck:true,striped:true">
+    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:false,pagination:true,pageSize:50,fitColumns:true,scrollbarSize:14,checkOnSelect:true,selectOnCheck:true,striped:true,border:false">
         <thead>
         <tr>
             <th data-options="field:'ck',checkbox:true"></th>
             <th data-options="field:'id',width:160,hidden:true">ID</th>
-            <th data-options="field:'pattern',width:260,formatter:fmt.pattern,editor:{type:'textbox'}">Pattern</th>
-            <th data-options="field:'patternType',width:120,editor:{type:'combobox',options:{data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}],valueField:'id',textField:'text'}}">Type</th>
-            <th data-options="field:'tags',width:200,formatter:fmt.tags,editor:{type:'tagbox',options:{hasDownArrow:true}}">Tags</th>
-            <th data-options="field:'priority',width:120,formatter:fmt.weight,editor:{type:'numberbox'}">Weight</th>
-            <th data-options="field:'active',width:80,formatter:fmt.active,editor:{type:'checkbox',options:{on:1,off:0}}">Active</th>
+            <th data-options="field:'pattern',width:260,halign:'center',formatter:fmt.pattern,editor:{type:'textbox'}">Pattern</th>
+            <th data-options="field:'patternType',width:100,halign:'center',editor:{type:'combobox',options:{data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}],valueField:'id',textField:'text'}}">Type</th>
+            <th data-options="field:'tags',width:180,halign:'center',formatter:fmt.tags,editor:{type:'tagbox',options:{hasDownArrow:true}}">Tags</th>
+            <th data-options="field:'priority',width:80,halign:'center',align:'center',formatter:fmt.weight,editor:{type:'numberbox'}">Weight</th>
+            <th data-options="field:'active',width:60,halign:'center',align:'center',formatter:fmt.active,editor:{type:'checkbox',options:{on:1,off:0}}">Active</th>
             <th data-options="field:'bankCode',width:100,hidden:true,editor:{type:'textbox'}">Bank</th>
             <th data-options="field:'cardTypeCode',width:120,hidden:true,editor:{type:'textbox'}">Card Type</th>
-            <th data-options="field:'remark',width:220,editor:{type:'textbox'}">Remark</th>
+            <th data-options="field:'remark',width:180,halign:'center',editor:{type:'textbox'}">Remark</th>
         </tr>
         </thead>
     </table>
 </div>
 
-<div data-options="region:'east'" style="width: 360px; border-left: 1px solid #ddd;">
-    <div style="padding:10px;">
-        <div style="margin-bottom:8px;font-weight:600;">Rule Detail</div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Category</label>
-            <input id="detail_category" class="easyui-textbox" style="width:230px" readonly>
+<div data-options="region:'east',split:true,border:false" class="detail-panel" style="width: 300px;">
+    <div style="margin-bottom:15px; font-size:16px; font-weight:600; color:#333; border-bottom:1px solid #ddd; padding-bottom:8px;">
+        Rule Detail
+    </div>
+    
+    <div class="detail-item">
+        <label>Category</label>
+        <input id="detail_category" class="easyui-textbox" style="width:100%;" readonly>
+    </div>
+    
+    <div class="detail-item">
+        <label>Pattern</label>
+        <input id="detail_pattern" class="easyui-textbox" style="width:100%;">
+    </div>
+    
+    <div style="display:flex; gap:10px;">
+        <div class="detail-item" style="flex:1;">
+            <label>Type</label>
+            <input id="detail_type" class="easyui-combobox" style="width:100%;">
         </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Pattern</label>
-            <input id="detail_pattern" class="easyui-textbox" style="width:230px">
+        <div class="detail-item" style="flex:1;">
+            <label>Weight</label>
+            <input id="detail_weight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:100%;">
         </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Type</label>
-            <input id="detail_type" class="easyui-combobox" style="width:130px">
+    </div>
+
+    <div class="detail-item">
+        <label>Active</label>
+        <input id="detail_active" class="easyui-switchbutton" data-options="onText:'ON',offText:'OFF'" style="width:80px;">
+    </div>
+
+    <div class="detail-item">
+        <label>Remark</label>
+        <input id="detail_remark" class="easyui-textbox" style="width:100%;">
+    </div>
+    
+    <div style="border-top:1px dashed #ddd; margin:15px 0;"></div>
+    
+    <div class="detail-item">
+        <label>Bank</label>
+        <input id="detail_bank" class="easyui-textbox" style="width:100%;">
+    </div>
+    <div class="detail-item">
+        <label>Card Type</label>
+        <input id="detail_card" class="easyui-textbox" style="width:100%;">
+    </div>
+    
+    <div style="display:flex; gap:10px;">
+        <div class="detail-item" style="flex:1;">
+            <label>Min Amount</label>
+            <input id="detail_min" class="easyui-numberbox" data-options="precision:2,min:0" style="width:100%;">
         </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Weight</label>
-            <input id="detail_weight" class="easyui-numberbox" data-options="min:0,precision:0" style="width:130px">
+        <div class="detail-item" style="flex:1;">
+            <label>Max Amount</label>
+            <input id="detail_max" class="easyui-numberbox" data-options="precision:2,min:0" style="width:100%;">
         </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Active</label>
-            <input id="detail_active" class="easyui-switchbutton" data-options="onText:'ON',offText:'OFF'">
+    </div>
+    
+    <div style="display:flex; gap:10px;">
+        <div class="detail-item" style="flex:1;">
+            <label>Start Date</label>
+            <input id="detail_start" class="easyui-datebox" style="width:100%;">
         </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Bank</label>
-            <input id="detail_bank" class="easyui-textbox" style="width:230px">
+        <div class="detail-item" style="flex:1;">
+            <label>End Date</label>
+            <input id="detail_end" class="easyui-datebox" style="width:100%;">
         </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Card Type</label>
-            <input id="detail_card" class="easyui-textbox" style="width:230px">
-        </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Min Amount</label>
-            <input id="detail_min" class="easyui-numberbox" data-options="precision:2,min:0" style="width:130px">
-        </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Max Amount</label>
-            <input id="detail_max" class="easyui-numberbox" data-options="precision:2,min:0" style="width:130px">
-        </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Start Date</label>
-            <input id="detail_start" class="easyui-datebox" style="width:130px">
-        </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">End Date</label>
-            <input id="detail_end" class="easyui-datebox" style="width:130px">
-        </div>
-        <div style="margin-bottom:8px;">
-            <label style="display:inline-block;width:90px;">Remark</label>
-            <input id="detail_remark" class="easyui-textbox" style="width:230px">
-        </div>
-        <div style="margin-top:10px;">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveDetail()">Save Detail</a>
-        </div>
-        <div style="margin-top:12px;font-weight:600;">Recommendations</div>
-        <div id="detail_recs" style="margin-top:6px;max-height:140px;overflow:auto;border:1px solid #eee;padding:6px;"></div>
-        <div style="margin-top:8px;">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="loadRecommendations()">Refresh</a>
-        </div>
+    </div>
+
+    <div style="margin-top:15px;">
+        <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" style="width:100%; height:32px;" onclick="saveDetail()">Save Detail</a>
+    </div>
+    
+    <div style="margin-top:20px; font-weight:600; color:#555;">Recommendations</div>
+    <div id="detail_recs" style="margin-top:6px; height:100px; overflow:auto; border:1px solid #eee; padding:6px; background:#fff; border-radius:3px;"></div>
+    <div style="margin-top:8px;">
+        <a class="easyui-linkbutton" data-options="iconCls:'icon-search',plain:true" onclick="loadRecommendations()">Refresh Recs</a>
     </div>
 </div>
 
