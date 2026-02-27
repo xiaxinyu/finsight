@@ -81,7 +81,14 @@ public class CgbCreditTransactionStatementImporter implements StatementImporter 
                 // Amount
                 String amtStr = safeGet(row, amountIdx).replaceAll("[^0-9\\-\\.]", "");
                 if (StringUtils.isNotBlank(amtStr)) {
-                    t.setBalanceMoney(Double.valueOf(amtStr));
+                    Double amount = Double.valueOf(amtStr);
+                    if (amount < 0) {
+                        t.setIncomeMoney(Math.abs(amount));
+                        t.setBalanceMoney(0.0);
+                    } else {
+                        t.setBalanceMoney(amount);
+                        t.setIncomeMoney(0.0);
+                    }
                 }
                 
                 // Card
