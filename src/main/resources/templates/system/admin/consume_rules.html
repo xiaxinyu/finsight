@@ -272,7 +272,15 @@ function saveRule(){
 }
 
 function doSaveRow(row){
-    var merged = $.extend({}, row, readDetail());
+    // Prioritize grid edits (in row) over detail form values (in readDetail) for grid columns
+    var form = readDetail();
+    var merged = $.extend({}, row, form);
+    var gridFields = ['pattern', 'patternType', 'priority', 'active', 'remark'];
+    for(var i=0; i<gridFields.length; i++){
+        var f = gridFields[i];
+        if(row[f] !== undefined) merged[f] = row[f];
+    }
+
     var method = row.id ? 'PUT' : 'POST';
     var url = '/api/v1/consume/rules' + (row.id ? '/' + row.id : '');
     $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(merged)}).done(function(){

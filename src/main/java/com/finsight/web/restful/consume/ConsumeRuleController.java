@@ -56,18 +56,32 @@ public class ConsumeRuleController {
 
     @PostMapping
     public ConsumeRule add(@RequestBody ConsumeRule rule){
-        rule.setId(com.finsight.core.StringTool.generateID());
-        ruleService.save(rule);
-        classificationService.reload();
-        return rule;
+        log.info("Try to add rule: {}", rule);
+        try {
+            rule.setId(com.finsight.core.StringTool.generateID());
+            ruleService.save(rule);
+            log.info("Rule added successfully: {}", rule.getId());
+            classificationService.reload();
+            return rule;
+        } catch (Exception e) {
+            log.error("Failed to add rule", e);
+            throw e;
+        }
     }
 
     @PutMapping("/{id}")
     public ConsumeRule update(@PathVariable("id") String id, @RequestBody ConsumeRule rule){
-        rule.setId(id);
-        ruleService.updateById(rule);
-        classificationService.reload();
-        return rule;
+        log.info("Try to update rule id={}, body={}", id, rule);
+        try {
+            rule.setId(id);
+            ruleService.updateById(rule);
+            log.info("Rule updated successfully: {}", id);
+            classificationService.reload();
+            return rule;
+        } catch (Exception e) {
+            log.error("Failed to update rule " + id, e);
+            throw e;
+        }
     }
 
     @DeleteMapping("/{id}")

@@ -11,6 +11,7 @@ import java.util.Date;
 @TableName("consume_rule")
 @Getter
 @Setter
+@lombok.ToString
 public class ConsumeRule extends BaseEntity {
     @TableId
     private String id;
