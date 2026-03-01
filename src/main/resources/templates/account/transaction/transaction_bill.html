@@ -102,6 +102,7 @@ var editIndex = undefined;
 $(function() {
     $(datagrid).datagrid({
         method:'post',
+        pageSize:200,
         title:'Total:<span id="totalConsume" style="color:red">0</span>',
         url: '/transaction/getTransactions',
         fitColumns:true,
@@ -109,13 +110,39 @@ $(function() {
         autoRowHeight:true,
         scrollbarSize:14,
         onDblClickRow:function(rowIndex, rowData){
-            $(this).datagrid('cancelEdit', editIndex);
+            if(editIndex != undefined){
+                $(this).datagrid('endEdit', editIndex);
+            }
             editIndex = rowIndex;
             $(this).datagrid('beginEdit', rowIndex);
         },
 		onClickRow:function(rowIndex, rowData){
-			$(this).datagrid('cancelEdit', editIndex);
+			if(editIndex != undefined && editIndex != rowIndex){
+				$(this).datagrid('endEdit', editIndex);
+			}
+            if(editIndex != rowIndex){
+                editIndex = rowIndex;
+                $(this).datagrid('beginEdit', rowIndex);
+            }
 		},
+        onAfterEdit: function(rowIndex, rowData, changes){
+            if(changes.hasOwnProperty('consumeCode')){
+                var tree = $('#cmbConsume').combotree('tree');
+                if(tree){
+                    var node = tree.tree('find', rowData.consumeCode);
+                    if(node){
+                        var text = node.text;
+                        var code = rowData.consumeCode;
+                        var name = text;
+                        if(code && text.indexOf(code) === 0){
+                            name = $.trim(text.substring(code.length));
+                        }
+                        rowData.consumeName = name;
+                        $(this).datagrid('refreshRow', rowIndex);
+                    }
+                }
+            }
+        },
 		onLoadSuccess:function(data){
 			var rowDatas = data.rows;
 			if(rowDatas != undefined && rowDatas.length > 0){

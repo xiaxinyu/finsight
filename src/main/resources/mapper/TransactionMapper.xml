@@ -238,8 +238,8 @@
                 and t.consume_name = #{transaction.consumeName,jdbcType=VARCHAR}
             </if>
             <if test="transaction.demoArea != null">
-                and (t.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
-                or t.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+                and (t.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                or t.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
             <if test="transaction.weekName != null">
                 and weekday(t.bookkeeping_date) = #{transaction.weekName,jdbcType=VARCHAR}
@@ -282,8 +282,8 @@
                 </foreach>
             </if>
             <if test="transaction.demoArea != null">
-                and (c.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
-                or c.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+                and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
         group by case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end
@@ -319,8 +319,8 @@
                 </foreach>
             </if>
             <if test="transaction.demoArea != null">
-                and (c.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
-                or c.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+                and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
         ) view1
@@ -366,8 +366,8 @@
                 </foreach>
             </if>
             <if test="transaction.demoArea != null">
-                and (c.demoarea like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%'
-                or c.transaction_desc like '%'||#{transaction.demoArea,jdbcType=VARCHAR}||'%' )
+                and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
         ) t1 group by cmonth) t2 order by cmonth
