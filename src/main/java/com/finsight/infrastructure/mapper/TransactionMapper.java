@@ -12,6 +12,8 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     void addTransactionList(@Param("transactions") List<Transaction> transactions);
     void updateTransaction(Transaction transaction);
     void deleteTransaction(String id);
+    int incomeToExpense(@Param("ids") List<String> ids, @Param("updateUser") String updateUser);
+    int expenseToIncome(@Param("ids") List<String> ids, @Param("updateUser") String updateUser);
     int countTransaction(@Param("transaction") Transaction transaction);
     List<Transaction> getTransactions(@Param("transaction") Transaction transaction, @Param("page") Page page);
     List<KeyValue> consumeReport(@Param("transaction") Transaction transaction);

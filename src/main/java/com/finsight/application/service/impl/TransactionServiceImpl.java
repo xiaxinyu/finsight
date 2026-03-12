@@ -43,6 +43,30 @@ public class TransactionServiceImpl implements ITransactionService {
     }
 
     @Override
+    public int incomeToExpense(List<String> ids, String userName) throws AppServiceException {
+        try {
+            if (ids == null || ids.isEmpty()) {
+                return 0;
+            }
+            return transactionMapper.incomeToExpense(ids, userName);
+        } catch (Exception e) {
+            throw new AppServiceException(e);
+        }
+    }
+
+    @Override
+    public int expenseToIncome(List<String> ids, String userName) throws AppServiceException {
+        try {
+            if (ids == null || ids.isEmpty()) {
+                return 0;
+            }
+            return transactionMapper.expenseToIncome(ids, userName);
+        } catch (Exception e) {
+            throw new AppServiceException(e);
+        }
+    }
+
+    @Override
     public void deleteTransaction(String id) throws AppServiceException {
         try {
             transactionMapper.deleteTransaction(id);

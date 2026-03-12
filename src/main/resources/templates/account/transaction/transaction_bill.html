@@ -176,8 +176,15 @@ $(function() {
 			iconCls : 'icon-save',
 			handler : updateTransaction
 		} , {
+			iconCls : 'icon-redo',
+			text : 'Income → Expense',
+			title : 'Income → Expense',
+			handler : incomeToExpense
+		} , {
 			iconCls : 'icon-undo',
-			handler : cancelEdit
+			text : 'Expense → Income',
+			title : 'Expense → Income',
+			handler : expenseToIncome
 		}]
 	});
 });
@@ -242,6 +249,108 @@ function deleteTransaction(){
 	}else{
 		app.messager.show({title:'Delete transaction record', msg:'Please select one transaction record!'});
 	}
+}
+
+function incomeToExpense(){
+    var rows = $(datagrid).datagrid('getSelections');
+    if(!rows || rows.length === 0){
+        var row = $(datagrid).datagrid('getSelected');
+        if(row){ rows = [row]; }
+    }
+    if(!rows || rows.length === 0){
+        app.messager.show({title:'Income → Expense', msg:'Please select one or more rows'});
+        return;
+    }
+    try{
+        if(editIndex != undefined){
+            $(datagrid).datagrid('endEdit', editIndex);
+        }
+    }catch(e){}
+
+    var ids = [];
+    var ignored = 0;
+    for(var i=0;i<rows.length;i++){
+        var incomeMoney = Number(rows[i].incomeMoney || 0);
+        var balanceMoney = Number(rows[i].balanceMoney || 0);
+        var hasIncome = incomeMoney > 0 || balanceMoney < 0;
+        if(hasIncome){
+            ids.push(rows[i].id);
+        }else{
+            ignored++;
+        }
+    }
+    if(ids.length === 0){
+        app.messager.show({title:'Income → Expense', msg:'Selected rows have no Income to convert'});
+        return;
+    }
+    var msg = '确认将选中的 ' + ids.length + ' 条记录从 Income 转为 Expense？该操作会把 Income 金额写入 Expense，并把 income_money 置为 0。';
+    if(ignored > 0){
+        msg += '（已忽略 ' + ignored + ' 条无 Income 的记录）';
+    }
+    $.messager.confirm('Confirm', msg, function(r){
+        if(!r){ return; }
+        transaction.incomeToExpense({ids: ids.join(',')}, function(data){
+            if(data && data.returnCode === 'success'){
+                $(datagrid).datagrid('reload');
+                app.messager.show({title:'Success', msg:'已转换 ' + ids.length + ' 条记录'});
+            }else{
+                app.messager.show({title:'Fail', msg: (data && data.returnMessage) ? data.returnMessage : 'Fail'});
+            }
+        }, function(e){
+            app.messager.show({title:'Error', msg: e && e.message ? e.message : 'Error'});
+        });
+    });
+}
+
+function expenseToIncome(){
+    var rows = $(datagrid).datagrid('getSelections');
+    if(!rows || rows.length === 0){
+        var row = $(datagrid).datagrid('getSelected');
+        if(row){ rows = [row]; }
+    }
+    if(!rows || rows.length === 0){
+        app.messager.show({title:'Expense → Income', msg:'Please select one or more rows'});
+        return;
+    }
+    try{
+        if(editIndex != undefined){
+            $(datagrid).datagrid('endEdit', editIndex);
+        }
+    }catch(e){}
+
+    var ids = [];
+    var ignored = 0;
+    for(var i=0;i<rows.length;i++){
+        var balanceMoney = Number(rows[i].balanceMoney || 0);
+        var incomeMoney = Number(rows[i].incomeMoney || 0);
+        var hasExpense = balanceMoney > 0;
+        if(hasExpense && incomeMoney <= 0){
+            ids.push(rows[i].id);
+        }else{
+            ignored++;
+        }
+    }
+    if(ids.length === 0){
+        app.messager.show({title:'Expense → Income', msg:'Selected rows have no Expense to convert'});
+        return;
+    }
+    var msg = '确认将选中的 ' + ids.length + ' 条记录从 Expense 转为 Income？该操作会把 Expense 金额写入 Income，并把 balance_money 置为 0。';
+    if(ignored > 0){
+        msg += '（已忽略 ' + ignored + ' 条不符合条件的记录）';
+    }
+    $.messager.confirm('Confirm', msg, function(r){
+        if(!r){ return; }
+        transaction.expenseToIncome({ids: ids.join(',')}, function(data){
+            if(data && data.returnCode === 'success'){
+                $(datagrid).datagrid('reload');
+                app.messager.show({title:'Success', msg:'已转换 ' + ids.length + ' 条记录'});
+            }else{
+                app.messager.show({title:'Fail', msg: (data && data.returnMessage) ? data.returnMessage : 'Fail'});
+            }
+        }, function(e){
+            app.messager.show({title:'Error', msg: e && e.message ? e.message : 'Error'});
+        });
+    });
 }
 	
 var fmt = {

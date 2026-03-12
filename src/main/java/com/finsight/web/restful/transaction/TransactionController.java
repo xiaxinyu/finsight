@@ -151,6 +151,66 @@ public class TransactionController {
         }
     }
 
+    @RequestMapping("/transaction/income-to-expense")
+    @ResponseBody
+    public CommonResult incomeToExpense(String ids) {
+        try {
+            ids = StringUtils.trimToEmpty(ids);
+            if (ids.isEmpty()) {
+                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "empty_ids");
+            }
+            String[] parts = ids.split(",");
+            java.util.List<String> idList = new java.util.ArrayList<>();
+            for (String p : parts) {
+                String v = StringUtils.trimToEmpty(p);
+                if (!v.isEmpty()) {
+                    idList.add(v);
+                }
+            }
+            if (idList.isEmpty()) {
+                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "empty_ids");
+            }
+            int updated = transactionService.incomeToExpense(idList, authenticationFacade.getUserName());
+            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), String.valueOf(updated));
+        } catch (AppServiceException e) {
+            logger.error("income to expense failed. params[ids = " + ids + "]", e);
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
+        } catch (Exception e) {
+            logger.error("income to expense failed. params[ids = " + ids + "]", e);
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
+        }
+    }
+
+    @RequestMapping("/transaction/expense-to-income")
+    @ResponseBody
+    public CommonResult expenseToIncome(String ids) {
+        try {
+            ids = StringUtils.trimToEmpty(ids);
+            if (ids.isEmpty()) {
+                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "empty_ids");
+            }
+            String[] parts = ids.split(",");
+            java.util.List<String> idList = new java.util.ArrayList<>();
+            for (String p : parts) {
+                String v = StringUtils.trimToEmpty(p);
+                if (!v.isEmpty()) {
+                    idList.add(v);
+                }
+            }
+            if (idList.isEmpty()) {
+                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "empty_ids");
+            }
+            int updated = transactionService.expenseToIncome(idList, authenticationFacade.getUserName());
+            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), String.valueOf(updated));
+        } catch (AppServiceException e) {
+            logger.error("expense to income failed. params[ids = " + ids + "]", e);
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
+        } catch (Exception e) {
+            logger.error("expense to income failed. params[ids = " + ids + "]", e);
+            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
+        }
+    }
+
     @RequestMapping("/transaction/update-batch")
     @ResponseBody
     public CommonResult updateTransactionBatch(@org.springframework.web.bind.annotation.RequestBody String payload) {

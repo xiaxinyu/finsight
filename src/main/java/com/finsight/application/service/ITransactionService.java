@@ -9,6 +9,10 @@ import java.util.List;
 public interface ITransactionService {
     void updateTransaction(Transaction transaction, String userName) throws AppServiceException;
 
+    int incomeToExpense(List<String> ids, String userName) throws AppServiceException;
+
+    int expenseToIncome(List<String> ids, String userName) throws AppServiceException;
+
     void deleteTransaction(String id) throws AppServiceException;
 
     List<Transaction> getTransactions(Transaction transaction, Page page) throws AppServiceException;

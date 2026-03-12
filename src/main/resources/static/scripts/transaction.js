@@ -19,6 +19,26 @@ var transaction = {
            error: efn
        });
 	},
+	incomeToExpense : function(params, sfn, efn) {
+		$.ajax({
+		   type:"post",
+           url: "/transaction/income-to-expense",
+           data:params,
+           dataType:'json',
+           success: sfn,
+           error: efn
+       });
+	},
+	expenseToIncome : function(params, sfn, efn) {
+		$.ajax({
+		   type:"post",
+           url: "/transaction/expense-to-income",
+           data:params,
+           dataType:'json',
+           success: sfn,
+           error: efn
+       });
+	},
 	consumeReport : function(params, sfn, efn){
 		$.ajax({
 		   type:"post",
