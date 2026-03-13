@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>FinSight - Personal Finance Intelligence</title>
-    <link rel="stylesheet" type="text/css" href="plugins/jquery-easyui-1.11.4/themes/default/easyui.css">
+    <link rel="stylesheet" type="text/css" href="plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="plugins/jquery-easyui-1.11.4/themes/icon.css">
     <script type="text/javascript" src="plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
@@ -10,13 +10,151 @@
     <script type="text/javascript" src="plugins/jquery-easyui-1.11.4/plugins/jquery.panel.js"></script>
     <script type="text/javascript" src="plugins/jquery-easyui-1.11.4/plugins/jquery.tabs.js"></script>
     <script type="text/javascript" src="scripts/app-plugin.js"></script>
+    <style>
+        :root{
+            --fs-primary:#1890ff;
+            --fs-primary-hover:#40a9ff;
+            --fs-primary-light:#e6f7ff;
+            --fs-bg:#f0f2f5;
+            --fs-card:#ffffff;
+            --fs-border:#e8e8e8;
+            --fs-border-light:rgba(0,0,0,0.06);
+            --fs-shadow:0 1px 2px -2px rgba(0,0,0,0.16), 0 3px 6px 0 rgba(0,0,0,0.08);
+            --fs-text:#333333;
+            --fs-text-muted:#666666;
+            --fs-text-faint:#999999;
+            --fs-radius:6px;
+            --fs-sidebar:#001529;
+            --fs-sidebar-border:rgba(255,255,255,0.08);
+            --fs-sidebar-text:rgba(255,255,255,0.65);
+        }
+
+        html, body{ height: 100%; }
+        body{ margin:0; background: var(--fs-bg); color: var(--fs-text); font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
+
+        .panel-header,
+        .panel-body{ border-color: var(--fs-border); }
+        .panel-header{ background: var(--fs-card); background-image: none; filter:none; }
+        .panel-title{ font-weight:600; color: #1f2937; }
+        .layout-panel{ background: transparent; }
+
+        .accordion{ border: none; background: transparent; }
+        .accordion .panel-header{ border: none; border-bottom: 1px solid var(--fs-border); }
+        .accordion .panel-body{ border: none; background: transparent; }
+        .accordion .panel-title{ font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--fs-text-faint); }
+
+        .l-btn{ border-radius: var(--fs-radius); background-image: none; filter:none; }
+        .l-btn-plain{ border: 1px solid transparent; }
+        .l-btn-plain:hover{ background: rgba(24,144,255,0.08); border-color: transparent; }
+
+        .easyui-layout .layout-split-west,
+        .easyui-layout .layout-split-east{ border-right: 1px solid var(--fs-border); }
+        .layout-expand{ background: var(--fs-card); border-color: var(--fs-border); }
+
+        #main-west{ background: var(--fs-sidebar); border-right: 1px solid rgba(0,0,0,0.06); }
+        #main-west .panel-header{ background: var(--fs-sidebar); border-color: var(--fs-sidebar-border); }
+        #main-west .panel-body{ background: var(--fs-sidebar); }
+        #main-west .accordion{ background: var(--fs-sidebar); }
+        #main-west .accordion .panel-header{ background: var(--fs-sidebar); border-bottom: 1px solid var(--fs-sidebar-border); }
+        #main-west .accordion .panel-title{ color: rgba(255,255,255,0.55); }
+
+        #navigationDiv .tabs-header{
+            background: var(--fs-card);
+            border-bottom: 1px solid var(--fs-border-light);
+            box-shadow: var(--fs-shadow);
+            padding: 10px 14px 0;
+            position: relative;
+        }
+        #navigationDiv .tabs{ border: none; padding-left: 2px; }
+        #navigationDiv .tabs li{ margin-right: 4px; }
+        #navigationDiv .tabs li a.tabs-inner{
+            border-radius: 10px 10px 0 0;
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 10px 40px 10px 14px;
+            color: var(--fs-text-muted);
+            font-weight: 600;
+            position: relative;
+        }
+        #navigationDiv .tabs li a.tabs-inner:hover{
+            background: rgba(0,0,0,0.03);
+            color: #111827;
+        }
+        #navigationDiv .tabs li.tabs-selected a.tabs-inner{
+            background: var(--fs-card);
+            border-color: rgba(0,0,0,0.08);
+            border-bottom-color: var(--fs-card);
+            color: var(--fs-primary);
+            font-weight: 700;
+        }
+        #navigationDiv .tabs li.tabs-selected a.tabs-inner:after{
+            content:'';
+            position:absolute;
+            left: 12px;
+            right: 12px;
+            bottom: -1px;
+            height: 2px;
+            background: var(--fs-primary);
+            border-radius: 2px;
+        }
+        #navigationDiv .tabs-title{ font-size: 13px; }
+        #navigationDiv .tabs-scroller-left,
+        #navigationDiv .tabs-scroller-right{ background: transparent; border: none; }
+        #navigationDiv .tabs-close{
+            background: none !important;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            margin: 0;
+        }
+        #navigationDiv .tabs-close:before{
+            content:'×';
+            display:block;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align:center;
+            font-size: 16px;
+            color: #9ca3af;
+        }
+        #navigationDiv .tabs li:hover .tabs-close:before{ color: #6b7280; }
+        #navigationDiv .tabs-close:hover{ background: rgba(239,68,68,0.12) !important; }
+        #navigationDiv .tabs-close:hover:before{ color: #ef4444; }
+        #navigationDiv .tabs-tool{
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 0;
+            border: none;
+            background: transparent;
+            z-index: 2;
+        }
+        #navigationDiv .tabs-tool .l-btn{
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            padding: 0;
+            border-radius: 8px;
+        }
+        #navigationDiv .tabs-tool .l-btn:hover{ background: rgba(239,68,68,0.10); }
+        #navigationDiv .tabs-panels{ border: none; background: var(--fs-bg); }
+        #navigationDiv .panel{ border: none; }
+        #navigationDiv .panel-body{ border: none; background: var(--fs-bg); }
+
+        #tab-tools .l-btn-plain:hover{ background: rgba(239,68,68,0.10); }
+    </style>
 </head>
 <body class="easyui-layout">
-<div data-options="region:'north',href:'north.html',cache:false" style="height:85px;"></div>
+<div data-options="region:'north',href:'north.html',cache:false,border:false" style="height:64px;"></div>
 <div data-options="region:'center',border:false">
     <div class="easyui-layout" data-options="fit:true">
-        <div data-options="title:'Navigator',region:'west',width:240,split:true,href:'menu.html',cache:false"></div>
-        <div data-options="region:'center',href:'navigation.html',cache:false"></div>
+        <div id="main-west" data-options="region:'west',width:256,split:false,href:'menu.html',cache:false,border:false"></div>
+        <div data-options="region:'center',href:'navigation.html',cache:false,border:false"></div>
     </div>
 </div>
 </body>

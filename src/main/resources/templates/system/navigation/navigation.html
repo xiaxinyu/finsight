@@ -1,11 +1,6 @@
 <div id="navigationDiv" class="easyui-tabs" data-options="tools:'#tab-tools',fit:true,border:false">
-    <style>
-        #navigationDiv .tabs-header { padding: 2px 4px; }
-        #navigationDiv .tabs-title { font-size: 12px; }
-        #navigationDiv .tabs li a.tabs-inner { padding: 4px 10px; }
-    </style>
      <div  data-options="title:'Home'">
-      	<iframe id="frameIndex" name="frameIndex"  frameborder="0" src="/account/index.html" width="99%" height="99%"></iframe>
+      	<iframe id="frameIndex" name="frameIndex" frameborder="0" scrolling="auto" src="/account/index.html" width="100%" height="100%"></iframe>
     </div> 
 </div>
 <div id="tab-tools">
@@ -25,18 +20,11 @@
     /** 添加面板 */
     function addPanel(title,url){
         var fullUrl = "/" + url;
-        console.info(fullUrl)
-    	var iframe = '<iframe scrolling="no" id="frame" name="frame"  src="' + fullUrl + '" width="100%" height="100%" frameborder="0" onload="try{var w=this.contentWindow;var p=w.location.pathname;if(p===\'/login.html\'|| w.document.getElementById(\'login-form\')){window.top.location.href=\'/login.html\';}}catch(e){}"></iframe>';
+    	var iframe = '<iframe scrolling="auto" id="frame" name="frame" src="' + fullUrl + '" width="100%" height="100%" frameborder="0" onload="try{var w=this.contentWindow;var p=w.location.pathname;if(p===\'/login.html\'|| w.document.getElementById(\'login-form\')){window.top.location.href=\'/login.html\';}}catch(e){}"></iframe>';
     	var tab = {
             title: title,
             content:iframe,
-            closable: true,
-            tools:[{    
-                iconCls:'icon-reload',    
-                handler:function(){    
-                	refresh();  
-                }    
-            }]    
+            closable: true
         };
         $(navigationDiv).tabs('add',tab);
     }

@@ -1,120 +1,90 @@
-<div class="northArea" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-     style="width: 100%;height: 82px;background-size: 100% auto;background-repeat:no-repeat;background-position:left 0;background-image: url('/images/system/mainPage.jpg'); position: relative;">
+<div class="fs-header" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
     <style>
-        .right-container {
-            position: absolute;
-            right: 20px;
-            bottom: 12px;
+        .fs-header{
+            height: 64px;
+            background: #ffffff;
             display: flex;
-            align-items: flex-end;
-            gap: 40px; /* Moves the slogan/title group to the left */
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
-
-        .brand-group {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            text-align: right;
-            margin-bottom: 2px;
-            animation: fadeInRight 0.6s ease-out;
+        .fs-brand{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-width: 260px;
         }
-
-        .brand-title {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 26px;
-            font-weight: 800;
+        .fs-logo{
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #1890ff;
+            box-shadow: 0 6px 14px rgba(24,144,255,0.25);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            font-weight:800;
+            font-size: 14px;
             letter-spacing: 0.5px;
-            color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            line-height: 1.1;
-            margin-bottom: 4px;
         }
-
-        .brand-slogan {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 13px;
-            color: rgba(255,255,255,0.95);
-            font-weight: 500;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        .fs-brand-text{
+            display:flex;
+            flex-direction:column;
+            line-height: 1.1;
+        }
+        .fs-title{
+            font-size: 16px;
+            font-weight: 800;
+            color: #111827;
+        }
+        .fs-subtitle{
+            font-size: 12px;
+            color: #6b7280;
             white-space: nowrap;
         }
-
-        .user-panel {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        .fs-user{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            color:#374151;
             font-size: 13px;
-            color: #334155;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 6px 16px;
-            border-radius: 20px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(255,255,255,0.6);
-            transition: all 0.3s ease;
-            height: 32px;
-            animation: fadeInUp 0.6s ease-out;
         }
-        .user-panel:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: translateY(-1px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        .user-welcome {
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .user-welcome span {
-            color: #2563EB;
+        .fs-user-name{
             font-weight: 700;
+            color: #111827;
         }
-        .divider {
+        .fs-divider{
             width: 1px;
-            height: 12px;
-            background: #cbd5e1;
+            height: 14px;
+            background: #e5e7eb;
         }
-        .logout-btn {
+        .fs-logout{
             color: #ef4444;
-            text-decoration: none;
+            text-decoration:none;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            transition: all 0.2s;
+            padding: 6px 10px;
+            border-radius: 6px;
         }
-        .logout-btn:hover {
+        .fs-logout:hover{
+            background: rgba(239,68,68,0.08);
             color: #dc2626;
-            text-shadow: 0 0 1px rgba(220, 38, 38, 0.2);
-        }
-        
-        @keyframes fadeInRight {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 
-    <div class="right-container">
-        <!-- Brand Group: Title above Slogan -->
-        <div class="brand-group">
-            <div class="brand-title">FinSight</div>
-            <div class="brand-slogan">Understand your money. Understand yourself.</div>
+    <div class="fs-brand">
+        <div class="fs-logo">F</div>
+        <div class="fs-brand-text">
+            <div class="fs-title">FinSight</div>
+            <div class="fs-subtitle">Understand your money. Understand yourself.</div>
         </div>
+    </div>
 
-        <!-- User Panel -->
-        <div class="user-panel">
-            <div class="user-welcome">
-                Hi, <span sec:authentication="name">User</span>
-            </div>
-            <div class="divider"></div>
-            <a href="/logout" class="logout-btn" title="Sign out">
-                Logout
-            </a>
-        </div>
+    <div class="fs-user">
+        <div>Hi, <span class="fs-user-name" sec:authentication="name">User</span></div>
+        <div class="fs-divider"></div>
+        <a href="/logout" class="fs-logout" title="Sign out">Logout</a>
     </div>
 </div>

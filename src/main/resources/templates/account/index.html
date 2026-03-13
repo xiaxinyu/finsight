@@ -6,76 +6,153 @@
     <script src="/plugins/echarts-6.0.0/echarts.min.js"></script>
     <style>
         :root {
-            --primary-color: #2563EB;
+            --primary-color: #1890ff;
             --bg-color: #f0f2f5;
             --card-bg: #ffffff;
             --text-main: #1f2937;
             --text-secondary: #6b7280;
+            --border-color: #e8e8e8;
+            --radius: 8px;
+            /* 新增：卡片与功能色、图表配色 */
+            --card-border: 1px solid rgba(0,0,0,0.08);
+            --card-shadow: 0 1px 2px -2px rgba(0,0,0,0.16), 0 3px 6px 0 rgba(0,0,0,0.12);
+            --card-hover-shadow: 0 3px 6px -4px rgba(0,0,0,0.12), 0 6px 16px 0 rgba(0,0,0,0.08);
+            --theme-year: #1890FF;
+            --theme-health: #52C41A;
+            --theme-bucket: #FAAD14;
+            --theme-insight: #722ED1;
+            --chart-life: #1890FF;
+            --chart-fixed: #52C41A;
+            --chart-shopping: #FAAD14;
+            --chart-entertainment: #F5222D;
+            --chart-investment: #722ED1;
+            --chart-education: #13C2C2;
+            --chart-other: #BFBFBF;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-color);
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
         }
 
-        .header-section {
-            text-align: center;
-            margin-bottom: 30px;
+        .page-top {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 14px;
         }
 
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin: 0 0 10px 0;
-            font-weight: 700;
-        }
-
-        .slogan {
+        .breadcrumb {
+            font-size: 12px;
             color: var(--text-secondary);
-            font-size: 1.1rem;
+            margin-bottom: 6px;
+        }
+
+        .page-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #111827;
             margin: 0;
+            line-height: 1.1;
+        }
+
+        .page-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: rgba(24,144,255,0.08);
+            border: 1px solid rgba(24,144,255,0.20);
+            padding: 6px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: var(--card-border);
+            border-radius: var(--radius);
+            padding: 16px 16px 14px 16px;
+            box-shadow: var(--card-shadow);
+            min-height: 72px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi-card::before{
+            content:'';
+            position:absolute;
+            top:0;left:0;right:0;height:4px;
+            background: var(--theme-color, var(--primary-color));
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .kpi-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1.1;
+        }
+
+        .kpi-value.kpi-small {
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
         }
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
+            grid-template-columns: 3fr 2fr; /* 下方 6:4 比例 */
+            gap: 24px;
             width: 100%;
-            max-width: 1200px;
+            margin-top: 4px;
         }
 
         .card {
             background: var(--card-bg);
-            border-radius: 12px;
+            border-radius: var(--radius);
             padding: 24px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
         }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+        .card::before{
+            content:'';
+            position:absolute;
+            top:0;left:0;right:0;height:4px;
+            background: var(--theme-color, var(--primary-color));
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 800;
             color: var(--text-main);
             margin: 0;
         }
@@ -85,18 +162,28 @@
             height: 300px;
         }
 
-        /* Health Score Specifics */
-        .score-badge {
-            background: #ecfdf5;
-            color: #059669;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
+        .score-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            line-height: 1.05;
+            gap: 2px;
         }
+        .score-number {
+            font-size: 26px;
+            font-weight: 900;
+            color: #111827;
+        }
+        .score-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        .score-number.score-good { color: #059669; }
+        .score-number.score-warn { color: #d97706; }
+        .score-number.score-bad { color: #dc2626; }
 
         .insight-list {
-            margin-top: 15px;
+            margin-top: 12px;
             font-size: 0.9rem;
             color: var(--text-secondary);
         }
@@ -106,27 +193,57 @@
             justify-content: space-between;
             margin-bottom: 8px;
             padding: 4px 0;
-            border-bottom: 1px dashed #f0f0f0;
+            border-bottom: 1px dashed rgba(0,0,0,0.06);
         }
         
         .insight-value {
             font-weight: 600;
             color: var(--text-main);
         }
+
+        @media (max-width: 980px) {
+            .kpi-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+            .dashboard-grid { grid-template-columns: 1fr; gap: 16px; }
+        }
+        @media (max-width: 520px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="header-section">
-        <h1>Welcome to FinSight</h1>
-        <p class="slogan">Understand your money. Understand yourself.</p>
+    <div class="page-top">
+        <div>
+            <div class="breadcrumb">Home / Dashboard</div>
+            <div class="page-title">Dashboard</div>
+        </div>
+        <div class="page-meta" id="pageMeta">Year: --</div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card" style="--theme-color: var(--theme-year);">
+            <div class="kpi-label">Year</div>
+            <div class="kpi-value" id="kpiYear">--</div>
+        </div>
+        <div class="kpi-card" style="--theme-color: var(--theme-health);">
+            <div class="kpi-label">Health Score</div>
+            <div class="kpi-value" id="kpiScore">--</div>
+        </div>
+        <div class="kpi-card" style="--theme-color: var(--theme-bucket);">
+            <div class="kpi-label">Largest Bucket</div>
+            <div class="kpi-value kpi-small" id="kpiTopBucket">--</div>
+        </div>
+        <div class="kpi-card" style="--theme-color: var(--theme-insight);">
+            <div class="kpi-label">Insight</div>
+            <div class="kpi-value kpi-small" id="kpiInsight">Loading…</div>
+        </div>
     </div>
 
     <div class="dashboard-grid">
-        <!-- Module 3: Consumption Structure -->
-        <div class="card">
+        <div class="card" style="--theme-color: var(--chart-life);">
             <div class="card-header">
-                <h2 class="card-title" id="consumptionTitle">📌 Consumption Structure</h2>
+                <h2 class="card-title" id="consumptionTitle">Consumption Structure</h2>
             </div>
             <div id="consumptionChart" class="chart-container"></div>
             <div class="insight-list">
@@ -165,11 +282,13 @@
             </div>
         </div>
 
-        <!-- Module 4: Behavior Insight -->
-        <div class="card">
+        <div class="card" style="--theme-color: var(--theme-health);">
             <div class="card-header">
-                <h2 class="card-title">🛡️ Financial Health Score</h2>
-                <span class="score-badge" id="scoreBadge">--</span>
+                <h2 class="card-title">Financial Health</h2>
+                <div class="score-wrap">
+                    <div class="score-number" id="scoreBadge">--</div>
+                    <div class="score-label">Score</div>
+                </div>
             </div>
             <div id="behaviorChart" class="chart-container"></div>
             <div class="insight-list">
@@ -186,6 +305,9 @@
     </div>
 
     <script type="text/javascript">
+        function cssVar(name){
+            return getComputedStyle(document.documentElement).getPropertyValue('--'+name).trim() || undefined;
+        }
         // Initialize Charts
         document.addEventListener('DOMContentLoaded', function() {
             loadHomeSummary();
@@ -204,6 +326,10 @@
                 }
                 const payload = JSON.parse(data.returnMessage || '{}');
                 const buckets = payload.buckets_pct || {};
+                document.getElementById('pageMeta').innerText = `Year: ${payload.year || year}`;
+                document.getElementById('kpiYear').innerText = `${payload.year || year}`;
+                document.getElementById('kpiInsight').innerText = (payload.summary_text || '—').replace('📌 ', '') || '—';
+                document.getElementById('kpiTopBucket').innerText = findTopBucketText(buckets) || '—';
                 const arr = [
                     { value: buckets.life || 0, name: 'Life (Essentials)' },
                     { value: buckets.fixed || 0, name: 'Fixed Costs' },
@@ -214,7 +340,7 @@
                     { value: buckets.other || 0, name: 'Other' }
                 ];
                 initConsumptionChart(arr);
-                document.getElementById('consumptionTitle').innerText = `📌 ${payload.year} Consumption Structure`;
+                document.getElementById('consumptionTitle').innerText = `${payload.year || year} Consumption Structure`;
                 document.getElementById('lifePct').innerText = `${buckets.life || 0}%`;
                 document.getElementById('fixedPct').innerText = `${buckets.fixed || 0}%`;
                 document.getElementById('shoppingPct').innerText = `${buckets.shopping || 0}%`;
@@ -235,7 +361,7 @@
                     toNumber(dims.growth_trend)
                 ];
                 initBehaviorChart(radarValues);
-                document.getElementById('scoreBadge').innerText = `Score: ${hs.total ?? '--'}`;
+                applyScore(hs.total);
                 document.getElementById('spendControlText').innerText = `${Math.round(dims.spend_control ?? 0)} / 100`;
                 document.getElementById('savingsRateText').innerText = `${Math.round(dims.savings_rate ?? 0)} / 100`;
             }catch(e){
@@ -246,27 +372,84 @@
 
         function toNumber(v){ var n = Number(v); return isNaN(n)?0:n; }
 
+        function applyScore(total){
+            var scoreEl = document.getElementById('scoreBadge');
+            var kpiScoreEl = document.getElementById('kpiScore');
+            var n = Number(total);
+            var text = (isNaN(n) ? '--' : String(Math.round(n)));
+            scoreEl.classList.remove('score-good', 'score-warn', 'score-bad');
+            if (!isNaN(n)) {
+                if (n < 60) scoreEl.classList.add('score-bad');
+                else if (n < 80) scoreEl.classList.add('score-warn');
+                else scoreEl.classList.add('score-good');
+            }
+            scoreEl.innerText = text;
+            kpiScoreEl.innerText = text;
+        }
+
+        function findTopBucketText(buckets){
+            var defs = [
+                { key: 'life', label: 'Life Essentials' },
+                { key: 'fixed', label: 'Fixed Costs' },
+                { key: 'shopping', label: 'Shopping' },
+                { key: 'entertainment', label: 'Entertainment' },
+                { key: 'investment', label: 'Investment' },
+                { key: 'edu', label: 'Education' },
+                { key: 'other', label: 'Other' }
+            ];
+            var maxKey = null;
+            var maxVal = -1;
+            for (var i = 0; i < defs.length; i++) {
+                var v = Number((buckets || {})[defs[i].key] ?? 0);
+                if (!isNaN(v) && v > maxVal) {
+                    maxVal = v;
+                    maxKey = defs[i].key;
+                }
+            }
+            if (maxKey === null) return '';
+            var label = '';
+            for (var j = 0; j < defs.length; j++) {
+                if (defs[j].key === maxKey) { label = defs[j].label; break; }
+            }
+            return label + ' · ' + Math.round(maxVal) + '%';
+        }
+
         function initConsumptionChart(dataArr) {
             var chartDom = document.getElementById('consumptionChart');
             var myChart = echarts.init(chartDom);
             var option = {
                 tooltip: {
                     trigger: 'item',
-                    formatter: '{b}: {c}%'
+                    formatter: function(p){
+                        var v = (p && p.value != null) ? p.value : '--';
+                        return p.name + ': ' + v + '%';
+                    }
                 },
                 legend: {
                     bottom: '0%',
-                    left: 'center'
+                    left: 'center',
+                    icon: 'roundRect',
+                    itemWidth: 12,
+                    itemHeight: 12,
+                    textStyle: { color: '#6b7280', fontSize: 12 }
                 },
-                color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#14B8A6', '#6366F1'],
+                color: [
+                    cssVar('chart-life') || '#1890FF',
+                    cssVar('chart-fixed') || '#52C41A',
+                    cssVar('chart-shopping') || '#FAAD14',
+                    cssVar('chart-entertainment') || '#F5222D',
+                    cssVar('chart-investment') || '#722ED1',
+                    cssVar('chart-education') || '#13C2C2',
+                    cssVar('chart-other') || '#BFBFBF'
+                ],
                 series: [
                     {
                         name: 'Consumption',
                         type: 'pie',
-                        radius: ['40%', '70%'],
+                        radius: ['50%', '70%'],
                         avoidLabelOverlap: false,
                         itemStyle: {
-                            borderRadius: 10,
+                            borderRadius: 8,
                             borderColor: '#fff',
                             borderWidth: 2
                         },
@@ -275,11 +458,8 @@
                             position: 'center'
                         },
                         emphasis: {
-                            label: {
-                                show: true,
-                                fontSize: 20,
-                                fontWeight: 'bold'
-                            }
+                            scale: true,
+                            scaleSize: 10
                         },
                         data: dataArr || [
                             { value: 58, name: 'Life (Essentials)' },
@@ -312,10 +492,15 @@
                         { name: 'Rationality', max: 100 },
                         { name: 'Growth Trend', max: 100 }
                     ],
+                    shape: 'circle',
                     radius: '65%',
-                    splitNumber: 4,
-                    axisName: {
-                        color: '#666'
+                    splitNumber: 5,
+                    axisName: { color: '#595959', fontSize: 12 },
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
+                    splitArea: {
+                        show: true,
+                        areaStyle: { color: ['rgba(24,144,255,0.02)', 'rgba(24,144,255,0.04)', 'rgba(24,144,255,0.06)', 'rgba(24,144,255,0.08)', 'rgba(24,144,255,0.10)'] }
                     }
                 },
                 series: [
@@ -327,13 +512,14 @@
                                 value: values || [90, 85, 70, 95, 80, 88],
                                 name: 'Current Status',
                                 areaStyle: {
-                                    color: 'rgba(37, 99, 235, 0.2)'
+                                    color: 'rgba(82, 196, 26, 0.30)'
                                 },
                                 lineStyle: {
-                                    color: '#2563EB'
+                                    color: '#52C41A',
+                                    width: 2
                                 },
                                 itemStyle: {
-                                    color: '#2563EB'
+                                    color: '#52C41A'
                                 }
                             }
                         ]
