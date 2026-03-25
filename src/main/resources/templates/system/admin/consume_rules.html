@@ -4,87 +4,109 @@
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
     <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/admin-ui.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/default/admin/AdminConsole.css">
     <style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --background-color: #f4f6f9;
-            --panel-bg: #ffffff;
-            --border-color: #e9ecef;
-            --text-color: #333333;
-            --header-bg: #f8f9fa;
-            --hover-color: #e2e6ea;
-            --selected-color: #e8f0fe;
+        /* Toolbar */
+        .rules-toolbar{
+            padding: 8px 15px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+            box-shadow: var(--shadow-card);
         }
+        .rules-toolbar .row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .rules-toolbar label{ color: var(--text-sub); font-size:13px; font-weight:600; }
 
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-            color: var(--text-color);
-            background-color: var(--background-color);
-        }
-
-        /* Modernize EasyUI Panel & Layout */
-        .panel-header, .panel-body { border-color: var(--border-color); }
-        .panel-header { background: var(--header-bg); background-image: none; filter: none; }
-        .panel-title { font-weight: 600; color: #495057; }
-
-        /* Toolbar Styling */
-        .rules-toolbar { 
-            padding: 12px 15px; 
-            border-bottom: 1px solid var(--border-color); 
-            background-color: var(--panel-bg); 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-        }
-        .rules-toolbar .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .rules-toolbar .row + .row { margin-top: 10px; }
-        .rules-toolbar label { color: #555; font-size: 13px; font-weight: 500; }
-        
-        /* Input & Button Modernization */
-        .easyui-linkbutton { border-radius: 4px; transition: all 0.2s; }
-        .l-btn-plain:hover { background: var(--hover-color); border-radius: 4px; border: 1px solid transparent; }
-        .textbox, .numberbox, .combobox, .datebox { border-radius: 4px; border-color: #ced4da; }
-        
         /* Tree & Detail Panels */
-        .tree-panel { background-color: #fcfcfc; border-right: 1px solid var(--border-color); }
-        .detail-panel { background-color: var(--panel-bg); border-left: 1px solid var(--border-color); padding: 20px; }
-        
-        /* Detail Form Styling */
-        .detail-item { margin-bottom: 15px; }
-        .detail-item label { display: block; color: #495057; font-size: 13px; margin-bottom: 6px; font-weight: 600; }
-        .detail-header { 
-            font-size: 16px; font-weight: 600; color: #343a40; 
-            border-bottom: 2px solid var(--border-color); 
-            padding-bottom: 10px; margin-bottom: 20px; 
+        .tree-panel{
+            background: #ffffff;
+            border-right: 1px solid var(--border);
+            padding: 10px;
+        }
+        .detail-panel{
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            padding: 18px;
+        }
+
+        /* Detail Form */
+        .detail-item{ margin-bottom: 14px; }
+        .detail-item label{
+            display:block;
+            color: var(--text-sub);
+            font-size: 13px;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .detail-header{
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 18px;
         }
 
         /* Datagrid Refinements */
-        .datagrid-header { background: var(--header-bg); border-bottom-color: var(--border-color); }
-        .datagrid-header .datagrid-cell { font-weight: 600; color: #495057; font-size: 13px; padding: 8px 4px; }
-        .datagrid-row-selected { background-color: var(--selected-color) !important; color: #212529 !important; }
-        .datagrid-row-over { background-color: var(--hover-color); }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        #dg .datagrid-header{
+            background: var(--header-bg) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+        #dg .datagrid-header .datagrid-cell{
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 13px;
+            padding: 10px 6px;
+        }
+        #dg .datagrid-row-selected{
+            background-color: var(--selected-bg) !important;
+            color: var(--text-main) !important;
+        }
+        #dg .datagrid-row-over{ background: var(--hover-bg); }
+
+        /* Recommendations */
+        #detail_recs{
+            border: 1px solid var(--border) !important;
+            background: #fff;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 6px;
+            height: 100px;
+            overflow: auto;
+        }
+
+        .fs-dot{
+            display:inline-block;
+            width:10px;
+            height:10px;
+            border-radius: 999px;
+            vertical-align: middle;
+        }
+        .fs-dot-on{ background:var(--success); }
+        .fs-dot-off{ background:var(--error); }
+
+        .detail-section-title{
+            margin-top: 20px;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
     </style>
 </head>
 <body class="easyui-layout">
-<div data-options="region:'north',border:false" style="height: 46px; padding:8px 15px; background:#fff; border-bottom:1px solid #e9ecef; display:flex; align-items:center;">
+<div data-options="region:'north',border:false" class="admin-topbar" style="padding-left:15px;padding-right:15px;">
     <a class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true" onclick="addRule()">Add</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-save',plain:true" onclick="saveRule()">Save</a>
+    <a class="easyui-linkbutton fs-btn-primary" data-options="iconCls:'icon-save'" onclick="saveRule()">Save</a>
     <a class="easyui-linkbutton" data-options="iconCls:'icon-remove',plain:true" onclick="deleteRule()">Delete</a>
-    <span class="separator" style="border-left:1px solid #dee2e6; margin:0 10px; height:20px; display:inline-block;"></span>
+    <span class="admin-separator"></span>
     <a class="easyui-linkbutton" data-options="iconCls:'icon-reload',plain:true" onclick="reloadCache()">Reload Cache</a>
-    <span class="separator" style="border-left:1px solid #dee2e6; margin:0 10px; height:20px; display:inline-block;"></span>
+    <span class="admin-separator"></span>
     <a class="easyui-linkbutton" data-options="iconCls:'icon-search',plain:true" onclick="openRegexTester()">Regex Test</a>
-    <span id="hint" style="margin-left:15px; color:#868e96; font-style:italic; font-size:13px;">Select a category on the left</span>
+    <span id="hint" class="admin-hint" style="margin-left:15px;">Select a category on the left</span>
 </div>
 
-<div data-options="region:'west',split:true,border:false" class="tree-panel" style="width: 200px; padding:10px;">
+<div data-options="region:'west',split:true,border:false" class="tree-panel" style="width: 200px;">
     <ul id="tree" class="easyui-tree" data-options="url:'/api/v1/consume/tree',method:'get',animate:true,lines:true"></ul>
 </div>
 
@@ -188,11 +210,11 @@
     </div>
 
     <div style="margin-top:15px;">
-        <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" style="width:100%; height:32px;" onclick="saveDetail()">Save Detail</a>
+        <a class="easyui-linkbutton fs-btn-primary" data-options="iconCls:'icon-save'" style="width:100%; height:36px; border-radius: 10px;" onclick="saveDetail()">Save Detail</a>
     </div>
     
-    <div style="margin-top:20px; font-weight:600; color:#555;">Recommendations</div>
-    <div id="detail_recs" style="margin-top:6px; height:100px; overflow:auto; border:1px solid #eee; padding:6px; background:#fff; border-radius:3px;"></div>
+    <div class="detail-section-title">Recommendations</div>
+    <div id="detail_recs"></div>
     <div style="margin-top:8px;">
         <a class="easyui-linkbutton" data-options="iconCls:'icon-search',plain:true" onclick="loadRecommendations()">Refresh Recs</a>
     </div>
@@ -214,20 +236,20 @@ var fmt = {
         var t = (r.patternType||'contains').toLowerCase();
         var txt = $.trim(v||'');
         if(!txt) return '';
-        if(t==='regex'){ return '<span style="font-weight:600;color:#0052d4;">'+escapeHtml(txt)+'</span>'; }
-        if(t==='equals'){ return '<span style="font-weight:600;color:#333;">'+escapeHtml(txt)+'</span>'; }
+        if(t==='regex'){ return '<span style="font-weight:700;color:var(--primary);">'+escapeHtml(txt)+'</span>'; }
+        if(t==='equals'){ return '<span style="font-weight:700;color:var(--text-main);">'+escapeHtml(txt)+'</span>'; }
         return '<span>'+escapeHtml(txt)+'</span>';
     },
     weight: function(v){
         var w = parseInt(v||0);
         var stars = Math.max(0, Math.min(5, Math.round(w/20)));
         var on = '★', off = '☆'; var s=''; for(var i=0;i<stars;i++){ s+=on; } for(var j=stars;j<5;j++){ s+=off; }
-        var color = w>=90?'#0066ff':(w>=80?'#ff9800':'#999');
-        return '<span style="color:'+color+';font-size:14px;letter-spacing:1px;">'+s+'</span> <span style="color:#888;">('+w+')</span>';
+        var color = w>=90?'var(--primary)':(w>=80?'var(--warning)':'var(--text-disabled)');
+        return '<span style="color:'+color+';font-size:14px;letter-spacing:1px;">'+s+'</span> <span style="color:var(--text-disabled);">('+w+')</span>';
     },
     active: function(v){
         var on = parseInt(v||0)===1;
-        return on ? '<span style="color:#10b981;">🟢</span>' : '<span style="color:#ef4444;">🔴</span>';
+        return on ? '<span class="fs-dot fs-dot-on"></span>' : '<span class="fs-dot fs-dot-off"></span>';
     }
 };
 
@@ -255,9 +277,9 @@ $(function(){
         rowStyler:function(index,row){
             var w = parseInt(row.priority||0);
             var a = parseInt(row.active||0);
-            if(a!==1) return 'color:#999;text-decoration:line-through;background:#f9f9f9;';
-            if(w>=90) return 'background:#f0f7ff;';
-            if(w>=80) return 'background:#fff7e6;';
+            if(a!==1) return 'color:var(--text-disabled);text-decoration:line-through;background:var(--bg-body);';
+            if(w>=90) return 'background:var(--primary-light);';
+            if(w>=80) return 'background:rgba(217,119,6,0.10);';
             return '';
         },
         onClickRow:function(index,row){ renderDetail(row); }
@@ -300,7 +322,7 @@ function endEditing(){
 
 function addRule(){
     if (!selectedCategoryId) {
-        $.messager.alert('Tip', 'Please select a category on the left first');
+        adminUi.fail(adminUi.C.selectCategoryFirst);
         return;
     }
     if (endEditing()){
@@ -317,7 +339,7 @@ function saveRule(){
     row.categoryId = selectedCategoryId || row.categoryId;
     var dup = hasConflict(row);
     if(dup){
-        $.messager.confirm('冲突警告','检测到可能的规则重复或冲突，仍然保存？',function(ok){
+        $.messager.confirm(adminUi.C.confirmTitle,'A potentially duplicate or conflicting rule was detected. Do you want to continue saving?',function(ok){
             if(!ok) return;
             doSaveRow(row);
         });
@@ -346,19 +368,19 @@ function doSaveRow(row){
 function deleteRule(){
     var row = $(dg).datagrid('getSelected');
     if (!row || !row.id) return;
-    var msg = 'Confirm deleting keyword '+(row.pattern||'')+'?';
-    $.messager.confirm('Confirm', msg, function(r){
+    var msg = 'Are you sure you want to delete the selected rule: ' + (row.pattern||'') + '?';
+    $.messager.confirm(adminUi.C.confirmDeletionTitle, msg, function(r){
         if(!r) return;
         $.ajax({url:'/api/v1/consume/rules/'+row.id,type:'DELETE'}).done(function(){
             loadRules();
-            app.messager.success('Rule deleted.');
-        }).fail(function(xhr){ $.messager.alert('Error', xhr.responseText || 'Error'); });
+            adminUi.success(adminUi.C.ruleDeleted);
+        }).fail(function(xhr){ adminUi.fail((xhr && xhr.responseText) ? xhr.responseText : 'Unable to delete the rule.'); });
     });
 }
 
 function reloadCache(){
     $.post('/api/v1/consume/rules/reload').done(function(){
-        app.messager.success('Rules cache reloaded.');
+        adminUi.success(adminUi.C.rulesCacheReloaded);
     });
 }
 
@@ -432,20 +454,20 @@ function hasConflict(row){
 function getSelections(){ return $(dg).datagrid('getSelections')||[]; }
 
 function batchEnable(){
-    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    var rows = getSelections(); if(rows.length===0){ adminUi.fail(adminUi.C.selectRuleFirst); return; }
     var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=1; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(true); }}); }
 }
 function batchDisable(){
-    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    var rows = getSelections(); if(rows.length===0){ adminUi.fail(adminUi.C.selectRuleFirst); return; }
     var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; r.active=0; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'PUT',contentType:'application/json',data:JSON.stringify(r)}).always(function(){done++; if(done===rows.length){ loadRules(true); }}); }
 }
 function batchCopy(){
-    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
+    var rows = getSelections(); if(rows.length===0){ adminUi.fail(adminUi.C.selectRuleFirst); return; }
     var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; var cp=$.extend({},r); delete cp.id; cp.priority=parseInt(r.priority||0); $.ajax({url:'/api/v1/consume/rules',type:'POST',contentType:'application/json',data:JSON.stringify(cp)}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
 }
 function batchDelete(){
-    var rows = getSelections(); if(rows.length===0){ $.messager.alert('Tip','请选择规则'); return; }
-    $.messager.confirm('Confirm','确认删除选中的规则？',function(ok){
+    var rows = getSelections(); if(rows.length===0){ adminUi.fail(adminUi.C.selectRuleFirst); return; }
+    $.messager.confirm(adminUi.C.confirmDeletionTitle,'Are you sure you want to delete the selected rules?',function(ok){
         if(!ok) return;
         var done=0; for(var i=0;i<rows.length;i++){ var r=rows[i]; $.ajax({url:'/api/v1/consume/rules/'+r.id,type:'DELETE'}).always(function(){done++; if(done===rows.length){ loadRules(); }}); }
     });
@@ -465,7 +487,7 @@ function openRegexTester(){
     try{
         $('#rt_type').combobox({editable:false,valueField:'id',textField:'text',data:[{id:'contains',text:'contains'},{id:'regex',text:'regex'},{id:'equals',text:'equals'}], onLoadSuccess:function(){ try{$('#rt_type').combobox('setValue', type);}catch(e){} }});
     }catch(e){}
-    $(dlg).dialog({title:'正则测试', modal:true, width:520, height:220, onClose:function(){ try{$(dlg).dialog('destroy'); $(dlg).remove();}catch(e){} }});
+    $(dlg).dialog({title:'Regex Tester', modal:true, width:520, height:220, onClose:function(){ try{$(dlg).dialog('destroy'); $(dlg).remove();}catch(e){} }});
 }
 function rt_run(){
     var pat = $.trim($('#rt_pattern').textbox('getValue')||'');
@@ -475,7 +497,7 @@ function rt_run(){
     if(type==='equals'){ ok = text===pat; }
     else if(type==='regex'){ try{ ok = new RegExp(pat).test(text); }catch(e){ ok=false; } }
     else { ok = text.indexOf(pat)>=0; }
-    $('#rt_result').text(ok ? '✅ Match' : '❌ Not match');
+    $('#rt_result').text(ok ? 'Match' : 'Not match');
 }
 
 function fmtDateValue(d){
@@ -555,9 +577,9 @@ function renderRecs(list){
     var html = '';
     for(var i=0;i<Math.min(20, list.length);i++){
         var t = list[i]||'';
-        html += '<div style="padding:6px 8px;border:1px solid #eee;border-radius:4px;margin-bottom:6px;cursor:pointer;" onclick="applyRec(\''+String(t).replace(/'/g,'&#39;')+'\')">'+String(t)+'</div>';
+        html += '<div style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;background:#fff;" onclick="applyRec(\''+String(t).replace(/'/g,'&#39;')+'\')">'+String(t)+'</div>';
     }
-    if(!html) html = '<div style="color:#999;">No recommendations</div>';
+    if(!html) html = '<div style="color:var(--text-disabled);">No recommendations</div>';
     $('#detail_recs').html(html);
 }
 function applyRec(t){

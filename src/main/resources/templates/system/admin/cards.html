@@ -4,23 +4,47 @@
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
     <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/admin-ui.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/default/admin/AdminConsole.css">
+    <style>
+        .cards-grid-wrap{
+            height: 100%;
+            padding: 8px 10px 10px;
+            background: var(--bg-body);
+        }
+        #dg .datagrid-header{
+            background: var(--header-bg) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+        #dg .datagrid-header .datagrid-cell{
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 13px;
+            padding: 10px 8px;
+        }
+        #dg .datagrid-row-selected{
+            background: var(--selected-bg) !important;
+            color: var(--text-main) !important;
+        }
+        #dg .datagrid-row-over{ background: var(--hover-bg) !important; }
+    </style>
 </head>
 <body class="easyui-layout">
-<div data-options="region:'north'" style="height: 40px;padding:6px 8px;">
+<div data-options="region:'north',border:false" class="admin-topbar">
     <a class="easyui-linkbutton" data-options="iconCls:'icon-add'" onclick="addCard()">Add</a>
-    <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="saveCard()">Save</a>
+    <a class="easyui-linkbutton fs-btn-primary" data-options="iconCls:'icon-save'" onclick="saveCard()">Save</a>
     <a class="easyui-linkbutton" data-options="iconCls:'icon-remove'" onclick="deleteCard()">Delete</a>
-    <span id="hint" style="margin-left:12px;color:#888;">Select a card type on the left</span>
+    <span id="hint" class="admin-hint">Select a card type on the left</span>
 </div>
 
-<div data-options="region:'west'" style="width: 280px; border-right: 1px solid #ddd; padding:6px;">
+<div data-options="region:'west',border:false" class="admin-tree-panel" style="width:280px;">
     <ul id="tree" class="easyui-tree" data-options="url:'/api/v1/cards/tree',method:'get'"></ul>
  </div>
 
-<div data-options="region:'center'">
-    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,idField:'id'">
+<div data-options="region:'center',border:false" class="cards-grid-wrap">
+    <table id="dg" fit="true" data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:50,idField:'id',fitColumns:true,striped:true,border:false">
         <thead>
         <tr>
             <th data-options="field:'id',width:160,hidden:true">ID</th>
@@ -45,7 +69,7 @@ function getResultMessage(res, fallback){
             if(n && n.message){ return n.message; }
         }
     }catch(e){}
-    return (res && (res.message || res.returnMessage)) ? (res.message || res.returnMessage) : (fallback || 'Operation failed.');
+    return (res && (res.message || res.returnMessage)) ? (res.message || res.returnMessage) : (fallback || adminUi.C.opFailed);
 }
 function normalizeRow(r){
     r = r || {};
@@ -87,7 +111,7 @@ $(function(){
         onAfterEdit:function(index,row,changes){
             var r = normalizeRow(row);
             if(!r.bankCode || !r.cardTypeCode || !r.cardNo){
-                $.messager.alert('Warning','Bank Code / Type / Card No is required');
+                adminUi.fail('Bank code, card type, and card number are required.');
                 return;
             }
             var method = r.id ? 'PUT' : 'POST';
@@ -95,12 +119,12 @@ $(function(){
             $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(r)}).done(function(resp){
                 $(dg).datagrid('acceptChanges');
                 loadCards();
-                app.messager.success('Card saved.');
+                adminUi.success(adminUi.C.cardSaved);
             }).fail(function(xhr){
                 try{
                     var res = JSON.parse(xhr.responseText||'{}');
-                    app.messager.fail(getResultMessage(res, 'Save failed.'));
-                }catch(e){ app.messager.error('Save failed.'); }
+                    adminUi.fail(getResultMessage(res, 'Unable to save the card.'));
+                }catch(e){ adminUi.fail('Unable to save the card.'); }
             });
         }
     });
@@ -121,7 +145,7 @@ function endEditing(){
 }
 
 function addCard(){
-    if (!selectedTypeCode) return;
+    if (!selectedTypeCode){ adminUi.fail(adminUi.C.selectCardTypeFirst); return; }
     if (endEditing()){
         $(dg).datagrid('appendRow',{bankCode:'',cardTypeCode:selectedTypeCode,cardNo:'',cardName:'',deleted:0});
         editIndex = $(dg).datagrid('getRows').length-1;
@@ -135,14 +159,17 @@ function saveCard(){
 
 function deleteCard(){
     var row = $(dg).datagrid('getSelected');
-    if (!row || !row.id) return;
-    var msg = 'Confirm deleting card '+(row.cardName||'')+'?';
-    $.messager.confirm('Confirm', msg, function(r){
+    if (!row || !row.id){ adminUi.fail(adminUi.C.selectCardFirst); return; }
+    var msg = 'Are you sure you want to delete this card: ' + (row.cardName||'') + '?';
+    $.messager.confirm(adminUi.C.confirmDeletionTitle, msg, function(r){
         if(!r) return;
         $.ajax({url:'/api/v1/cards/'+row.id,type:'DELETE'}).done(function(){
             loadCards();
-            app.messager.success('Card deleted.');
-        }).fail(function(xhr){ app.messager.error(xhr.responseText || 'Delete failed.'); });
+            adminUi.success(adminUi.C.cardDeleted);
+        }).fail(function(xhr){
+            var msg = xhr && xhr.responseText ? xhr.responseText : 'Unable to delete the card.';
+            adminUi.fail(msg);
+        });
     });
 }
 
