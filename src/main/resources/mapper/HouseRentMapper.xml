@@ -14,40 +14,40 @@
     </resultMap>
     
     <select id="getHouseRents" resultMap="baseSalaryResultMap">
-    	select b.*
-		  from (select a.*, rownum rn
-		          from (select id,
-		                       card_id,
-		                       transaction_date,
-		                       transaction_desc,
-		                       balance_currency,
-		                       balance_money,
-		                       card_type_id,
-		                       card_type_name,
-		                       demoarea
-		                  from house_rent
-		                  where 1 = 1
-		                  <if test="houseRent != null">
-			                  <if test="houseRent.transactionDateStart != null">
-			                  	and transaction_date &gt;= #{houseRent.transactionDateStart,jdbcType=DATE} 
-			                  </if>
-			                  <if test="houseRent.transactionDateEnd != null">
-			                  	and transaction_date &lt;= #{houseRent.transactionDateEnd,jdbcType=DATE}
-			                  </if>
-			                  <if test="houseRent.cardTypeName != null">
-			                  	and card_type_name = #{houseRent.cardTypeName,jdbcType=VARCHAR}
-			                  </if>
-			                  <if test="houseRent.demoArea != null">
-			                  	and (demoarea like '%'||#{houseRent.demoArea,jdbcType=VARCHAR}||'%'
-								or  transaction_desc like '%'||#{houseRent.demoArea,jdbcType=VARCHAR}||'%' )
-			                  </if>
-			                  <if test="houseRent.year != null">
-			                  	and trim(to_char(transaction_date, 'yyyy')) = #{houseRent.year,jdbcType=VARCHAR}
-			                  </if>
-		                  </if>
-		                 order by transaction_date desc) a
-		         where rownum &lt;= #{page.recordEnd,jdbcType=NUMERIC}) b
-		 where b.rn &gt; #{page.recordBegin,jdbcType=NUMERIC}
+        select
+            id,
+            card_id,
+            transaction_date,
+            transaction_desc,
+            balance_currency,
+            balance_money,
+            card_type_id,
+            card_type_name,
+            demoarea
+        from house_rent
+        where 1 = 1
+        <if test="houseRent != null">
+            <if test="houseRent.transactionDateStart != null">
+                and transaction_date &gt;= #{houseRent.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="houseRent.transactionDateEnd != null">
+                and transaction_date &lt;= #{houseRent.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <if test="houseRent.cardTypeName != null">
+                and card_type_name = #{houseRent.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="houseRent.demoArea != null">
+                and (
+                    demoarea like CONCAT('%', #{houseRent.demoArea,jdbcType=VARCHAR}, '%')
+                    or transaction_desc like CONCAT('%', #{houseRent.demoArea,jdbcType=VARCHAR}, '%')
+                )
+            </if>
+            <if test="houseRent.year != null">
+                and YEAR(transaction_date) = #{houseRent.year,jdbcType=VARCHAR}
+            </if>
+        </if>
+        order by transaction_date desc
+        limit #{page.pageSize,jdbcType=INTEGER} offset #{page.recordBegin,jdbcType=INTEGER}
     </select>
     
     <select id="countHouseRent" resultType="java.lang.Integer">
@@ -64,11 +64,13 @@
 				and card_type_name = #{houseRent.cardTypeName,jdbcType=VARCHAR}
 			</if>
 			<if test="houseRent.demoArea != null">
-             	and (demoarea like '%'||#{houseRent.demoArea,jdbcType=VARCHAR}||'%'
-					or  transaction_desc like '%'||#{houseRent.demoArea,jdbcType=VARCHAR}||'%' )
+             	and (
+                    demoarea like CONCAT('%', #{houseRent.demoArea,jdbcType=VARCHAR}, '%')
+                    or transaction_desc like CONCAT('%', #{houseRent.demoArea,jdbcType=VARCHAR}, '%')
+                )
            	</if>
             <if test="houseRent.year != null">
-            	and trim(to_char(transaction_date, 'yyyy')) = #{houseRent.year,jdbcType=VARCHAR}
+            	and YEAR(transaction_date) = #{houseRent.year,jdbcType=VARCHAR}
             </if>
 		</if>
     </select>
