@@ -81,11 +81,14 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
         return bankCard;
     }
 
+    /**
+     * Rule-based category uses a single magnitude: statement imports set {@code incomeMoney} for inflows
+     * and {@code balanceMoney} as a positive expense amount for outflows (never both on one row).
+     */
     private void classifyTransaction(Transaction t, String bankCode, String cardTypeCode) {
-        Double amount = t.getBalanceMoney();
-        if (amount != null) {
-            amount = Math.abs(amount);
-        }
+        double income = t.getIncomeMoney() == null ? 0.0 : Math.max(0.0, t.getIncomeMoney());
+        double expense = t.getBalanceMoney() == null ? 0.0 : Math.max(0.0, t.getBalanceMoney());
+        double amount = Math.max(income, expense);
         Date txnDate = t.getTransactionDate();
         if (txnDate == null) {
             txnDate = t.getBookKeepingDate();

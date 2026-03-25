@@ -8,6 +8,24 @@
 </div> 
 <script type="text/javascript">
 	var navigationDiv = "#navigationDiv";
+    /** Keep sidebar highlight in sync when user switches tabs from the tab bar (not only from the menu). */
+    function syncMenuWithTabTitle(title){
+        try{
+            if(!title || title === 'Home'){ return; }
+            var matched = null;
+            $('.menu-link').each(function(){
+                if($(this).attr('title') === title){
+                    matched = $(this);
+                    return false;
+                }
+            });
+            if(matched && matched.length){
+                $('.menu-link').removeClass('menu-link-active');
+                matched.addClass('menu-link-active');
+                localStorage.setItem('fs.menu.active.title', title);
+            }
+        }catch(e){}
+    }
     /** 初始化页面 */
     function initPanel(title,url){
     	var tab = $(navigationDiv).tabs('getTab',title);  
@@ -44,10 +62,22 @@
                 if (isIE && window.CollectGarbage) {
                     CollectGarbage();
                 }
-			}
-		} catch (e) {
+            }
+        } catch (e) {
 		}
     }
+    $(function(){
+        try{
+            $(navigationDiv).tabs({
+                onSelect: function(title){ syncMenuWithTabTitle(title); }
+            });
+            var sel = $(navigationDiv).tabs('getSelected');
+            if(sel && sel.length){
+                var t = sel.panel('options').title;
+                syncMenuWithTabTitle(t);
+            }
+        }catch(e){}
+    });
     /** 关闭页面 */
     function removePanel(){
         var tab = $(navigationDiv).tabs('getSelected');

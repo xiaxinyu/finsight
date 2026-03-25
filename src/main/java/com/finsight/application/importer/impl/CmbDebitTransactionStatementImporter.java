@@ -10,11 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
-
 public class CmbDebitTransactionStatementImporter implements StatementImporter {
     private static final Logger log = LoggerFactory.getLogger(CmbDebitTransactionStatementImporter.class);
-    private static final Pattern DATE_PATTERN = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$");
 
     @Override
     public List<Transaction> parse(List<String[]> rows, String bankCode, String cardTypeCode, String cardNo) {
@@ -121,12 +118,12 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
                 }
                 narration = String.join(" ", narTokens);
                 
-                // 金额
+                /* 交易金额：>0 记入收入，<0 记入支出（支出在库内以正数存于 balanceMoney） */
                 Double amt = parseDouble(tokens[amountIdx]);
-                if (amt < 0) {
-                    expense = Math.abs(amt);
-                } else {
+                if (amt > 0) {
                     income = amt;
+                } else if (amt < 0) {
+                    expense = Math.abs(amt);
                 }
                 
                 // 余额
@@ -187,13 +184,26 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
             t.setIncomeMoney(income == null ? 0.0 : income);
             t.setBalanceMoney(expense == null ? 0.0 : expense);
             t.setAccountBalance(balance == null ? 0.0 : balance);
+            /* 备注区保留原始「对手信息」全文，便于核对与追溯（名称/账号已拆字段） */
+            if (StringUtils.isNotBlank(opponentInfo)) {
+                String note = opponentInfo.trim();
+                if (note.length() > 512) {
+                    note = note.substring(0, 512);
+                }
+                t.setDemoArea(note);
+            }
             String dateStr = "";
             try { dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd").format(t.getTransactionDate()); } catch (Exception ignore) {}
             t.setTransactionDateTime(dateStr);
             t.setOpponentAccount(opponentAcc);
             t.setOpponentName(opponentName);
-            t.setCardTypeId(2);
-            t.setCardTypeName("储蓄卡");
+            if ("credit".equalsIgnoreCase(cardTypeCode)) {
+                t.setCardTypeId(1);
+                t.setCardTypeName("信用卡");
+            } else {
+                t.setCardTypeId(2);
+                t.setCardTypeName("储蓄卡");
+            }
             list.add(t);
         }
         log.info("CMB importer finished, parsed transactions={}", list.size());

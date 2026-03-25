@@ -353,7 +353,7 @@ function deleteTransaction(){
 			if (r){
 			    transaction.deleteTransaction({'id':rowData.id}, function(data){
 			    	if(isSuccessResult(data)){
-			    		$(datagrid).datagrid('reload');
+			    		reloadTransactionGrid();
 			    		app.messager.success('Transaction deleted.');
 			    	}else{
 			    		app.messager.fail(getResultMessage(data, 'Delete failed.'));
@@ -408,7 +408,7 @@ function incomeToExpense(){
         if(!r){ return; }
         transaction.incomeToExpense({ids: ids.join(',')}, function(data){
             if(isSuccessResult(data)){
-                $(datagrid).datagrid('reload');
+                reloadTransactionGrid();
                 app.messager.success('Converted ' + ids.length + ' records.');
             }else{
                 app.messager.fail(getResultMessage(data, 'Conversion failed.'));
@@ -459,7 +459,7 @@ function expenseToIncome(){
         if(!r){ return; }
         transaction.expenseToIncome({ids: ids.join(',')}, function(data){
             if(isSuccessResult(data)){
-                $(datagrid).datagrid('reload');
+                reloadTransactionGrid();
                 app.messager.success('Converted ' + ids.length + ' records.');
             }else{
                 app.messager.fail(getResultMessage(data, 'Conversion failed.'));
@@ -528,7 +528,7 @@ function updateTransaction() {
     var params = {'id':rowData.id, 'consumptionType':consumptionType,'demoArea':$.trim(demoArea),'consumeCode':consumeCode,'consumeName':consumeName};
 	transaction.updateTransaction(params, function(data){
     	if(isSuccessResult(data)){
-    		$(datagrid).datagrid('reload');
+    		reloadTransactionGrid();
     	}else{
     		app.messager.fail(getResultMessage(data, 'Save failed.'));
     	}
@@ -594,7 +594,7 @@ function autoClassify(){
                             if(!code){ return; }
                             if(code && name && name.indexOf(code) === 0){ name = $.trim(name.substring(code.length)); }
                             transaction.updateTransaction({id:row.id, consumeCode:code, consumeName:name}, function(dr){
-                                if(isSuccessResult(dr)){ $(datagrid).datagrid('reload'); try{ $dlg.dialog('close'); }catch(e){} }
+                                if(isSuccessResult(dr)){ reloadTransactionGrid(); try{ $dlg.dialog('close'); }catch(e){} }
                                 else { app.messager.fail(getResultMessage(dr, 'Update failed.')); }
                             }, function(e){ app.messager.error((e && e.message) ? e.message : 'Network error.'); });
                         }
@@ -665,7 +665,7 @@ function autoClassify(){
         var total = targets.length, done = 0, fail = 0, idx = 0;
         function next(){
             if(stop) return;
-            if(idx >= total){ $(datagrid).datagrid('reload'); return; }
+            if(idx >= total){ reloadTransactionGrid(); return; }
             var it = targets[idx++]; $('#'+dlgId+'_pending').text(total - idx);
             var params = { transactionDesc: it.transactionDesc, cardTypeName: it.cardTypeName, balanceMoney: it.balanceMoney, bookKeepingDate: it.bookKeepingDate };
             transaction.classify(params, function(res){
@@ -707,6 +707,11 @@ function searchTransactions(){
     params.emptyConsume = $('#cmbConsumeFilter').combobox('getValue') === 'empty';
     params.demoArea = $('#txtDemo').textbox('getValue');
     $(datagrid).datagrid('load', params);
+}
+
+/** Refresh grid with current toolbar filters. datagrid('reload') drops query params from last Query — do not use after delete/save. */
+function reloadTransactionGrid(){
+    searchTransactions();
 }
 
 function genKeywords(){
@@ -911,7 +916,7 @@ function batchSetCategory(){
                     $('#'+dlgId+'_done').text(success);
                     $('#'+dlgId+'_fail').text(failed);
                     updateBar(success+failed);
-                    $(datagrid).datagrid('reload');
+                    reloadTransactionGrid();
                     try{$dlg.dialog('close');}catch(e){}
                 }, function(){
                     $('#'+dlgId+'_pending').text(0);

@@ -117,12 +117,15 @@ public class StatementController {
             List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(dataRows, bankCode, cardTypeCode, cardNo, statement.getId());
             statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
             
-            log.info("statement/upload stored preview: statementId={}, rows={}, parsed={}", statement.getId(), dataRows.size(), transactions == null ? 0 : transactions.size());
+            int rawRows = dataRows.size();
+            int parsedCount = transactions == null ? 0 : transactions.size();
+            log.info("statement/upload stored preview: statementId={}, rows={}, parsed={}", statement.getId(), rawRows, parsedCount);
 
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
             resp.put("statementId", statement.getId());
-            resp.put("rows", dataRows.size());
-            resp.put("parsed", transactions == null ? 0 : transactions.size());
+            resp.put("rows", rawRows);
+            resp.put("parsed", parsedCount);
+            resp.put("skipped", Math.max(0, rawRows - parsedCount));
             return CommonResult.success(JSON.toJSONString(resp));
 
         } catch (Exception e) {
@@ -155,10 +158,13 @@ public class StatementController {
             List<String[]> dataRows = parsePlainTable(content);
             List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(dataRows, bankCode, cardTypeCode, cardNo, null);
             int imported = transactionService.addTransactions(transactions, userName);
+            int rawPdf = dataRows.size();
+            int parsedPdf = transactions == null ? 0 : transactions.size();
             java.util.Map<String,Object> payload = new java.util.LinkedHashMap<>();
             payload.put("path", path);
-            payload.put("rows", dataRows.size());
-            payload.put("parsed", transactions == null ? 0 : transactions.size());
+            payload.put("rows", rawPdf);
+            payload.put("parsed", parsedPdf);
+            payload.put("skipped", Math.max(0, rawPdf - parsedPdf));
             payload.put("imported", imported);
             return CommonResult.success(com.alibaba.fastjson.JSON.toJSONString(payload));
         }catch(Exception e){
@@ -197,10 +203,13 @@ public class StatementController {
             statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
 
             log.info("statement/upload-parsed stored preview: statementId={}, size={}", statement.getId(), transactions == null ? 0 : transactions.size());
+            int rawRowsUp = dataRows.size();
+            int parsedUp = transactions == null ? 0 : transactions.size();
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
             resp.put("statementId", statement.getId());
-            resp.put("rows", dataRows.size());
-            resp.put("parsed", transactions == null ? 0 : transactions.size());
+            resp.put("rows", rawRowsUp);
+            resp.put("parsed", parsedUp);
+            resp.put("skipped", Math.max(0, rawRowsUp - parsedUp));
             return CommonResult.success(JSON.toJSONString(resp));
         }catch(Exception e){
             log.error("Upload parsed failed", e);

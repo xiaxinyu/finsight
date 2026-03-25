@@ -34,7 +34,6 @@ $(function(){
 
 var _card_cache = {};
 var _pending_xhr = null;
-var _refreshing = false;
 function isSuccessResult(res){
     try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
     return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
@@ -47,6 +46,35 @@ function getResultData(res){
     }catch(e){}
     return res ? res.returnMessage : null;
 }
+/** Human-readable upload result: raw file lines vs recognized transactions (headers/footers/PDF noise are not "missing data"). */
+function buildUploadSuccessMessage(rows, parsed, skipped){
+    var r = Number(rows) || 0;
+    var p = Number(parsed) || 0;
+    var s = typeof skipped === 'number' && !isNaN(skipped) ? skipped : Math.max(0, r - p);
+    var line1 = '已识别 ' + p + ' 笔可导入交易（预览表格为准）。';
+    var line2 = '文件中共 ' + r + ' 行文本：除有效流水外，常含表头、空行、页脚说明、或不含「日期+金额」格式的行。';
+    if(s > 0){
+        line2 += ' 约 ' + s + ' 行未计入交易，属银行导出/PDF 拆行常见情况，一般不是漏单。';
+    }
+    return line1 + ' ' + line2;
+}
+
+function showUploadSuccessToast(msg){
+    try{
+        if(window.app && app.messager && typeof app.messager.show === 'function'){
+            app.messager.show({
+                title: '导入完成',
+                msg: msg,
+                timeout: 12000,
+                showType: 'slide',
+                style: { right: '', bottom: '' }
+            });
+            return;
+        }
+    }catch(e){}
+    showInfo(msg);
+}
+
 function getResultMessage(res, fallback){
     try{
         if(res && app.api && app.api.normalizeResult){
@@ -84,8 +112,6 @@ function fetchAllCards(){
 }
 
 function refreshCardNos(ctx){
-    if(_refreshing){ try{ console.log('[upload] skip refresh (busy)'); }catch(e){} return; }
-    _refreshing = true;
     var bank = (ctx && ctx.bank) || $('#cmbBank').combobox('getValue');
     var type = (ctx && ctx.type) || $('#cmbCardType').combobox('getValue');
     var typeText = $('#cmbCardType').combobox('getText');
@@ -96,24 +122,44 @@ function refreshCardNos(ctx){
         try{ console.log('[upload] type fallback from text', {text:typeText, mapped:type}); }catch(e){}
     }
     try{ console.log('[upload] refreshCardNos', {bank:bank, type:type}); }catch(e){}
-    
+
     $('#cmbCardNo').combobox('clear');
     $('#cmbCardNo').combobox('loadData', []);
-    
-    if(!bank || !type){ _refreshing = false; return; }
 
-    if(_pending_xhr){ try{ _pending_xhr.abort(); }catch(e){} _pending_xhr=null; }
+    if(!bank || !type){ return; }
+
+    if(_pending_xhr){
+        try{ _pending_xhr.abort(); }catch(e){}
+        _pending_xhr = null;
+    }
     var params = { bankCode: bank, cardTypeCode: type };
     try{ console.log('[upload] numbers request params', params); }catch(e){}
-    _pending_xhr = $.get('/api/v1/cards/numbers', params, function(list){
-        var data = $.map(list || [], function(kv){ return { id: kv.key, text: kv.value || kv.key }; });
-        $('#cmbCardNo').combobox('loadData', data);
-        try{ 
-            console.log('[upload] numbers response length', data.length); 
-            console.log('[upload] numbers sample', $.map(data.slice(0,5), function(it){ return it.id; })); 
-        }catch(e){}
-    }).always(function(){ _pending_xhr=null; _refreshing=false; });
-    _refreshing = false;
+
+    /* global:false — superseded requests won't fire document ajaxError (HTTP-0 toast) */
+    var jq = $.ajax({
+        url: '/api/v1/cards/numbers',
+        data: params,
+        dataType: 'json',
+        global: false,
+        success: function(list){
+            var data = $.map(list || [], function(kv){ return { id: kv.key, text: kv.value || kv.key }; });
+            $('#cmbCardNo').combobox('loadData', data);
+            try{
+                console.log('[upload] numbers response length', data.length);
+                console.log('[upload] numbers sample', $.map(data.slice(0,5), function(it){ return it.id; }));
+            }catch(e){}
+        },
+        error: function(xhr, status){
+            if(status === 'abort'){ return; }
+            try{ console.warn('[upload] numbers request failed', status, xhr && xhr.status); }catch(e){}
+        }
+    });
+    _pending_xhr = jq;
+    jq.always(function(){
+        if(_pending_xhr === jq){
+            _pending_xhr = null;
+        }
+    });
 }
 
 function submitUpload(){
@@ -142,8 +188,9 @@ function submitUpload(){
                 reloadTemp(statementId);
                 var rows = payload.rows || 0;
                 var parsed = payload.parsed || 0;
+                var skipped = (typeof payload.skipped === 'number') ? payload.skipped : Math.max(0, rows - parsed);
                 if(rows || parsed){
-                    showInfo('Parsed ' + rows + ' rows, ' + parsed + ' transactions.');
+                    showUploadSuccessToast(buildUploadSuccessMessage(rows, parsed, skipped));
                 }else{
                     showInfo('File uploaded and parsed successfully.');
                 }
@@ -162,6 +209,7 @@ function reloadTemp(statementId){
     var sid = statementId || $('#currentStatementId').val();
     if(!sid){
         $('#dgTempUpload').datagrid('loadData', []);
+        updateUploadGridKpis({ total: 0, rows: [] });
         try{ console.log('[upload] preview grid ready, no statementId'); }catch(e){}
         return;
     }
@@ -170,6 +218,56 @@ function reloadTemp(statementId){
     opts.url = '/statement/preview?statementId=' + sid;
     $('#dgTempUpload').datagrid('load');
     try{ console.log('[upload] preview grid reload with statementId', sid); }catch(e){}
+}
+
+function formatPostingDateCol(v, r, i){
+    try{
+        if(window.app && app.date && app.date.format){
+            return app.date.format(v, r, i);
+        }
+    }catch(e){}
+    return formatDateOnly(v);
+}
+function formatTxnDateCol(v, r, i){
+    try{
+        if(window.app && app.date && app.date.format){
+            return app.date.format(v, r, i);
+        }
+    }catch(e){}
+    return formatDateOnly(v);
+}
+function formatIncomePreview(v, r, i){
+    var income = v || 0;
+    if(r && r.balanceMoney < 0){ income += Math.abs(r.balanceMoney); }
+    var cls = income > 0 ? 'fs-money-income' : 'fs-money-neutral';
+    var inner = (window.app && app.money && app.money.rmb) ? app.money.rmb(income, r, i) : String(income);
+    return '<span class="' + cls + '">' + inner + '</span>';
+}
+function formatExpensePreview(v, r, i){
+    var expense = 0;
+    if(v > 0){ expense = v; }
+    var cls = expense > 0 ? 'fs-money-expense' : 'fs-money-neutral';
+    var inner = (window.app && app.money && app.money.rmb) ? app.money.rmb(expense, r, i) : String(expense);
+    return '<span class="' + cls + '">' + inner + '</span>';
+}
+function formatBalancePreview(v, r, i){
+    if(window.app && app.money && app.money.rmb){
+        return app.money.rmb(v, r, i);
+    }
+    return v == null ? '' : String(v);
+}
+function updateUploadGridKpis(data){
+    var rows = (data && data.rows) ? data.rows : [];
+    var total = 0;
+    if(data && typeof data.total === 'number'){
+        total = data.total;
+    } else if(data && data.originalRows && data.originalRows.length){
+        total = data.originalRows.length;
+    } else {
+        total = rows.length;
+    }
+    $('#kpiUploadRows').text(total);
+    $('#uploadRowTotal').text(total);
 }
 
 function clientSideFilter(data){
@@ -208,24 +306,28 @@ function initTempGrid(){
         striped: true,
         rownumbers: true,
         pagination: true,
-        pageSize: 50,
-        pageList: [50, 100, 200, 500],
+        pageSize: 200,
+        pageList: [100, 200, 500],
         loadFilter: clientSideFilter,
         nowrap: false,
         method: 'get',
         singleSelect: true,
         fitColumns: true,
         remoteSort: false,
+        loadMsg: 'Loading preview...',
+        emptyMsg: 'No preview rows yet. Select bank, type, and file, then Upload.',
+        title: 'Preview · <span id="uploadRowTotal" class="fs-total-count">0</span> rows',
+        onLoadSuccess: function(data){ updateUploadGridKpis(data || {}); },
         onDblClickRow: function(i,r){ $(this).datagrid('beginEdit',i); },
         columns: [[
             {field:'bankCardName', title:'Card Name', width:160, halign:'center'},
-            {field:'bookKeepingDate', title:'Posting Date', width:100, align:'center', halign:'center', formatter: formatDateOnly, sortable:true, sorter: dateSorter},
-            {field:'transactionDateTime', title:'TXN Date', width:160, align:'center', halign:'center', sortable:true, sorter: dateSorter},
-            {field:'transactionDesc', title:'Narration', width:260, halign:'center'},
+            {field:'bookKeepingDate', title:'Posting Date', width:100, align:'center', halign:'center', formatter: formatPostingDateCol, sortable:true, sorter: dateSorter},
+            {field:'transactionDateTime', title:'TXN Date', width:160, align:'center', halign:'center', formatter: formatTxnDateCol, sortable:true, sorter: dateSorter},
+            {field:'transactionDesc', title:'Narration', width:260, align:'left', halign:'center'},
             {field:'balanceCurrency', title:'Currency', width:80, align:'center', halign:'center'},
-            {field:'incomeMoney', title:'Income', width:100, align:'right', halign:'center'},
-            {field:'balanceMoney', title:'Expense', width:100, align:'right', halign:'center'},
-            {field:'accountBalance', title:'Balance', width:120, align:'right', halign:'center'},
+            {field:'incomeMoney', title:'Income', width:100, align:'right', halign:'center', formatter: formatIncomePreview},
+            {field:'balanceMoney', title:'Expense', width:100, align:'right', halign:'center', formatter: formatExpensePreview},
+            {field:'accountBalance', title:'Balance', width:120, align:'right', halign:'center', formatter: formatBalancePreview},
             {field:'consumeCode', title:'Category', width:220, halign:'center',
                 formatter: function(v,r){ return r.consumeName || v; },
                 editor:{
@@ -242,6 +344,7 @@ function initTempGrid(){
         ]]
     });
     $('#dgTempUpload').datagrid('loadData', []);
+    updateUploadGridKpis({ total: 0, rows: [] });
     try{ console.log('[upload] preview grid initialized'); }catch(e){}
 }
 
@@ -292,6 +395,7 @@ function saveAll(){
                     showInfo('Commit done: total ' + total + ', imported ' + imported + ', failed ' + failed + '.');
                     // Clear UI
                     $('#dgTempUpload').datagrid('loadData', []);
+                    updateUploadGridKpis({ total: 0, rows: [] });
                     $('#currentStatementId').val('');
                     $('#fileBill').filebox('clear');
                 } else {

@@ -31,7 +31,7 @@ public final class StatementImporterFactory {
                 return new CrbankDebitTransactionStatementImporter();
             }
         } else if ("CMB".equalsIgnoreCase(bankCode) || "招商银行".equalsIgnoreCase(bankCode)) {
-            if ("debit".equalsIgnoreCase(cardTypeCode)) {
+            if ("debit".equalsIgnoreCase(cardTypeCode) || "credit".equalsIgnoreCase(cardTypeCode)) {
                 return new CmbDebitTransactionStatementImporter();
             }
         }

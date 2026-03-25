@@ -139,10 +139,14 @@ $(function(){
             }
         }catch(e){}
     });
-    $(document).ajaxError(function(event, xhr){
+    $(document).ajaxError(function(event, xhr, settings, thrownError){
         try{
             var st = xhr.status;
             var rt = xhr.responseText || '';
+            /* Aborted (e.g. superseded request) — status 0; do not toast */
+            if(st === 0 && (xhr.statusText === 'abort' || thrownError === 'abort')){
+                return;
+            }
             if(st === 401 || st === 403 || rt.indexOf('id=\"login-form\"') >= 0){
                 window.top.location.href = '/login.html';
                 return;
