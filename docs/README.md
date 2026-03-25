@@ -1,53 +1,41 @@
-# FinSight Knowledge Base
+# FinSight Documentation
 
-> **"Understand your money. Understand yourself."**
+| | |
+| :--- | :--- |
+| **Language** | English · [简体中文](README.zh-CN.md) |
 
-Welcome to the FinSight documentation hub. This library is structured to help you understand not just *how* to use FinSight, but *why* it exists and *where* it is going.
-
-## 🧭 **Strategy & Philosophy**
-*Start here to understand the soul of the project.*
-
-*   **[The Manifesto](MANIFESTO.md)**
-    *   Why we reject "cloud-first" finance.
-    *   The philosophy of "Financial Empathy" and "Data Sovereignty".
-*   **[Business Model & Sustainability](BUSINESS_MODEL.md)**
-    *   How we stay sustainable without selling your data.
-    *   The "Free Core" vs. "Smart Advisor" value proposition.
-*   **[Strategic SWOT Analysis](SWOT.md)**
-    *   An executive-level look at our strengths, weaknesses, opportunities, and threats.
-*   **[Roadmap & Milestones](MILESTONES.md)**
-    *   The path from "Ledger" to "Advisor": Phases, timeline, and deliverables.
-
-## 💡 **Product & Capabilities**
-*How FinSight acts as your intelligent financial advisor.*
-
-*   **[Product Guide](PRODUCT_GUIDE.md)**
-    *   **The Intelligence Engine**: How we turn raw transactions into wisdom.
-    *   **Core Capabilities**: Deep dives into Spending Analysis, Wealth Tracking, and Forecasting.
-    *   **The "Local-First" Advantage**: Why local processing is faster and safer.
-*   **[Design & Branding](BRANDING.md)**
-    *   Our visual identity, color system, and UI philosophy.
-
-## 🛠️ **Technical & Engineering**
-*For developers and contributors.*
-
-*   **[Technical Documentation](TECHNICAL.md)**
-    *   Architecture Overview (Spring Boot + MyBatis + Thymeleaf).
-    *   Database Schema & Data Flow.
-    *   Contribution Guidelines.
-
-## 📦 **Recent Updates**
-- Added: Monthly Income vs Expense trend with interactive drill-down (click to view categories and transactions)
-- Added: Home statistics overview
-- Refactor: Rules page
-- Added: Rule tag system
-- Import Enhancements: CMB debit data import
-- Structure: Optimized project layout for FinSight/FinSight2
-- Frontend: Multiple page and style optimizations
-- Docs: Expanded and updated Chinese/English docs; refreshed product and business model; consolidated function list
+This hub groups **strategy**, **product**, and **engineering** material so stakeholders and developers can onboard quickly.
 
 ---
 
-### **Quick Links**
-*   [🏠 Project Home](../README.md)
-*   [🐛 Issue Tracker](https://github.com/finsight/issues)
+## Strategy & governance
+
+| Document | Purpose |
+| :--- | :--- |
+| [MANIFESTO](MANIFESTO.md) | Principles: local-first finance, data control. |
+| [BUSINESS_MODEL](BUSINESS_MODEL.md) | Value proposition and sustainability. |
+| [SWOT](SWOT.md) | Strategic strengths, gaps, opportunities, risks. |
+| [MILESTONES](MILESTONES.md) | Roadmap and phase deliverables. |
+
+## Product & experience
+
+| Document | Purpose |
+| :--- | :--- |
+| [PRODUCT_GUIDE](PRODUCT_GUIDE.md) | How FinSight behaves as an advisor-style product. |
+| [FUNCTION_LIST](FUNCTION_LIST.md) | Feature inventory aligned to the codebase. |
+| [BRANDING](BRANDING.md) | Visual and UX direction. |
+
+## Engineering
+
+| Document | Purpose |
+| :--- | :--- |
+| [TECHNICAL](TECHNICAL.md) | Stack, setup, architecture, contribution. |
+| [FINALIZATION_2026-03](FINALIZATION_2026-03.md) | Recent hardening: API shape, security, UX, imports. |
+| [NEXT_DEV_PROMPT](NEXT_DEV_PROMPT.md) | Template for structured refactors and terminology alignment. |
+
+---
+
+## Quick links
+
+- [Project home](../README.md)
+- [Rules for AI / contributors](RULES_GUIDE.md)

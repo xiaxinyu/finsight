@@ -12,16 +12,12 @@ mybatis-plus:
       logic-delete-value: 1 # 逻辑已删除值(默认为 1)
       logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
 
-jasypt:
-  encryptor:
-    password: pirvate@account
-
 spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
-    url: jdbc:mysql://127.0.0.1:3306/finsight?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/finsight?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
     hikari:
       minimum-idle: 3
       idle-timeout: 600000
@@ -37,7 +33,7 @@ spring:
       max-request-size: 60MB
 
 account:
-  des-sign-key: 45a8c1035b35c7d56882189d5349cd9c
+  des-sign-key: ${ACCOUNT_DES_SIGN_KEY:change-me-in-env}
 
 server:
   servlet:

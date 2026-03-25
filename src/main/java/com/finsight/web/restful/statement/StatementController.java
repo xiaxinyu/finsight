@@ -2,17 +2,12 @@ package com.finsight.web.restful.statement;
 
 import com.finsight.application.service.ITransactionService;
 import com.finsight.application.service.IStatementService;
+import com.finsight.application.service.StatementProcessingService;
 import com.finsight.application.authentication.AuthenticationFacade;
-import com.finsight.application.card.BankCardService;
-import com.finsight.application.consume.ClassificationService;
-import com.finsight.application.importer.StatementImporterFactory;
-import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.Statement;
 import com.finsight.domain.model.Transaction;
 import com.finsight.web.restful.model.CommonResult;
-import com.finsight.web.restful.model.ResultCode;
 import com.alibaba.fastjson.JSON;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 @RequestMapping("/statement")
@@ -44,13 +37,10 @@ public class StatementController {
     private AuthenticationFacade authenticationFacade;
 
     @Autowired
-    private BankCardService bankCardService;
-
-    @Autowired
-    private ClassificationService classificationService;
-
-    @Autowired
     private com.finsight.application.service.ITransactionTempService transactionTempService;
+
+    @Autowired
+    private StatementProcessingService statementProcessingService;
 
     // Temporary storage for preview before commit
     // private static final ConcurrentHashMap<String, List<Transaction>> TEMP_STORE = new ConcurrentHashMap<>();
@@ -89,6 +79,9 @@ public class StatementController {
                                HttpServletRequest request) {
         String userName = authenticationFacade.getUserName();
         try {
+            if (file == null || file.isEmpty()) {
+                return CommonResult.fail("File is empty or unreadable");
+            }
             log.info("statement/upload request: user={}, bankCode={}, cardTypeCode={}, cardNo={}, fileName={}", userName, bankCode, cardTypeCode, cardNo, file == null ? null : file.getOriginalFilename());
             String filename = file.getOriginalFilename();
             String suffix = filename == null ? "" : filename.trim().toLowerCase();
@@ -100,13 +93,13 @@ public class StatementController {
             } else if (suffix.endsWith(".pdf")) {
                 content = readPdf(file);
                 if (StringUtils.isBlank(content)) {
-                    return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "File is empty or unreadable");
+                    return CommonResult.fail("File is empty or unreadable");
                 }
                 dataRows = parsePlainTable(content);
             } else {
                 content = readText(file);
                 if (StringUtils.isBlank(content)) {
-                    return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "File is empty or unreadable");
+                    return CommonResult.fail("File is empty or unreadable");
                 }
                 dataRows = parseCsv(content);
             }
@@ -121,58 +114,8 @@ public class StatementController {
             statementService.createStatement(statement, userName);
 
             // 4. Parse Transactions
-            List<Transaction> transactions = StatementImporterFactory
-                    .get(StringUtils.trimToEmpty(bankCode), StringUtils.trimToEmpty(cardTypeCode))
-                    .parse(dataRows, bankCode, cardTypeCode, cardNo);
-
-            // 5. Enrich Transactions
-            BankCard bankCard = bankCardService.getByBankTypeNo(StringUtils.trimToEmpty(bankCode), StringUtils.trimToEmpty(cardTypeCode), StringUtils.trimToEmpty(cardNo));
-            if (bankCard == null && StringUtils.isNotBlank(cardNo)) {
-                bankCard = bankCardService.getByCardNo(StringUtils.trimToEmpty(cardNo));
-            }
-            String bankCardId = bankCard == null ? null : bankCard.getId();
-            String bankCardName = bankCard == null ? null : bankCard.getCardName();
-
-            for (Transaction t : transactions) {
-                if (StringUtils.isNotBlank(bankCardId)) {
-                    t.setBankCardId(bankCardId);
-                    t.setBankCardName(bankCardName);
-                }
-                // Classification
-                Double amount = t.getBalanceMoney();
-                if(amount != null){ amount = Math.abs(amount); }
-                java.util.Date txnDate = t.getTransactionDate();
-                if(txnDate == null){ txnDate = t.getBookKeepingDate(); }
-                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode, amount, txnDate);
-                if (r != null) {
-                    t.setConsumeCode(r.id);
-                    t.setConsumeName(r.name);
-                }
-                // Link to Statement
-                 t.setRecordID(statement.getId()); 
-            }
-
-            // 6. Store in DB (Temp Table)
-            // Clear old if exists
-            transactionTempService.deleteByStatementId(statement.getId());
-            // Add new
-            if (transactions != null && !transactions.isEmpty()) {
-                List<com.finsight.domain.model.TransactionTemp> temps = new java.util.ArrayList<>();
-                for (Transaction t : transactions) {
-                    com.finsight.domain.model.TransactionTemp temp = new com.finsight.domain.model.TransactionTemp();
-                    org.springframework.beans.BeanUtils.copyProperties(t, temp);
-                    temp.setId(java.util.UUID.randomUUID().toString()); // Generate ID for temp
-                    temp.setCreateUser(userName);
-                    temp.setUpdateUser(userName);
-                    try{
-                        String ds = t.getTransactionDate() == null ? "" : new java.text.SimpleDateFormat("yyyy-MM-dd").format(t.getTransactionDate());
-                        String ts = org.apache.commons.lang3.StringUtils.trimToEmpty(t.getTransactionTime());
-                        temp.setTransactionDateTime(org.apache.commons.lang3.StringUtils.isNotBlank(ts) ? (ds + " " + ts) : ds);
-                    }catch(Exception ignore){}
-                    temps.add(temp);
-                }
-                transactionTempService.saveBatch(temps);
-            }
+            List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(dataRows, bankCode, cardTypeCode, cardNo, statement.getId());
+            statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
             
             log.info("statement/upload stored preview: statementId={}, rows={}, parsed={}", statement.getId(), dataRows.size(), transactions == null ? 0 : transactions.size());
 
@@ -180,11 +123,11 @@ public class StatementController {
             resp.put("statementId", statement.getId());
             resp.put("rows", dataRows.size());
             resp.put("parsed", transactions == null ? 0 : transactions.size());
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), JSON.toJSONString(resp));
+            return CommonResult.success(JSON.toJSONString(resp));
 
         } catch (Exception e) {
             log.error("Upload failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), friendlyError(e));
+            return CommonResult.fail(friendlyError(e));
         }
     }
 
@@ -198,7 +141,7 @@ public class StatementController {
         try{
             File f = new File(path);
             if(!f.exists() || !f.isFile()){
-                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "file_not_found");
+                return CommonResult.fail("file_not_found");
             }
             org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.pdmodel.PDDocument.load(f);
             String content;
@@ -210,40 +153,17 @@ public class StatementController {
                 doc.close();
             }
             List<String[]> dataRows = parsePlainTable(content);
-            List<Transaction> transactions = StatementImporterFactory
-                    .get(org.apache.commons.lang3.StringUtils.trimToEmpty(bankCode), org.apache.commons.lang3.StringUtils.trimToEmpty(cardTypeCode))
-                    .parse(dataRows, bankCode, cardTypeCode, cardNo);
-            BankCard bankCard = bankCardService.getByBankTypeNo(org.apache.commons.lang3.StringUtils.trimToEmpty(bankCode), org.apache.commons.lang3.StringUtils.trimToEmpty(cardTypeCode), org.apache.commons.lang3.StringUtils.trimToEmpty(cardNo));
-            if (bankCard == null && org.apache.commons.lang3.StringUtils.isNotBlank(cardNo)) {
-                bankCard = bankCardService.getByCardNo(org.apache.commons.lang3.StringUtils.trimToEmpty(cardNo));
-            }
-            String bankCardId = bankCard == null ? null : bankCard.getId();
-            String bankCardName = bankCard == null ? null : bankCard.getCardName();
-            for (Transaction t : transactions) {
-                if (org.apache.commons.lang3.StringUtils.isNotBlank(bankCardId)) {
-                    t.setBankCardId(bankCardId);
-                    t.setBankCardName(bankCardName);
-                }
-                Double amount = t.getBalanceMoney();
-                if(amount != null){ amount = Math.abs(amount); }
-                java.util.Date txnDate = t.getTransactionDate();
-                if(txnDate == null){ txnDate = t.getBookKeepingDate(); }
-                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode, amount, txnDate);
-                if (r != null) {
-                    t.setConsumeCode(r.id);
-                    t.setConsumeName(r.name);
-                }
-            }
+            List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(dataRows, bankCode, cardTypeCode, cardNo, null);
             int imported = transactionService.addTransactions(transactions, userName);
             java.util.Map<String,Object> payload = new java.util.LinkedHashMap<>();
             payload.put("path", path);
             payload.put("rows", dataRows.size());
             payload.put("parsed", transactions == null ? 0 : transactions.size());
             payload.put("imported", imported);
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), com.alibaba.fastjson.JSON.toJSONString(payload));
+            return CommonResult.success(com.alibaba.fastjson.JSON.toJSONString(payload));
         }catch(Exception e){
             log.error("import-pdf-local failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), friendlyError(e));
+            return CommonResult.fail(friendlyError(e));
         }
     }
 
@@ -254,7 +174,7 @@ public class StatementController {
         try{
             log.info("statement/upload-parsed request: user={}, bankCode={}, cardTypeCode={}, cardNo={}, fileName={}, rows={}", userName, payload == null ? null : payload.bankCode, payload == null ? null : payload.cardTypeCode, payload == null ? null : payload.cardNo, payload == null ? null : payload.fileName, payload == null || payload.rows == null ? 0 : payload.rows.size());
             if(payload == null || payload.rows == null || payload.rows.isEmpty()){
-                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "empty_rows");
+                return CommonResult.fail("empty_rows");
             }
             java.util.List<String[]> dataRows = new java.util.ArrayList<>();
             for(java.util.List<String> r : payload.rows){
@@ -272,63 +192,19 @@ public class StatementController {
             statement.setSource(payload.bankCode);
             statementService.createStatement(statement, userName);
 
-            java.util.List<Transaction> transactions = StatementImporterFactory
-                    .get(org.apache.commons.lang3.StringUtils.trimToEmpty(payload.bankCode), org.apache.commons.lang3.StringUtils.trimToEmpty(payload.cardTypeCode))
-                    .parse(dataRows, payload.bankCode, payload.cardTypeCode, payload.cardNo);
+            java.util.List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(dataRows, payload.bankCode, payload.cardTypeCode, payload.cardNo, statement.getId());
             log.info("statement/upload-parsed parsed transactions: {}", transactions == null ? 0 : transactions.size());
-
-            BankCard bankCard = bankCardService.getByBankTypeNo(org.apache.commons.lang3.StringUtils.trimToEmpty(payload.bankCode), org.apache.commons.lang3.StringUtils.trimToEmpty(payload.cardTypeCode), org.apache.commons.lang3.StringUtils.trimToEmpty(payload.cardNo));
-            if (bankCard == null && org.apache.commons.lang3.StringUtils.isNotBlank(payload.cardNo)) {
-                bankCard = bankCardService.getByCardNo(org.apache.commons.lang3.StringUtils.trimToEmpty(payload.cardNo));
-            }
-            String bankCardId = bankCard == null ? null : bankCard.getId();
-            String bankCardName = bankCard == null ? null : bankCard.getCardName();
-
-            for (Transaction t : transactions) {
-                if (org.apache.commons.lang3.StringUtils.isNotBlank(bankCardId)) {
-                    t.setBankCardId(bankCardId);
-                    t.setBankCardName(bankCardName);
-                }
-                Double amount = t.getBalanceMoney();
-                if(amount != null){ amount = Math.abs(amount); }
-                java.util.Date txnDate = t.getTransactionDate();
-                if(txnDate == null){ txnDate = t.getBookKeepingDate(); }
-                ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), payload.bankCode, payload.cardTypeCode, amount, txnDate);
-                if (r != null) {
-                    t.setConsumeCode(r.id);
-                    t.setConsumeName(r.name);
-                }
-                t.setRecordID(statement.getId());
-            }
-            // Store in DB (Temp Table)
-            transactionTempService.deleteByStatementId(statement.getId());
-            if (transactions != null && !transactions.isEmpty()) {
-                List<com.finsight.domain.model.TransactionTemp> temps = new java.util.ArrayList<>();
-                for (Transaction t : transactions) {
-                    com.finsight.domain.model.TransactionTemp temp = new com.finsight.domain.model.TransactionTemp();
-                    org.springframework.beans.BeanUtils.copyProperties(t, temp);
-                    temp.setId(java.util.UUID.randomUUID().toString());
-                    temp.setCreateUser(userName);
-                    temp.setUpdateUser(userName);
-                    try{
-                        String ds = t.getTransactionDate() == null ? "" : new java.text.SimpleDateFormat("yyyy-MM-dd").format(t.getTransactionDate());
-                        String ts = org.apache.commons.lang3.StringUtils.trimToEmpty(t.getTransactionTime());
-                        temp.setTransactionDateTime(org.apache.commons.lang3.StringUtils.isNotBlank(ts) ? (ds + " " + ts) : ds);
-                    }catch(Exception ignore){}
-                    temps.add(temp);
-                }
-                transactionTempService.saveBatch(temps);
-            }
+            statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
 
             log.info("statement/upload-parsed stored preview: statementId={}, size={}", statement.getId(), transactions == null ? 0 : transactions.size());
             java.util.Map<String,Object> resp = new java.util.LinkedHashMap<>();
             resp.put("statementId", statement.getId());
             resp.put("rows", dataRows.size());
             resp.put("parsed", transactions == null ? 0 : transactions.size());
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), JSON.toJSONString(resp));
+            return CommonResult.success(JSON.toJSONString(resp));
         }catch(Exception e){
             log.error("Upload parsed failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), friendlyError(e));
+            return CommonResult.fail(friendlyError(e));
         }
     }
 
@@ -397,18 +273,21 @@ public class StatementController {
     @ResponseBody
     public CommonResult commit(@RequestParam("statementId") String statementId) {
         if (StringUtils.isBlank(statementId)) {
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "Invalid Statement ID");
+            return CommonResult.fail("Invalid Statement ID");
         }
         try {
             // Retrieve from Temp
             List<com.finsight.domain.model.TransactionTemp> temps = transactionTempService.getByStatementId(statementId);
             if (temps == null || temps.isEmpty()) {
-                return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "No transactions found to commit");
+                return CommonResult.fail("No transactions found to commit");
             }
 
             // Convert and Save to Official Table
             List<Transaction> transactions = new java.util.ArrayList<>();
             for (com.finsight.domain.model.TransactionTemp temp : temps) {
+                if (temp == null) {
+                    continue;
+                }
                 Transaction t = new Transaction();
                 org.springframework.beans.BeanUtils.copyProperties(temp, t);
                 transactions.add(t);
@@ -431,10 +310,10 @@ public class StatementController {
             payload.put("total", total);
             payload.put("imported", imported);
             payload.put("failed", Math.max(0, total - imported));
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), JSON.toJSONString(payload));
+            return CommonResult.success(JSON.toJSONString(payload));
         } catch (Exception e) {
             log.error("Commit failed", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), "系统出现错误");
+            return CommonResult.fail("系统出现错误");
         }
     }
 

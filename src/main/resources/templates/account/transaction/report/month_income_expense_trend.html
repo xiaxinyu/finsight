@@ -101,6 +101,18 @@ function ensureMainSize(){
 
 function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
 function safeTextboxValue(sel){ var jq=$(sel); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } }
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+function getResultData(res){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            return app.api.normalizeResult(res).data;
+        }
+    }catch(e){}
+    return res ? res.returnMessage : null;
+}
 
 function getParamsBase(){
     var year = safeComboboxValue('#cmbYear');
@@ -116,14 +128,14 @@ function statistic(){
     transaction.monthConsumeReport(pIncome, function(di){
         transaction.monthConsumeReport(pExpense, function(de){
             try{
-                var arrI = (di && di.returnCode==='success') ? ($.parseJSON(di.returnMessage||'[]')||[]) : [];
-                var arrE = (de && de.returnCode==='success') ? ($.parseJSON(de.returnMessage||'[]')||[]) : [];
+                var arrI = isSuccessResult(di) ? ($.parseJSON(getResultData(di)||'[]')||[]) : [];
+                var arrE = isSuccessResult(de) ? ($.parseJSON(getResultData(de)||'[]')||[]) : [];
                 renderTrend(arrI, arrE);
             }catch(e){
-                app.messager.show({title:'错误',msg:'解析返回数据失败'});
+                app.messager.error('Failed to parse response data.');
             }
-        }, function(){ app.messager.show({title:'错误',msg:'支出统计请求失败'}); });
-    }, function(){ app.messager.show({title:'错误',msg:'收入统计请求失败'}); });
+        }, function(){ app.messager.error('Expense request failed.'); });
+    }, function(){ app.messager.error('Income request failed.'); });
 }
 
 function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','10','11','12']; }

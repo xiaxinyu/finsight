@@ -24,7 +24,6 @@
         <maven.compiler.target>21</maven.compiler.target>
         <maven.compiler.proc>full</maven.compiler.proc>
         <commons-io.version>2.16.0</commons-io.version>
-        <jasypt.version>3.0.5</jasypt.version>
     </properties>
 
 
@@ -101,11 +100,6 @@
 
         
 
-        <dependency>
-            <groupId>com.github.ulisesbocchio</groupId>
-            <artifactId>jasypt-spring-boot-starter</artifactId>
-            <version>${jasypt.version}</version>
-        </dependency>
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>

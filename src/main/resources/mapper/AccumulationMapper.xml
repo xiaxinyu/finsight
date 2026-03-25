@@ -89,7 +89,18 @@
           from accumulation
           where 1 = 1
           <if test="accumulation != null">
-                                  
+              <if test="accumulation.timeFrom != null and accumulation.timeFrom != ''">
+                  and time &gt;= #{accumulation.timeFrom}
+              </if>
+              <if test="accumulation.timeTo != null and accumulation.timeTo != ''">
+                  and time &lt;= #{accumulation.timeTo}
+              </if>
+              <if test="accumulation.unitNo != null and accumulation.unitNo != ''">
+                  and unit_no = #{accumulation.unitNo}
+              </if>
+              <if test="accumulation.demoArea != null and accumulation.demoArea != ''">
+                  and demoarea like concat('%', #{accumulation.demoArea}, '%')
+              </if>
           </if>
          order by time desc
          limit #{page.recordBegin}, #{page.pageSize}
@@ -99,7 +110,18 @@
     	select count(id) from accumulation
         where 1 = 1
         <if test="accumulation != null">
-			
-		</if>
+            <if test="accumulation.timeFrom != null and accumulation.timeFrom != ''">
+                and time &gt;= #{accumulation.timeFrom}
+            </if>
+            <if test="accumulation.timeTo != null and accumulation.timeTo != ''">
+                and time &lt;= #{accumulation.timeTo}
+            </if>
+            <if test="accumulation.unitNo != null and accumulation.unitNo != ''">
+                and unit_no = #{accumulation.unitNo}
+            </if>
+            <if test="accumulation.demoArea != null and accumulation.demoArea != ''">
+                and demoarea like concat('%', #{accumulation.demoArea}, '%')
+            </if>
+        </if>
     </select>
 </mapper>

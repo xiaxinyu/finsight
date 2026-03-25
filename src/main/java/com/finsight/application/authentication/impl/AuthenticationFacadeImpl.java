@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
+/**
+ * Delegates to {@link org.springframework.security.core.context.SecurityContextHolder};
+ * {@link #getUserName()} requires an authenticated context.
+ */
 @Service
 public class AuthenticationFacadeImpl implements AuthenticationFacade {
 

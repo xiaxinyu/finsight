@@ -3,6 +3,7 @@
     <title>User Management</title>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
     <style>
@@ -124,7 +125,7 @@
             if(this.checked){ ids.push(parseInt(this.value)); }
         });
         $.ajax({url:'/api/v1/users/'+row.id+'/roles', method:'POST', contentType:'application/json', data: JSON.stringify(ids)})
-            .done(function(){ $('#dlgRoles').dialog('close'); $.messager.show({title:'Info', msg:'Roles updated'}); })
+            .done(function(){ $('#dlgRoles').dialog('close'); app.messager.success('Roles updated.'); })
             .fail(function(){ $.messager.alert('Error','Assign failed'); });
     }
 </script>

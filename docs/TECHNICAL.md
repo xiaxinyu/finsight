@@ -1,79 +1,96 @@
 # Technical Documentation
-Language: English | [中文](TECHNICAL.zh-CN.md)
 
-## 🏗 Project Structure
+| | |
+| :--- | :--- |
+| **Language** | English · [简体中文](TECHNICAL.zh-CN.md) |
+
+This document is for **operators and developers** who deploy, configure, or extend FinSight. Product positioning and feature narrative live in [PRODUCT_GUIDE](PRODUCT_GUIDE.md); strategy and roadmap in [docs/README](README.md).
+
+---
+
+## Repository layout
 
 ```text
 finsight/
-├── docs/                 # Documentation (Features, Branding, Manifesto)
-├── src/
-│   ├── main/
-│   │   ├── java/com/finsight/
-│   │   │   ├── application/    # Business Logic & Services
-│   │   │   ├── domain/         # Core Domain Models
-│   │   │   ├── infrastructure/ # Data Access (Mappers)
-│   │   │   └── web/            # REST Controllers & Views
-│   │   └── resources/
-│   │       ├── mapper/         # MyBatis XML Mappers
-│   │       ├── static/         # Frontend Assets (CSS, JS)
-│   │       └── templates/      # Thymeleaf HTML Templates
-├── pom.xml               # Maven Dependencies
+├── docs/                 # Product, strategy, engineering docs
+├── src/main/java/com/finsight/
+│   ├── application/      # Use cases, services, importers, classification
+│   ├── domain/           # Domain models
+│   ├── infrastructure/   # MyBatis mappers, adapters
+│   └── web/              # Controllers, REST models, Thymeleaf views
+├── src/main/resources/
+│   ├── mapper/           # MyBatis XML
+│   ├── static/           # CSS, JS
+│   └── templates/      # Thymeleaf HTML
+├── pom.xml
 └── README.md
 ```
 
-## 🛠 Technology Stack
+---
 
-- **Backend**: Spring Boot 3, Java 21
-- **Persistence**: MyBatis-Plus, MySQL 8.x
-- **Frontend**: Thymeleaf, EasyUI, ECharts
-- **Build Tool**: Maven 3.9+
+## Stack
 
-## 🚀 Getting Started
+| Layer | Technology |
+| :--- | :--- |
+| Runtime | Java **21**, Spring Boot **3.x** |
+| Data | MyBatis-Plus, **MySQL 8.x** |
+| UI | Thymeleaf, jQuery EasyUI, ECharts |
+| Build | Maven **3.9+** |
 
-### Prerequisites
-- JDK `21`
-- Maven `3.9+`
-- MySQL `8.x` (Create database `finsight`)
+---
 
-### Installation & Setup
+## Prerequisites
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourname/finsight.git
-   cd finsight
-   ```
+- JDK **21**
+- Maven **3.9+**
+- MySQL **8.x** with a database (e.g. `finsight`) created for the app
 
-2. **Configure Database**
-   Edit `src/main/resources/application.yml` and update the database connection details:
-   ```yaml
-   spring:
-     datasource:
-       url: jdbc:mysql://127.0.0.1:3306/finsight?...
-       username: your_username
-       password: your_password
-   ```
+---
 
-3. **Build the project**
-   ```bash
-   mvn clean package -DskipTests
-   ```
+## Configuration
 
-4. **Run the application**
-   ```bash
-   java -jar target/finsight-1.0.0.jar
-   ```
+`src/main/resources/application.yml` supports **environment-variable overrides** for sensitive and environment-specific values. For production, set at least:
 
-### Usage
-1. Open your browser and navigate to `http://localhost:8080/index.html`.
-2. Upload your statement files (if applicable) or explore the demo data.
+| Variable | Purpose |
+| :--- | :--- |
+| `SPRING_DATASOURCE_URL` | JDBC URL |
+| `SPRING_DATASOURCE_USERNAME` | DB user |
+| `SPRING_DATASOURCE_PASSWORD` | DB password |
+| `ACCOUNT_DES_SIGN_KEY` | Signing key for account-related crypto (replace default) |
 
-> 🔐 **Privacy Note**: Never commit real transaction data or configuration files with passwords to Git. Use `.gitignore`.
+Defaults in the file are for **local development only**. Do not commit real credentials.
 
-## 🤝 Contributing Guide
+---
 
-We welcome contributions! Please follow these steps:
+## Build and run
 
-1. **Open an issue**: Discuss your changes before implementing them.
-2. **Code Style**: Follow the existing Java/Spring Boot coding conventions.
-3. **Testing**: Add unit tests for new features if possible.
-4. **Pull Request**: Submit a PR with a clear description of your changes.
+```bash
+git clone <your-repository-url>
+cd finsight
+mvn clean package -DskipTests
+java -jar target/finsight-1.6.0.jar
+```
+
+Alternatively:
+
+```bash
+mvn spring-boot:run
+```
+
+Then open `http://localhost:8080/index.html` (adjust host/port if configured).
+
+---
+
+## Security and data hygiene
+
+- Keep secrets out of Git; use env vars or your platform’s secret store.
+- Do not commit exports of real transaction data.
+
+---
+
+## Contributing
+
+1. Discuss non-trivial changes via an issue or short design note.
+2. Match existing Java/Spring style; keep changes focused.
+3. Add or update tests when behavior changes.
+4. Open a PR with a clear summary and risk notes.

@@ -3,6 +3,7 @@
     <title>== Category Rules ==</title>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
     <style>
@@ -350,14 +351,14 @@ function deleteRule(){
         if(!r) return;
         $.ajax({url:'/api/v1/consume/rules/'+row.id,type:'DELETE'}).done(function(){
             loadRules();
-            $.messager.show({title:'OK',msg:'Deleted successfully'});
+            app.messager.success('Rule deleted.');
         }).fail(function(xhr){ $.messager.alert('Error', xhr.responseText || 'Error'); });
     });
 }
 
 function reloadCache(){
     $.post('/api/v1/consume/rules/reload').done(function(){
-        $.messager.show({title:'OK',msg:'Rules cache reloaded'});
+        app.messager.success('Rules cache reloaded.');
     });
 }
 

@@ -4,13 +4,12 @@ import com.finsight.domain.common.ResponseEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
+import org.springframework.context.NoSuchMessageException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Locale;
 import java.util.Objects;
@@ -27,9 +26,23 @@ public class GlobalExceptionHandler {
         this.messageSource = messageSource;
     }
 
+    /**
+     * Application-layer failures with an explicit message (preferred over generic {@link Exception}).
+     */
+    @ExceptionHandler(AppServiceException.class)
+    @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<?> handleAppServiceException(AppServiceException ex) {
+        log.error(ex.getMessage(), ex);
+        String message = ex.getMessage();
+        if (message == null || message.isBlank()) {
+            message = messageSource.getMessage("error.system.error", null, "Operation failed", Locale.getDefault());
+        }
+        return ResponseEntity.error(message);
+    }
+
     @ExceptionHandler(value = Exception.class)
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity catchExceptionHandler(Exception exception) {
+    public ResponseEntity<?> catchExceptionHandler(Exception exception) {
         log.error(exception.getMessage(), exception);
 
         String message;
@@ -43,8 +56,21 @@ public class GlobalExceptionHandler {
         }
         if (tempEx instanceof AppException) {
             AppException appEx = (AppException) tempEx;
-            message = messageSource.getMessage(appEx.getDescription(), appEx.getParameters(), appEx.getMessage(), Locale.getDefault());
-            return ResponseEntity.error(message);
+            String code = appEx.getDescription();
+            if (code == null || code.isBlank()) {
+                code = "error.system.error";
+            }
+            String fallback = appEx.getMessage();
+            if (fallback == null || fallback.isBlank()) {
+                fallback = "System error";
+            }
+            try {
+                message = messageSource.getMessage(code, appEx.getParameters(), Locale.getDefault());
+            } catch (NoSuchMessageException ex) {
+                message = fallback;
+            }
+            String resolvedMessage = (message == null || message.isBlank()) ? fallback : message;
+            return ResponseEntity.error(resolvedMessage);
         }
 
         if (tempEx instanceof MethodArgumentNotValidException) {

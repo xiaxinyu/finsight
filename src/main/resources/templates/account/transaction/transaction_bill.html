@@ -19,8 +19,8 @@
     <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
 </head>
 <body class="easyui-layout">
-<div data-options="region:'north',border:false" style="height: 50px">
-    <div class="toolbar" style="height: 100%;">
+<div data-options="region:'north',border:false" style="height: 56px">
+    <div class="toolbar fs-toolbar" style="height: 100%;">
 			<span class="item_intervel">
 	           	<label>Date</label>
             <input id="dateStart" class="easyui-datebox" style="width: 110px;"
@@ -31,34 +31,36 @@
 
         
 
-        <span class="item_intervel">
+        <span class="item_intervel fs-toolbar-group">
 				<label>Card</label>
                 <input id="cmbCardTypes" class="easyui-combobox"
                        data-options="url:'/api/v1/cards/list',method:'get',valueField:'key',textField:'value',editable:false,prompt:'All cards'"
                        style="width: 140px;">
 			</span>
 
-        <span class="item_intervel">
+        <span class="item_intervel fs-toolbar-group">
           	<label>Consume</label>
                 <select id="cmbConsume" class="easyui-combotree"
                         data-options="url:'/api/v1/consume/tree',method:'get'" multiple
                         style="width:220px;"></select>
         </span>
-        <span class="item_intervel">
+        <span class="item_intervel fs-toolbar-group">
             <label>Filter</label>
             <input id="cmbConsumeFilter" class="easyui-combobox" style="width:120px;"
                    data-options="editable:false,valueField:'id',textField:'text',data:[{id:'all',text:'All'},{id:'empty',text:'Only Unclassified'}],prompt:'All'">
         </span>
 
-                <span class="item_intervel">
+                <span class="item_intervel fs-toolbar-group">
              	  <input id="txtDemo" class="easyui-textbox" data-options="prompt:'Keyword'" style="width:140px"> 
           	  </span>
 
-        <span class="item_intervel">
-	              <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="searchTransactions()">Search</a>
-                  <a class="easyui-linkbutton" data-options="iconCls:'icon-large-smartart'" onclick="autoClassify()">Classify</a>
-                  <a class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="batchSetCategory()">Batch Category</a>
-                  <a class="easyui-linkbutton" data-options="iconCls:'icon-edit'" onclick="genKeywords()">Keyword</a>
+        <span class="item_intervel fs-toolbar-actions">
+                  <span class="fs-kpi">Rows <b id="kpiRows">0</b></span>
+                  <span class="fs-kpi">Selected <b id="kpiSelected">0</b></span>
+	              <a id="btnQuery" class="easyui-linkbutton fs-btn-primary" data-options="iconCls:'icon-search'" onclick="searchTransactions()">Query</a>
+                  <a class="easyui-linkbutton" data-options="iconCls:'icon-large-smartart'" onclick="autoClassify()">Auto</a>
+                  <a class="easyui-linkbutton" data-options="iconCls:'icon-ok'" onclick="batchSetCategory()">Batch</a>
+                  <a class="easyui-linkbutton" data-options="iconCls:'icon-edit'" onclick="genKeywords()">Rules</a>
 	              <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="">Export</a>
 	          </span>
     </div>
@@ -69,27 +71,29 @@
         <thead>
         <tr>
             <th data-options="field:'id',hidden:true">ID</th>
-            <th data-options="field:'bankCardName',width:160">Card Name</th>
-            <th data-options="field:'bookKeepingDate',width:90,align:'center',formatter:app.date.format">Posting Date</th>
-            <th data-options="field:'transactionDateTime',width:140,align:'center'">TXN Date</th>
-            <th data-options="field:'transactionDesc',width:250,align:'left'">Narration</th>
-            <th data-options="field:'balanceCurrency',width:80,align:'center'">Currency</th>
-            <th data-options="field:'incomeMoney',width:100,align:'right',formatter:function(v,r,i){
+            <th data-options="field:'bankCardName',width:150">Card Name</th>
+            <th data-options="field:'bookKeepingDate',width:86,align:'center',formatter:app.date.format">Posting Date</th>
+            <th data-options="field:'transactionDateTime',width:118,align:'center'">TXN Date</th>
+            <th data-options="field:'transactionDesc',width:300,align:'left'">Narration</th>
+            <th data-options="field:'balanceCurrency',width:72,align:'center'">Currency</th>
+            <th data-options="field:'incomeMoney',width:88,align:'right',formatter:function(v,r,i){
                 var income = v || 0;
                 if(r.balanceMoney < 0){ income += Math.abs(r.balanceMoney); }
-                return app.money.rmb(income,r,i);
+                var cls = income > 0 ? 'fs-money-income' : 'fs-money-neutral';
+                return '<span class=&quot;'+cls+'&quot;>' + app.money.rmb(income,r,i) + '</span>';
             }">Income</th>
-            <th data-options="field:'balanceMoney',width:100,align:'right',formatter:function(v,r,i){
+            <th data-options="field:'balanceMoney',width:88,align:'right',formatter:function(v,r,i){
                 var expense = 0;
                 if(v > 0){ expense = v; }
-                return app.money.rmb(expense,r,i);
+                var cls = expense > 0 ? 'fs-money-expense' : 'fs-money-neutral';
+                return '<span class=&quot;'+cls+'&quot;>' + app.money.rmb(expense,r,i) + '</span>';
             }">Expense</th>
-            <th data-options="field:'accountBalance',width:120,align:'right',formatter:app.money.rmb">Balance</th>
+            <th data-options="field:'accountBalance',width:98,align:'right',formatter:app.money.rmb">Balance</th>
             
-            <th data-options="field:'consumeCode',width:220,align:'left',formatter:function(v,r){return r.consumeName||'';},editor:{type:'combotree',options:{url:'/api/v1/consume/tree',method:'get',loadFilter:function(data){function mapNode(n){if(!n) return n;var code=n.id||'';var name=n.text||'';n.text=(code?code:'')+(name?('  '+name):'');if(n.children&&n.children.length){for(var i=0;i<n.children.length;i++){n.children[i]=mapNode(n.children[i]);}}return n;}if($.isArray(data)){for(var i=0;i<data.length;i++){data[i]=mapNode(data[i]);}}else{data=mapNode(data);}return data;},onShowPanel:function(){try{$(this).combotree('tree').tree('collapseAll');}catch(e){}},onLoadSuccess:function(){try{$(this).combotree('tree').tree('collapseAll');}catch(e){}}}}">
+            <th data-options="field:'consumeCode',width:180,align:'left',formatter:function(v,r){return r.consumeName||'';},editor:{type:'combotree',options:{url:'/api/v1/consume/tree',method:'get',loadFilter:function(data){function mapNode(n){if(!n) return n;var code=n.id||'';var name=n.text||'';n.text=(code?code:'')+(name?('  '+name):'');if(n.children&&n.children.length){for(var i=0;i<n.children.length;i++){n.children[i]=mapNode(n.children[i]);}}return n;}if($.isArray(data)){for(var i=0;i<data.length;i++){data[i]=mapNode(data[i]);}}else{data=mapNode(data);}return data;},onShowPanel:function(){try{$(this).combotree('tree').tree('collapseAll');}catch(e){}},onLoadSuccess:function(){try{$(this).combotree('tree').tree('collapseAll');}catch(e){}}}}">
                 Category
             </th>
-            <th data-options="field:'demoArea',width:420,align:'left',editor:{type:'textbox'}">Remarks</th>
+            <th data-options="field:'demoArea',width:320,align:'left',editor:{type:'textbox'}">Remarks</th>
         </tr>
         </thead>
     </table>
@@ -99,13 +103,50 @@
 <script type="text/javascript">
 var datagrid = '#datagrid';
 var editIndex = undefined;
+var searchTimer = null;
+var CARD_OPTIONS_LOADED = false;
+var GRID_SCROLL_BOUND = false;
+function scheduleSearch(){
+    if(searchTimer){ clearTimeout(searchTimer); }
+    searchTimer = setTimeout(function(){ searchTransactions(); }, 220);
+}
+function isSuccessResult(res){
+    try{
+        return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok);
+    }catch(e){
+        return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+    }
+}
+function getResultMessage(res, fallback){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            var n = app.api.normalizeResult(res);
+            if(n && n.message){ return n.message; }
+        }
+    }catch(e){}
+    if(res && res.returnMessage){ return res.returnMessage; }
+    if(res && res.message){ return res.message; }
+    return fallback || 'Operation failed.';
+}
+function getResultData(res, fallback){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            var n = app.api.normalizeResult(res);
+            if(typeof n.data !== 'undefined'){ return n.data; }
+        }
+    }catch(e){}
+    if(res && typeof res.returnMessage !== 'undefined'){ return res.returnMessage; }
+    return (typeof fallback === 'undefined') ? null : fallback;
+}
 $(function() {
     $(datagrid).datagrid({
         method:'post',
         pageSize:200,
         title:'Total:<span id="totalConsume" class="fs-total-count">0</span>',
         url: '/transaction/getTransactions',
+        loadMsg:'Loading transactions...',
         fitColumns:true,
+        nowrap:true,
         striped:true,
         autoRowHeight:true,
         scrollbarSize:14,
@@ -124,7 +165,12 @@ $(function() {
                 editIndex = rowIndex;
                 $(this).datagrid('beginEdit', rowIndex);
             }
+            updateSelectionKpi();
 		},
+        onSelect:function(){ updateSelectionKpi(); },
+        onUnselect:function(){ updateSelectionKpi(); },
+        onSelectAll:function(){ updateSelectionKpi(); },
+        onUnselectAll:function(){ updateSelectionKpi(); },
         onAfterEdit: function(rowIndex, rowData, changes){
             if(changes.hasOwnProperty('consumeCode')){
                 var tree = $('#cmbConsume').combotree('tree');
@@ -145,6 +191,9 @@ $(function() {
         },
 		onLoadSuccess:function(data){
 			var rowDatas = data.rows;
+            $('#kpiRows').text((rowDatas && rowDatas.length) ? rowDatas.length : 0);
+            updateSelectionKpi();
+            ensureGridScrollEffect();
 			if(rowDatas != undefined && rowDatas.length > 0){
 				var total = 0;
 				for(var i=0;i<rowDatas.length;i++){
@@ -191,11 +240,16 @@ $(function() {
 
 $(function(){
     $.parser.onComplete = function(){
-        $('#dateStart').datebox({onSelect:function(){searchTransactions();}});
-        $('#dateEnd').datebox({onSelect:function(){searchTransactions();}});
+        $('#dateStart').datebox({onSelect:function(){scheduleSearch();}});
+        $('#dateEnd').datebox({onSelect:function(){scheduleSearch();}});
         
-        $('#cmbCardTypes').combobox({onSelect:function(){searchTransactions();},onShowPanel:function(){ $('#cmbCardTypes').combobox('reload'); }});
-        $('#cmbCardTypes').combobox('reload');
+        $('#cmbCardTypes').combobox({
+            onSelect:function(){scheduleSearch();},
+            onLoadSuccess:function(){ CARD_OPTIONS_LOADED = true; }
+        });
+        if(!CARD_OPTIONS_LOADED){
+            $('#cmbCardTypes').combobox('reload');
+        }
         $('#cmbConsume').combotree({
             url:'/api/v1/consume/tree',
             method:'get',
@@ -216,7 +270,7 @@ $(function(){
                 return data;
             },
             onLoadSuccess:function(){ try{$('#cmbConsume').combotree('tree').tree('collapseAll');}catch(e){} },
-            onChange:function(){searchTransactions();},
+            onChange:function(){scheduleSearch();},
             onShowPanel:function(){
                 try{
                     var treeObj = $('#cmbConsume').combotree('tree');
@@ -224,10 +278,73 @@ $(function(){
                 }catch(e){}
             }
         });
-        try{$('#cmbConsume').combotree('reload','/api/v1/consume/tree');}catch(e){}
-        $('#cmbConsumeFilter').combobox({onChange:function(){searchTransactions();}});
+        $('#cmbConsumeFilter').combobox({onChange:function(){scheduleSearch();}});
+        $('#txtDemo').textbox('textbox').on('keydown', function(e){
+            if(e.key === 'Enter'){
+                e.preventDefault();
+                searchTransactions();
+            }
+        });
     };
 });
+
+$(function(){
+    bindTransactionHotkeys();
+});
+
+function bindTransactionHotkeys(){
+    $(document).on('keydown.transactionHotkeys', function(e){
+        var key = e.key || '';
+        if(key === 'Escape'){
+            try{
+                if(editIndex !== undefined){
+                    $(datagrid).datagrid('cancelEdit', editIndex);
+                    editIndex = undefined;
+                    app.messager.success('Edit cancelled.');
+                }
+            }catch(ignore){}
+            return;
+        }
+        if((e.ctrlKey || e.metaKey) && (key.toLowerCase() === 's')){
+            e.preventDefault();
+            updateTransaction();
+            return;
+        }
+        if((e.ctrlKey || e.metaKey) && key.toLowerCase() === 'f'){
+            e.preventDefault();
+            try{
+                $('#txtDemo').textbox('textbox').focus();
+            }catch(ignore){}
+        }
+    });
+}
+
+function updateSelectionKpi(){
+    try{
+        var selected = $(datagrid).datagrid('getSelections') || [];
+        $('#kpiSelected').text(selected.length || 0);
+    }catch(e){
+        $('#kpiSelected').text(0);
+    }
+}
+
+function ensureGridScrollEffect(){
+    if(GRID_SCROLL_BOUND){ return; }
+    try{
+        var panel = $(datagrid).datagrid('getPanel');
+        var body = panel.find('.datagrid-view2 .datagrid-body');
+        if(!body || body.length === 0){ return; }
+        GRID_SCROLL_BOUND = true;
+        body.on('scroll.fsHeaderShadow', function(){
+            var top = $(this).scrollTop();
+            if(top > 2){
+                panel.addClass('fs-grid-scrolled');
+            }else{
+                panel.removeClass('fs-grid-scrolled');
+            }
+        });
+    }catch(e){}
+}
 
 function deleteTransaction(){
 	var rowData = $(datagrid).datagrid("getSelected");
@@ -235,19 +352,19 @@ function deleteTransaction(){
 		$.messager.confirm('Confirm', 'Do you want to delete this transaction record？', function(r){
 			if (r){
 			    transaction.deleteTransaction({'id':rowData.id}, function(data){
-			    	if(data.returnCode == 'success'){
+			    	if(isSuccessResult(data)){
 			    		$(datagrid).datagrid('reload');
-			    		app.messager.show({title:'Success', msg:'Success to delete this transaction record!'});
+			    		app.messager.success('Transaction deleted.');
 			    	}else{
-			    		app.messager.show({title:'Fail', msg: data.returnMessage});
+			    		app.messager.fail(getResultMessage(data, 'Delete failed.'));
 			    	}
 			    },function(e){
-					app.messager.show({title:'Error', msg: e.message});
+					app.messager.error((e && e.message) ? e.message : 'Network error.');
 				})
 			}
 		});
 	}else{
-		app.messager.show({title:'Delete transaction record', msg:'Please select one transaction record!'});
+		app.messager.fail('Please select one transaction record.');
 	}
 }
 
@@ -258,7 +375,7 @@ function incomeToExpense(){
         if(row){ rows = [row]; }
     }
     if(!rows || rows.length === 0){
-        app.messager.show({title:'Income → Expense', msg:'Please select one or more rows'});
+        app.messager.fail('Please select one or more rows.');
         return;
     }
     try{
@@ -280,7 +397,7 @@ function incomeToExpense(){
         }
     }
     if(ids.length === 0){
-        app.messager.show({title:'Income → Expense', msg:'Selected rows have no Income to convert'});
+        app.messager.fail('Selected rows have no income to convert.');
         return;
     }
     var msg = '确认将选中的 ' + ids.length + ' 条记录从 Income 转为 Expense？该操作会把 Income 金额写入 Expense，并把 income_money 置为 0。';
@@ -290,14 +407,14 @@ function incomeToExpense(){
     $.messager.confirm('Confirm', msg, function(r){
         if(!r){ return; }
         transaction.incomeToExpense({ids: ids.join(',')}, function(data){
-            if(data && data.returnCode === 'success'){
+            if(isSuccessResult(data)){
                 $(datagrid).datagrid('reload');
-                app.messager.show({title:'Success', msg:'已转换 ' + ids.length + ' 条记录'});
+                app.messager.success('Converted ' + ids.length + ' records.');
             }else{
-                app.messager.show({title:'Fail', msg: (data && data.returnMessage) ? data.returnMessage : 'Fail'});
+                app.messager.fail(getResultMessage(data, 'Conversion failed.'));
             }
         }, function(e){
-            app.messager.show({title:'Error', msg: e && e.message ? e.message : 'Error'});
+            app.messager.error(e && e.message ? e.message : 'Network error.');
         });
     });
 }
@@ -309,7 +426,7 @@ function expenseToIncome(){
         if(row){ rows = [row]; }
     }
     if(!rows || rows.length === 0){
-        app.messager.show({title:'Expense → Income', msg:'Please select one or more rows'});
+        app.messager.fail('Please select one or more rows.');
         return;
     }
     try{
@@ -331,7 +448,7 @@ function expenseToIncome(){
         }
     }
     if(ids.length === 0){
-        app.messager.show({title:'Expense → Income', msg:'Selected rows have no Expense to convert'});
+        app.messager.fail('Selected rows have no expense to convert.');
         return;
     }
     var msg = '确认将选中的 ' + ids.length + ' 条记录从 Expense 转为 Income？该操作会把 Expense 金额写入 Income，并把 balance_money 置为 0。';
@@ -341,14 +458,14 @@ function expenseToIncome(){
     $.messager.confirm('Confirm', msg, function(r){
         if(!r){ return; }
         transaction.expenseToIncome({ids: ids.join(',')}, function(data){
-            if(data && data.returnCode === 'success'){
+            if(isSuccessResult(data)){
                 $(datagrid).datagrid('reload');
-                app.messager.show({title:'Success', msg:'已转换 ' + ids.length + ' 条记录'});
+                app.messager.success('Converted ' + ids.length + ' records.');
             }else{
-                app.messager.show({title:'Fail', msg: (data && data.returnMessage) ? data.returnMessage : 'Fail'});
+                app.messager.fail(getResultMessage(data, 'Conversion failed.'));
             }
         }, function(e){
-            app.messager.show({title:'Error', msg: e && e.message ? e.message : 'Error'});
+            app.messager.error(e && e.message ? e.message : 'Network error.');
         });
     });
 }
@@ -376,7 +493,7 @@ var consume_operate = {};
 
 function updateTransaction() {
 	var rowData = $(datagrid).datagrid('getSelected');
-	if(!rowData){ app.messager.show({title:'Save', msg:'Please select one row to save'}); return; }
+	if(!rowData){ app.messager.fail('Please select one row to save.'); return; }
 	var rowIndex = $(datagrid).datagrid('getRowIndex',rowData);
 	var consumptionTypeEditor = $(datagrid).datagrid('getEditor', {index:rowIndex,field:'consumptionType'});
 	var consumptionType = (function(){
@@ -410,10 +527,10 @@ function updateTransaction() {
 	try{ $(datagrid).datagrid('endEdit', rowIndex); }catch(e){}
     var params = {'id':rowData.id, 'consumptionType':consumptionType,'demoArea':$.trim(demoArea),'consumeCode':consumeCode,'consumeName':consumeName};
 	transaction.updateTransaction(params, function(data){
-    	if(data.returnCode == 'success'){
+    	if(isSuccessResult(data)){
     		$(datagrid).datagrid('reload');
     	}else{
-    		app.messager.show({title:'Fail', msg: data.returnMessage});
+    		app.messager.fail(getResultMessage(data, 'Save failed.'));
     	}
     });
 }
@@ -432,9 +549,9 @@ function autoClassify(){
         try{ $(datagrid).datagrid('selectRow', idx); }catch(e){}
         var params = { transactionDesc: row.transactionDesc, cardTypeName: row.cardTypeName, balanceMoney: row.balanceMoney, bookKeepingDate: row.bookKeepingDate };
         transaction.classify(params, function(res){
-            if(res && res.returnCode === 'success'){
+            if(isSuccessResult(res)){
                 var arr = [];
-                try{ arr = JSON.parse(res.returnMessage || '[]'); }catch(ex){ arr = []; }
+                try{ arr = JSON.parse(getResultData(res, '[]') || '[]'); }catch(ex){ arr = []; }
                 if(!arr || !arr.length){ arr = [{id:'OTHER-01', name:'Uncategorized Expense'}]; }
                 var dlgId = 'autoClassifyDlg_'+Math.floor(Math.random()*1000000);
                 var html = '<div id="'+dlgId+'" style="padding:12px;">'+
@@ -477,9 +594,9 @@ function autoClassify(){
                             if(!code){ return; }
                             if(code && name && name.indexOf(code) === 0){ name = $.trim(name.substring(code.length)); }
                             transaction.updateTransaction({id:row.id, consumeCode:code, consumeName:name}, function(dr){
-                                if(dr && dr.returnCode === 'success'){ $(datagrid).datagrid('reload'); try{ $dlg.dialog('close'); }catch(e){} }
-                                else { app.messager.show({title:'Fail', msg:(dr && dr.returnMessage) || 'Update failed'}); }
-                            }, function(e){ app.messager.show({title:'Error', msg: e.message || 'Network error'}); });
+                                if(isSuccessResult(dr)){ $(datagrid).datagrid('reload'); try{ $dlg.dialog('close'); }catch(e){} }
+                                else { app.messager.fail(getResultMessage(dr, 'Update failed.')); }
+                            }, function(e){ app.messager.error((e && e.message) ? e.message : 'Network error.'); });
                         }
                     },{
                         text:'Cancel',
@@ -507,9 +624,9 @@ function autoClassify(){
                 }catch(e){}
                 try{ $(datagrid).datagrid('selectRow', idx); }catch(e){}
             } else {
-                app.messager.show({title:'Auto Classify', msg:(res && res.returnMessage) || 'No match'});
+                app.messager.fail(getResultMessage(res, 'No match.'));
             }
-        }, function(e){ app.messager.show({title:'Error', msg: e.message || 'Network error'}); });
+        }, function(e){ app.messager.error((e && e.message) ? e.message : 'Network error.'); });
         return;
     }
     var rows = $(datagrid).datagrid('getRows') || [];
@@ -520,7 +637,7 @@ function autoClassify(){
         var cn = $.trim(r.consumeName||'');
         if(!cc || !cn){ targets.push(r); }
     }
-    if(!targets.length){ app.messager.show({title:'Classify', msg:'No unclassified records in current page'}); return; }
+    if(!targets.length){ app.messager.fail('No unclassified records in current page.'); return; }
     var msg = 'This will auto classify only unclassified records in current page.\nCount: ' + targets.length + '\nUse top recommendation for each.\nContinue?';
     $.messager.confirm('Confirm', msg, function(r){
         if(!r) return;
@@ -553,13 +670,13 @@ function autoClassify(){
             var params = { transactionDesc: it.transactionDesc, cardTypeName: it.cardTypeName, balanceMoney: it.balanceMoney, bookKeepingDate: it.bookKeepingDate };
             transaction.classify(params, function(res){
                 var arr = [];
-                try{ if(res && res.returnCode==='success'){ arr = JSON.parse(res.returnMessage||'[]'); } }catch(ex){ arr = []; }
+                try{ if(isSuccessResult(res)){ arr = JSON.parse(getResultData(res, '[]')||'[]'); } }catch(ex){ arr = []; }
                 if(arr && arr.length){
                     var best = arr[0]||{};
                     var code = $.trim(best.id||''); var name = $.trim(best.name||'');
                     if(code){
                         transaction.updateTransaction({id:it.id, consumeCode:code, consumeName:name}, function(dr){
-                            if(dr && dr.returnCode==='success'){ done++; $('#'+dlgId+'_done').text(done); }
+                            if(isSuccessResult(dr)){ done++; $('#'+dlgId+'_done').text(done); }
                             else { fail++; $('#'+dlgId+'_fail').text(fail); }
                             updateBar(done+fail, total); setTimeout(next, 10);
                         }, function(){ fail++; $('#'+dlgId+'_fail').text(fail); updateBar(done+fail, total); setTimeout(next, 10); });
@@ -594,20 +711,20 @@ function searchTransactions(){
 
 function genKeywords(){
     var row = $(datagrid).datagrid('getSelected');
-    if(!row){ app.messager.show({title:'Keywords', msg:'Please select a transaction'}); return; }
+    if(!row){ app.messager.fail('Please select a transaction.'); return; }
     
     // 1. Fetch Keywords
     $.post('/transaction/keywords', {transactionDesc: row.transactionDesc}, function(res){
         var keywords = '';
-        if(res && res.returnCode === 'success'){
-            try{ keywords = JSON.parse(res.returnMessage || '[]').join('|'); }catch(e){}
+        if(isSuccessResult(res)){
+            try{ keywords = JSON.parse(getResultData(res, '[]') || '[]').join('|'); }catch(e){}
         }
         
         // 2. Fetch Recommendations
         var params = { transactionDesc: row.transactionDesc, cardTypeName: row.cardTypeName, balanceMoney: row.balanceMoney, bookKeepingDate: row.bookKeepingDate };
         transaction.classify(params, function(resClassify){
             var recs = [];
-            try{ if(resClassify && resClassify.returnCode==='success'){ recs = JSON.parse(resClassify.returnMessage||'[]'); } }catch(ex){}
+            try{ if(isSuccessResult(resClassify)){ recs = JSON.parse(getResultData(resClassify, '[]')||'[]'); } }catch(ex){}
             
             showKeywordDialog(row, keywords, recs);
         });
@@ -677,10 +794,10 @@ function showKeywordDialog(row, keywords, recs){
             iconCls:'icon-save',
             handler:function(){
                 var patternStr = $('#'+dlgId+'_kw').textbox('getValue');
-                if(!patternStr){ app.messager.show({title:'Error', msg:'Keywords cannot be empty'}); return; }
+                if(!patternStr){ app.messager.error('Keywords cannot be empty.'); return; }
                 var catId = $('#'+dlgId+'_manual').combotree('getValue');
                 if(!catId){ catId = $dlg.find('input[name="kw-cat"]:checked').val(); }
-                if(!catId){ app.messager.show({title:'Error', msg:'Please select a category'}); return; }
+                if(!catId){ app.messager.error('Please select a category.'); return; }
                 var raw = (patternStr||'').split('|');
                 var tokens = [];
                 var seen = {};
@@ -688,7 +805,7 @@ function showKeywordDialog(row, keywords, recs){
                     var t = $.trim(raw[i]||'');
                     if(t && !seen[t]){ seen[t] = true; tokens.push(t); }
                 }
-                if(!tokens.length){ app.messager.show({title:'Error', msg:'No valid keywords'}); return; }
+                if(!tokens.length){ app.messager.error('No valid keywords.'); return; }
                 var saved = 0, failed = 0, idx = 0;
                 function updateStatus(){
                     var cn = '已保存 ' + saved + ' 条规则' + (failed>0 ? ('，失败 ' + failed + ' 条') : '');
@@ -722,7 +839,7 @@ function showKeywordDialog(row, keywords, recs){
 function batchSetCategory(){
     var selections = $(datagrid).datagrid('getSelections') || [];
     var currentRows = $(datagrid).datagrid('getRows') || [];
-    if(!selections.length && !currentRows.length){ app.messager.show({title:'Batch Set Category', msg:'No data'}); return; }
+    if(!selections.length && !currentRows.length){ app.messager.fail('No data.'); return; }
     var dlgId = 'batchCatDlg_'+Math.floor(Math.random()*1000000);
     var html = '<div id="'+dlgId+'" style="padding:14px 16px;">'
         + '<div style="margin-bottom:10px;font-weight:600;">Apply Scope</div>'
@@ -771,7 +888,7 @@ function batchSetCategory(){
                     var $sel = $dlg.find('input[name="bc-rec"]:checked');
                     code = $.trim(($sel.val()||'')); name = $.trim(($sel.attr('data-name')||''));
                 }
-                if(!code){ app.messager.show({title:'Batch Set Category', msg:'Please choose a category'}); return; }
+                if(!code){ app.messager.fail('Please choose a category.'); return; }
                 if(name && name.indexOf(code)===0){ name = $.trim(name.substring(code.length)); }
                 var total = targets.length;
                 $('#'+dlgId+'_pending').text(total);
@@ -784,8 +901,8 @@ function batchSetCategory(){
                 transaction.updateTransactionsBatch(payload, function(res){
                     var success = 0, failed = 0;
                     try{
-                        if(res && res.returnCode==='success'){
-                            var r = JSON.parse(res.returnMessage||'{}');
+                        if(isSuccessResult(res)){
+                            var r = JSON.parse(getResultData(res, '{}')||'{}');
                             success = Number(r.success||0);
                             failed = Number(r.failed||0);
                         }
@@ -842,7 +959,7 @@ function batchSetCategory(){
             var params = { transactionDesc: sample.transactionDesc, cardTypeName: sample.cardTypeName, balanceMoney: sample.balanceMoney, bookKeepingDate: sample.bookKeepingDate };
             transaction.classify(params, function(res){
                 var arr = [];
-                try{ if(res && res.returnCode==='success'){ arr = JSON.parse(res.returnMessage||'[]'); } }catch(ex){ arr = []; }
+                try{ if(isSuccessResult(res)){ arr = JSON.parse(getResultData(res, '[]')||'[]'); } }catch(ex){ arr = []; }
                 var $recs = $('#'+dlgId+'_recs');
                 if(arr && arr.length){
                     var html = '';

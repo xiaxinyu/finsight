@@ -1,19 +1,19 @@
 package com.finsight.application.importer.impl;
 
+import com.finsight.core.DateParseException;
 import com.finsight.core.DateTool;
 import com.finsight.core.StringTool;
 import com.finsight.domain.model.Transaction;
 import com.finsight.application.importer.StatementImporter;
 import org.apache.commons.lang3.StringUtils;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
 public class CcbDebitTransactionStatementImporter implements StatementImporter {
     private static final Pattern DATE8 = Pattern.compile("^\\d{8}$");
-    private static final Pattern CARD = Pattern.compile("^\\d{12,19}$");
-
     @Override
     public List<Transaction> parse(List<String[]> rows, String bankCode, String cardTypeCode, String cardNo) {
         List<Transaction> list = new ArrayList<>();
@@ -49,27 +49,23 @@ public class CcbDebitTransactionStatementImporter implements StatementImporter {
                 if (StringUtils.equalsAny(originC0, "交易日", "交易日期")) {
                     inTable = true;
                     continue;
-                } else {
-                    // Fallback: check full row string for header keywords
-            String joined = StringUtils.join(row, "");
-            if (StringUtils.contains(joined, "交易日") &&
-                    (StringUtils.contains(joined, "入账金额")
-                            || StringUtils.contains(joined, "交易金额")
-                            || StringUtils.contains(joined, "金额")
-                            || StringUtils.contains(joined, "收入")
-                            || StringUtils.contains(joined, "支出")
-                            || StringUtils.contains(joined, "交易时间"))) {
-                inTable = true;
-                continue;
-            }
                 }
-                
-                // Heuristic
+                String joined = StringUtils.join(row, "");
+                if (StringUtils.contains(joined, "交易日")
+                        && (StringUtils.contains(joined, "入账金额")
+                                || StringUtils.contains(joined, "交易金额")
+                                || StringUtils.contains(joined, "金额")
+                                || StringUtils.contains(joined, "收入")
+                                || StringUtils.contains(joined, "支出")
+                                || StringUtils.contains(joined, "交易时间"))) {
+                    inTable = true;
+                    continue;
+                }
                 if (DATE8.matcher(c0).matches() && DATE8.matcher(c1).matches()) {
-                     inTable = true;
-                     // fall through
+                    inTable = true;
+                    // fall through to parse data row
                 } else {
-                    if(!inTable) continue;
+                    continue;
                 }
             }
 
@@ -99,18 +95,22 @@ public class CcbDebitTransactionStatementImporter implements StatementImporter {
                 // c1 is Transaction Date, c0 is Booking Date
                 transaction.setTransactionDate(DateTool.changeStringToDate(c1, DateTool.DF_YYYYMMDD));
                 transaction.setBookKeepingDate(DateTool.changeStringToDate(c0, DateTool.DF_YYYYMMDD));
-            } catch (Exception e) {
+            } catch (DateParseException e) {
                 continue;
             }
             String dateStr = "";
-            try{ dateStr = new java.text.SimpleDateFormat("yyyy-MM-dd").format(transaction.getTransactionDate()); }catch(Exception ignore){}
-            if(org.apache.commons.lang3.StringUtils.isNotBlank(c2)){
-                transaction.setTransactionDateTime((dateStr==null? "":dateStr) + " " + c2);
-            }else{
+            try {
+                dateStr = new SimpleDateFormat("yyyy-MM-dd").format(transaction.getTransactionDate());
+            } catch (Exception ignore) {
+                // ignore
+            }
+            if (StringUtils.isNotBlank(c2)) {
+                transaction.setTransactionDateTime((dateStr == null ? "" : dateStr) + " " + c2);
+            } else {
                 transaction.setTransactionDateTime(dateStr);
             }
             // Merge columns into description with @@ separator
-            java.util.List<String> descParts = new java.util.ArrayList<>();
+            List<String> descParts = new ArrayList<>();
             if (StringUtils.isNotBlank(c7)) descParts.add(c7);
             if (StringUtils.isNotBlank(c8)) descParts.add(c8);
             if (StringUtils.isNotBlank(c9)) descParts.add(c9);

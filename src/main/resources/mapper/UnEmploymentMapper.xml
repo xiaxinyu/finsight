@@ -89,7 +89,18 @@
           from unemployment
           where 1 = 1
           <if test="unEmployment != null">
-                                  
+              <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
+                  and time &gt;= #{unEmployment.timeFrom}
+              </if>
+              <if test="unEmployment.timeTo != null and unEmployment.timeTo != ''">
+                  and time &lt;= #{unEmployment.timeTo}
+              </if>
+              <if test="unEmployment.unitNo != null and unEmployment.unitNo != ''">
+                  and unit_no = #{unEmployment.unitNo}
+              </if>
+              <if test="unEmployment.demoArea != null and unEmployment.demoArea != ''">
+                  and demoarea like concat('%', #{unEmployment.demoArea}, '%')
+              </if>
           </if>
          order by time desc
          limit #{page.recordBegin}, #{page.pageSize}
@@ -99,7 +110,18 @@
     	select count(id) from unemployment
         where 1 = 1
         <if test="unEmployment != null">
-			
-		</if>
+            <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
+                and time &gt;= #{unEmployment.timeFrom}
+            </if>
+            <if test="unEmployment.timeTo != null and unEmployment.timeTo != ''">
+                and time &lt;= #{unEmployment.timeTo}
+            </if>
+            <if test="unEmployment.unitNo != null and unEmployment.unitNo != ''">
+                and unit_no = #{unEmployment.unitNo}
+            </if>
+            <if test="unEmployment.demoArea != null and unEmployment.demoArea != ''">
+                and demoarea like concat('%', #{unEmployment.demoArea}, '%')
+            </if>
+        </if>
     </select>
 </mapper>

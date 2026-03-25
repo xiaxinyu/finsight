@@ -120,6 +120,18 @@ function getParamsBase(){
     var demoArea = (function(){ var jq=$('#txtDemo'); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } })();
     return {'txnTypes':'expense','consumeID':consume,'cardTypeName':cardtype,'demoArea':demoArea};
 }
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+function getResultData(res){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            return app.api.normalizeResult(res).data;
+        }
+    }catch(e){}
+    return res ? res.returnMessage : null;
+}
 
 function compareYears(){
     var a = ($('#yearA').combobox('getValue')||'').trim();
@@ -151,13 +163,13 @@ function compareYears(){
     }
     if(pa){
         transaction.consumeReport(pa, function(res){
-            try{ da = $.parseJSON(res.returnMessage||'[]'); }catch(e){ da = []; }
+            try{ da = $.parseJSON(getResultData(res)||'[]'); }catch(e){ da = []; }
             done++; maybeRender();
         }, function(){ done++; maybeRender(); });
     }
     if(pb){
         transaction.consumeReport(pb, function(res){
-            try{ db = $.parseJSON(res.returnMessage||'[]'); }catch(e){ db = []; }
+            try{ db = $.parseJSON(getResultData(res)||'[]'); }catch(e){ db = []; }
             done++; maybeRender();
         }, function(){ done++; maybeRender(); });
     }
@@ -165,7 +177,7 @@ function compareYears(){
 
 function ajaxError(xhr){
     var msg = (xhr && xhr.responseText) ? xhr.responseText : 'Network error';
-    app.messager.show({title:'Fail', msg: msg});
+    app.messager.error(msg);
 }
 
 function renderComparePies(listA, listB, yearA, yearB){

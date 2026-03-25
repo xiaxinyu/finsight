@@ -1,6 +1,6 @@
 # FinSight 功能清单与分类
 
-本文档提供了 FinSight 的详细功能清单，按功能领域分类。它反映了系统的开发历史和当前能力。
+本文档提供了 FinSight 的详细功能清单，按功能领域分类。它反映了系统的开发历史和当前能力。产品定位与 **Free / Plus / Pro** 分档说明（非许可或 SKU 对应关系）见 [产品指南](PRODUCT_GUIDE.zh-CN.md)。
 
 ## 1. 交易处理 (Transaction Processing)
 

@@ -1,5 +1,6 @@
 package com.finsight.domain.model;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
@@ -19,6 +20,11 @@ public class Accumulation extends Base {
 	private String demoArea;
 		
 	private String year;
+
+	@TableField(exist = false)
+	private String timeFrom;
+	@TableField(exist = false)
+	private String timeTo;
 
 	public String getUnitNo() {
 		return unitNo;
@@ -98,5 +104,21 @@ public class Accumulation extends Base {
 
 	public void setYear(String year) {
 		this.year = year;
+	}
+
+	public String getTimeFrom() {
+		return timeFrom;
+	}
+
+	public void setTimeFrom(String timeFrom) {
+		this.timeFrom = timeFrom;
+	}
+
+	public String getTimeTo() {
+		return timeTo;
+	}
+
+	public void setTimeTo(String timeTo) {
+		this.timeTo = timeTo;
 	}
 }

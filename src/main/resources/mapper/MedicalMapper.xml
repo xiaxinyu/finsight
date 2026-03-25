@@ -89,7 +89,18 @@
           from medical
           where 1 = 1
           <if test="medical != null">
-                                  
+              <if test="medical.timeFrom != null and medical.timeFrom != ''">
+                  and time &gt;= #{medical.timeFrom}
+              </if>
+              <if test="medical.timeTo != null and medical.timeTo != ''">
+                  and time &lt;= #{medical.timeTo}
+              </if>
+              <if test="medical.unitNo != null and medical.unitNo != ''">
+                  and unit_no = #{medical.unitNo}
+              </if>
+              <if test="medical.demoArea != null and medical.demoArea != ''">
+                  and demoarea like concat('%', #{medical.demoArea}, '%')
+              </if>
           </if>
          order by time desc
          limit #{page.recordBegin}, #{page.pageSize}
@@ -99,7 +110,18 @@
     	select count(id) from medical
         where 1 = 1
         <if test="medical != null">
-			
-		</if>
+            <if test="medical.timeFrom != null and medical.timeFrom != ''">
+                and time &gt;= #{medical.timeFrom}
+            </if>
+            <if test="medical.timeTo != null and medical.timeTo != ''">
+                and time &lt;= #{medical.timeTo}
+            </if>
+            <if test="medical.unitNo != null and medical.unitNo != ''">
+                and unit_no = #{medical.unitNo}
+            </if>
+            <if test="medical.demoArea != null and medical.demoArea != ''">
+                and demoarea like concat('%', #{medical.demoArea}, '%')
+            </if>
+        </if>
     </select>
 </mapper>

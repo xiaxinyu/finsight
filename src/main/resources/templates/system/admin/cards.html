@@ -3,6 +3,7 @@
     <title>== Bank Cards ==</title>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
 </head>
@@ -37,6 +38,15 @@ var tree = '#tree';
 var dg = '#dg';
 var editIndex;
 var selectedTypeCode = '';
+function getResultMessage(res, fallback){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            var n = app.api.normalizeResult(res);
+            if(n && n.message){ return n.message; }
+        }
+    }catch(e){}
+    return (res && (res.message || res.returnMessage)) ? (res.message || res.returnMessage) : (fallback || 'Operation failed.');
+}
 function normalizeRow(r){
     r = r || {};
     r.bankCode = (r.bankCode||'').trim();
@@ -85,13 +95,12 @@ $(function(){
             $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(r)}).done(function(resp){
                 $(dg).datagrid('acceptChanges');
                 loadCards();
-                $.messager.show({title:'OK',msg:'Saved successfully'});
+                app.messager.success('Card saved.');
             }).fail(function(xhr){
                 try{
                     var res = JSON.parse(xhr.responseText||'{}');
-                    var msg = res.message || res.returnMessage || 'Save failed';
-                    $.messager.alert('Error', msg);
-                }catch(e){ $.messager.alert('Error','Save failed'); }
+                    app.messager.fail(getResultMessage(res, 'Save failed.'));
+                }catch(e){ app.messager.error('Save failed.'); }
             });
         }
     });
@@ -132,8 +141,8 @@ function deleteCard(){
         if(!r) return;
         $.ajax({url:'/api/v1/cards/'+row.id,type:'DELETE'}).done(function(){
             loadCards();
-            $.messager.show({title:'OK',msg:'Deleted successfully'});
-        }).fail(function(xhr){ $.messager.alert('Error', xhr.responseText || 'Error'); });
+            app.messager.success('Card deleted.');
+        }).fail(function(xhr){ app.messager.error(xhr.responseText || 'Delete failed.'); });
     });
 }
 

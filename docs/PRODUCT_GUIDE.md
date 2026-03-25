@@ -1,12 +1,22 @@
-# FinSight Product Guide: Your Intelligent Financial Advisor
+# FinSight Product Guide
 
-> **Core Philosophy**: We don't just record numbers. We interpret them.
+Language: English · [中文](PRODUCT_GUIDE.zh-CN.md)
 
-FinSight is designed to be more than a ledger. It is a **Personal Finance Intelligence System** that runs entirely on your local machine. It transforms raw banking data into a mirror of your life choices, helping you understand your past to optimize your future.
+FinSight is a **self-hosted personal finance application**: import bank activity, apply **rules-based classification**, and review **reports and trends** without sending data to a third-party cloud. This guide describes **product intent and capability areas**; exact features ship with each release—see [FUNCTION_LIST](FUNCTION_LIST.md).
+
+**Principle:** clarity and control first—useful insight from data you already own.
 
 ---
 
-## 🧠 **The Intelligence Engine**
+## Edition tiers (roadmap reference)
+
+**Free / Plus / Pro** labels describe a **planned capability matrix** for positioning and roadmapping. **They do not strictly map** to this repository’s license, distribution, or pricing. For what is implemented today, see [FUNCTION_LIST](FUNCTION_LIST.md).
+
+The full tier table (Chinese) lives in [PRODUCT_GUIDE.zh-CN.md](PRODUCT_GUIDE.zh-CN.md) under **各版本功能一览（规划分档）**.
+
+---
+
+## The Intelligence Engine
 
 At the heart of FinSight is a local processing engine that classifies, links, and analyzes your financial footprint without ever sending a byte to the cloud.
 
@@ -27,7 +37,7 @@ FinSight builds a profile of your financial behavior:
 
 ---
 
-## 📊 **Core Capabilities**
+## Core Capabilities
 
 ### **Wealth Management (The "Balance Sheet")**
 *A holistic view of what you own and what you owe.*
@@ -56,7 +66,7 @@ FinSight builds a profile of your financial behavior:
 
 ---
 
-## 🔒 **The Local-First Advantage**
+## The Local-First Advantage
 
 Why we chose to be a desktop-class local application:
 
@@ -66,7 +76,9 @@ Why we chose to be a desktop-class local application:
 
 ---
 
-## 🚀 **Future Roadmap**
+## Future Roadmap
+
+*These items align with the **Pro**-tier vision in the [Chinese tier matrix](PRODUCT_GUIDE.zh-CN.md). What ships when is release-specific—see [FUNCTION_LIST](FUNCTION_LIST.md).*
 
 *   **AI Advisor**: Local LLM integration to answer questions like "Can I afford a vacation next month?"
 *   **Scenario Planning**: "What if I lose my job?" simulation.

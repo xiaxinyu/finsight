@@ -6,7 +6,15 @@ import com.finsight.application.importer.impl.CrbankDebitTransactionStatementImp
 import com.finsight.application.importer.impl.CmbDebitTransactionStatementImporter;
 import com.finsight.application.importer.impl.CgbCreditTransactionStatementImporter;
 
-public class StatementImporterFactory {
+/**
+ * Selects a {@link StatementImporter} implementation from bank and card type codes.
+ * Unknown combinations fall back to {@link CcbTransactionStatementImporter} (legacy default).
+ */
+public final class StatementImporterFactory {
+
+    private StatementImporterFactory() {
+    }
+
     public static StatementImporter get(String bankCode, String cardTypeCode) {
         if ("CCB".equalsIgnoreCase(bankCode)) {
             if ("credit".equalsIgnoreCase(cardTypeCode)) {

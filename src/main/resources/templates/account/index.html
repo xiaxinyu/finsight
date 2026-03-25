@@ -73,6 +73,20 @@
             border-radius: 999px;
             white-space: nowrap;
         }
+        .page-meta-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .year-select {
+            font-size: 12px;
+            color: #111827;
+            border: 1px solid rgba(24,144,255,0.3);
+            background: #fff;
+            border-radius: 999px;
+            padding: 4px 10px;
+            outline: none;
+        }
 
         .kpi-grid {
             display: grid;
@@ -160,7 +174,38 @@
         .chart-container {
             width: 100%;
             height: 300px;
+            position: relative;
         }
+        .chart-loading {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.65);
+            border-radius: 8px;
+            z-index: 3;
+        }
+        .chart-loading.show { display: flex; }
+        .spinner {
+            width: 26px;
+            height: 26px;
+            border: 3px solid rgba(24, 144, 255, 0.20);
+            border-top-color: #1890ff;
+            border-radius: 50%;
+            animation: fs-spin 0.9s linear infinite;
+        }
+        @keyframes fs-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .empty-tip {
+            margin-top: 8px;
+            color: #9ca3af;
+            font-size: 12px;
+            display: none;
+        }
+        .empty-tip.show { display: block; }
 
         .score-wrap {
             display: flex;
@@ -218,7 +263,11 @@
             <div class="breadcrumb">Home / Dashboard</div>
             <div class="page-title">Dashboard</div>
         </div>
-        <div class="page-meta" id="pageMeta">Year: --</div>
+        <div class="page-meta-wrap">
+            <label class="page-meta" for="yearSelect">Year</label>
+            <select id="yearSelect" class="year-select" aria-label="Select report year"></select>
+            <div class="page-meta" id="pageMeta">Year: --</div>
+        </div>
     </div>
 
     <div class="kpi-grid">
@@ -246,6 +295,8 @@
                 <h2 class="card-title" id="consumptionTitle">Consumption Structure</h2>
             </div>
             <div id="consumptionChart" class="chart-container"></div>
+            <div id="consumptionLoading" class="chart-loading"><span class="spinner"></span></div>
+            <div id="consumptionEmpty" class="empty-tip">No consumption data for selected year.</div>
             <div class="insight-list">
                 <div class="insight-item">
                     <span>Life Essentials</span>
@@ -291,6 +342,8 @@
                 </div>
             </div>
             <div id="behaviorChart" class="chart-container"></div>
+            <div id="behaviorLoading" class="chart-loading"><span class="spinner"></span></div>
+            <div id="behaviorEmpty" class="empty-tip">No financial health data for selected year.</div>
             <div class="insight-list">
                 <div class="insight-item">
                     <span>💸 Spend Control (30%)</span>
@@ -304,234 +357,6 @@
         </div>
     </div>
 
-    <script type="text/javascript">
-        function cssVar(name){
-            return getComputedStyle(document.documentElement).getPropertyValue('--'+name).trim() || undefined;
-        }
-        // Initialize Charts
-        document.addEventListener('DOMContentLoaded', function() {
-            loadHomeSummary();
-        });
-
-        async function loadHomeSummary(){
-            const year = new Date().getFullYear();
-            const url = `/transaction-report/home-summary?year=${year}`;
-            try{
-                const resp = await fetch(url, { method: 'GET' });
-                const data = await resp.json();
-                if (!data || (data.returnCode !== 'success' && data.returnCode !== 20000)) {
-                    initConsumptionChart();
-                    initBehaviorChart();
-                    return;
-                }
-                const payload = JSON.parse(data.returnMessage || '{}');
-                const buckets = payload.buckets_pct || {};
-                document.getElementById('pageMeta').innerText = `Year: ${payload.year || year}`;
-                document.getElementById('kpiYear').innerText = `${payload.year || year}`;
-                document.getElementById('kpiInsight').innerText = (payload.summary_text || '—').replace('📌 ', '') || '—';
-                document.getElementById('kpiTopBucket').innerText = findTopBucketText(buckets) || '—';
-                const arr = [
-                    { value: buckets.life || 0, name: 'Life (Essentials)' },
-                    { value: buckets.fixed || 0, name: 'Fixed Costs' },
-                    { value: buckets.shopping || 0, name: 'Shopping' },
-                    { value: buckets.entertainment || 0, name: 'Entertainment' },
-                    { value: buckets.investment || 0, name: 'Investment' },
-                    { value: buckets.edu || 0, name: 'Education' },
-                    { value: buckets.other || 0, name: 'Other' }
-                ];
-                initConsumptionChart(arr);
-                document.getElementById('consumptionTitle').innerText = `${payload.year || year} Consumption Structure`;
-                document.getElementById('lifePct').innerText = `${buckets.life || 0}%`;
-                document.getElementById('fixedPct').innerText = `${buckets.fixed || 0}%`;
-                document.getElementById('shoppingPct').innerText = `${buckets.shopping || 0}%`;
-                document.getElementById('entertainmentPct').innerText = `${buckets.entertainment || 0}%`;
-                document.getElementById('investmentPct').innerText = `${buckets.investment || 0}%`;
-                document.getElementById('eduPct').innerText = `${buckets.edu || 0}%`;
-                document.getElementById('otherPct').innerText = `${buckets.other || 0}%`;
-                document.getElementById('summaryText').innerText = (payload.summary_text || '').replace('📌 ', '');
-
-                const hs = payload.health_score || {};
-                const dims = hs.dimensions || {};
-                const radarValues = [
-                    toNumber(dims.spend_control),
-                    toNumber(dims.savings_rate),
-                    toNumber(dims.invest_awareness),
-                    toNumber(dims.debt_risk),
-                    toNumber(dims.rationality),
-                    toNumber(dims.growth_trend)
-                ];
-                initBehaviorChart(radarValues);
-                applyScore(hs.total);
-                document.getElementById('spendControlText').innerText = `${Math.round(dims.spend_control ?? 0)} / 100`;
-                document.getElementById('savingsRateText').innerText = `${Math.round(dims.savings_rate ?? 0)} / 100`;
-            }catch(e){
-                initConsumptionChart();
-                initBehaviorChart();
-            }
-        }
-
-        function toNumber(v){ var n = Number(v); return isNaN(n)?0:n; }
-
-        function applyScore(total){
-            var scoreEl = document.getElementById('scoreBadge');
-            var kpiScoreEl = document.getElementById('kpiScore');
-            var n = Number(total);
-            var text = (isNaN(n) ? '--' : String(Math.round(n)));
-            scoreEl.classList.remove('score-good', 'score-warn', 'score-bad');
-            if (!isNaN(n)) {
-                if (n < 60) scoreEl.classList.add('score-bad');
-                else if (n < 80) scoreEl.classList.add('score-warn');
-                else scoreEl.classList.add('score-good');
-            }
-            scoreEl.innerText = text;
-            kpiScoreEl.innerText = text;
-        }
-
-        function findTopBucketText(buckets){
-            var defs = [
-                { key: 'life', label: 'Life Essentials' },
-                { key: 'fixed', label: 'Fixed Costs' },
-                { key: 'shopping', label: 'Shopping' },
-                { key: 'entertainment', label: 'Entertainment' },
-                { key: 'investment', label: 'Investment' },
-                { key: 'edu', label: 'Education' },
-                { key: 'other', label: 'Other' }
-            ];
-            var maxKey = null;
-            var maxVal = -1;
-            for (var i = 0; i < defs.length; i++) {
-                var v = Number((buckets || {})[defs[i].key] ?? 0);
-                if (!isNaN(v) && v > maxVal) {
-                    maxVal = v;
-                    maxKey = defs[i].key;
-                }
-            }
-            if (maxKey === null) return '';
-            var label = '';
-            for (var j = 0; j < defs.length; j++) {
-                if (defs[j].key === maxKey) { label = defs[j].label; break; }
-            }
-            return label + ' · ' + Math.round(maxVal) + '%';
-        }
-
-        function initConsumptionChart(dataArr) {
-            var chartDom = document.getElementById('consumptionChart');
-            var myChart = echarts.init(chartDom);
-            var option = {
-                tooltip: {
-                    trigger: 'item',
-                    formatter: function(p){
-                        var v = (p && p.value != null) ? p.value : '--';
-                        return p.name + ': ' + v + '%';
-                    }
-                },
-                legend: {
-                    bottom: '0%',
-                    left: 'center',
-                    icon: 'roundRect',
-                    itemWidth: 12,
-                    itemHeight: 12,
-                    textStyle: { color: '#6b7280', fontSize: 12 }
-                },
-                color: [
-                    cssVar('chart-life') || '#1890FF',
-                    cssVar('chart-fixed') || '#52C41A',
-                    cssVar('chart-shopping') || '#FAAD14',
-                    cssVar('chart-entertainment') || '#F5222D',
-                    cssVar('chart-investment') || '#722ED1',
-                    cssVar('chart-education') || '#13C2C2',
-                    cssVar('chart-other') || '#BFBFBF'
-                ],
-                series: [
-                    {
-                        name: 'Consumption',
-                        type: 'pie',
-                        radius: ['50%', '70%'],
-                        avoidLabelOverlap: false,
-                        itemStyle: {
-                            borderRadius: 8,
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        },
-                        label: {
-                            show: false,
-                            position: 'center'
-                        },
-                        emphasis: {
-                            scale: true,
-                            scaleSize: 10
-                        },
-                        data: dataArr || [
-                            { value: 58, name: 'Life (Essentials)' },
-                            { value: 15, name: 'Fixed Costs' },
-                            { value: 12, name: 'Shopping' },
-                            { value: 8, name: 'Entertainment' },
-                            { value: 7, name: 'Investment' }
-                        ]
-                    }
-                ]
-            };
-            myChart.setOption(option);
-            
-            // Handle Resize
-            window.addEventListener('resize', function() {
-                myChart.resize();
-            });
-        }
-
-        function initBehaviorChart(values) {
-            var chartDom = document.getElementById('behaviorChart');
-            var myChart = echarts.init(chartDom);
-            var option = {
-                radar: {
-                    indicator: [
-                        { name: 'Spend Control', max: 100 },
-                        { name: 'Savings Rate', max: 100 },
-                        { name: 'Invest Awareness', max: 100 },
-                        { name: 'Debt Risk', max: 100 },
-                        { name: 'Rationality', max: 100 },
-                        { name: 'Growth Trend', max: 100 }
-                    ],
-                    shape: 'circle',
-                    radius: '65%',
-                    splitNumber: 5,
-                    axisName: { color: '#595959', fontSize: 12 },
-                    axisLine: { show: false },
-                    splitLine: { lineStyle: { color: 'rgba(0,0,0,0.05)' } },
-                    splitArea: {
-                        show: true,
-                        areaStyle: { color: ['rgba(24,144,255,0.02)', 'rgba(24,144,255,0.04)', 'rgba(24,144,255,0.06)', 'rgba(24,144,255,0.08)', 'rgba(24,144,255,0.10)'] }
-                    }
-                },
-                series: [
-                    {
-                        name: 'Health Score',
-                        type: 'radar',
-                        data: [
-                            {
-                                value: values || [90, 85, 70, 95, 80, 88],
-                                name: 'Current Status',
-                                areaStyle: {
-                                    color: 'rgba(82, 196, 26, 0.30)'
-                                },
-                                lineStyle: {
-                                    color: '#52C41A',
-                                    width: 2
-                                },
-                                itemStyle: {
-                                    color: '#52C41A'
-                                }
-                            }
-                        ]
-                    }
-                ]
-            };
-            myChart.setOption(option);
-
-            window.addEventListener('resize', function() {
-                myChart.resize();
-            });
-        }
-    </script>
+    <script src="/scripts/account-dashboard.js"></script>
 </body>
 </html>

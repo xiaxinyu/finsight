@@ -11,6 +11,15 @@ var app = {
 			};
 			var finalParams = $.extend(initParams, obj);
 			$.messager.show(finalParams);
+		},
+        success : function(msg){
+            app.messager.show({ title:'Success', msg: msg || 'Operation succeeded.' });
+        },
+        fail : function(msg){
+            app.messager.show({ title:'Fail', msg: msg || 'Operation failed.' });
+        },
+        error : function(msg){
+            app.messager.show({ title:'Error', msg: msg || 'Unexpected error.' });
 		}
 	},
 
@@ -53,7 +62,39 @@ var app = {
 	           success: sfn,
 	           error: efn
 	       });
-		}
+		},
+
+    api : {
+        isWrappedResponse : function(obj){
+            return !!(obj && typeof obj === 'object' && (typeof obj.code !== 'undefined' || typeof obj.returnCode !== 'undefined'));
+        },
+        normalizeResult : function(obj){
+            if(!obj || typeof obj !== 'object'){
+                return { wrapped: false, ok: true, code: 20000, message: '', data: obj, raw: obj };
+            }
+            if(typeof obj.code !== 'undefined'){
+                return {
+                    wrapped: true,
+                    ok: Number(obj.code) === 20000 || Number(obj.code) === 200,
+                    code: Number(obj.code),
+                    message: obj.message || '',
+                    data: typeof obj.data === 'undefined' ? null : obj.data,
+                    raw: obj
+                };
+            }
+            if(typeof obj.returnCode !== 'undefined'){
+                return {
+                    wrapped: true,
+                    ok: obj.returnCode === 'success',
+                    code: obj.returnCode === 'success' ? 20000 : 50000,
+                    message: obj.returnMessage || '',
+                    data: obj.returnMessage,
+                    raw: obj
+                };
+            }
+            return { wrapped: false, ok: true, code: 20000, message: '', data: obj, raw: obj };
+        }
+    }
 }
 
 $(function(){
@@ -66,24 +107,18 @@ $(function(){
                 try{
                     var obj = JSON.parse(rt);
                     if(obj && typeof obj === 'object'){
-                        var bizCode = obj.code;
-                        var retCode = obj.returnCode;
-                        if(typeof bizCode !== 'undefined'){
-                            if(bizCode === 20000){
-                                return;
-                            } else if(bizCode === 40000){
-                                var m1 = obj.message || '未授权，请登录';
-                                app.messager.show({title:'Error', msg:m1});
-                                window.top.location.href = '/login.html';
-                            } else {
-                                var m2 = obj.message || '操作失败';
-                                app.messager.show({title:'Error', msg:m2});
-                            }
-                        } else if(typeof retCode !== 'undefined'){
-                            if(retCode !== 'success'){
-                                var m3 = obj.returnMessage || '操作失败';
-                                app.messager.show({title:'Error', msg:m3});
-                            }
+                        if(!app.api.isWrappedResponse(obj)){
+                            return;
+                        }
+                        var n = app.api.normalizeResult(obj);
+                        if(n.ok){
+                            return;
+                        }
+                        if(n.code === 40000 || n.code === 401){
+                            app.messager.show({title:'Error', msg:n.message || '未授权，请登录'});
+                            window.top.location.href = '/login.html';
+                        }else{
+                            app.messager.show({title:'Error', msg:n.message || '操作失败'});
                         }
                     }
                 }catch(e){}
@@ -118,11 +153,8 @@ $(function(){
                 if(ct && ct.indexOf('application/json') >= 0){
                     var obj = JSON.parse(rt || '{}');
                     if(obj){
-                        if(typeof obj.code !== 'undefined'){
-                            msg = obj.message || ('ERR-' + obj.code);
-                        } else if(obj.returnCode === 'fail'){
-                            msg = obj.returnMessage || '操作失败';
-                        }
+                        var n = app.api.normalizeResult(obj);
+                        msg = n.message || ('ERR-' + n.code);
                     }
                 } else {
                     if(st >= 500){ msg = 'HTTP-' + st; }

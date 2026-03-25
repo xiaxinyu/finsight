@@ -159,6 +159,18 @@ function ensureMainSize(){
 function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
 function safeTextboxValue(sel){ var jq=$(sel); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } }
 function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+function getResultData(res){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            return app.api.normalizeResult(res).data;
+        }
+    }catch(e){}
+    return res ? res.returnMessage : null;
+}
 
 function getParamsBase(){
     var year = safeComboboxValue('#cmbYear');
@@ -194,8 +206,8 @@ function statistic(){
     transaction.monthConsumeReport(pIncomeA, function(diA){
         transaction.monthConsumeReport(pExpenseA, function(deA){
             var arrIA = []; var arrEA = [];
-            if(diA && diA.returnCode==='success'){ try{ arrIA = $.parseJSON(diA.returnMessage||'[]')||[]; }catch(e){} }
-            if(deA && deA.returnCode==='success'){ try{ arrEA = $.parseJSON(deA.returnMessage||'[]')||[]; }catch(e){} }
+            if(isSuccessResult(diA)){ try{ arrIA = $.parseJSON(getResultData(diA)||'[]')||[]; }catch(e){} }
+            if(isSuccessResult(deA)){ try{ arrEA = $.parseJSON(getResultData(deA)||'[]')||[]; }catch(e){} }
             if(y2){
                 var baseB = $.extend({}, base, {'year': y2});
                 var pIncomeB = $.extend({}, baseB, {'txnTypes':'income'});
@@ -203,16 +215,16 @@ function statistic(){
                 transaction.monthConsumeReport(pIncomeB, function(diB){
                     transaction.monthConsumeReport(pExpenseB, function(deB){
                         var arrIB = []; var arrEB = [];
-                        if(diB && diB.returnCode==='success'){ try{ arrIB = $.parseJSON(diB.returnMessage||'[]')||[]; }catch(e){} }
-                        if(deB && deB.returnCode==='success'){ try{ arrEB = $.parseJSON(deB.returnMessage||'[]')||[]; }catch(e){} }
+                        if(isSuccessResult(diB)){ try{ arrIB = $.parseJSON(getResultData(diB)||'[]')||[]; }catch(e){} }
+                        if(isSuccessResult(deB)){ try{ arrEB = $.parseJSON(getResultData(deB)||'[]')||[]; }catch(e){} }
                         renderTrend(arrIA, arrEA, arrIB, arrEB);
                     }, function(){ renderTrend(arrIA, arrEA); });
                 }, function(){ renderTrend(arrIA, arrEA); });
             } else {
                 renderTrend(arrIA, arrEA);
             }
-        }, function(){ app.messager.show({title:'错误',msg:'支出统计请求失败'}); });
-    }, function(){ app.messager.show({title:'错误',msg:'收入统计请求失败'}); });
+        }, function(){ app.messager.error('Expense request failed.'); });
+    }, function(){ app.messager.error('Income request failed.'); });
 }
 
 function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','10','11','12']; }
@@ -392,9 +404,9 @@ function getCategoryPie(monthCode, year, txnTypes){
     var params = $.extend({}, base, {'transactionDateStartStr': start, 'transactionDateEndStr': end, 'txnTypes': txnTypes});
     transaction.consumeReport(params, function(data){
         var list = [];
-        if(data && (data.returnCode==='success' || data.returnCode===20000)){
+        if(isSuccessResult(data)){
             try{
-                var rows = $.parseJSON(data.returnMessage||'[]')||[];
+                var rows = $.parseJSON(getResultData(data)||'[]')||[];
                 for(var i=0;i<rows.length;i++){
                     var r = rows[i]; var v = parseFloat(r.value); list.push({name:r.key, value:isNaN(v)?0:v});
                 }

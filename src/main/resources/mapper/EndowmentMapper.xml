@@ -89,7 +89,18 @@
           from endowment
           where 1 = 1
           <if test="endowment != null">
-                                  
+              <if test="endowment.timeFrom != null and endowment.timeFrom != ''">
+                  and time &gt;= #{endowment.timeFrom}
+              </if>
+              <if test="endowment.timeTo != null and endowment.timeTo != ''">
+                  and time &lt;= #{endowment.timeTo}
+              </if>
+              <if test="endowment.unitNo != null and endowment.unitNo != ''">
+                  and unit_no = #{endowment.unitNo}
+              </if>
+              <if test="endowment.demoArea != null and endowment.demoArea != ''">
+                  and demoarea like concat('%', #{endowment.demoArea}, '%')
+              </if>
           </if>
          order by time desc
          limit #{page.recordBegin}, #{page.pageSize}
@@ -99,7 +110,18 @@
     	select count(id) from endowment
         where 1 = 1
         <if test="endowment != null">
-			
-		</if>
+            <if test="endowment.timeFrom != null and endowment.timeFrom != ''">
+                and time &gt;= #{endowment.timeFrom}
+            </if>
+            <if test="endowment.timeTo != null and endowment.timeTo != ''">
+                and time &lt;= #{endowment.timeTo}
+            </if>
+            <if test="endowment.unitNo != null and endowment.unitNo != ''">
+                and unit_no = #{endowment.unitNo}
+            </if>
+            <if test="endowment.demoArea != null and endowment.demoArea != ''">
+                and demoarea like concat('%', #{endowment.demoArea}, '%')
+            </if>
+        </if>
     </select>
 </mapper>

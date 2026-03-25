@@ -4,9 +4,11 @@
 
 FinSight is built on a simple premise: **Trust is our most valuable asset.** We do not sell user data. We do not show ads. We do not lock your data behind a paywall. Our business model is aligned with your financial success.
 
+**Tier labels (Free / Plus / Pro)** below describe a **roadmap and commercial narrative**. They do not strictly map to this repository’s license, packaging, or pricing—see [PRODUCT_GUIDE](PRODUCT_GUIDE.md) and [FUNCTION_LIST](FUNCTION_LIST.md) for what is implemented today.
+
 ---
 
-## 💎 **Core Positioning**
+## Core Positioning
 
 **FinSight is not just a "prettier ledger."**
 It is a local, automated, privacy-preserving financial advisor that understands you.
@@ -17,7 +19,7 @@ It is a local, automated, privacy-preserving financial advisor that understands 
 
 ---
 
-## 🎁 **The "Internet Free" Promise (Community Edition)**
+## The "Internet Free" Promise (Community Edition)
 *The foundation of our ecosystem.*
 
 We believe that basic financial literacy and data sovereignty are human rights. Therefore, the core of FinSight will **always be free and open source**.
@@ -30,7 +32,7 @@ We believe that basic financial literacy and data sovereignty are human rights. 
 
 ---
 
-## 🚀 **Value-Added Services (Professional & Enterprise)**
+## Value-Added Services (Professional & Enterprise)
 *For those who need higher-order intelligence and convenience.*
 
 Our revenue comes from users who want to upgrade from "tracking" to "optimizing" and "automating".
@@ -60,7 +62,7 @@ Our revenue comes from users who want to upgrade from "tracking" to "optimizing"
 
 ---
 
-## ⚖️ **Pricing Philosophy**
+## Pricing Philosophy
 
 1.  **No Data Monetization**: We will never sell, share, or analyze your data for third parties. You are the customer, not the product.
 2.  **Free at the Core**: We do not cripple the free version. The Pro version adds *new* capabilities, it does not subtract existing ones.

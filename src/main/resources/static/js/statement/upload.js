@@ -35,6 +35,27 @@ $(function(){
 var _card_cache = {};
 var _pending_xhr = null;
 var _refreshing = false;
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+function getResultData(res){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            return app.api.normalizeResult(res).data;
+        }
+    }catch(e){}
+    return res ? res.returnMessage : null;
+}
+function getResultMessage(res, fallback){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            var n = app.api.normalizeResult(res);
+            if(n && n.message){ return n.message; }
+        }
+    }catch(e){}
+    return (res && res.returnMessage) ? res.returnMessage : (fallback || 'Operation failed.');
+}
 function _key(b,t){ return (b||'')+':'+(t||''); }
 
 function fetchAllCards(){
@@ -100,8 +121,8 @@ function submitUpload(){
     var type = $('#cmbCardType').combobox('getValue');
     var file = $('#fileBill').filebox('getValue');
     
-    if(!bank || !type){ showWarn('Please select Bank and Card Type'); return; }
-    if(!file){ showWarn('Please select a file'); return; }
+    if(!bank || !type){ showWarn('Please select bank and card type.'); return; }
+    if(!file){ showWarn('Please select a file.'); return; }
 
     var formData = new FormData($('#uploadForm')[0]);
     $.messager.progress({ title:'Uploading', msg:'Processing file...' });
@@ -113,25 +134,26 @@ function submitUpload(){
         contentType: false,
         success: function(res){
             $.messager.progress('close');
-            if(res.returnCode === 'success'){
-                var payload = parseReturnMessage(res.returnMessage);
-                var statementId = payload.statementId || res.returnMessage;
+            if(isSuccessResult(res)){
+                var responseData = getResultData(res);
+                var payload = parseReturnMessage(responseData);
+                var statementId = payload.statementId || responseData;
                 $('#currentStatementId').val(statementId);
                 reloadTemp(statementId);
                 var rows = payload.rows || 0;
                 var parsed = payload.parsed || 0;
                 if(rows || parsed){
-                    showInfo('提示', '解析完成：共 ' + rows + ' 行，成功解析 ' + parsed + ' 条。');
+                    showInfo('Parsed ' + rows + ' rows, ' + parsed + ' transactions.');
                 }else{
-                    showInfo('提示', '文件上传并解析成功。');
+                    showInfo('File uploaded and parsed successfully.');
                 }
             } else {
-                showWarn(res.returnMessage || 'Upload failed');
+                showWarn(getResultMessage(res, 'Upload failed.'));
             }
         },
         error: function(){
             $.messager.progress('close');
-            showWarn('Network Error');
+            showError('Network error.');
         }
     });
 }
@@ -255,33 +277,34 @@ function dateSorter(a, b){
 
 function saveAll(){
     var sid = $('#currentStatementId').val();
-    if(!sid){ showWarn('No statement uploaded'); return; }
+    if(!sid){ showWarn('No statement uploaded.'); return; }
 
     $.messager.confirm('Confirm', 'Are you sure you want to commit these transactions?', function(r){
         if(r){
             $.messager.progress({ title:'Saving', msg:'Committing transactions...' });
             $.post('/statement/commit', {statementId: sid}, function(res){
                 $.messager.progress('close');
-                if(res.returnCode === 'success'){
-                    var payload = parseReturnMessage(res.returnMessage);
+                if(isSuccessResult(res)){
+                    var payload = parseReturnMessage(getResultData(res));
                     var imported = payload.imported || 0;
                     var total = payload.total || imported;
                     var failed = (typeof payload.failed !== 'undefined') ? payload.failed : Math.max(0, total - imported);
-                    showInfo('提示', '提交完成：共 ' + total + ' 条，成功导入 ' + imported + ' 条，失败 ' + failed + ' 条。');
+                    showInfo('Commit done: total ' + total + ', imported ' + imported + ', failed ' + failed + '.');
                     // Clear UI
                     $('#dgTempUpload').datagrid('loadData', []);
                     $('#currentStatementId').val('');
                     $('#fileBill').filebox('clear');
                 } else {
-                    showWarn(res.returnMessage || 'Commit failed');
+                    showWarn(getResultMessage(res, 'Commit failed.'));
                 }
             });
         }
     });
 }
 
-function showWarn(msg){ $.messager.alert('提示', msg, 'warning'); }
-function showInfo(title, msg){ $.messager.alert(title, msg, 'info'); }
+function showWarn(msg){ app.messager.fail(msg || 'Operation failed.'); }
+function showInfo(msg){ app.messager.success(msg || 'Operation succeeded.'); }
+function showError(msg){ app.messager.error(msg || 'Unexpected error.'); }
 
 function parseReturnMessage(msg){
     try{
@@ -310,11 +333,11 @@ function parseReturnMessage(msg){
 
 function autoClassifySelected(){
     // ... Implement if needed, similar to original ...
-    showInfo('Info', 'Auto Classify logic can be migrated here.');
+    showInfo('Auto classify logic can be migrated here.');
 }
 
 function exportPreview(){
     var sid = $('#currentStatementId').val();
-    if(!sid){ showWarn('No statement uploaded'); return; }
+    if(!sid){ showWarn('No statement uploaded.'); return; }
     window.open('/statement/export?statementId=' + encodeURIComponent(sid), '_blank');
 }

@@ -8,20 +8,20 @@ This roadmap outlines the strategic path to building FinSight. It is designed to
 
 ---
 
-## 📅 Overview Timeline
+## Overview Timeline
 
 | Phase | Theme | Core Value | Est. Duration | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **0** | **Foundation & Identity** | Rebranding, Codebase Cleanup, Docs | 1 Week | ✅ Completed |
-| **1** | **The "Smart" Ledger** | Visual Insights, Usability, Mobile-Ready | 2 Weeks | 🚧 In Progress |
-| **2** | **Data Foundations** | Collection, Cleaning, Organization | 2 Weeks | 📅 Planned |
-| **3** | **Automation Engine** | "Set it and Forget it" Operations | 2 Weeks | 📅 Planned |
-| **4** | **Local Intelligence** | "Chat with Data" (Local LLM), Insights | 4 Weeks | 📅 Planned |
-| **5** | **Financial Wisdom** | Forecasting, Scenarios, Health Score | 3 Weeks | 📅 Planned |
+| **0** | **Foundation & Identity** | Rebranding, Codebase Cleanup, Docs | 1 Week | Completed |
+| **1** | **The "Smart" Ledger** | Visual Insights, Usability, Mobile-Ready | 2 Weeks | In progress |
+| **2** | **Data Foundations** | Collection, Cleaning, Organization | 2 Weeks | Planned |
+| **3** | **Automation Engine** | "Set it and Forget it" Operations | 2 Weeks | Planned |
+| **4** | **Local Intelligence** | "Chat with Data" (Local LLM), Insights | 4 Weeks | Planned |
+| **5** | **Financial Wisdom** | Forecasting, Scenarios, Health Score | 3 Weeks | Planned |
 
 ---
 
-## 🚩 Phase 1: The "Smart" Ledger (Modernization)
+## Phase 1: The "Smart" Ledger (Modernization)
 **Goal**: Transform the legacy UI into a modern, responsive experience that makes users *want* to check their finances daily.
 
 *   **Value Proposition**: "Clarity & Joy". Eliminate the friction of clunky interfaces.
@@ -31,7 +31,7 @@ This roadmap outlines the strategic path to building FinSight. It is designed to
     *   [ ] **Smart Search**: Global search bar (cmd+k) to find transactions or settings instantly.
     *   [ ] **Quality Gate**: 90% Unit Test coverage for Core Domain Logic.
 
-## 🚩 Phase 2: Data Foundations (Collection & Organization)
+## Phase 2: Data Foundations (Collection & Organization)
 **Goal**: Build a robust pipeline to ingest, clean, and organize 10+ years of fragmented financial history.
 
 *   **Value Proposition**: "Data Integrity". Garbage in, garbage out. This phase ensures your financial data is accurate, unified, and trusted.
@@ -46,7 +46,7 @@ This roadmap outlines the strategic path to building FinSight. It is designed to
         *   **Merchant Normalization**: Map "STARBUCKS COFFEE SHA" and "Starbucks Beijing" -> "Starbucks".
         *   **Tagging System**: Add multi-dimensional tags (e.g., `#BusinessTrip`, `#Reimbursable`) alongside categories.
 
-## 🚩 Phase 3: The Automation Engine (Efficiency)
+## Phase 3: The Automation Engine (Efficiency)
 **Goal**: Reduce the manual effort of data entry and maintenance to near zero.
 
 *   **Value Proposition**: "Time Freedom".
@@ -58,7 +58,7 @@ This roadmap outlines the strategic path to building FinSight. It is designed to
     *   [ ] **Data Export**: One-click JSON/CSV backup (Data Sovereignty).
     *   [ ] **Privacy-First Sync**: Optional local network sync between devices (no cloud).
 
-## 🚩 Phase 4: Local Intelligence (The "Advisor")
+## Phase 4: Local Intelligence (The "Advisor")
 **Goal**: Integrate Local LLMs (e.g., Llama 3 / Ollama) to enable natural language interaction.
 
 *   **Value Proposition**: "Understand your money". Ask questions, get answers.
@@ -70,7 +70,7 @@ This roadmap outlines the strategic path to building FinSight. It is designed to
     *   [ ] **Privacy Guard**: Ensure no data leaves the local network during inference.
     *   [ ] **Insight Push**: Proactive notifications ("You've exceeded your dining budget by 15%").
 
-## 🚩 Phase 5: Financial Wisdom (Forecasting)
+## Phase 5: Financial Wisdom (Forecasting)
 **Goal**: Move from "Past Reporting" to "Future Planning".
 
 *   **Value Proposition**: "Secure your future".

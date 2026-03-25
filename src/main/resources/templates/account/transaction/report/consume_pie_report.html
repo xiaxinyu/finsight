@@ -99,15 +99,36 @@ function statistic() {
 	var params = getParams();
 	transaction.consumeReport(params, show, ajaxError);
 }
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+function getResultData(res){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            return app.api.normalizeResult(res).data;
+        }
+    }catch(e){}
+    return res ? res.returnMessage : null;
+}
+function getResultMessage(res, fallback){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            var n = app.api.normalizeResult(res);
+            if(n && n.message){ return n.message; }
+        }
+    }catch(e){}
+    return (res && res.returnMessage) ? res.returnMessage : (fallback || 'Request failed.');
+}
 
 function show(data){
-	if(data && (data.returnCode == 'success' || data.returnCode == 20000)){
+	if(isSuccessResult(data)){
 		var json = null;
 		try{
-			json = $.parseJSON(data.returnMessage);
+			json = $.parseJSON(getResultData(data) || '[]');
 		}catch(e){
 			json = null;
-			app.messager.show({title:'Fail', msg: 'Parse return data fail!'});
+			app.messager.fail('Failed to parse response data.');
 			return;
 		}
 		if(json != null){
@@ -129,18 +150,15 @@ function show(data){
 			var names = []; for(var i=0;i<agg.length;i++){ names.push(agg[i].name); }
 			var subtitle = list.length>topN ? 'Money · Top12+Others · Legend scroll' : (agg.length? 'Money' : 'No data');
 			render(names, agg, subtitle);
-		} else {
-			app.messager.show({title : 'Fail', msg : data.returnMessage});
-		}
+		} else { app.messager.fail(getResultMessage(data, 'Request failed.')); }
 	} else {
-		var msg = data && data.returnMessage ? data.returnMessage : 'Request failed';
-		app.messager.show({title:'Fail', msg: msg});
+		app.messager.fail(getResultMessage(data, 'Request failed.'));
 	}
 }
 
 function ajaxError(xhr){
     var msg = (xhr && xhr.responseText) ? xhr.responseText : 'Network error';
-    app.messager.show({title:'Fail', msg: msg});
+    app.messager.error(msg);
 }
 
 function render(weekNames,rowDatas,subtitle){

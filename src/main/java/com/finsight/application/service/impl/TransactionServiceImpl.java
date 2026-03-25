@@ -22,10 +22,13 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service("transactionService")
 public class TransactionServiceImpl implements ITransactionService {
     private static final Logger log = LoggerFactory.getLogger(TransactionServiceImpl.class);
+    private static final long HOME_SUMMARY_CACHE_TTL_MS = 120_000L;
+    private final Map<Integer, CacheEntry> homeSummaryCache = new ConcurrentHashMap<>();
     @Autowired
     CardService cardService;
 
@@ -131,7 +134,6 @@ public class TransactionServiceImpl implements ITransactionService {
                 transaction.setId(StringTool.generateID());
                 transaction.setCreateUser(userName);
                 transaction.setUpdateUser(userName);
-                transaction.setId(StringTool.generateID());
                 String cardId = StringTool.cleanStr(rowData[0]);
                 transaction.setCardId(cardId);
                 transaction.setTransactionDate(DateTool.changeStringToDate(StringTool.cleanStr(rowData[1]), DateTool.DF_YYYY_MM_DD));
@@ -143,7 +145,8 @@ public class TransactionServiceImpl implements ITransactionService {
                 transaction.setBalanceMoney(StringUtils.isBlank(balanceMoney) ? 0 : Double.parseDouble(balanceMoney));
 
                 transaction.setCardTypeId(1);
-                transaction.setCardTypeName(cardMap.get(cardId).getCardName());
+                Card card = cardMap.get(cardId);
+                transaction.setCardTypeName(card != null ? card.getCardName() : "Unknown Card");
                 transaction.setRecordID(recordID);
                 transactionMapper.insert(transaction);
             } catch (Exception e) {
@@ -238,11 +241,20 @@ public class TransactionServiceImpl implements ITransactionService {
                 java.util.Calendar cal = java.util.Calendar.getInstance();
                 year = cal.get(java.util.Calendar.YEAR);
             }
+            CacheEntry cached = homeSummaryCache.get(year);
+            long now = System.currentTimeMillis();
+            if (cached != null && (now - cached.getCreatedAt()) <= HOME_SUMMARY_CACHE_TTL_MS) {
+                return cached.getPayload();
+            }
+
             List<KeyValue> buckets = transactionMapper.homeSummaryExpenseBuckets(year);
             List<KeyValue> bucketsPrev = transactionMapper.homeSummaryExpenseBucketsPrev(year);
-            double income = transactionMapper.sumIncomeByYear(year) == null ? 0.0 : transactionMapper.sumIncomeByYear(year);
-            double debt = transactionMapper.sumDebtPaymentsByYear(year) == null ? 0.0 : transactionMapper.sumDebtPaymentsByYear(year);
-            int refunds = transactionMapper.countRefundsByYear(year) == null ? 0 : transactionMapper.countRefundsByYear(year);
+            Double incomeResult = transactionMapper.sumIncomeByYear(year);
+            Double debtResult = transactionMapper.sumDebtPaymentsByYear(year);
+            Integer refundsResult = transactionMapper.countRefundsByYear(year);
+            double income = incomeResult == null ? 0.0 : incomeResult;
+            double debt = debtResult == null ? 0.0 : debtResult;
+            int refunds = refundsResult == null ? 0 : refundsResult;
 
             java.util.Map<String, Double> bm = new java.util.LinkedHashMap<>();
             double expenseTotal = 0.0;
@@ -326,6 +338,7 @@ public class TransactionServiceImpl implements ITransactionService {
             java.util.Map<String, Object> dims2 = new java.util.LinkedHashMap<>();
             dims2.put("rationality", Math.round(rationality));
             dims2.put("growth_trend", Math.round(growthTrend));
+            dims.putAll(dims2);
             score.put("dimensions", dims);
             json.put("health_score", score);
 
@@ -339,7 +352,9 @@ public class TransactionServiceImpl implements ITransactionService {
                     bucketsOut.get("edu"),
                     bucketsOut.get("other"));
             json.put("summary_text", summaryText);
-            return com.alibaba.fastjson.JSONObject.toJSONString(json);
+            String payload = com.alibaba.fastjson.JSONObject.toJSONString(json);
+            homeSummaryCache.put(year, new CacheEntry(now, payload));
+            return payload;
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -353,5 +368,23 @@ public class TransactionServiceImpl implements ITransactionService {
     private double asDouble(String s){
         if (s == null) return 0.0;
         try { return Double.parseDouble(s); } catch (Exception e){ return 0.0; }
+    }
+
+    private static class CacheEntry {
+        private final long createdAt;
+        private final String payload;
+
+        private CacheEntry(long createdAt, String payload) {
+            this.createdAt = createdAt;
+            this.payload = payload;
+        }
+
+        private long getCreatedAt() {
+            return createdAt;
+        }
+
+        private String getPayload() {
+            return payload;
+        }
     }
 }

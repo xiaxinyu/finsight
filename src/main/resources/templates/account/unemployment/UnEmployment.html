@@ -108,6 +108,19 @@ var save_url = app_url + '/unemployment/add';
 var query_url = app_url + '/unemployment/getUnEmployments';
 var dialog = '#dlg';
 var form = 'form';
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+function getResultMessage(res, fallback){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            var n = app.api.normalizeResult(res);
+            if(n && n.message){ return n.message; }
+        }
+    }catch(e){}
+    return (res && (res.returnMessage || res.message)) ? (res.returnMessage || res.message) : (fallback || 'Operation failed.');
+}
 $(function() {
     $(datagrid).datagrid({
         method:'post',
@@ -172,11 +185,11 @@ function saveUnEmployment(){
         },
         success: function(result){
             var result = eval('('+result+')');
-            if (result.returnCode == 'success'){
+            if (isSuccessResult(result)){
                 $(dialog).dialog('close');
                 $(datagrid).datagrid('reload');
             } else {
-                app.messager.show({title:'Fail', msg: result.returnMessage});
+                app.messager.fail(getResultMessage(result, 'Save failed.'));
             }
         }
     });
@@ -209,10 +222,11 @@ function updateUnEmployment() {
 
     var params = {'id':rowData.id,'unitNo':unitNo,'time':time,'personalPay':personalPay,'unitPay':unitPay,'totalPay':totalPay,'personalReserved':personalReserved,'demoArea':demoArea};
     unemployment.updateUnEmployment(params, function(data){
-        if(data.returnCode == 'success'){
+        if(isSuccessResult(data)){
             $(datagrid).datagrid('reload');
+            app.messager.success('Unemployment record updated.');
         }else{
-            app.messager.show({title:'Fail', msg: data.returnMessage});
+            app.messager.fail(getResultMessage(data, 'Update failed.'));
         }
     });
 }
@@ -222,14 +236,15 @@ function copyUnEmployment(){
     if(rowData != null){
         var params = {'unitNo':rowData.unitNo,'time':rowData.time,'personalPay':rowData.personalPay,'unitPay':rowData.unitPay,'totalPay':rowData.totalPay,'personalReserved':rowData.personalReserved,'demoArea':rowData.demoArea};
         unemployment.copyUnEmployment(params, function(data){
-            if(data.returnCode == 'success'){
+            if(isSuccessResult(data)){
                 $(datagrid).datagrid('reload');
+                app.messager.success('Unemployment record copied.');
             }else{
-                app.messager.show({title:'Fail', msg: data.returnMessage});
+                app.messager.fail(getResultMessage(data, 'Copy failed.'));
             }
         });
     }else{
-        app.messager.show({title:'Copy unemployment record', msg:'Please select one unemployment record!'});
+        app.messager.fail('Please select one unemployment record.');
     }
 }
 
@@ -239,19 +254,19 @@ function deleteUnEmployment(){
         $.messager.confirm('Confirm', 'Do you want to delete this unemployment record？', function(r){
             if (r){
                 unemployment.deleteUnEmployment({'id':rowData.id}, function(data){
-                    if(data.returnCode == 'success'){
+                    if(isSuccessResult(data)){
                         $(datagrid).datagrid('reload');
-                        app.messager.show({title:'Success', msg:'Success to delete this unemploymentecord!'});
+                        app.messager.success('Unemployment record deleted.');
                     }else{
-                        app.messager.show({title:'Fail', msg: data.returnMessage});
+                        app.messager.fail(getResultMessage(data, 'Delete failed.'));
                     }
                 },function(e){
-                    app.messager.show({title:'Error', msg: e.message});
+                    app.messager.error((e && e.message) ? e.message : 'Request failed.');
                 })
             }
         });
     }else{
-        app.messager.show({title:'Delete unemployment record', msg:'Please select one unemployment record!'});
+        app.messager.fail('Please select one unemployment record.');
     }
 }
 
@@ -277,7 +292,32 @@ function cancelEdit() {
 }
 
 function searchUnEmployments() {
-    
+    var dateStart = '';
+    var dateEnd = '';
+    var demoArea = '';
+    var unitNo = '';
+
+    if ($('#dateStart').data('datebox')) {
+        dateStart = $('#dateStart').datebox('getValue');
+    }
+    if ($('#dateEnd').data('datebox')) {
+        dateEnd = $('#dateEnd').datebox('getValue');
+    }
+    if ($('#txtDemo').data('textbox')) {
+        demoArea = $('#txtDemo').textbox('getValue');
+    }
+    if ($('#cmbUnitName').data('combobox')) {
+        unitNo = $('#cmbUnitName').combobox('getValue');
+    }
+
+    if ($(datagrid).data('datagrid')) {
+        $(datagrid).datagrid('load', {
+            transactionDateStartStr: dateStart,
+            transactionDateEndStr: dateEnd,
+            demoArea: demoArea,
+            unitNo: unitNo
+        });
+    }
 }
 </script>
 

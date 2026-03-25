@@ -1,63 +1,28 @@
-# FinSight — Personal Finance Intelligence Engine
+# FinSight
 
-Language: English | [中文](README.zh-CN.md)
+**Personal finance intelligence — local-first, insight-driven.**
 
-> **Understand your money. Understand yourself.**
+| | |
+| :--- | :--- |
+| **Language** | English · [简体中文](README.zh-CN.md) |
 
-FinSight transforms raw bank transaction data into deep personal insights.
-It automatically categorizes spending, builds your financial persona, and helps you make smarter decisions — all from your own data.
+## Positioning
 
-No cloud. No tracking. Just pure insight.
+FinSight turns bank and card activity into **classified transactions, trends, and reports** you control end-to-end. Data stays **on your infrastructure**; the product focuses on **clarity, categorization, and decision support** for individuals and small teams who need serious visibility without handing data to a third-party app.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=FinSight+Dashboard+Preview)
+## What it delivers
 
----
+- **Transaction intelligence** — Import, reconcile, and classify flows with rules and reporting suited to long-running histories.
+- **Reporting & analytics** — Income/expense views, trends, and drill-downs for operational review.
+- **Privacy by design** — Self-hosted deployment; credentials and secrets via environment configuration (no embedded secrets in source).
 
-## 🌟 Core Features
+## Documentation
 
-- 🔍 **Smart Transaction Categorization**
-  Uses rule-based + regex matching to classify 10+ years of bank/Alipay/WeChat data.
-- 👤 **Personal Financial Persona**
-  Builds your unique "spending DNA" — are you a saver, investor, or experience-seeker?
-- 📊 **Time-Series Behavior Analysis**
-  Monthly trends, seasonal patterns, anomaly detection using ECharts.
-- 💡 **AI-Powered Recommendations**
-  Get actionable advice: “Reduce coffee spend by ¥200/month → fund a vacation.”
-- 🛡️ **100% Local & Private**
-  Your data never leaves your machine.
+| Audience | Start here |
+| :--- | :--- |
+| **Product & strategy** | [docs/README.md](docs/README.md) |
+| **Engineering** | [Technical](docs/TECHNICAL.md) · [Function list](docs/FUNCTION_LIST.md) |
 
----
+## License
 
-## 📚 Documentation
-
-Explore our full documentation hub at **[docs/README.md](docs/README.md)**, or jump directly to:
-
-- **[Product Guide](docs/PRODUCT_GUIDE.md)** 🧠
-  *How FinSight acts as your intelligent financial advisor.*
-
-- **[Detailed Function List](docs/FUNCTION_LIST.md)** 📋
-  *A comprehensive list of features and capabilities based on development history.*
-
-- **[The Manifesto](docs/MANIFESTO.md)** 🧭
-  *Why we reject "cloud-first" finance. Our philosophy.*
-
-- **[Business Model](docs/BUSINESS_MODEL.md)** 💎
-  *The "Internet Free" core and the path to sustainability.*
-
-- **[Technical Documentation](docs/TECHNICAL.md)** 🛠️
-  *For developers: Installation, Architecture, Contributing.*
-
-- **[Strategic SWOT Analysis](docs/SWOT.md)** 📊
-  *Executive strategy, risks, and market opportunities.*
-
----
-
-## 📜 License
-
-Apache License
-
-See [LICENSE](LICENSE) for details.
-
----
-
-*FinSight is not just a ledger — it’s a mirror for your financial self.*
+Apache License 2.0 — see [LICENSE](LICENSE).

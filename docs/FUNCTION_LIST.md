@@ -1,6 +1,6 @@
 # FinSight Function List & Classification
 
-This document provides a detailed list of features and capabilities of FinSight, categorized by their functional domain. It reflects the development history and the current state of the application.
+This document provides a detailed list of features and capabilities of FinSight, categorized by their functional domain. It reflects the development history and the current state of the application. For product positioning and the **Free / Plus / Pro** roadmap labels (not a license or SKU map), see [PRODUCT_GUIDE](PRODUCT_GUIDE.md).
 
 ## 1. Transaction Processing (交易处理)
 

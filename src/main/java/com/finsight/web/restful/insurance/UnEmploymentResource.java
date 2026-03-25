@@ -1,24 +1,18 @@
 package com.finsight.web.restful.insurance;
+
+import com.finsight.application.service.IUnEmploymentListingService;
+import com.finsight.application.service.IUnEmploymentService;
+import com.finsight.domain.model.UnEmployment;
 import com.finsight.web.restful.common.ControllerHelper;
-
-import com.alibaba.fastjson.JSONObject;
-
+import com.finsight.web.restful.model.CollectionResult;
+import com.finsight.web.restful.model.CommonResult;
+import com.finsight.web.restful.model.UnEmploymentParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import com.finsight.core.StringTool;
-import com.finsight.domain.model.Page;
-import com.finsight.domain.model.UnEmployment;
-import com.finsight.core.AppServiceException;
-import com.finsight.application.service.IUnEmploymentService;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.CommonResult;
-import com.finsight.web.restful.model.ResultCode;
-import com.finsight.web.restful.model.UnEmploymentParam;
 
 @Controller
 @RequestMapping("/unemployment")
@@ -28,79 +22,54 @@ public class UnEmploymentResource extends ControllerHelper {
     @Autowired
     private IUnEmploymentService unEmploymentService;
 
+    @Autowired
+    private IUnEmploymentListingService unEmploymentListingService;
+
     @RequestMapping("/getUnEmployments")
     @ResponseBody
     public CollectionResult<UnEmployment> getUnEmployments(UnEmploymentParam param) {
-        try {
-            //Fetch params
-            UnEmployment unEmployment = new UnEmployment();
-            Page page = new Page(param.getPage(), param.getRows());
-            CollectionResult<UnEmployment> result = new CollectionResult<UnEmployment>();
-            result.setRows(unEmploymentService.getUnEmployments(unEmployment, page));
-            result.setTotal(unEmploymentService.countUnEmployments(unEmployment));
-            return result;
-        } catch (AppServiceException e) {
-            logger.error("get UnEmployments failed. params[message = " + e.getMessage() + "]", e);
-        }
-        return null;
+        return runCollection(logger, "get unemployments", () -> unEmploymentListingService.listUnEmployments(param));
     }
 
     @RequestMapping("/add")
     @ResponseBody
-    public String addUnEmployment(UnEmployment unEmployment) {
-        try {
-            String userName = this.getSessionUser().getUserName();
-            unEmployment.setId(StringTool.generateID());
-            unEmployment.setCreateuser(userName);
-            unEmployment.setUpdateuser(userName);
+    public CommonResult addUnEmployment(UnEmployment unEmployment) {
+        return runCommon(logger, "add unemployment", () -> {
+            String userName = getSessionUser().getUserName();
+            stampNewRecord(unEmployment, userName);
             unEmploymentService.addUnEmployment(unEmployment);
-            return JSONObject.toJSONString(new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功."));
-        } catch (AppServiceException e) {
-            logger.error("add UnEmployment failed. params[UnitNo = " + unEmployment.getUnitNo() + ",Time = " + unEmployment.getTime() + "]", e);
-            return JSONObject.toJSONString(new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage()));
-        }
+            return CommonResult.success(OPERATION_OK);
+        });
     }
 
     @RequestMapping("/delete")
     @ResponseBody
     public CommonResult deleteUnEmployment(String id) {
-        try {
+        return runCommon(logger, "delete unemployment", () -> {
             unEmploymentService.deleteUnEmployment(id);
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功.");
-        } catch (AppServiceException e) {
-            logger.error("delete UnEmployment failed. params[id = " + id + "]", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
-        }
+            return CommonResult.success(OPERATION_OK);
+        });
     }
 
     @RequestMapping("/update")
     @ResponseBody
     public CommonResult updateUnEmployment(UnEmployment unEmployment) {
-        try {
-            String userName = this.getSessionUser().getUserName();
+        return runCommon(logger, "update unemployment", () -> {
+            String userName = getSessionUser().getUserName();
             unEmployment.setUpdateuser(userName);
             unEmploymentService.updateUnEmployment(unEmployment);
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功.");
-        } catch (AppServiceException e) {
-            logger.error("update UnEmployment failed. params[id = " + unEmployment.getId() + "]", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
-        }
+            return CommonResult.success(OPERATION_OK);
+        });
     }
 
     @RequestMapping("/copy")
     @ResponseBody
     public CommonResult copyUnEmployment(UnEmployment unEmployment) {
-        try {
-            String userName = this.getSessionUser().getUserName();
-            unEmployment.setId(StringTool.generateID());
-            unEmployment.setCreateuser(userName);
-            unEmployment.setUpdateuser(userName);
-            unEmployment.setUpdateuser(userName);
+        return runCommon(logger, "copy unemployment", () -> {
+            String userName = getSessionUser().getUserName();
+            stampNewRecord(unEmployment, userName);
             unEmploymentService.addUnEmployment(unEmployment);
-            return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功.");
-        } catch (AppServiceException e) {
-            logger.error("update UnEmployment failed. params[id = " + unEmployment.getId() + "]", e);
-            return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
-        }
+            return CommonResult.success(OPERATION_OK);
+        });
     }
 }

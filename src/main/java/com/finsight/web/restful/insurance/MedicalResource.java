@@ -1,24 +1,18 @@
 package com.finsight.web.restful.insurance;
-import com.finsight.web.restful.common.ControllerHelper;
 
+import com.finsight.application.service.IMedicalListingService;
+import com.finsight.application.service.IMedicalService;
+import com.finsight.domain.model.Medical;
+import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.CollectionResult;
 import com.finsight.web.restful.model.CommonResult;
-import com.alibaba.fastjson.JSONObject;
-
+import com.finsight.web.restful.model.MedicalParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import com.finsight.core.StringTool;
-import com.finsight.domain.model.Medical;
-import com.finsight.domain.model.Page;
-import com.finsight.core.AppServiceException;
-import com.finsight.application.service.IMedicalService;
-import com.finsight.web.restful.model.MedicalParam;
-import com.finsight.web.restful.model.ResultCode;
 
 @Controller
 @RequestMapping("/medical")
@@ -27,80 +21,55 @@ public class MedicalResource extends ControllerHelper {
 	
 	@Autowired
 	private IMedicalService medicalService;
+
+	@Autowired
+	private IMedicalListingService medicalListingService;
 	
 	@RequestMapping("/getMedicals")
 	@ResponseBody 
 	public CollectionResult<Medical> getMedicals(MedicalParam param){
-		try {
-			//Fetch params
-			Medical medical = new Medical();
-			Page page = new Page(param.getPage(),param.getRows());
-			CollectionResult<Medical> result = new CollectionResult<Medical>();
-			result.setRows(medicalService.getMedicals(medical,page));
-			result.setTotal(medicalService.countMedicals(medical));
-			return result;
-		} catch (AppServiceException e) {
-			logger.error("get medicals failed. params[message = " + e.getMessage() + "]", e);
-		} 
-		return null;
+		return runCollection(logger, "get medicals", () -> medicalListingService.listMedicals(param));
 	}
 	
 	@RequestMapping("/add")
 	@ResponseBody 
-	public String addMedical(Medical medical){
-		try {
-			String userName = this.getSessionUser().getUserName();
-			medical.setId(StringTool.generateID());
-			medical.setCreateuser(userName);
-			medical.setUpdateuser(userName);
+	public CommonResult addMedical(Medical medical){
+		return runCommon(logger, "add medical", () -> {
+			String userName = getSessionUser().getUserName();
+			stampNewRecord(medical, userName);
 			medicalService.addMedical(medical);
-			return JSONObject.toJSONString(new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功."));
-		} catch (AppServiceException e) {
-			logger.error("add medical failed. params[UnitNo = " + medical.getUnitNo() + ",Time = " + medical.getTime() + "]", e);
-			return JSONObject.toJSONString(new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage()));
-		}
+			return CommonResult.success(OPERATION_OK);
+		});
 	}
 	
 	@RequestMapping("/delete")
 	@ResponseBody 
 	public CommonResult deleteMedical(String id) {
-		try {
+		return runCommon(logger, "delete medical", () -> {
 			medicalService.deleteMedical(id);
-			return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功.");
-		} catch (AppServiceException e) {
-			logger.error("delete medical failed. params[id = " + id + "]", e);
-			return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
-		}
+			return CommonResult.success(OPERATION_OK);
+		});
 	}
 	
 	@RequestMapping("/update")
 	@ResponseBody 
 	public CommonResult updateMedical(Medical medical){
-		try {
-			String userName = this.getSessionUser().getUserName();
+		return runCommon(logger, "update medical", () -> {
+			String userName = getSessionUser().getUserName();
 			medical.setUpdateuser(userName);
 			medicalService.updateMedical(medical);
-			return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功.");
-		} catch (AppServiceException e) {
-			logger.error("update medical failed. params[id = " + medical.getId() + "]", e);
-			return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
-		}
+			return CommonResult.success(OPERATION_OK);
+		});
 	}
 	
 	@RequestMapping("/copy")
 	@ResponseBody 
 	public CommonResult copyMedical(Medical medical){
-		try {
-			String userName = this.getSessionUser().getUserName();
-			medical.setId(StringTool.generateID());
-			medical.setCreateuser(userName);
-			medical.setUpdateuser(userName);
-			medical.setUpdateuser(userName);
+		return runCommon(logger, "copy medical", () -> {
+			String userName = getSessionUser().getUserName();
+			stampNewRecord(medical, userName);
 			medicalService.addMedical(medical);
-			return new CommonResult(ResultCode.OPERATION_SUCCEED.getCodeValue(), "操作成功.");
-		} catch (AppServiceException e) {
-			logger.error("update medical failed. params[id = " + medical.getId() + "]", e);
-			return new CommonResult(ResultCode.OPERATION_FAILED.getCodeValue(), e.getMessage());
-		}
+			return CommonResult.success(OPERATION_OK);
+		});
 	}
 }
