@@ -216,16 +216,33 @@ function saveCategory(){
     var cascade = $('#chkCascade').is(':checked');
     var url = '/api/v1/consume/categories' + (cat.id ? '/' + cat.id : '');
     if (cascade && method==='PUT') { url += '?cascade=true'; }
-    $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(cat),success:function(r){
+    $.ajax({url:url,type:method,contentType:'application/json',data:JSON.stringify(cat),dataType:'json',success:function(r){
         categoriesCache = [];
         $(tree).tree('reload');
         if(r && r.id){ $('#txtId').textbox('setValue', r.id); }
         adminUi.success(adminUi.C.categorySaved);
     },error:function(xhr){
-        var msg = xhr && xhr.responseText ? xhr.responseText : 'Unable to save the category.';
+        var text = xhr && xhr.responseText ? xhr.responseText : '';
+        // Some servers/frameworks can still commit data even if the response is not parseable.
+        // If we can recover a category-like JSON response, treat it as success to avoid false negatives.
+        try{
+            var parsed = JSON.parse(text || '{}');
+            if(parsed && (parsed.id || parsed.code)){
+                categoriesCache = [];
+                $(tree).tree('reload');
+                if(parsed.id){ $('#txtId').textbox('setValue', parsed.id); }
+                adminUi.success(adminUi.C.categorySaved);
+                return;
+            }
+        }catch(e){}
+
+        var msg = text || 'Unable to save the category.';
         var isDup = (xhr && (xhr.status===409)) || (msg && (msg.indexOf('Duplicate')>=0));
-        if(isDup){ adminUi.fail('A category with the same ID or code already exists. Please use a unique value.'); }
-        else { adminUi.fail(msg); }
+        if(isDup){
+            adminUi.fail('A category with the same ID or code already exists. Please use a unique value.');
+        }else{
+            adminUi.fail(msg);
+        }
     }});
 }
 

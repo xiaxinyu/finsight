@@ -60,16 +60,20 @@ body{
 }
 
 .admin-topbar{
-    height:46px;
-    padding:8px 12px;
+    /* Keep single-line toolbar, but add breathing room. */
+    min-height:56px;
+    height:auto;
+    padding:12px 18px;
     display:flex;
     align-items:center;
+    flex-wrap:nowrap;
+    gap:14px;
     background: var(--bg-card);
     border-bottom:1px solid var(--border);
     box-shadow: var(--shadow-card);
 }
 .admin-hint{ margin-left:12px; color:var(--text-disabled); font-size:13px; }
-.admin-separator{ border-left:1px solid var(--border); margin:0 10px; height:20px; display:inline-block; }
+.admin-separator{ border-left:1px solid var(--border); margin:0 6px; height:20px; display:inline-block; }
 
 .admin-tree-panel{
     width:220px;

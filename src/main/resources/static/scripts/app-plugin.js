@@ -66,7 +66,20 @@ var app = {
 
     api : {
         isWrappedResponse : function(obj){
-            return !!(obj && typeof obj === 'object' && (typeof obj.code !== 'undefined' || typeof obj.returnCode !== 'undefined'));
+            // Only treat as "wrapped" when it clearly matches our result envelope.
+            // This avoids false positives for normal domain objects that may have a "code" field.
+            if(!obj || typeof obj !== 'object'){ return false; }
+            var hasCode = (typeof obj.code !== 'undefined');
+            var hasReturnCode = (typeof obj.returnCode !== 'undefined');
+            if(hasCode){
+                // Typical envelope: { code, message, data }
+                return (typeof obj.message !== 'undefined') || (typeof obj.data !== 'undefined');
+            }
+            if(hasReturnCode){
+                // Legacy envelope: { returnCode, returnMessage }
+                return (typeof obj.returnMessage !== 'undefined') || (typeof obj.message !== 'undefined');
+            }
+            return false;
         },
         normalizeResult : function(obj){
             if(!obj || typeof obj !== 'object'){

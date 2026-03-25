@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -58,6 +59,7 @@ public class ConsumeCategoryAdminController {
     }
 
     @PutMapping("/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public ConsumeCategory update(@PathVariable("id") String id,
                                   @RequestBody ConsumeCategory cat,
                                   @RequestParam(value = "cascade", required = false) Boolean cascade){
@@ -68,6 +70,8 @@ public class ConsumeCategoryAdminController {
             cat.setLevel(2);
         }
         autofillCodeAndSort(cat);
+        // Fail fast on duplicate code so the request outcome matches DB changes.
+        validateUniqueCode(cat.getCode(), id);
         String newId = buildId(cat.getLevel(), cat.getCode(), cat.getParentId());
         // Update current category, allowing primary key change
         com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ConsumeCategory> uwCat = Wrappers.lambdaUpdate();
