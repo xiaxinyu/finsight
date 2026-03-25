@@ -120,3 +120,42 @@ body{ background: var(--bg-body); color: var(--text-main); }
 .fs-upload-toolbar .filebox .textbox-text:focus{ height: 26px; line-height: 26px; font-size: 12px; }
 .fs-upload-toolbar .filebox .l-btn{ height: 26px; line-height: 26px; padding: 0 10px; border-radius: 6px; }
 .fs-upload-toolbar .textbox{ border-radius: 4px; }
+
+/* Report layout helpers (professional finance-report style) */
+.fs-report-kpi-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    padding:10px 14px 0;
+    min-height:46px;
+}
+
+.fs-report-side-card{
+    height:100%;
+    background: var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow: var(--shadow-card);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    margin: 10px 10px 10px 0;
+}
+
+.fs-report-side-title{
+    padding:12px 14px;
+    font-weight:800;
+    color: var(--text-main);
+    border-bottom:1px solid var(--border);
+    background: var(--header-bg);
+}
+
+.fs-report-side-card .datagrid-header{
+    background: transparent !important;
+    border-bottom: none !important;
+}
+
+.fs-report-side-card .datagrid-row-selected{
+    background: var(--primary-light) !important;
+}

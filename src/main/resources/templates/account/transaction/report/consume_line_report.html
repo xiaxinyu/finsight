@@ -17,6 +17,10 @@
 <body class="easyui-layout">
 <div data-options="region:'north'" style="height: 52px">
     <div style="margin-top: 3px;">
+        <span class="item_intervel">
+            <label>Year</label>
+            <select id="cmbYearQuick" class="easyui-combobox" style="width:90px;"></select>
+        </span>
 			<span class="item_intervel">
 	           	<label>Transaction date:</label> 
 	           	<input id="dateStart" class="easyui-datebox" style="width: 100px;" data-options="onSelect:statistic"/>
@@ -48,7 +52,26 @@
     </div>
 </div>
 <div id="chartArea" data-options="region:'center',border:false">
-    <div id="main" style="margin-top: 20px; width:100%; height: 360px;"></div>
+    <div class="easyui-layout" fit="true">
+        <div data-options="region:'center',border:false" style="padding-bottom: 8px;">
+            <div id="kpiBar" class="fs-report-kpi-bar"></div>
+            <div id="main" style="margin-top: 10px; width:100%; height: 380px;"></div>
+        </div>
+        <div data-options="region:'east',split:true,border:false" style="width:360px;">
+            <div class="fs-report-side-card">
+                <div class="fs-report-side-title">Top Categories</div>
+                <table id="topCatGrid" class="easyui-datagrid" style="width:100%;"
+                       data-options="fit:true,border:false,rownumbers:false,singleSelect:true,showHeader:true,pagination:false,nowrap:true">
+                    <thead>
+                    <tr>
+                        <th data-options="field:'key',width:220,formatter:function(v){ return v || ''; }">Category</th>
+                        <th data-options="field:'value',width:120,align:'right',formatter:function(v){ return app.money.rmb(v); }">Expense</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 <div id="dialog" style='display: none;'>
     <table id="datagrid" fit="true"
@@ -70,12 +93,41 @@
 var pieX = 320;
 $(function(){
     $.parser.onComplete = function(){
-        $('#main').height($('#chartArea').height()-40);
+        initYearQuick();
+        $('#main').height($('#chartArea').height()-90);
         pieX = $('#chartArea').width() - pieX;
         statistic();
     };
-    try{ statistic(); }catch(e){ if(window.console){ console.error('statistic call failed:', e); } }
 });
+
+function initYearQuick(){
+    try{
+        var curY = new Date().getFullYear();
+        var startY = curY - 15;
+        var years = [];
+        for(var y = curY; y >= startY; y--){
+            years.push({ value: ''+y, text: ''+y });
+        }
+        $('#cmbYearQuick').combobox('loadData', years);
+        $('#cmbYearQuick').combobox('setValue', ''+curY);
+        var startStr = curY + '-01-01';
+        var endStr = curY + '-12-31';
+        $('#dateStart').datebox('setValue', startStr);
+        $('#dateEnd').datebox('setValue', endStr);
+
+        $('#cmbYearQuick').combobox({
+            onSelect: function(rec){
+                var yy = rec && rec.value ? rec.value : $('#cmbYearQuick').combobox('getValue');
+                if(!yy) return;
+                $('#dateStart').datebox('setValue', yy + '-01-01');
+                $('#dateEnd').datebox('setValue', yy + '-12-31');
+                statistic();
+            }
+        });
+    }catch(e){
+        // ignore
+    }
+}
 
 function getParams(){
     function safeDateboxValue(sel){ var jq=$(sel); try{ var v=jq.datebox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
@@ -122,35 +174,117 @@ function getResultMessage(res, fallback){
 
 <script type="text/javascript">
 function show(data){
-	if(isSuccessResult(data)){
-		var json = null;
-		try{
-			json = $.parseJSON(getResultData(data) || '[]');
-		}catch(e){
-			json = null;
-			app.messager.fail('Failed to parse response data.');
-			return;
-		}
-		if(json != null){
-			var rows = json;
-			var keys = new Array();
-			var values = new Array();
-			var markPoints = new Array();
-			for (var i = 0; i < rows.length; i++) {
-				var row = rows[i];
-				var key = row.key;
-				var value = parseFloat(row.value);
-				keys.push(key);
-				values.push(value);
-				markPoints.push({name: key, value: value ,xAxis: i, yAxis: value});
-			}
-			render(keys,values,markPoints);
-		} else {
-			app.messager.fail(getResultMessage(data, 'Request failed.'));
-		}
-	} else {
-		app.messager.fail(getResultMessage(data, 'Request failed.'));
-	}
+    if(!isSuccessResult(data)){
+        app.messager.fail(getResultMessage(data, 'Request failed.'));
+        return;
+    }
+    var json = null;
+    try{
+        json = $.parseJSON(getResultData(data) || '[]');
+    }catch(e){
+        app.messager.fail('Failed to parse response data.');
+        return;
+    }
+    var rows = $.isArray(json) ? json : [];
+
+    // Filter invalid values, normalize to number
+    var clean = [];
+    for(var i=0;i<rows.length;i++){
+        var row = rows[i]||{};
+        var key = row.key;
+        var v = parseFloat(row.value);
+        if(key && isFinite(v)){
+            clean.push({ key: key, value: v });
+        }
+    }
+
+    // Sort by expense descending
+    clean.sort(function(a,b){ return (b.value||0)-(a.value||0); });
+
+    var total = 0;
+    for(var j=0;j<clean.length;j++){ total += (clean[j].value||0); }
+
+    if(clean.length === 0){
+        $('#kpiBar').html('<span class="fs-kpi"><b>¥0</b> Total Expense</span>');
+        try{ $('#topCatGrid').datagrid('loadData', []); }catch(e){}
+        return;
+    }
+
+    var topN = 10;
+    var topRows = clean.slice(0, topN);
+    var othersRows = clean.slice(topN);
+    var othersSum = 0;
+    for(var k=0;k<othersRows.length;k++){ othersSum += (othersRows[k].value||0); }
+
+    var keys = [];
+    var values = [];
+    var gridRows = [];
+    for(var t=0;t<topRows.length;t++){
+        keys.push(topRows[t].key);
+        values.push(topRows[t].value);
+        gridRows.push({ key: topRows[t].key, value: topRows[t].value });
+    }
+    if(othersSum > 0){
+        keys.push('Others');
+        values.push(othersSum);
+        gridRows.push({ key: 'Others', value: othersSum });
+    }
+
+    // KPI summary
+    var topCat = topRows[0] || { key: '', value: 0 };
+    var topShare = total > 0 ? (topCat.value/total*100) : 0;
+    var baseKpi = (
+        '<span class="fs-kpi">Total Expense <b>' + app.money.rmb(total) + '</b></span>' +
+        '<span class="fs-kpi">Categories <b>' + clean.length + '</b></span>' +
+        '<span class="fs-kpi">Top: <b>' + (topCat.key||'') + '</b> <span style="color:var(--text-disabled);">( ' + topShare.toFixed(1) + '% )</span></span>'
+    );
+    $('#kpiBar').html(baseKpi);
+
+    // Strict KPI: income/expense/savings are re-computed using current report filters.
+    try{
+        var paramsExpense = getParams(); // expense params already include current filters
+        var paramsIncome = $.extend({}, paramsExpense, { txnTypes: 'income' });
+        transaction.consumeReport(paramsIncome, function(incomeRes){
+            if(!isSuccessResult(incomeRes)) return;
+            try{
+                var rows = $.parseJSON(getResultData(incomeRes) || '[]');
+                if(!$.isArray(rows)) rows = [];
+                var incomeTotal = 0;
+                for(var i=0;i<rows.length;i++){ incomeTotal += (Number(rows[i] && rows[i].value) || 0); }
+
+                var expenseTotal = total; // already computed from current expense distribution
+                var surplus = incomeTotal - expenseTotal;
+                var savingsRate = incomeTotal <= 0 ? 0 : Math.max(0, surplus / incomeTotal) * 100.0;
+                var hint = (surplus < 0)
+                    ? '（逆差压力）'
+                    : (savingsRate < 10)
+                        ? '（储蓄偏弱）'
+                        : (savingsRate < 20)
+                            ? '（需收紧预算）'
+                            : '（现金流稳健）';
+                var finKpi =
+                    '<span class="fs-kpi">Income ' + app.money.rmb(incomeTotal) + '</span>' +
+                    '<span class="fs-kpi">Expense ' + app.money.rmb(expenseTotal) + '</span>' +
+                    '<span class="fs-kpi">Surplus ' + app.money.rmb(surplus) + '</span>' +
+                    '<span class="fs-kpi">Savings ' + savingsRate.toFixed(1) + '%' + hint + '</span>';
+                $('#kpiBar').html(baseKpi + finKpi);
+                try{ ensureMainSize(); }catch(e){}
+            }catch(e){}
+        }, function(){});
+    }catch(e){}
+
+    // Side grid
+    try{
+        $('#topCatGrid').datagrid('loadData', gridRows);
+    }catch(e){
+        try{
+            $('#topCatGrid').datagrid({ data: gridRows });
+        }catch(ex){
+            // ignore if EasyUI not initialized yet
+        }
+    }
+
+    render(keys, values, total);
 }
 
 function ajaxError(xhr){
@@ -158,22 +292,30 @@ function ajaxError(xhr){
     app.messager.error(msg);
 }
 
-function render(keys,values,markPoints){
+function render(keys,values,total){
         ensureMainSize();
         var myChart = echarts.init(document.getElementById('main'));
 
+        function fmtMoney(n){
+            var num = Number(n || 0);
+            return '¥' + num.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
         var option = {
-            title : {
-                text: 'Consume Line Statistic',
-                subtext: 'Money',
-                x:'left'
-            },
+            title : { text: 'Consume Categories (TopN)', subtext: 'Expense by Category', left: 20 },
             tooltip : {
-                trigger : 'axis'
+                trigger : 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function(params){
+                    var p = params && params.length ? params[0] : null;
+                    if(!p) return '';
+                    var name = p.name || '';
+                    var v = Number(p.value||0);
+                    var share = total > 0 ? (v/total*100) : 0;
+                    return name + '<br/>' + 'Expense: ' + fmtMoney(v) + '<br/>' + 'Share: ' + share.toFixed(1) + '%';
+                }
             },
-            legend : {
-                data : [ 'Money' ]
-            },
+            legend : { data : [ 'Expense' ] },
             toolbox : {
                 show : true,
                 feature : {
@@ -183,7 +325,7 @@ function render(keys,values,markPoints){
                     },
                     magicType : {
                         show : true,
-                        type : [ 'line', 'bar' ]
+                        type : [ 'bar' ]
                     },
                     restore : {
                         show : true
@@ -193,53 +335,39 @@ function render(keys,values,markPoints){
                     }
                 }
             },
-            dataZoom: [
-                {type: 'slider', start: 0, end: 50},
-                {type: 'inside'}
-            ],
-            xAxis : [ {
+            grid: { left: 90, right: 24, top: 50, bottom: 70 },
+            xAxis : {
                 type : 'category',
-                boundaryGap : false,
                 data : keys,
                 axisLabel: {
-                    rotate: 45,
-                    hideOverlap: true,
-                    textStyle : {
-                        color : '#0000FF',
-                        align : 'left',
-                        fontWeight : 'bold',
-                        fontFamily : 'Arial'
+                    interval: 0,
+                    rotate: 0,
+                    formatter: function(v){
+                        var s = String(v||'');
+                        return s.length > 10 ? (s.substring(0,10) + '…') : s;
                     }
                 }
-            } ],
-			grid: {
-			    x: 40,
-			    x2: 20,
-			    y2: 100,
-			},
-			yAxis : [ {
-				type : 'value',
-			} ],
-			series : [ {
-				name : 'Money',
-				type : 'line',
-				data : values,
-				markPoint : {
-					data : markPoints
-				},
-				markLine : {
-					data : [ {
-						type : 'average',
-						name : 'Average'
-					} ]
-				}
-			} ]
+            },
+            yAxis : {
+                type : 'value',
+                axisLabel: { formatter: function(v){ return fmtMoney(v); } }
+            },
+            series : [ {
+                name : 'Expense',
+                type : 'bar',
+                data : values,
+                barMaxWidth: 48,
+                itemStyle: { borderRadius: [6,6,0,0] },
+                markLine : {
+                    data : [ { type : 'average', name : 'Average' } ]
+                }
+            } ]
         };
         
         myChart.setOption(option);
         myChart.on('click', function (param) {
             var name = param && param.name ? param.name : '';
-            if(name){ openDialog(name); }
+            if(name && name !== 'Others'){ openDialog(name); }
         });
 }
 
@@ -247,8 +375,8 @@ function ensureMainSize() {
     var chartArea = $('#chartArea');
     var main = $('#main');
     var w = chartArea.width();
-    var h = chartArea.height() - 40; 
-    if (h < 300) h = 300;
+    var h = chartArea.height() - 90;
+    if (h < 280) h = 280;
     main.width(w);
     main.height(h);
 }

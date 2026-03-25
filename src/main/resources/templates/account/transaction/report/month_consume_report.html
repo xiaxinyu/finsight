@@ -113,6 +113,7 @@
     </div>
 </div>
 <div id="chartArea" data-options="region:'center',border:false">
+    <div id="kpiBar" class="fs-report-kpi-bar"></div>
     <div id="main" style="margin-top: 20px; width:100%; height: 360px;"></div>
     <div id="mainHeat" style="margin-top: 12px; width:100%; height: 280px;"></div>
 </div>
@@ -136,16 +137,30 @@
 var pieX = 320;
 $(function(){
     $.parser.onComplete = function(){
-        $('#main').height($('#chartArea').height()-40);
         pieX = $('#chartArea').width() - pieX;
         selectYear();
+        ensureMainSize();
         statistic();
     };
 });
 
 function selectYear(){
-	var now = new Date();
-	var year = now.getFullYear();
+    var now = new Date();
+    var year = now.getFullYear();
+    var startYear = year - 15;
+
+    // Build year options dynamically so we always include current year.
+    var years = [];
+    for(var y = year; y >= startYear; y--){
+        years.push({ value: ''+y, text: ''+y });
+    }
+    try{
+        $('#cmbYear').combobox('loadData', years);
+        $('#cmbYear2').combobox('loadData', years);
+    }catch(e){
+        // Fallback: if combobox isn't initialized for some reason, rely on original HTML options.
+    }
+
 	$("#cmbYear").combobox('setValue', ''+year);
     $("#cmbYear2").combobox('setValue', ''+(year-1));
 }
@@ -279,6 +294,73 @@ function render(keys,values,markPoints,monthCodes){
         ensureMainSize();
         echarts.dispose(document.getElementById('main'));
         var myChart = echarts.init(document.getElementById('main'));
+
+        // KPI: totals + peak month
+        var total = 0;
+        for(var iTotal=0;iTotal<values.length;iTotal++){ total += (values[iTotal]||0); }
+        var peakIdx = -1;
+        var peakVal = 0;
+        for(var iPeak=0;iPeak<values.length;iPeak++){
+            var v = values[iPeak]||0;
+            if(peakIdx === -1 || v > peakVal){ peakIdx = iPeak; peakVal = v; }
+        }
+        var peakName = (peakIdx >= 0 && keys && keys.length) ? keys[peakIdx] : '';
+        var share = total > 0 ? (peakVal/total*100) : 0;
+        var baseKpi =
+            '<span class="fs-kpi">Total Expense <b>' + app.money.rmb(total) + '</b></span>' +
+            '<span class="fs-kpi">Peak: <b>' + (peakName||'') + '</b> <span style="color:var(--text-disabled);">( ' + share.toFixed(1) + '% )</span></span>';
+        $('#kpiBar').html(baseKpi);
+
+        // Strict KPI: re-compute income/savings using current filters (and selected year date range).
+        try{
+            var selectedYear = (function(){
+                var y = '';
+                try{ y = $('#cmbYear').combobox('getValue'); }catch(e){}
+                if(!y){ try{ var ds = $('#dateStart').datebox('getValue'); if(ds && ds.length>=4){ y = ds.substring(0,4); } }catch(e){} }
+                var n = parseInt($.trim(y||''), 10);
+                return isNaN(n) ? null : n;
+            })();
+            if(selectedYear){
+                var paramsExpense = getParams(); // expense params already include current filters
+                var paramsIncome = $.extend({}, paramsExpense, {
+                    txnTypes: 'income',
+                    transactionDateStartStr: '01/01/' + selectedYear,
+                    transactionDateEndStr: '12/31/' + selectedYear
+                });
+                transaction.consumeReport(paramsIncome, function(incomeRes){
+                    if(!isSuccessResult(incomeRes)) return;
+                    try{
+                        var rows = $.parseJSON(getResultData(incomeRes) || '[]');
+                        if(!$.isArray(rows)) rows = [];
+                        var incomeTotal = 0;
+                        for(var i=0;i<rows.length;i++){ incomeTotal += (Number(rows[i] && rows[i].value) || 0); }
+
+                        var expenseTotal = total;
+                        var surplus = incomeTotal - expenseTotal;
+                        var savingsRate = incomeTotal <= 0 ? 0 : Math.max(0, surplus / incomeTotal) * 100.0;
+                        var hint = (surplus < 0)
+                            ? '（逆差压力）'
+                            : (savingsRate < 10)
+                                ? '（储蓄偏弱）'
+                                : (savingsRate < 20)
+                                    ? '（需收紧预算）'
+                                    : '（现金流稳健）';
+                        var finKpi =
+                            '<span class="fs-kpi">Income ' + app.money.rmb(incomeTotal) + '</span>' +
+                            '<span class="fs-kpi">Expense ' + app.money.rmb(expenseTotal) + '</span>' +
+                            '<span class="fs-kpi">Surplus ' + app.money.rmb(surplus) + '</span>' +
+                            '<span class="fs-kpi">Savings ' + savingsRate.toFixed(1) + '%' + hint + '</span>';
+                        $('#kpiBar').html(baseKpi + finKpi);
+                        ensureMainSize();
+                    }catch(e){}
+                }, function(){});
+            }
+        }catch(e){}
+
+        if(!values || values.length === 0){
+            $('#main').html('<div style="padding:18px;color:var(--text-disabled);">No data for selected filters.</div>');
+            return;
+        }
 
         var avg = (function(){ var t=0; for(var i=0;i<values.length;i++){ t += values[i]||0; } return values.length?Math.round(t/values.length):0; })();
         var yearSel = (function(){ try{ return $.trim($('#cmbYear').combobox('getValue')||''); }catch(e){ return $.trim($('#cmbYear').val()||''); }})();
@@ -422,9 +504,20 @@ function render(keys,values,markPoints,monthCodes){
 function ensureMainSize(){
     var $area = $('#chartArea');
     var $main = $('#main');
-    var h = $area.height();
+    var kpiH = $('#kpiBar').length ? $('#kpiBar').outerHeight(true) : 0;
+    var h = $area.height() - kpiH;
     if(!h || h <= 40){ h = $(window).height() - 160; }
-    if(h && h > 100){ $main.height(h - 40); $('#mainHeat').height(240); }
+    if(h && h > 100){
+        // Two stacked charts: main (line) + mainHeat (heatmap)
+        var heat = 240;
+        var line = h - heat;
+        if(line < 220){
+            heat = Math.max(140, h - 220);
+            line = h - heat;
+        }
+        if(line > 0){ $main.height(line); }
+        if(heat > 0){ $('#mainHeat').height(heat); }
+    }
 }
 
 function monthNameCn(en){
@@ -490,25 +583,116 @@ function renderHeatmap(year, months, allCats, monthCatVals){
     var cats = Object.keys(allCats).sort(function(a,b){ return (allCats[b]||0)-(allCats[a]||0); }).slice(0,10);
     var idxMap = {}; for(var i=0;i<cats.length;i++){ idxMap[cats[i]]=i; }
     var data = [];
+    var total = 0;
     for(var mi=0;mi<months.length;mi++){
         var m = months[mi];
         var arr = monthCatVals[m]||[];
         for(var j=0;j<arr.length;j++){
             var it = arr[j]; var ci = idxMap[it.name]; if(ci==null) continue;
-            data.push([mi, ci, it.value]);
+            var v = it.value || 0;
+            data.push([mi, ci, v]);
+            total += v;
         }
     }
+    if(!data.length){
+        $('#kpiBar').html('<span class="fs-kpi"><b>¥0</b> No data for selected filters</span>');
+        try{ echarts.dispose(document.getElementById('mainHeat')); }catch(e){}
+        $('#mainHeat').html('<div style="padding:18px;color:var(--text-disabled);">No data for the selected filters.</div>');
+        return;
+    }
+
+    // Heatmap KPI
+    var topCat = cats && cats.length ? cats[0] : '';
+    var topVal = topCat ? (allCats[topCat] || 0) : 0;
+    var share = total > 0 ? (topVal / total * 100) : 0;
+    var baseKpi =
+        '<span class="fs-kpi">Total Expense <b>' + app.money.rmb(total) + '</b></span>' +
+        '<span class="fs-kpi">Top: <b>' + (topCat||'') + '</b> <span style="color:var(--text-disabled);">( ' + share.toFixed(1) + '% )</span></span>';
+    $('#kpiBar').html(baseKpi);
+
+    // Strict KPI: re-compute income/savings using current filters + selected year date range.
+    try{
+        var selectedYear = parseInt(year, 10);
+        if(!isNaN(selectedYear)){
+            var paramsExpense = getParams(); // includes current consume/card/demo filters
+            var paramsIncome = $.extend({}, paramsExpense, {
+                txnTypes: 'income',
+                transactionDateStartStr: '01/01/' + selectedYear,
+                transactionDateEndStr: '12/31/' + selectedYear
+            });
+            transaction.consumeReport(paramsIncome, function(incomeRes){
+                if(!isSuccessResult(incomeRes)) return;
+                try{
+                    var rows = $.parseJSON(getResultData(incomeRes) || '[]');
+                    if(!$.isArray(rows)) rows = [];
+                    var incomeTotal = 0;
+                    for(var i=0;i<rows.length;i++){ incomeTotal += (Number(rows[i] && rows[i].value) || 0); }
+
+                    var expenseTotal = total;
+                    var surplus = incomeTotal - expenseTotal;
+                    var savingsRate = incomeTotal <= 0 ? 0 : Math.max(0, surplus / incomeTotal) * 100.0;
+                    var hint = (surplus < 0)
+                        ? '（逆差压力）'
+                        : (savingsRate < 10)
+                            ? '（储蓄偏弱）'
+                            : (savingsRate < 20)
+                                ? '（需收紧预算）'
+                                : '（现金流稳健）';
+                    var finKpi =
+                        '<span class="fs-kpi">Income ' + app.money.rmb(incomeTotal) + '</span>' +
+                        '<span class="fs-kpi">Expense ' + app.money.rmb(expenseTotal) + '</span>' +
+                        '<span class="fs-kpi">Surplus ' + app.money.rmb(surplus) + '</span>' +
+                        '<span class="fs-kpi">Savings ' + savingsRate.toFixed(1) + '%' + hint + '</span>';
+                    $('#kpiBar').html(baseKpi + finKpi);
+                    ensureMainSize();
+                }catch(e){}
+            }, function(){});
+        }
+    }catch(e){}
+
     var names = months.map(function(m){ return m; });
     var yCats = cats;
+    try{ echarts.dispose(document.getElementById('mainHeat')); }catch(e){}
     var chart = echarts.init(document.getElementById('mainHeat'));
     chart.setOption({
-        title:{ text:'Monthly Category Heat · '+year, left:'left' },
-        tooltip:{ position:'top' },
-        grid:{ height: '70%', y: 30, x:40 },
+        title:{ text:'Monthly Category Heat · Top ' + cats.length + ' · ' + year, left:'left' },
+        tooltip:{
+            position:'top',
+            formatter:function(p){
+                var mi = p && p.value ? p.value[0] : null;
+                var yi = p && p.value ? p.value[1] : null;
+                var v = p && p.value ? p.value[2] : 0;
+                var m = (mi!=null && months[mi]) ? months[mi] : '';
+                var cat = (yi!=null && yCats[yi]) ? yCats[yi] : '';
+                return 'Month: ' + m + '<br/>Category: ' + cat + '<br/>Expense: ¥' + Number(v||0).toFixed(0);
+            }
+        },
+        grid:{ height: '70%', y: 50, x:80, x2:40 },
         xAxis:{ type:'category', data:names, splitArea:{ show:true } },
         yAxis:{ type:'category', data:yCats, splitArea:{ show:true } },
-        visualMap:{ min:0, max:(function(){ var m=0; for(var i=0;i<data.length;i++){ m=Math.max(m,data[i][2]||0); } return m||1000; })(), calculable:true, orient:'horizontal', left:'center', bottom:0 },
-        series:[{ name:'金额', type:'heatmap', data:data }]
+        visualMap:{
+            min:0,
+            max:(function(){
+                var m=0;
+                for(var i=0;i<data.length;i++){ m=Math.max(m,data[i][2]||0); }
+                return m||1000;
+            })(),
+            calculable:true,
+            orient:'horizontal',
+            left:'center',
+            bottom:10,
+            formatter:function(v){ return '¥' + Number(v).toFixed(0); }
+        },
+        series:[{
+            name:'金额',
+            type:'heatmap',
+            data:data,
+            label:{ show:false },
+            emphasis:{
+                itemStyle:{ shadowBlur:12, shadowColor:'rgba(37,99,235,0.35)' },
+                label:{ show:false }
+            }
+        }]
     });
 }
 

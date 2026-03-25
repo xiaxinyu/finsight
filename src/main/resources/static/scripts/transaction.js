@@ -68,7 +68,16 @@ var transaction = {
 	           success: sfn,
 	           error: efn
 	       });
-		}
+	},
+	homeSummary : function(year, sfn, efn){
+		$.ajax({
+			type: 'get',
+			url: '/transaction-report/home-summary?year=' + encodeURIComponent(year),
+			dataType: 'json',
+			success: sfn,
+			error: efn
+		});
+	}
 		,
 		classify : function(params, sfn, efn){
 			$.ajax({

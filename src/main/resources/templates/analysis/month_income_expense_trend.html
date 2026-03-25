@@ -100,6 +100,7 @@
 </div>
 <div id="chartArea" data-options="region:'center',border:false" class="content-area">
     <div class="chart-card">
+        <div id="kpiBar" class="fs-report-kpi-bar"></div>
         <div id="main" style="width:100%; flex:1;"></div>
     </div>
     <div class="grid-card">
@@ -145,6 +146,21 @@ $(function(){
     $.parser.onComplete = function(){
         if(initialized) return;
         initialized = true;
+        // Dynamic year options: current year + last 15 years
+        try{
+            var curY = new Date().getFullYear();
+            var startY = curY - 15;
+            var years = [];
+            for(var y = curY; y >= startY; y--){
+                years.push({ value: ''+y, text: ''+y });
+            }
+            $('#cmbYear').combobox('loadData', years);
+            $('#cmbYear').combobox('setValue', ''+curY);
+
+            var years2 = [{ value: '', text: 'None' }].concat(years);
+            $('#cmbYear2').combobox('loadData', years2);
+            $('#cmbYear2').combobox('setValue', ''+(curY-1));
+        }catch(e){}
         ensureMainSize();
         scheduleStatistic();
         $(window).on('resize', ensureMainSize);
@@ -277,6 +293,19 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
         surplus.push(s);
         rows.push({month:names[k], income:i, expense:e, surplus:s});
     }
+
+    // Financial KPIs for the current selection (Year A = current tab year).
+    var incomeTotal = incomes.reduce(function(t,x){ return t + (Number(x)||0); }, 0);
+    var expenseTotal = expenses.reduce(function(t,x){ return t + (Number(x)||0); }, 0);
+    var surplusTotal = incomeTotal - expenseTotal;
+    var savingsRate = incomeTotal <= 0 ? 0 : Math.max(0, surplusTotal / incomeTotal) * 100.0;
+    $('#kpiBar').html(
+        '<span class="fs-kpi">Income <b>' + app.money.rmb(incomeTotal) + '</b></span>' +
+        '<span class="fs-kpi">Expense <b>' + app.money.rmb(expenseTotal) + '</b></span>' +
+        '<span class="fs-kpi">Surplus <b>' + app.money.rmb(surplusTotal) + '</b></span>' +
+        '<span class="fs-kpi">Savings ' + savingsRate.toFixed(1) + '%</span>'
+    );
+
     $('#summaryGrid').datagrid('loadData', rows);
     echarts.dispose(document.getElementById('main'));
     var chart = echarts.init(document.getElementById('main'));

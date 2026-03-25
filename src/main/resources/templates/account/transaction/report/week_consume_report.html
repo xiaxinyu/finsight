@@ -17,6 +17,10 @@
 <body class="easyui-layout">
     <div data-options="region:'north'" style="height: 52px">
 		<div style="margin-top: 3px;">
+            <span class="item_intervel">
+                <label>Year</label>
+                <select id="cmbYearQuick" class="easyui-combobox" style="width:90px;"></select>
+            </span>
 			<span class="item_intervel">
 	           	<label>Transaction date:</label> 
 	           	<input id="dateStart" class="easyui-datebox" style="width: 100px;"  data-options="onSelect:statistic"/>
@@ -48,7 +52,10 @@
 	</div>
 	<div id="chartArea" data-options="region:'center',border:false">
 		<div class="easyui-layout" fit="true">
-	        <div data-options="region:'west',split:true" title="Pie" style="width:720px;">
+            <div data-options="region:'north',border:false" style="height:56px;padding:6px 10px 0;">
+                <div id="kpiBar" class="fs-report-kpi-bar" style="padding:0;"></div>
+            </div>
+	        <div data-options="region:'west',split:true" title="Week Consume" style="width:720px;">
             <div id="main" style="margin-top: 20px; width:100%; height: 360px;"></div>
 	        </div>
 	        <div id="detailGridArea" data-options="region:'center',title:'Detail - Monday'">
@@ -71,11 +78,39 @@
 <script type="text/javascript">
 $(function(){
     $.parser.onComplete = function(){
-        $('#main').height($('#chartArea').height()-80);
+        initYearQuick();
+        ensureMainSize();
         statistic();
         getTransactions(0);
     };
 });
+
+function initYearQuick(){
+    try{
+        var curY = new Date().getFullYear();
+        var startY = curY - 15;
+        var years = [];
+        for(var y = curY; y >= startY; y--){
+            years.push({ value: ''+y, text: ''+y });
+        }
+        $('#cmbYearQuick').combobox('loadData', years);
+        $('#cmbYearQuick').combobox('setValue', ''+curY);
+        $('#dateStart').datebox('setValue', curY + '-01-01');
+        $('#dateEnd').datebox('setValue', curY + '-12-31');
+        $('#cmbYearQuick').combobox({
+            onSelect: function(rec){
+                var yy = rec && rec.value ? rec.value : $('#cmbYearQuick').combobox('getValue');
+                if(!yy) return;
+                $('#dateStart').datebox('setValue', yy + '-01-01');
+                $('#dateEnd').datebox('setValue', yy + '-12-31');
+                statistic();
+                getTransactions(0);
+            }
+        });
+    }catch(e){
+        // ignore
+    }
+}
 
 function getParams(){
     function safeDateboxValue(sel){ var jq=$(sel); try{ var v=jq.datebox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
@@ -145,15 +180,17 @@ function show(data){
             var rows = json;
             var weekNames = new Array();
             var rowDatas = new Array();
+            var total = 0;
             for (var i = 0; i < rows.length; i++) {
                 var row = rows[i];
                 var key = parseInt(row.key);
                 var value = parseFloat(row.value);
                 var name = weekName(key);
                 weekNames.push(name);
+                total += (value||0);
                 rowDatas.push({name: name, value: value});
             }
-            render(weekNames,rowDatas);
+            render(weekNames,rowDatas,total);
         } else { app.messager.fail(getResultMessage(data, 'Request failed.')); }
     } else {
         app.messager.fail(getResultMessage(data, 'Request failed.'));
@@ -165,9 +202,53 @@ function ajaxError(xhr){
     app.messager.error(msg);
 }
 
-function render(weekNames,rowDatas){
+function render(weekNames,rowDatas,total){
         ensureMainSize();
         var myChart = echarts.init(document.getElementById('main'));
+
+        // KPI
+        var top = rowDatas && rowDatas.length ? rowDatas[0] : {name:'',value:0};
+        var share = total > 0 ? ((top.value||0) / total * 100) : 0;
+        var baseKpi =
+            '<span class="fs-kpi">Total Expense <b>' + app.money.rmb(total) + '</b></span>' +
+            '<span class="fs-kpi">Top: <b>' + (top.name||'') + '</b> <span style="color:var(--text-disabled);">( ' + share.toFixed(1) + '% )</span></span>';
+        $('#kpiBar').html(baseKpi);
+
+        // Strict KPI: re-compute income/savings using current report filters.
+        try{
+            var paramsExpense = getParams(); // expense params already include current filters
+            var paramsIncome = $.extend({}, paramsExpense, { txnTypes: 'income' });
+            transaction.consumeReport(paramsIncome, function(incomeRes){
+                if(!isSuccessResult(incomeRes)) return;
+                try{
+                    var rows = $.parseJSON(getResultData(incomeRes) || '[]');
+                    if(!$.isArray(rows)) rows = [];
+                    var incomeTotal = 0;
+                    for(var i=0;i<rows.length;i++){ incomeTotal += (Number(rows[i] && rows[i].value) || 0); }
+
+                    var expenseTotal = total;
+                    var surplus = incomeTotal - expenseTotal;
+                    var savingsRate = incomeTotal <= 0 ? 0 : Math.max(0, surplus / incomeTotal) * 100.0;
+                    var hint = (surplus < 0)
+                        ? '（逆差压力）'
+                        : (savingsRate < 10)
+                            ? '（储蓄偏弱）'
+                            : (savingsRate < 20)
+                                ? '（需收紧预算）'
+                                : '（现金流稳健）';
+                    var finKpi =
+                        '<span class="fs-kpi">Income ' + app.money.rmb(incomeTotal) + '</span>' +
+                        '<span class="fs-kpi">Expense ' + app.money.rmb(expenseTotal) + '</span>' +
+                        '<span class="fs-kpi">Surplus ' + app.money.rmb(surplus) + '</span>' +
+                        '<span class="fs-kpi">Savings ' + savingsRate.toFixed(1) + '%' + hint + '</span>';
+                    $('#kpiBar').html(baseKpi + finKpi);
+                    try{ ensureMainSize(); }catch(e){}
+                }catch(e){}
+            }, function(){});
+        }catch(e){}
+
+        var values = [];
+        for(var i=0;i<rowDatas.length;i++){ values.push(rowDatas[i].value||0); }
 
         var option = {
             title : {
@@ -176,14 +257,16 @@ function render(weekNames,rowDatas){
                 x:'center'
             },
 		    tooltip : {
-		        trigger: 'item',
-		        formatter: "{a} <br/>{b} : {c} ({d}%)"
+		        trigger: 'axis',
+		        axisPointer: { type: 'shadow' },
+		        formatter: function(params){
+                    var p = params && params.length ? params[0] : null;
+                    if(!p) return '';
+                    var v = Number(p.value||0);
+                    return p.name + '<br/>Expense: ' + app.money.rmb(v);
+                }
 		    },
-		    legend: {
-		        orient : 'vertical',
-		        x : 'left',
-		        data: weekNames
-		    },
+		    legend: { show: false },
 		    toolbox: {
 		        show : true,
 		        feature : {
@@ -191,7 +274,7 @@ function render(weekNames,rowDatas){
 		            dataView : {show: true, readOnly: false},
 		            magicType : {
 		                show: true, 
-		                type: ['pie', 'funnel'],
+		                type: ['line', 'bar'],
 		                option: {
 		                    funnel: {
 		                        x: '25%',
@@ -205,13 +288,24 @@ function render(weekNames,rowDatas){
 		            saveAsImage : {show: true}
 		        }
             },
+            grid: { left: 60, right: 24, top: 60, bottom: 60 },
+            xAxis : {
+                type : 'category',
+                data : weekNames,
+                axisLabel: { rotate: 0 }
+            },
+            yAxis : {
+                type : 'value',
+                axisLabel: { formatter: function(v){ return '¥' + Number(v||0).toFixed(0); } }
+            },
 		    series : [
 		        {
-		            name:'Week',
-		            type:'pie',
-		            radius : '55%',
-		            center: ['50%', '60%'],
-		            data:rowDatas
+		            name:'Expense',
+		            type:'bar',
+		            data: values,
+		            barMaxWidth: 48,
+		            itemStyle: { borderRadius: [6,6,0,0] },
+		            markLine : { data: [ { type: 'average', name: 'Average' } ] }
 		        }
 		    ]
 		};
@@ -228,6 +322,8 @@ function ensureMainSize(){
     var $area = $('#chartArea');
     var $main = $('#main');
     var h = $area.height();
+    var kpiH = $('#kpiBar').length ? $('#kpiBar').outerHeight(true) : 0;
+    h = h - kpiH;
     if(!h || h <= 80){ h = $(window).height() - 160; }
     if(h && h > 120){ $main.height(h - 80); }
 }
