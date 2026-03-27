@@ -5,6 +5,7 @@
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
     <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
@@ -118,6 +119,10 @@
 <script type="text/javascript">
 $(function(){
     var nowY = new Date().getFullYear();
+    var m = /[?&]year=(\d{4})/.exec(window.location.search||'');
+    if(m && m[1]){ nowY = parseInt(m[1], 10) || nowY; }
+    var mPrev = /[?&]prevYear=(\d{4})/.exec(window.location.search||'');
+    var prevY = (mPrev && mPrev[1]) ? (parseInt(mPrev[1], 10) || (nowY-1)) : (nowY-1);
     var startYear = nowY - 15;
     var years = [];
     for(var y = nowY; y >= startYear; y--){
@@ -130,10 +135,11 @@ $(function(){
         // Fallback to existing HTML options if loadData is not available.
     }
     $('#yearA').combobox('setValue', nowY);
-    $('#yearB').combobox('setValue', nowY-1);
+    $('#yearB').combobox('setValue', prevY);
 
     $.parser.onComplete = function(){
         setTimeout(function(){
+            applyFocusHint();
             ensureMainSize();
             compareYears();
         }, 50);
@@ -143,6 +149,30 @@ $(function(){
         try{ if(window.pieChart){ window.pieChart.resize(); } }catch(e){}
     });
 });
+
+function applyFocusHint(){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.top',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ compareYears(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
+function applyFocusAutoFilter(focus){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.top',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ compareYears(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
 
 function getParamsBase(){
     function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }

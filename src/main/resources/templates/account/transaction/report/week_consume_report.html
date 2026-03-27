@@ -5,6 +5,7 @@
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
     <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
@@ -79,15 +80,42 @@
 $(function(){
     $.parser.onComplete = function(){
         initYearQuick();
+        applyFocusHint();
         ensureMainSize();
         statistic();
         getTransactions(0);
     };
 });
 
+function applyFocusHint(){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.top',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ statistic(); getTransactions(0); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
+function applyFocusAutoFilter(focus){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.top',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ statistic(); getTransactions(0); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
 function initYearQuick(){
     try{
         var curY = new Date().getFullYear();
+        var m = /[?&]year=(\d{4})/.exec(window.location.search||'');
+        if(m && m[1]){ curY = parseInt(m[1], 10) || curY; }
         var startY = curY - 15;
         var years = [];
         for(var y = curY; y >= startY; y--){

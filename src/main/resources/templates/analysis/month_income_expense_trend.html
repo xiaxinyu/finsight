@@ -5,6 +5,7 @@
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
     <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
@@ -149,6 +150,10 @@ $(function(){
         // Dynamic year options: current year + last 15 years
         try{
             var curY = new Date().getFullYear();
+            var m = /[?&]year=(\d{4})/.exec(window.location.search||'');
+            if(m && m[1]){ curY = parseInt(m[1], 10) || curY; }
+            var mPrev = /[?&]prevYear=(\d{4})/.exec(window.location.search||'');
+            var prevY = (mPrev && mPrev[1]) ? (parseInt(mPrev[1], 10) || (curY-1)) : (curY-1);
             var startY = curY - 15;
             var years = [];
             for(var y = curY; y >= startY; y--){
@@ -159,13 +164,38 @@ $(function(){
 
             var years2 = [{ value: '', text: 'None' }].concat(years);
             $('#cmbYear2').combobox('loadData', years2);
-            $('#cmbYear2').combobox('setValue', ''+(curY-1));
+            $('#cmbYear2').combobox('setValue', ''+prevY);
         }catch(e){}
+        applyFocusHint();
         ensureMainSize();
         scheduleStatistic();
         $(window).on('resize', ensureMainSize);
     };
 });
+
+function applyFocusHint(){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.filter-bar',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ scheduleStatistic(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
+function applyFocusAutoFilter(focus){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.filter-bar',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ scheduleStatistic(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
 
 function ensureMainSize(){
     var chart = echarts.getInstanceByDom(document.getElementById('main'));

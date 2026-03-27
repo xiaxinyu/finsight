@@ -5,6 +5,7 @@
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
     <script type="text/javascript" src="/scripts/app-plugin.js"></script>
     <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
@@ -139,14 +140,43 @@ $(function(){
     $.parser.onComplete = function(){
         pieX = $('#chartArea').width() - pieX;
         selectYear();
+        applyFocusHint();
         ensureMainSize();
         statistic();
     };
 });
 
+function applyFocusHint(){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.top',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ statistic(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
+function applyFocusAutoFilter(focus){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.top',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ statistic(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
 function selectYear(){
     var now = new Date();
     var year = now.getFullYear();
+    var m = /[?&]year=(\d{4})/.exec(window.location.search||'');
+    if(m && m[1]){ year = parseInt(m[1], 10) || year; }
+    var mPrev = /[?&]prevYear=(\d{4})/.exec(window.location.search||'');
+    var prevYear = (mPrev && mPrev[1]) ? (parseInt(mPrev[1], 10) || (year-1)) : (year-1);
     var startYear = year - 15;
 
     // Build year options dynamically so we always include current year.
@@ -162,7 +192,7 @@ function selectYear(){
     }
 
 	$("#cmbYear").combobox('setValue', ''+year);
-    $("#cmbYear2").combobox('setValue', ''+(year-1));
+    $("#cmbYear2").combobox('setValue', ''+prevYear);
 }
 
 function getParams(){
