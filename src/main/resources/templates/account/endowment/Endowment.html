@@ -113,6 +113,8 @@ var save_url = app_url + '/endowment/add';
 var query_url = app_url + '/endowment/getEndowments';
 var dialog = '#dlg';
 var form = 'form';
+var searchTimer = null;
+function scheduleSearch(){ if(searchTimer){ clearTimeout(searchTimer); } searchTimer = setTimeout(searchEndowments, 220); }
 function isSuccessResult(res){
     try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
     return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
@@ -139,17 +141,21 @@ function ensureOneYearDateRange(startVal, endVal, startSelector, endSelector){
     var s = String(startVal || '').trim();
     var e = String(endVal || '').trim();
     if(s || e){ return {start:s, end:e}; }
-    var end = new Date();
-    var start = new Date(end.getTime());
-    start.setFullYear(start.getFullYear() - 1);
-    var ds = formatDateMMDDYYYY(start);
-    var de = formatDateMMDDYYYY(end);
+    var now = new Date();
+    var y = now.getFullYear();
+    var ds = '01/01/' + y;
+    var de = '12/31/' + y;
     try{ if($(startSelector).data('datebox')){ $(startSelector).datebox('setValue', ds); } }catch(ignore){}
     try{ if($(endSelector).data('datebox')){ $(endSelector).datebox('setValue', de); } }catch(ignore){}
     return {start:ds, end:de};
 }
 
 $(function() {
+    try{
+        var y = new Date().getFullYear();
+        $('#dateStart').datebox('setValue', '01/01/' + y);
+        $('#dateEnd').datebox('setValue', '12/31/' + y);
+    }catch(e){}
     $(datagrid).datagrid({
         method:'post',
         url: query_url,
@@ -185,6 +191,10 @@ $(function() {
                     {iconCls : 'icon-save',handler : updateEndowment} ,
                     {iconCls : 'icon-undo',handler : cancelEdit    }]
     });
+    try{
+        $('#txtDemo').textbox('textbox').on('input', scheduleSearch).on('keydown', function(e){ if(e.keyCode===13){ searchEndowments(); } });
+    }catch(e){}
+    searchEndowments();
 });
 
 $(function(){

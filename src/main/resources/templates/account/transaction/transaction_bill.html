@@ -151,14 +151,28 @@ function ensureOneYearDateRange(startVal, endVal, startSelector, endSelector){
     var s = String(startVal || '').trim();
     var e = String(endVal || '').trim();
     if(s || e){ return {start:s, end:e}; }
-    var end = new Date();
-    var start = new Date(end.getTime());
-    start.setFullYear(start.getFullYear() - 1);
-    var ds = formatDateMMDDYYYY(start);
-    var de = formatDateMMDDYYYY(end);
+    var now = new Date();
+    var y = now.getFullYear();
+    var ds = '01/01/' + y;
+    var de = '12/31/' + y;
     try{ if($(startSelector).data('datebox')){ $(startSelector).datebox('setValue', ds); } }catch(ignore){}
     try{ if($(endSelector).data('datebox')){ $(endSelector).datebox('setValue', de); } }catch(ignore){}
     return {start:ds, end:de};
+}
+
+function getCurrentYearRange(){
+    var y = new Date().getFullYear();
+    return { start: '01/01/' + y, end: '12/31/' + y };
+}
+
+var DEFAULT_TXN_RANGE = getCurrentYearRange();
+
+function initTxnDateBoxes(){
+    try{
+        var r = getCurrentYearRange();
+        if($('#dateStart').data('datebox')){ $('#dateStart').datebox('setValue', r.start); }
+        if($('#dateEnd').data('datebox')){ $('#dateEnd').datebox('setValue', r.end); }
+    }catch(e){}
 }
 
 $(function() {
@@ -167,6 +181,10 @@ $(function() {
         pageSize:200,
         title:'Total:<span id="totalConsume" class="fs-total-count">0</span>',
         url: '/transaction/getTransactions',
+        queryParams:{
+            transactionDateStartStr: DEFAULT_TXN_RANGE.start,
+            transactionDateEndStr: DEFAULT_TXN_RANGE.end
+        },
         loadMsg:'Loading transactions...',
         fitColumns:true,
         nowrap:true,
@@ -265,6 +283,11 @@ $(function(){
     $.parser.onComplete = function(){
         $('#dateStart').datebox({onSelect:function(){scheduleSearch();}});
         $('#dateEnd').datebox({onSelect:function(){scheduleSearch();}});
+        try{
+            var r = getCurrentYearRange();
+            $('#dateStart').datebox('setValue', r.start);
+            $('#dateEnd').datebox('setValue', r.end);
+        }catch(e){}
         
         $('#cmbCardTypes').combobox({
             onSelect:function(){scheduleSearch();},
@@ -308,7 +331,17 @@ $(function(){
                 searchTransactions();
             }
         });
+        // Ensure first visible result is current-year data.
+        searchTransactions();
     };
+});
+
+// Datebox might not fire $.parser.onComplete depending on parse timing.
+// Keep a fallback init to ensure date fields display the current-year range.
+$(function(){
+    initTxnDateBoxes();
+    setTimeout(initTxnDateBoxes, 50);
+    setTimeout(initTxnDateBoxes, 250);
 });
 
 $(function(){

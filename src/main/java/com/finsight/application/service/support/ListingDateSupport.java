@@ -37,8 +37,8 @@ public final class ListingDateSupport {
     }
 
     /**
-     * Same as {@link #monthRangeOrNull(String, String)} but defaults to the latest one-year window
-     * when both inputs are blank.
+     * Same as {@link #monthRangeOrNull(String, String)} but defaults to current calendar year
+     * ({@code yyyy-01} ~ {@code yyyy-12}) when both inputs are blank.
      */
     public static String[] monthRangeOrDefaultOneYear(String transactionDateStartStr, String transactionDateEndStr)
             throws AppServiceException {
@@ -47,9 +47,9 @@ public final class ListingDateSupport {
             return ym;
         }
         Calendar cal = Calendar.getInstance();
-        String to = new SimpleDateFormat("yyyy-MM").format(cal.getTime());
-        cal.add(Calendar.YEAR, -1);
-        String from = new SimpleDateFormat("yyyy-MM").format(cal.getTime());
+        String year = new SimpleDateFormat("yyyy").format(cal.getTime());
+        String from = year + "-01";
+        String to = year + "-12";
         return new String[]{from, to};
     }
 
@@ -63,7 +63,8 @@ public final class ListingDateSupport {
     }
 
     /**
-     * Parses date strings if present; when both are blank returns [now-1y, now].
+     * Parses date strings if present; when both are blank returns current calendar year range
+     * [yyyy-01-01 00:00:00, yyyy-12-31 23:59:59 (date granularity)].
      */
     public static Date[] parseMmDdYyyyOrDefaultOneYear(String transactionDateStartStr, String transactionDateEndStr)
             throws AppServiceException {
@@ -79,9 +80,22 @@ public final class ListingDateSupport {
             return new Date[]{from, to};
         }
         Calendar cal = Calendar.getInstance();
-        Date endDate = cal.getTime();
-        cal.add(Calendar.YEAR, -1);
+        int year = cal.get(Calendar.YEAR);
+        cal.set(Calendar.YEAR, year);
+        cal.set(Calendar.MONTH, Calendar.JANUARY);
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
         Date startDate = cal.getTime();
+        cal.set(Calendar.MONTH, Calendar.DECEMBER);
+        cal.set(Calendar.DAY_OF_MONTH, 31);
+        cal.set(Calendar.HOUR_OF_DAY, 23);
+        cal.set(Calendar.MINUTE, 59);
+        cal.set(Calendar.SECOND, 59);
+        cal.set(Calendar.MILLISECOND, 999);
+        Date endDate = cal.getTime();
         return new Date[]{startDate, endDate};
     }
 

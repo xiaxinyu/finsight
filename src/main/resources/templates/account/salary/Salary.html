@@ -101,15 +101,18 @@ function formatDateYmd(dt){
     return (m < 10 ? ('0' + m) : m) + '/' + (d < 10 ? ('0' + d) : d) + '/' + y;
 }
 
-function ensureOneYearDateRange(dateStart, dateEnd){
+function ensureCurrentYearDateRange(dateStart, dateEnd){
     var s = (dateStart || '').trim();
     var e = (dateEnd || '').trim();
     if(s || e){
         return { dateStart: s, dateEnd: e };
     }
+    var start = new Date();
+    start.setMonth(0);
+    start.setDate(1);
     var end = new Date();
-    var start = new Date(end.getTime());
-    start.setFullYear(start.getFullYear() - 1);
+    end.setMonth(11);
+    end.setDate(31);
     var startVal = formatDateYmd(start);
     var endVal = formatDateYmd(end);
     try{
@@ -125,12 +128,12 @@ function scheduleSearch(){
 }
 
 $(function() {
-    // Keep behavior aligned with Transaction page: default to current-year range.
+    // First-open default: current calendar year (01/01 ~ 12/31).
     try{
         var now = new Date();
         var y = now.getFullYear();
-        $('#dateStart').datebox('setValue', y + '-01-01');
-        $('#dateEnd').datebox('setValue', y + '-12-31');
+        $('#dateStart').datebox('setValue', '01/01/' + y);
+        $('#dateEnd').datebox('setValue', '12/31/' + y);
     }catch(e){}
 
     $(datagrid).datagrid({
@@ -212,7 +215,7 @@ function collectSearchParams(){
     if ($('#dateEnd').data('datebox')) {
         dateEnd = $('#dateEnd').datebox('getValue');
     }
-    var fixedRange = ensureOneYearDateRange(dateStart, dateEnd);
+    var fixedRange = ensureCurrentYearDateRange(dateStart, dateEnd);
     dateStart = fixedRange.dateStart;
     dateEnd = fixedRange.dateEnd;
     if ($('#txtDemo').data('textbox')) {

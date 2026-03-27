@@ -1,0 +1,476 @@
+<html>
+<head>
+    <title>Income Curve · Monthly</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/scripts/report-focus.js"></script>
+    <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <script type="text/javascript" src="/scripts/transaction.js"></script>
+    <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <style>
+        body { font-family: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #f5f7fa; }
+        .filter-bar { background: #fff; padding: 10px 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; flex-wrap: wrap; border-bottom: 1px solid #eee; }
+        .filter-item { display: flex; align-items: center; font-size: 13px; color: #333; }
+        .filter-item label { margin-right: 6px; font-weight: 500; color: #555; white-space: nowrap; }
+        .content-area { padding: 15px; background-color: #f5f7fa; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: 15px; }
+        .chart-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 20px; flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #eef2f7; }
+        .grid-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 0; height: 260px; overflow: hidden; border: 1px solid #eef2f7; }
+
+        .kpi-row { display: flex; gap: 14px; margin-bottom: 14px; }
+        .kpi-donut-card {
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid #eef2f7;
+            border-radius: 10px;
+            padding: 14px 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .kpi-donut-title { font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 8px; text-align: center; }
+        .kpi-donut { width: 130px; height: 90px; }
+        .kpi-gauge { width: 130px; height: 90px; }
+        .kpi-donut-text { margin-top: 4px; font-size: 14px; font-weight: 700; color: #0f172a; text-align: center; }
+    </style>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north',border:false" style="height:auto; overflow:visible;">
+    <div class="filter-bar">
+        <span class="filter-item">
+            <label>Year</label>
+            <select id="cmbYear" class="easyui-combobox" style="width:90px;" data-options="onSelect:scheduleStatistic">
+                <option value="">--</option>
+            </select>
+        </span>
+        <span class="filter-item">
+            <input type="checkbox" id="chkYoY" onchange="toggleYoY()">
+            <label for="chkYoY" style="cursor:pointer;">YoY</label>
+        </span>
+        <span class="filter-item">
+            <label>Card</label>
+            <input id="cmbCardTypes" class="easyui-combobox"
+                   data-options="url:'/api/v1/cards/list',method:'get',valueField:'key',textField:'value',editable:false,prompt:'All cards',onSelect:scheduleStatistic"
+                   style="width: 160px;">
+        </span>
+        <span class="filter-item">
+            <label>Consume</label>
+            <select id="cmbConsume" class="easyui-combotree"
+                    data-options="url:'/api/v1/consume/tree?txnType=income',method:'get',onChange:scheduleStatistic" multiple
+                    style="width:200px;"></select>
+        </span>
+        <span class="filter-item">
+            <label>Description</label>
+            <input id="txtDemo" class="easyui-textbox" style="width:160px" onkeyup="scheduleStatistic();">
+        </span>
+    </div>
+</div>
+
+<div id="chartArea" data-options="region:'center',border:false" class="content-area">
+    <div class="chart-card">
+        <div class="kpi-row">
+            <div class="kpi-donut-card">
+                <div class="kpi-donut-title">Total Income</div>
+                <div id="donutTotal" class="kpi-donut"></div>
+                <div id="donutTotalText" class="kpi-donut-text">--</div>
+            </div>
+            <div class="kpi-donut-card">
+                <div class="kpi-donut-title">Avg / Month</div>
+                <div id="donutAvg" class="kpi-donut"></div>
+                <div id="donutAvgText" class="kpi-donut-text">--</div>
+            </div>
+            <div class="kpi-donut-card">
+                <div class="kpi-donut-title">YoY Change</div>
+                <div id="gaugeYoY" class="kpi-gauge"></div>
+                <div id="gaugeYoYText" class="kpi-donut-text">--</div>
+            </div>
+        </div>
+        <div id="main" style="width:100%; flex:1;"></div>
+    </div>
+    <div class="grid-card">
+        <table id="summaryGrid" class="easyui-datagrid" fit="true"
+               data-options="rownumbers:true,singleSelect:true,border:false,fitColumns:true">
+            <thead>
+            <tr>
+                <th data-options="field:'month',width:120">Month</th>
+                <th data-options="field:'income',width:150,align:'right',formatter:function(v){ return moneyText(v); }">Income</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<script type="text/javascript">
+function initIncomeCurveYears(){
+    try{
+        var curY = new Date().getFullYear();
+        var m = /[?&]year=(\d{4})/.exec(window.location.search||'');
+        if(m && m[1]){ curY = parseInt(m[1], 10) || curY; }
+        var startY = curY - 15;
+        var years = [];
+        for(var y = curY; y >= startY; y--){
+            years.push({ value: ''+y, text: ''+y });
+        }
+        $('#cmbYear').combobox('loadData', years);
+        $('#cmbYear').combobox('setValue', ''+curY);
+    }catch(e){}
+}
+
+$(function(){
+    var initialized = false;
+    $.parser.onComplete = function(){
+        if(initialized) return;
+        initialized = true;
+        initIncomeCurveYears();
+        // Default comparison: current year
+        try{ $('#chkYoY').prop('checked', true); }catch(e){}
+        applyFocusHint();
+        scheduleStatistic();
+    };
+});
+
+// Fallback for cases where parser timing skips onComplete.
+$(function(){
+    initIncomeCurveYears();
+    setTimeout(initIncomeCurveYears, 80);
+    setTimeout(function(){
+        try{
+            var y = safeComboboxValue('#cmbYear');
+            if(!/^\d{4}$/.test(y)){ initIncomeCurveYears(); }
+        }catch(e){}
+    }, 300);
+});
+
+function applyFocusHint(){
+    try{
+        if(window.reportFocus && reportFocus.applyToPage){
+            reportFocus.applyToPage({
+                afterSelector: '.filter-bar',
+                cmbConsumeSelector: '#cmbConsume',
+                onFilterApplied: function(ctx){ try{ if(!ctx || ctx.changed){ scheduleStatistic(); } }catch(e){} }
+            });
+        }
+    }catch(e){}
+}
+
+function toggleYoY(){
+    scheduleStatistic();
+}
+
+function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+function safeTextboxValue(sel){ var jq=$(sel); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } }
+function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+function expandedConsumeValues(sel){
+    var jq = $(sel);
+    var raw = [];
+    try{ raw = jq.combotree('getValues') || []; }catch(e){}
+    if(!raw || !raw.length){ return ''; }
+    var tree = null;
+    try{ tree = jq.combotree('tree'); }catch(e){}
+    if(!tree){ return $.trim(raw.join(',')); }
+    var ids = [];
+    var seen = {};
+    function pushId(id){
+        var v = String(id || '').trim();
+        if(!v || seen[v]){ return; }
+        seen[v] = true;
+        ids.push(v);
+    }
+    function walk(node){
+        if(!node){ return; }
+        var children = node.children || [];
+        if(children.length === 0){
+            pushId(node.id || node.code || node.value);
+            return;
+        }
+        // Parent selected: expand to all leaf codes for accurate report filtering.
+        for(var i=0;i<children.length;i++){ walk(children[i]); }
+    }
+    for(var i=0;i<raw.length;i++){
+        var rid = raw[i];
+        var nd = null;
+        try{ nd = tree.tree('find', rid); }catch(e){}
+        if(nd){ walk(nd); } else { pushId(rid); }
+    }
+    return $.trim(ids.join(','));
+}
+function moneyText(v){
+    var n = Number(v || 0);
+    if(isNaN(n)){ n = 0; }
+    return '¥' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function isSuccessResult(res){
+    try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
+    return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
+}
+
+function getResultData(res){
+    try{
+        if(res && app.api && app.api.normalizeResult){
+            return app.api.normalizeResult(res).data;
+        }
+    }catch(e){}
+    return res ? res.returnMessage : null;
+}
+
+function scheduleStatistic(){
+    if(window.__incomeCurveStatTimer){ clearTimeout(window.__incomeCurveStatTimer); }
+    window.__incomeCurveStatTimer = setTimeout(function(){
+        window.__incomeCurveStatTimer = null;
+        statistic();
+    }, 300);
+}
+
+function getParamsBase(){
+    var year = safeComboboxValue('#cmbYear');
+    var cardtype = safeComboboxValue('#cmbCardTypes'); if(cardtype==='0') cardtype='';
+    var demoArea = safeTextboxValue('#txtDemo');
+    var consume = expandedConsumeValues('#cmbConsume');
+    return {'year':year,'cardTypeName':cardtype,'demoArea':demoArea,'consumeID':consume};
+}
+
+function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','10','11','12']; }
+function monthNameList(){ return ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月']; }
+function getMonthCodeByName(en){
+    var map = {
+        'Janunary':'01','January':'01','一月':'01',
+        'February':'02','二月':'02',
+        'March':'03','三月':'03',
+        'April':'04','四月':'04',
+        'May':'05','五月':'05',
+        'June':'06','六月':'06',
+        'July':'07','七月':'07',
+        'August':'08','八月':'08',
+        'September':'09','九月':'09',
+        'October':'10','十月':'10',
+        'November':'11','十一月':'11',
+        'December':'12','十二月':'12'
+    };
+    return map[en]||'';
+}
+
+function statistic(){
+    var base = getParamsBase();
+    var y1 = parseInt(base.year, 10);
+    if(isNaN(y1)){ return; }
+
+    var y2 = ($('#chkYoY').prop('checked') ? (y1 - 1).toString() : '');
+
+    var pIncomeA = $.extend({}, base, {'txnTypes':'income'});
+    transaction.monthConsumeReport(pIncomeA, function(diA){
+        var arrIA = [];
+        try{ if(isSuccessResult(diA)){ arrIA = $.parseJSON(getResultData(diA)||'[]')||[]; } }catch(e){}
+
+        if(y2){
+            var baseB = $.extend({}, base, {'year': y2});
+            var pIncomeB = $.extend({}, baseB, {'txnTypes':'income'});
+            transaction.monthConsumeReport(pIncomeB, function(diB){
+                var arrIB = [];
+                try{ if(isSuccessResult(diB)){ arrIB = $.parseJSON(getResultData(diB)||'[]')||[]; } }catch(e){}
+                renderIncomeTrend(arrIA, arrIB, y1, y2);
+            }, function(){ renderIncomeTrend(arrIA, null, y1, y2); });
+        }else{
+            renderIncomeTrend(arrIA, null, y1, '');
+        }
+    }, function(){ app.messager.error('Income request failed.'); });
+}
+
+function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
+    var mapA = {};
+    for(var i=0;i<(arrIncomeA||[]).length;i++){
+        var it = arrIncomeA[i]||{};
+        var code = getMonthCodeByName(it.key);
+        mapA[code||''] = parseFloat(it.value)||0;
+    }
+    var mapB = {};
+    for(var j=0;j<(arrIncomeB||[]).length;j++){
+        var it2 = arrIncomeB[j]||{};
+        var code2 = getMonthCodeByName(it2.key);
+        mapB[code2||''] = parseFloat(it2.value)||0;
+    }
+
+    var codes = monthCodeList();
+    var names = monthNameList();
+    var incomesA = [];
+    var incomesB = [];
+    var rows = [];
+
+    for(var k=0;k<codes.length;k++){
+        var c = codes[k];
+        var vA = mapA[c] || 0;
+        var vB = mapB[c] || 0;
+        incomesA.push(vA);
+        if(arrIncomeB){ incomesB.push(vB); }
+        rows.push({ month: names[k], income: vA });
+    }
+
+    var incomeTotalA = incomesA.reduce(function(t,x){ return t + (Number(x)||0); }, 0);
+    var incomeTotalB = 0;
+    for(var tb=0; tb<(incomesB||[]).length; tb++){ incomeTotalB += (Number(incomesB[tb])||0); }
+    var yoyPct = (incomeTotalB > 0) ? ((incomeTotalA - incomeTotalB) / incomeTotalB * 100.0) : null;
+    var avgA = incomeTotalA / 12.0;
+    var maxA = 0; for(var ma=0; ma<(incomesA||[]).length; ma++){ if(incomesA[ma] > maxA) maxA = incomesA[ma]; }
+
+    $('#summaryGrid').datagrid('loadData', rows);
+
+    // Donut/KPI cards
+    try{
+        // Dispose existing charts on re-render (avoid memory leaks).
+        var d1 = echarts.getInstanceByDom(document.getElementById('donutTotal')); if(d1){ echarts.dispose(d1); }
+        var d2 = echarts.getInstanceByDom(document.getElementById('donutAvg')); if(d2){ echarts.dispose(d2); }
+        var d3 = echarts.getInstanceByDom(document.getElementById('gaugeYoY')); if(d3){ echarts.dispose(d3); }
+    }catch(e){}
+    try{
+        $('#donutTotalText').text(moneyText(incomeTotalA));
+        $('#donutAvgText').text(moneyText(avgA));
+        var yoyText = (yoyPct === null) ? '--' : (yoyPct>=0? ('+'+yoyPct.toFixed(1)+'%') : (yoyPct.toFixed(1)+'%'));
+        $('#gaugeYoYText').text(yoyText);
+    }catch(e){}
+
+    try{
+        // Total income vs prev year share
+        var chartTotal = echarts.init(document.getElementById('donutTotal'));
+        var prev = (arrIncomeB ? incomeTotalB : 0);
+        var optionTotal = {
+            tooltip: { show: true, formatter: function(){ return 'Income'; } },
+            legend: { show: false },
+            series: [{
+                name: 'income-share',
+                type: 'pie',
+                radius: ['60%', '78%'],
+                center: ['50%', '55%'],
+                avoidLabelOverlap: true,
+                label: { show: false },
+                data: [
+                    { value: incomeTotalA, name: 'A', itemStyle:{ color:'#10B981' } },
+                    { value: prev, name: 'B', itemStyle:{ color:'#06b6d4' } }
+                ],
+                animation: false
+            }],
+            graphic: [{
+                type: 'text',
+                left: 'center',
+                top: '46%',
+                style: { text: '', fill:'#0f172a', fontSize: 12, fontWeight: 700 }
+            }]
+        };
+        chartTotal.setOption(optionTotal, true);
+
+        // Avg vs peak month (gives a stable visual even when YoY is off)
+        var chartAvg = echarts.init(document.getElementById('donutAvg'));
+        var base = (maxA > 0) ? maxA : avgA;
+        var ratioAvg = base > 0 ? (avgA / base) : 0;
+        ratioAvg = Math.max(0, Math.min(1, ratioAvg));
+        var optionAvg = {
+            legend: { show:false },
+            tooltip: { show:false },
+            series: [{
+                name:'avg-shared',
+                type:'pie',
+                radius:['60%','78%'],
+                center:['50%','55%'],
+                avoidLabelOverlap:true,
+                label:{ show:false },
+                data: [
+                    { value: avgA, name:'avg', itemStyle:{ color:'#0ea5e9' } },
+                    { value: Math.max(0, base-avgA), name:'rest', itemStyle:{ color:'#e5e7eb' } }
+                ],
+                animation:false
+            }]
+        };
+        chartAvg.setOption(optionAvg, true);
+
+        // YoY gauge: -50% ~ +50% (clamped)
+        var chartYoY = echarts.init(document.getElementById('gaugeYoY'));
+        var clamp = (yoyPct === null) ? 0 : Math.max(-50, Math.min(50, yoyPct));
+        var gaugeColor = (yoyPct !== null && yoyPct >= 0) ? '#10B981' : '#EF4444';
+        var optionYoY = {
+            series: [{
+                type: 'gauge',
+                startAngle: 180,
+                endAngle: 0,
+                min: -50,
+                max: 50,
+                center: ['50%', '62%'],
+                radius: '82%',
+                progress: { show: true, width: 10, itemStyle:{ color:gaugeColor } },
+                axisLine: {
+                    roundCap: true,
+                    // Avoid Thymeleaf inlining parsing conflicts in this JS config.
+                    lineStyle: { width: 10, color: [ [1, '#e5e7eb'] ] }
+                },
+                splitLine: { length: 12, lineStyle: { color:'#cbd5e1', width:1 } },
+                axisTick: { length: 6, lineStyle: { color:'#cbd5e1', width:1 } },
+                axisLabel: { show: true, distance: 8, color:'#64748b', formatter: function(v){
+                    if(v===0) return '0%';
+                    if(v>0) return '+'+v+'%';
+                    return v+'%';
+                }},
+                pointer: { show: true, length: '35%', width: 4, itemStyle:{ color:gaugeColor } },
+                title: { show: false },
+                detail: {
+                    valueAnimation: false,
+                    formatter: function(v){ return (yoyPct===null ? '—' : (v===0? '0.0%' : (v>0? ('+'+v.toFixed(1)+'%') : (v.toFixed(1)+'%')))); },
+                    offsetCenter:[0,'10%'],
+                    color:'#0f172a',
+                    fontSize: 12,
+                    fontWeight: 700
+                }
+            }]
+        };
+        chartYoY.setOption(optionYoY, true);
+    }catch(e){}
+
+    echarts.dispose(document.getElementById('main'));
+    var chart = echarts.init(document.getElementById('main'));
+
+    var option = {
+        title: { text: 'Income Curve · ' + yearA, left: 'left' },
+        tooltip: {
+            trigger: 'axis',
+            formatter: function(params){
+                // params: series entries at the same axis index
+                var n = params && params[0] ? params[0].name : '';
+                var a = 0, b = null, d = null;
+                for(var i=0;i<params.length;i++){
+                    var p = params[i];
+                    if(p.seriesName === '收入'){ a = Number(p.value)||0; }
+                    if(p.seriesName === '收入(B)'){ b = Number(p.value)||0; }
+                    if(p.seriesName === '差额'){ d = Number(p.value)||0; }
+                }
+                var out = '月份：' + n + '<br/>收入：' + moneyText(a);
+                if(b !== null){ out += '<br/>收入(B)：' + moneyText(b); }
+                if(d !== null){ out += '<br/>差额：' + moneyText(d); }
+                return out;
+            }
+        },
+        legend: { data: ['收入'].concat(arrIncomeB ? ['收入(B)','差额'] : []) },
+        toolbox: { show: true, feature: { saveAsImage: {show:true} } },
+        grid: { left: 40, right: 20, bottom: 60 },
+        xAxis: [{ type:'category', boundaryGap:false, data:names }],
+        yAxis: [{ type:'value', axisLabel:{ formatter:'¥{value}' }, splitArea:{ show:true } }],
+        series: [
+            { name:'收入', type:'line', data: incomesA, itemStyle:{ color:'#10B981' }, smooth:true, areaStyle:{ color:'rgba(16,185,129,0.12)'} }
+        ]
+    };
+
+    if(arrIncomeB){
+        option.series.push({ name:'收入(B)', type:'line', data: incomesB, itemStyle:{ color:'#06b6d4' }, smooth:true, lineStyle:{ type:'dashed'} });
+        var delta = [];
+        for(var di=0; di<incomesA.length; di++){
+            delta.push( (Number(incomesA[di])||0) - (Number(incomesB[di])||0) );
+        }
+        option.series.push({ name:'差额', type:'bar', data: delta, itemStyle:{ color:'rgba(37,99,235,0.35)' } });
+    }
+    chart.setOption(option);
+}
+</script>
+</body>
+</html>
+

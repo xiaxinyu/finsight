@@ -15,4 +15,10 @@ public class AnalysisController {
         log.info("************ Open: Income vs Expense Monthly Trend ************");
         return "analysis/month_income_expense_trend";
     }
+
+    @RequestMapping("/analysis/income-curve.html")
+    public String incomeCurve(ModelMap model) {
+        log.info("************ Open: Income Curve Report ************");
+        return "analysis/income_curve_report";
+    }
 }
