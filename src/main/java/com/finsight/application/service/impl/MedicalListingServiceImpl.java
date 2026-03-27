@@ -21,7 +21,7 @@ public class MedicalListingServiceImpl implements IMedicalListingService {
     @Override
     public CollectionResult<Medical> listMedicals(MedicalParam param) throws AppServiceException {
         Medical medical = new Medical();
-        String[] ym = ListingDateSupport.monthRangeOrNull(
+        String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {
             medical.setTimeFrom(ym[0]);

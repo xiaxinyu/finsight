@@ -9,5 +9,6 @@ import java.util.List;
 public interface ConsumeCategoryService extends IService<ConsumeCategory> {
     List<ConsumeCategory> listAll();
     List<TreeNode> tree();
+    List<TreeNode> tree(String txnType);
     void ensureDefaults();
 }

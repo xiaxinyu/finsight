@@ -27,7 +27,30 @@ public class ConsumeCategoryServiceImpl extends ServiceImpl<ConsumeCategoryMappe
 
     @Override
     public List<TreeNode> tree() {
+        return tree(null);
+    }
+
+    @Override
+    public List<TreeNode> tree(String txnType) {
         List<ConsumeCategory> list = listAll();
+        String type = txnType == null ? null : txnType.trim().toLowerCase();
+        if (type != null && !type.isEmpty()) {
+            // Keep categories that match txnType, and keep their parents so the tree remains navigable.
+            java.util.Set<String> keepCodes = new java.util.LinkedHashSet<>();
+            for (ConsumeCategory c : list) {
+                if (matchesTxnType(c, type)) {
+                    if (c.getCode() != null) {
+                        keepCodes.add(c.getCode().trim());
+                    }
+                    if (c.getParentId() != null) {
+                        keepCodes.add(c.getParentId().trim());
+                    }
+                }
+            }
+            list = list.stream()
+                    .filter(c -> c != null && c.getCode() != null && keepCodes.contains(c.getCode().trim()))
+                    .collect(Collectors.toList());
+        }
         List<ConsumeCategory> roots = list.stream()
                 .filter(c -> {
                     Integer lv = c.getLevel();
@@ -46,6 +69,19 @@ public class ConsumeCategoryServiceImpl extends ServiceImpl<ConsumeCategoryMappe
             result.add(build(r, byParent));
         }
         return result;
+    }
+
+    private boolean matchesTxnType(ConsumeCategory c, String type){
+        if (c == null) return false;
+        String ts = c.getTxnTypes();
+        if (ts == null) return false;
+        String[] arr = ts.toLowerCase().split(",");
+        for (String s : arr) {
+            if (s != null && s.trim().equals(type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

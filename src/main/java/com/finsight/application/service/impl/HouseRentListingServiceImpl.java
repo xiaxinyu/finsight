@@ -24,14 +24,10 @@ public class HouseRentListingServiceImpl implements IHouseRentListingService {
     @Override
     public CollectionResult<HouseRent> listHouseRents(HouseRentParam param) throws AppServiceException {
         HouseRent houseRent = new HouseRent();
-        if (!StringTool.isNullOrEmpty(param.getTransactionDateStartStr())) {
-            houseRent.setTransactionDateStart(
-                    ListingDateSupport.parseMmDdYyyy(param.getTransactionDateStartStr()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getTransactionDateEndStr())) {
-            houseRent.setTransactionDateEnd(
-                    ListingDateSupport.parseMmDdYyyy(param.getTransactionDateEndStr()));
-        }
+        java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
+                param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
+        houseRent.setTransactionDateStart(range[0]);
+        houseRent.setTransactionDateEnd(range[1]);
         if (!StringTool.isNullOrEmpty(param.getDemoArea())) {
             houseRent.setDemoArea(param.getDemoArea());
         }

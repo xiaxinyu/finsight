@@ -6,7 +6,7 @@ import com.finsight.web.restful.model.CollectionResult;
 import com.finsight.web.restful.model.TransactionParam;
 
 /**
- * Salary-related transaction listing (payroll income category INC-01).
+ * Income-related transaction listing for Income Management.
  */
 public interface ISalaryListingService {
 

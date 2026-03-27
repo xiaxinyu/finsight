@@ -21,7 +21,7 @@ public class UnEmploymentListingServiceImpl implements IUnEmploymentListingServi
     @Override
     public CollectionResult<UnEmployment> listUnEmployments(UnEmploymentParam param) throws AppServiceException {
         UnEmployment unEmployment = new UnEmployment();
-        String[] ym = ListingDateSupport.monthRangeOrNull(
+        String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {
             unEmployment.setTimeFrom(ym[0]);

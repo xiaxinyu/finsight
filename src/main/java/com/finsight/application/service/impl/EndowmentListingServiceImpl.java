@@ -21,7 +21,7 @@ public class EndowmentListingServiceImpl implements IEndowmentListingService {
     @Override
     public CollectionResult<Endowment> listEndowments(EndowmentParam param) throws AppServiceException {
         Endowment endowment = new Endowment();
-        String[] ym = ListingDateSupport.monthRangeOrNull(
+        String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {
             endowment.setTimeFrom(ym[0]);

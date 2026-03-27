@@ -126,6 +126,29 @@ function getResultMessage(res, fallback){
     }catch(e){}
     return (res && (res.returnMessage || res.message)) ? (res.returnMessage || res.message) : (fallback || 'Operation failed.');
 }
+
+function formatDateMMDDYYYY(dt){
+    if(!dt){ return ''; }
+    var m = dt.getMonth() + 1;
+    var d = dt.getDate();
+    var y = dt.getFullYear();
+    return (m < 10 ? ('0' + m) : m) + '/' + (d < 10 ? ('0' + d) : d) + '/' + y;
+}
+
+function ensureOneYearDateRange(startVal, endVal, startSelector, endSelector){
+    var s = String(startVal || '').trim();
+    var e = String(endVal || '').trim();
+    if(s || e){ return {start:s, end:e}; }
+    var end = new Date();
+    var start = new Date(end.getTime());
+    start.setFullYear(start.getFullYear() - 1);
+    var ds = formatDateMMDDYYYY(start);
+    var de = formatDateMMDDYYYY(end);
+    try{ if($(startSelector).data('datebox')){ $(startSelector).datebox('setValue', ds); } }catch(ignore){}
+    try{ if($(endSelector).data('datebox')){ $(endSelector).datebox('setValue', de); } }catch(ignore){}
+    return {start:ds, end:de};
+}
+
 $(function() {
     $(datagrid).datagrid({
         method:'post',
@@ -311,6 +334,9 @@ function searchEndowments() {
     if ($('#dateEnd').data('datebox')) {
         dateEnd = $('#dateEnd').datebox('getValue');
     }
+    var fixedRange = ensureOneYearDateRange(dateStart, dateEnd, '#dateStart', '#dateEnd');
+    dateStart = fixedRange.start;
+    dateEnd = fixedRange.end;
     if ($('#txtDemo').data('textbox')) {
         demoArea = $('#txtDemo').textbox('getValue');
     }

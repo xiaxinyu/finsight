@@ -13,13 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Builds payroll (salary) transaction query and returns paged {@link CollectionResult}.
+ * Builds income transaction query and returns paged {@link CollectionResult}.
+ * <p>
+ * Historically this page only queried payroll category (INC-01). We now query by
+ * {@code txnTypes=income} so it includes all income categories configured in the
+ * consume category tree (e.g. salary, deposit increase, bank loan, etc.).
  */
 @Service
 public class SalaryListingServiceImpl implements ISalaryListingService {
-
-    /** Consume code for salary / payroll income in this product. */
-    public static final String SALARY_INCOME_CONSUME_CODE = "INC-01";
 
     @Autowired
     private ITransactionService transactionService;
@@ -27,15 +28,15 @@ public class SalaryListingServiceImpl implements ISalaryListingService {
     @Override
     public CollectionResult<Transaction> listSalaryTransactions(TransactionParam param) throws AppServiceException {
         Transaction transaction = new Transaction();
-        if (!StringTool.isNullOrEmpty(param.getTransactionDateStartStr())) {
-            transaction.setTransactionDateStart(
-                    ListingDateSupport.parseMmDdYyyy(param.getTransactionDateStartStr()));
+        java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
+                param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
+        transaction.setTransactionDateStart(range[0]);
+        transaction.setTransactionDateEnd(range[1]);
+        // Query all categories tagged as income instead of only INC-01.
+        transaction.setTxnTypes("income");
+        if (!StringTool.isNullOrEmpty(param.getConsumeID())) {
+            transaction.setConsumeID(param.getConsumeID());
         }
-        if (!StringTool.isNullOrEmpty(param.getTransactionDateEndStr())) {
-            transaction.setTransactionDateEnd(
-                    ListingDateSupport.parseMmDdYyyy(param.getTransactionDateEndStr()));
-        }
-        transaction.setConsumeCode(SALARY_INCOME_CONSUME_CODE);
         if (!StringTool.isNullOrEmpty(param.getDemoArea())) {
             transaction.setDemoArea(param.getDemoArea());
         }

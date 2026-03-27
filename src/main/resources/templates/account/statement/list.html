@@ -5,28 +5,34 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
     <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
-    <style>
-        body { margin: 0; padding: 10px; font-family: sans-serif; }
-    </style>
 </head>
-<body>
-    <div style="margin-bottom:10px;">
-        <a href="/statement/upload.html" class="easyui-linkbutton" iconCls="icon-add">Upload New Statement</a>
+<body class="easyui-layout">
+    <div data-options="region:'north',border:false" style="height:56px;">
+        <div class="toolbar fs-toolbar" style="height:100%;">
+            <span class="item_intervel fs-toolbar-group"><label>Statement History</label></span>
+            <span class="item_intervel fs-toolbar-actions">
+                <span class="fs-kpi">Rows <b id="kpiRows">0</b></span>
+                <a href="/statement/upload.html" class="easyui-linkbutton fs-btn-primary" iconCls="icon-add">Upload New Statement</a>
+            </span>
+        </div>
     </div>
-    <table id="dgStatement" class="easyui-datagrid" title="Statement History" style="width:100%;height:500px"
-           data-options="url:'/statement/api/list',method:'get',singleSelect:true,fitColumns:true,pagination:true">
-        <thead>
-            <tr>
-                <th data-options="field:'fileName',width:200">File Name</th>
-                <th data-options="field:'source',width:100">Bank/Source</th>
-                <th data-options="field:'itemCount',width:100,align:'right'">Items</th>
-                <th data-options="field:'status',width:100,align:'center'">Status</th>
-                <th data-options="field:'createtime',width:150,align:'center'">Upload Time</th>
-                <th data-options="field:'createuser',width:100">User</th>
-            </tr>
-        </thead>
-    </table>
+    <div data-options="region:'center',border:false">
+        <table id="dgStatement" class="easyui-datagrid" fit="true"
+               data-options="url:'/statement/api/list',method:'get',singleSelect:true,fitColumns:true,pagination:true,pageSize:200,pageList:[50,100,150,200,500],loadMsg:'Loading records...',striped:true,autoRowHeight:true,scrollbarSize:14,onLoadSuccess:function(data){ $('#kpiRows').text((data && typeof data.total!=='undefined') ? data.total : (((data||{}).rows||[]).length)); }">
+            <thead>
+                <tr>
+                    <th data-options="field:'fileName',width:220">File Name</th>
+                    <th data-options="field:'source',width:120">Bank/Source</th>
+                    <th data-options="field:'itemCount',width:100,align:'right'">Items</th>
+                    <th data-options="field:'status',width:100,align:'center'">Status</th>
+                    <th data-options="field:'createtime',width:170,align:'center'">Upload Time</th>
+                    <th data-options="field:'createuser',width:120">User</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
 </body>
 </html>

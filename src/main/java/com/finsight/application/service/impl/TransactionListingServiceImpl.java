@@ -66,14 +66,10 @@ public class TransactionListingServiceImpl implements ITransactionListingService
 
     private static Transaction buildQuery(TransactionParam param) throws AppServiceException {
         Transaction transaction = new Transaction();
-        if (!StringTool.isNullOrEmpty(param.getTransactionDateStartStr())) {
-            transaction.setTransactionDateStart(
-                    ListingDateSupport.parseMmDdYyyy(param.getTransactionDateStartStr()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getTransactionDateEndStr())) {
-            transaction.setTransactionDateEnd(
-                    ListingDateSupport.parseMmDdYyyy(param.getTransactionDateEndStr()));
-        }
+        java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
+                param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
+        transaction.setTransactionDateStart(range[0]);
+        transaction.setTransactionDateEnd(range[1]);
         if (!StringTool.isNullOrEmpty(param.getConsumptionType())) {
             transaction.setConsumptionType(StringTool.changeObjToInt(StringUtils.trim(param.getConsumptionType())));
         }

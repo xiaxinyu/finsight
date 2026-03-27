@@ -21,7 +21,7 @@ public class AccumulationListingServiceImpl implements IAccumulationListingServi
     @Override
     public CollectionResult<Accumulation> listAccumulations(AccumulationParam param) throws AppServiceException {
         Accumulation accumulation = new Accumulation();
-        String[] ym = ListingDateSupport.monthRangeOrNull(
+        String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {
             accumulation.setTimeFrom(ym[0]);
