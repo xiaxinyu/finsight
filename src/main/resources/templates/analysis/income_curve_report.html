@@ -98,10 +98,6 @@
                     data-options="url:'/api/v1/consume/tree?txnType=income',method:'get',onChange:scheduleStatistic" multiple
                     style="width:200px;"></select>
         </span>
-        <span class="filter-item">
-            <label>Description</label>
-            <input id="txtDemo" class="easyui-textbox" style="width:160px" onkeyup="scheduleStatistic();">
-        </span>
     </div>
 </div>
 
@@ -138,14 +134,14 @@
                 <div class="hint" id="kpiLowHint">--</div>
             </div>
             <div class="sub-kpi">
-                <div class="label">Volatility (CV)</div>
+                <div class="label">Active Months</div>
                 <div class="value" id="kpiVol">--</div>
-                <div class="hint">StdDev / Avg</div>
+                <div class="hint" id="kpiVolHint">Months with income</div>
             </div>
             <div class="sub-kpi">
-                <div class="label">Run-rate (Annualized)</div>
+                <div class="label">Latest Active</div>
                 <div class="value" id="kpiRunRate">--</div>
-                <div class="hint">Avg × 12</div>
+                <div class="hint" id="kpiRunRateHint">Most recent month with income</div>
             </div>
         </div>
     </div>
@@ -283,6 +279,15 @@ function moneyText(v){
     if(isNaN(n)){ n = 0; }
     return '¥' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+function moneyAxisLabel(v){
+    var n = Number(v||0);
+    if(!isFinite(n)) n = 0;
+    var abs = Math.abs(n);
+    if(abs >= 1000000000) return '¥' + (n/1000000000).toFixed(1) + 'b';
+    if(abs >= 1000000) return '¥' + (n/1000000).toFixed(1) + 'm';
+    if(abs >= 1000) return '¥' + (n/1000).toFixed(0) + 'k';
+    return '¥' + n;
+}
 function pctText(v){
     var n = Number(v);
     if(!isFinite(n)){ return '--'; }
@@ -314,9 +319,8 @@ function scheduleStatistic(){
 function getParamsBase(){
     var year = safeComboboxValue('#cmbYear');
     var cardtype = safeComboboxValue('#cmbCardTypes'); if(cardtype==='0') cardtype='';
-    var demoArea = safeTextboxValue('#txtDemo');
     var consume = expandedConsumeValues('#cmbConsume');
-    return {'year':year,'cardTypeName':cardtype,'demoArea':demoArea,'consumeID':consume};
+    return {'year':year,'cardTypeName':cardtype,'consumeID':consume};
 }
 
 function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','10','11','12']; }
@@ -451,22 +455,40 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
         if((Number(incomesA[pi])||0) > (Number(incomesA[peakIdx])||0)) peakIdx = pi;
         if((Number(incomesA[pi])||0) < (Number(incomesA[lowIdx])||0)) lowIdx = pi;
     }
-    var mean = avgA;
-    var variance = 0;
+    var activeMonths = 0;
+    var lastActiveIdx = -1;
     for(var si=0; si<incomesA.length; si++){
-        var dv = (Number(incomesA[si])||0) - mean;
-        variance += dv*dv;
+        var cur = Number(incomesA[si])||0;
+        if(cur > 0){
+            activeMonths += 1;
+            lastActiveIdx = si;
+        }
     }
-    variance = variance / Math.max(1, incomesA.length);
-    var std = Math.sqrt(Math.max(0, variance));
-    var cv = (mean > 0) ? (std / mean) : 0;
     try{
         $('#kpiPeak').text(names[peakIdx] + ' · ' + moneyText(incomesA[peakIdx]));
         $('#kpiPeakHint').text('Spike month');
         $('#kpiLow').text(names[lowIdx] + ' · ' + moneyText(incomesA[lowIdx]));
         $('#kpiLowHint').text('Low month');
-        $('#kpiVol').text((cv*100).toFixed(1) + '%');
-        $('#kpiRunRate').text(moneyText(avgA * 12.0));
+        $('#kpiVol').text(activeMonths + ' / 12');
+        $('#kpiVolHint').text(activeMonths > 0 ? 'Months with income booked' : 'No income booked');
+        if(lastActiveIdx >= 0){
+            $('#kpiRunRate').text(names[lastActiveIdx] + ' · ' + moneyText(incomesA[lastActiveIdx]));
+            var prevActiveIdx = -1;
+            for(var lp=lastActiveIdx-1; lp>=0; lp--){
+                if((Number(incomesA[lp])||0) > 0){ prevActiveIdx = lp; break; }
+            }
+            if(prevActiveIdx >= 0){
+                var latest = Number(incomesA[lastActiveIdx])||0;
+                var prevLatest = Number(incomesA[prevActiveIdx])||0;
+                var deltaPct = prevLatest > 0 ? ((latest - prevLatest) / prevLatest * 100) : null;
+                $('#kpiRunRateHint').text(deltaPct == null ? ('Prev active ' + names[prevActiveIdx]) : ((deltaPct>=0?'+':'') + deltaPct.toFixed(1) + '% vs ' + names[prevActiveIdx]));
+            }else{
+                $('#kpiRunRateHint').text('First active month in this year');
+            }
+        }else{
+            $('#kpiRunRate').text('--');
+            $('#kpiRunRateHint').text('No income booked');
+        }
     }catch(e){}
 
     for(var r=0;r<rows.length;r++){
@@ -605,7 +627,7 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
         grid: { left: 52, right: 20, bottom: 70, top: 48 },
         xAxis: [{ type:'category', boundaryGap:false, data:names }],
         yAxis: [
-            { type:'value', axisLabel:{ formatter:'¥{value}' }, splitArea:{ show:true } },
+            { type:'value', axisLabel:{ formatter: function(v){ return moneyAxisLabel(v); } }, splitArea:{ show:true } },
             { type:'value', axisLabel:{ formatter:'' }, splitLine:{ show:false } }
         ],
         series: [
@@ -627,7 +649,7 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
     chart.setOption(option);
 
     // Category breakdown (pie + note)
-    renderIncomeCategoryBreakdown(yearA);
+    renderIncomeCategoryBreakdown(yearA, incomeTotalA);
 }
 
 var INCOME_PIE_COLORS = ['#10B981','#059669','#14B8A6','#06b6d4','#0ea5e9','#22c55e','#84cc16','#eab308','#f59e0b','#f97316','#a855f7','#64748B'];
@@ -648,7 +670,7 @@ function parseIncomeConsumeRows(res){
     return list;
 }
 
-function renderIncomeCategoryBreakdown(year){
+function renderIncomeCategoryBreakdown(year, curveYearTotal){
     var y = String(year||'').trim();
     if(!/^\d{4}$/.test(y)){ return; }
     var yNum = parseInt(y, 10);
@@ -681,8 +703,16 @@ function renderIncomeCategoryBreakdown(year){
         var topSum = 0;
         for(var i2=0; i2<Math.min(topN, listCur.length); i2++){ topSum += (Number(listCur[i2].value)||0); }
         try{
-            var note = (total>0 && agg.length) ? (y + ' · Top ' + Math.min(topN, listCur.length) + ' · ' + ((topSum/total)*100).toFixed(1) + '% of year') : 'No breakdown data';
-            if(total>0 && listPrev.length){ note += ' · vs ' + yPrev; }
+            var curveT = Number(curveYearTotal)||0;
+            var note = '';
+            if(total>0 && agg.length){
+                note = (y + ' · Top ' + Math.min(topN, listCur.length) + ' · ' + ((topSum/total)*100).toFixed(1) + '% of year');
+                if(listPrev.length){ note += ' · vs ' + yPrev; }
+            }else if(curveT > 0){
+                note = 'No breakdown data · You have income totals, but categories are empty. Check filters and income category tagging.';
+            }else{
+                note = 'No breakdown data';
+            }
             $('#pieNote').text(note);
         }catch(e){}
         try{
@@ -691,6 +721,7 @@ function renderIncomeCategoryBreakdown(year){
             var pie = echarts.init(dom);
             pie.setOption({
                 color: INCOME_PIE_COLORS,
+                title: (total>0 ? null : { text:'No breakdown data', left:'center', top:'middle', textStyle:{ color:'#94a3b8', fontSize:12, fontWeight:600 } }),
                 tooltip:{ trigger:'item', formatter:function(p){
                     var prevV = mapPrev[p.name] != null ? mapPrev[p.name] : 0;
                     var curV = Number(p.value)||0;

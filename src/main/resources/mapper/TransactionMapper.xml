@@ -305,7 +305,16 @@
     </select>
 
     <select id="consumeReport" resultType="com.finsight.domain.model.KeyValue">
-        select round(abs(sum(c.balance_money))) as `value`,
+        select round(abs(sum(
+        <choose>
+            <when test="q != null and q.txnTypes == 'income'">
+                coalesce(c.income_money, case when coalesce(c.balance_money,0) &lt; 0 then abs(c.balance_money) else 0 end, 0)
+            </when>
+            <otherwise>
+                coalesce(c.balance_money, 0)
+            </otherwise>
+        </choose>
+        ))) as `value`,
         case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end as `key`
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1

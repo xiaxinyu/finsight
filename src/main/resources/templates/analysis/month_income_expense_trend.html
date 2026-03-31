@@ -18,9 +18,26 @@
         .filter-item { display: flex; align-items: center; font-size: 13px; color: #333; }
         .filter-item label { margin-right: 6px; font-weight: 500; color: #555; white-space: nowrap; }
         
-        .content-area { padding: 15px; background-color: #f5f7fa; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: 15px; }
-        .chart-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 20px; flex: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #eef2f7; }
-        .grid-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 0; height: 300px; overflow: hidden; border: 1px solid #eef2f7; }
+        .content-area { padding: 15px; background-color: #f5f7fa; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; gap: 15px; overflow-y: auto; overflow-x: hidden; }
+        .chart-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 18px 20px 20px; display: flex; flex-direction: column; overflow: visible; border: 1px solid #eef2f7; flex: 0 0 auto; }
+        .kpi-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 14px 16px; border: 1px solid #eef2f7; }
+        .grid-card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 0; height: 420px; min-height: 420px; overflow: hidden; border: 1px solid #eef2f7; flex: 0 0 auto; }
+        #kpiBar { display:block; width:100%; margin:0; padding:0; min-height:0; }
+        .kpi-grid { display:flex; flex-wrap:wrap; gap:10px; margin:0; }
+        .kpi-box { background:#f8fafc; border:1px solid #eef2f7; border-radius:10px; padding:8px 10px; min-width:140px; flex:1 1 140px; }
+        .kpi-box .label { font-size:12px; color:#64748b; font-weight:700; }
+        .kpi-box .value { font-size:15px; color:#0f172a; font-weight:800; margin-top:3px; }
+        .kpi-box .hint { font-size:11px; color:#64748b; margin-top:1px; line-height:1.2; }
+        .chart-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 0 0 14px; padding-top: 0; }
+        .chart-section-title { font-size:18px; font-weight:700; color:#0f172a; line-height:1.2; }
+        .chart-section-sub { font-size:12px; color:#64748b; font-weight:600; white-space:nowrap; }
+        .main-chart { width:100%; height:640px; min-height:640px; margin-top: 0; }
+        @media (max-width: 1200px){
+            .main-chart { height:520px; min-height:520px; }
+        }
+        @media (min-width: 1500px){
+            .kpi-box { flex:1 1 calc(12.5% - 10px); min-width:130px; }
+        }
         
         /* Popup Styling */
         #popup { background: #fff; }
@@ -40,42 +57,13 @@
         <span class="filter-item">
             <label>Year</label>
             <select id="cmbYear" class="easyui-combobox" style="width:90px;" data-options="onSelect:scheduleStatistic">
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
-                <option value="2021">2021</option>
-                <option value="2020">2020</option>
-                <option value="2019">2019</option>
-                <option value="2018">2018</option>
-                <option value="2017">2017</option>
-                <option value="2016">2016</option>
-                <option value="2015">2015</option>
-                <option value="2014">2014</option>
-                <option value="2013">2013</option>
+                <option value="">--</option>
             </select>
         </span>
         <span class="filter-item">
-            <input type="checkbox" id="chkYoY" onchange="toggleYoY()">
-            <label for="chkYoY" style="cursor:pointer;">YoY</label>
-        </span>
-        <span class="filter-item">
-            <label>Year B</label>
+            <label>Compare</label>
             <select id="cmbYear2" class="easyui-combobox" style="width:90px;" data-options="onSelect:scheduleStatistic">
                 <option value="">None</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2022">2022</option>
-                <option value="2021">2021</option>
-                <option value="2020">2020</option>
-                <option value="2019">2019</option>
-                <option value="2018">2018</option>
-                <option value="2017">2017</option>
-                <option value="2016">2016</option>
-                <option value="2015">2015</option>
-                <option value="2014">2014</option>
-                <option value="2013">2013</option>
             </select>
         </span>
         <span class="filter-item">
@@ -91,18 +79,20 @@
                     style="width:200px;"></select>
         </span>
         <span class="filter-item">
-            <label>Description</label>
-            <input id="txtDemo" class="easyui-textbox" style="width:160px">
-        </span>
-        <span class="filter-item">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-search',plain:true" onclick="statistic()">Compare</a>
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-reload',plain:true" onclick="statistic()">Refresh</a>
         </span>
     </div>
 </div>
 <div id="chartArea" data-options="region:'center',border:false" class="content-area">
+    <div class="kpi-card">
+        <div id="kpiBar"></div>
+    </div>
     <div class="chart-card">
-        <div id="kpiBar" class="fs-report-kpi-bar"></div>
-        <div id="main" style="width:100%; flex:1;"></div>
+        <div class="chart-header">
+            <div id="mainTitle" class="chart-section-title">Income vs Expense</div>
+            <div id="mainSubtitle" class="chart-section-sub"></div>
+        </div>
+        <div id="main" class="main-chart"></div>
     </div>
     <div class="grid-card">
         <table id="summaryGrid" class="easyui-datagrid" fit="true"
@@ -113,6 +103,8 @@
                 <th data-options="field:'income',width:120,align:'right',formatter:app.money.rmb">Income</th>
                 <th data-options="field:'expense',width:120,align:'right',formatter:app.money.rmb">Expense</th>
                 <th data-options="field:'surplus',width:120,align:'right',formatter:app.money.rmb">Surplus</th>
+                <th data-options="field:'savingsRate',width:100,align:'right'">Savings</th>
+                <th data-options="field:'status',width:110,align:'center'">Status</th>
             </tr>
             </thead>
         </table>
@@ -150,10 +142,7 @@ $(function(){
         // Dynamic year options: current year + last 15 years
         try{
             var curY = new Date().getFullYear();
-            var m = /[?&]year=(\d{4})/.exec(window.location.search||'');
-            if(m && m[1]){ curY = parseInt(m[1], 10) || curY; }
-            var mPrev = /[?&]prevYear=(\d{4})/.exec(window.location.search||'');
-            var prevY = (mPrev && mPrev[1]) ? (parseInt(mPrev[1], 10) || (curY-1)) : (curY-1);
+            var prevY = curY - 1;
             var startY = curY - 15;
             var years = [];
             for(var y = curY; y >= startY; y--){
@@ -171,6 +160,27 @@ $(function(){
         scheduleStatistic();
         $(window).on('resize', ensureMainSize);
     };
+});
+
+// Fallback for cases where parser timing skips initial year injection.
+$(function(){
+    setTimeout(function(){
+        try{
+            var y = safeComboboxValue('#cmbYear');
+            if(!/^\d{4}$/.test(y)){
+                var curY = new Date().getFullYear();
+                var startY = curY - 15;
+                var years = [];
+                for(var yr = curY; yr >= startY; yr--){
+                    years.push({ value: ''+yr, text: ''+yr });
+                }
+                $('#cmbYear').combobox('loadData', years);
+                $('#cmbYear').combobox('setValue', ''+curY);
+                $('#cmbYear2').combobox('loadData', [{ value: '', text: 'None' }].concat(years));
+                $('#cmbYear2').combobox('setValue', ''+(curY-1));
+            }
+        }catch(e){}
+    }, 80);
 });
 
 function applyFocusHint(){
@@ -205,6 +215,16 @@ function ensureMainSize(){
 function safeComboboxValue(sel){ var jq=$(sel); try{ var v=jq.combobox('getValue'); if(v!=null) return $.trim(v);}catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
 function safeTextboxValue(sel){ var jq=$(sel); try{ return $.trim(jq.textbox('getValue')); }catch(e){ return $.trim(jq.val()||''); } }
 function safeCombotreeValues(sel){ var jq=$(sel); try{ var arr=jq.combotree('getValues'); if(arr&&arr.length) return $.trim(arr.join(',')); }catch(e){} var v2=jq.val(); return v2?$.trim(v2):''; }
+function moneyText(v){ return app.money.rmb(Number(v)||0); }
+function moneyAxisLabel(v){
+    var n = Number(v||0);
+    if(!isFinite(n)) n = 0;
+    var abs = Math.abs(n);
+    if(abs >= 1000000000) return '¥' + (n/1000000000).toFixed(1) + 'b';
+    if(abs >= 1000000) return '¥' + (n/1000000).toFixed(1) + 'm';
+    if(abs >= 1000) return '¥' + (n/1000).toFixed(0) + 'k';
+    return '¥' + n;
+}
 function isSuccessResult(res){
     try{ return !!(res && app.api && app.api.normalizeResult && app.api.normalizeResult(res).ok); }catch(e){}
     return !!(res && (res.returnCode === 'success' || res.code === 20000 || res.code === 200));
@@ -221,9 +241,8 @@ function getResultData(res){
 function getParamsBase(){
     var year = safeComboboxValue('#cmbYear');
     var cardtype = safeComboboxValue('#cmbCardTypes'); if(cardtype==='0') cardtype='';
-    var demoArea = safeTextboxValue('#txtDemo');
     var consume = safeCombotreeValues('#cmbConsume');
-    return {'year':year,'cardTypeName':cardtype,'demoArea':demoArea,'consumeID':consume};
+    return {'year':year,'cardTypeName':cardtype,'consumeID':consume};
 }
 
 var statTimer = null;
@@ -232,24 +251,12 @@ function scheduleStatistic(){
     statTimer = setTimeout(function(){ statTimer = null; statistic(); }, 300);
 }
 
-function toggleYoY(){
-    var checked = $('#chkYoY').prop('checked');
-    $('#cmbYear2').combobox(checked ? 'disable' : 'enable');
-    scheduleStatistic();
-}
-
 function statistic(){
     var base = getParamsBase();
     var y2 = safeComboboxValue('#cmbYear2');
-    if($('#chkYoY').prop('checked')){
-        var y1 = parseInt(base.year);
-        if(!isNaN(y1)){
-            y2 = (y1 - 1).toString();
-        }
-    }
     var pIncomeA = $.extend({}, base, {'txnTypes':'income'});
     var pExpenseA = $.extend({}, base, {'txnTypes':'expense'});
-    transaction.monthConsumeReport(pIncomeA, function(diA){
+    transaction.monthIncomeReport(pIncomeA, function(diA){
         transaction.monthConsumeReport(pExpenseA, function(deA){
             var arrIA = []; var arrEA = [];
             if(isSuccessResult(diA)){ try{ arrIA = $.parseJSON(getResultData(diA)||'[]')||[]; }catch(e){} }
@@ -258,7 +265,7 @@ function statistic(){
                 var baseB = $.extend({}, base, {'year': y2});
                 var pIncomeB = $.extend({}, baseB, {'txnTypes':'income'});
                 var pExpenseB = $.extend({}, baseB, {'txnTypes':'expense'});
-                transaction.monthConsumeReport(pIncomeB, function(diB){
+                transaction.monthIncomeReport(pIncomeB, function(diB){
                     transaction.monthConsumeReport(pExpenseB, function(deB){
                         var arrIB = []; var arrEB = [];
                         if(isSuccessResult(diB)){ try{ arrIB = $.parseJSON(getResultData(diB)||'[]')||[]; }catch(e){} }
@@ -321,7 +328,14 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
         if(arrIncomeB){ incomesB.push(iB); }
         if(arrExpenseB){ expensesB.push(eB); }
         surplus.push(s);
-        rows.push({month:names[k], income:i, expense:e, surplus:s});
+        rows.push({
+            month:names[k],
+            income:i,
+            expense:e,
+            surplus:s,
+            savingsRate: i > 0 ? ((Math.max(0, s) / i) * 100).toFixed(1) + '%' : '--',
+            status: s < 0 ? 'Deficit' : (i > 0 || e > 0 ? 'Healthy' : 'Idle')
+        });
     }
 
     // Financial KPIs for the current selection (Year A = current tab year).
@@ -329,11 +343,32 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
     var expenseTotal = expenses.reduce(function(t,x){ return t + (Number(x)||0); }, 0);
     var surplusTotal = incomeTotal - expenseTotal;
     var savingsRate = incomeTotal <= 0 ? 0 : Math.max(0, surplusTotal / incomeTotal) * 100.0;
+    var activeIncomeMonths = 0, activeExpenseMonths = 0, deficitMonths = 0, latestActiveIdx = -1;
+    for(var ai=0; ai<rows.length; ai++){
+        var ri = rows[ai] || {};
+        var inc = Number(ri.income)||0;
+        var exp = Number(ri.expense)||0;
+        if(inc > 0){ activeIncomeMonths += 1; latestActiveIdx = ai; }
+        if(exp > 0){ activeExpenseMonths += 1; if(latestActiveIdx < ai){ latestActiveIdx = ai; } }
+        if((Number(ri.surplus)||0) < 0){ deficitMonths += 1; }
+    }
+    var coverRatio = expenseTotal > 0 ? (incomeTotal / expenseTotal) : null;
+    var latestText = '--';
+    if(latestActiveIdx >= 0){
+        var latestRow = rows[latestActiveIdx];
+        latestText = latestRow.month + ' ' + moneyText(latestRow.surplus);
+    }
     $('#kpiBar').html(
-        '<span class="fs-kpi">Income <b>' + app.money.rmb(incomeTotal) + '</b></span>' +
-        '<span class="fs-kpi">Expense <b>' + app.money.rmb(expenseTotal) + '</b></span>' +
-        '<span class="fs-kpi">Surplus <b>' + app.money.rmb(surplusTotal) + '</b></span>' +
-        '<span class="fs-kpi">Savings ' + savingsRate.toFixed(1) + '%</span>'
+        '<div class="kpi-grid">' +
+            '<div class="kpi-box"><div class="label">Income</div><div class="value">' + moneyText(incomeTotal) + '</div><div class="hint">Year total</div></div>' +
+            '<div class="kpi-box"><div class="label">Expense</div><div class="value">' + moneyText(expenseTotal) + '</div><div class="hint">Year total</div></div>' +
+            '<div class="kpi-box"><div class="label">Surplus</div><div class="value">' + moneyText(surplusTotal) + '</div><div class="hint">Net</div></div>' +
+            '<div class="kpi-box"><div class="label">Savings</div><div class="value">' + savingsRate.toFixed(1) + '%</div><div class="hint">Net / income</div></div>' +
+            '<div class="kpi-box"><div class="label">Coverage</div><div class="value">' + (coverRatio == null ? '--' : coverRatio.toFixed(2) + 'x') + '</div><div class="hint">Income / expense</div></div>' +
+            '<div class="kpi-box"><div class="label">Deficit Months</div><div class="value">' + deficitMonths + '</div><div class="hint">Below zero</div></div>' +
+            '<div class="kpi-box"><div class="label">Active Months</div><div class="value">' + activeIncomeMonths + ' / ' + activeExpenseMonths + '</div><div class="hint">Inc / exp</div></div>' +
+            '<div class="kpi-box"><div class="label">Latest Active</div><div class="value">' + latestText + '</div><div class="hint">Latest movement</div></div>' +
+        '</div>'
     );
 
     $('#summaryGrid').datagrid('loadData', rows);
@@ -341,16 +376,14 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
     var chart = echarts.init(document.getElementById('main'));
     var yearSel = safeComboboxValue('#cmbYear');
     var yearSel2 = safeComboboxValue('#cmbYear2');
-    if($('#chkYoY').prop('checked')){
-         var y1 = parseInt(yearSel);
-         if(!isNaN(y1)) yearSel2 = (y1 - 1).toString();
-    }
-    var titleText = 'Income vs Expense · ' + (yearSel||'');
+    var titleText = 'Income vs Expense';
+    var subtitleText = (yearSel||'');
     if(arrIncomeB && yearSel2){
-        titleText += ' vs ' + yearSel2;
+        subtitleText += ' vs ' + yearSel2;
     }
+    try{ $('#mainTitle').text(titleText); }catch(e){}
+    try{ $('#mainSubtitle').text(subtitleText); }catch(e){}
     var option = {
-        title: { text: titleText, left: 'left' },
         tooltip: {
             trigger: 'axis',
             formatter: function(params){
@@ -365,11 +398,11 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
                 var s = pS ? pS.value : (i-e);
                 var i2 = pIB ? pIB.value : null;
                 var e2 = pEB ? pEB.value : null;
-                var extra = '';
+                var extra = '<br/>储蓄率：' + (i > 0 ? ((Math.max(0, s) / i) * 100).toFixed(1) + '%' : '--');
                 if(i2!=null || e2!=null){
-                    extra = '<br/>收入(B)：¥'+(i2||0)+'<br/>支出(B)：¥'+(e2||0);
+                    extra += '<br/>收入(B)：'+moneyText(i2||0)+'<br/>支出(B)：'+moneyText(e2||0);
                 }
-                return '月份：'+n+'<br/>收入：¥'+i+'<br/>支出：¥'+e+'<br/>差额：¥'+s+extra;
+                return '月份：'+n+'<br/>收入：'+moneyText(i)+'<br/>支出：'+moneyText(e)+'<br/>差额：'+moneyText(s)+extra;
             }
         },
         legend: { data: ['收入','支出','差额'].concat(arrIncomeB?['收入(B)']:[]).concat(arrExpenseB?['支出(B)']:[]) },
@@ -378,27 +411,70 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
             feature: { dataView:{show:true,readOnly:false}, magicType:{show:true,type:['line','bar']}, restore:{show:true}, saveAsImage:{show:true} }
         },
         xAxis: [{ type:'category', boundaryGap:false, data: names }],
-        yAxis: [{ type:'value', axisLabel:{ formatter:'¥{value}' }, splitArea:{ show:true } }],
-        grid: { left: 40, right: 20, bottom: 80 },
+        yAxis: [
+            { type:'value', axisLabel:{ formatter:function(v){ return moneyAxisLabel(v); } }, splitArea:{ show:true } },
+            { type:'value', axisLabel:{ show:false }, axisTick:{ show:false }, axisLine:{ show:false }, splitLine:{ show:false } }
+        ],
+        grid: { left: 52, right: 28, top: 28, bottom: 96 },
         series: [
-            { name:'收入', type:'line', data: incomes, itemStyle:{ color:'#10B981' }, smooth:true },
-            { name:'支出', type:'line', data: expenses, itemStyle:{ color:'#EF4444' }, smooth:true },
-            { name:'差额', type:'bar', data: surplus, itemStyle:{ color:'#2563EB' } }
+            {
+                name:'收入',
+                type:'line',
+                data: incomes,
+                itemStyle:{ color:'#10B981' },
+                smooth:true,
+                markPoint:{ data:[{type:'max',name:'Peak income'}] }
+            },
+            {
+                name:'支出',
+                type:'line',
+                data: expenses,
+                itemStyle:{ color:'#EF4444' },
+                smooth:true,
+                markPoint:{ data:[{type:'max',name:'Peak expense'}] }
+            },
+            {
+                name:'差额',
+                type:'bar',
+                yAxisIndex: 1,
+                data: surplus.map(function(v, idx){
+                    return {
+                        value: v,
+                        itemStyle: { color: v < 0 ? '#F59E0B' : '#2563EB' }
+                    };
+                }),
+                markLine:{
+                    symbol:'none',
+                    label:{ formatter:'Break-even' },
+                    lineStyle:{ type:'dashed', color:'#94a3b8' },
+                    data:[{ yAxis: 0 }]
+                },
+                markArea:{
+                    itemStyle:{ color:'rgba(245,158,11,0.08)' },
+                    data:(function(){
+                        var zones = [];
+                        for(var zi=0; zi<surplus.length; zi++){
+                            if((Number(surplus[zi])||0) < 0){
+                                zones.push([{ xAxis:names[zi] }, { xAxis:names[zi] }]);
+                            }
+                        }
+                        return zones;
+                    })()
+                }
+            }
         ]
     };
     if(arrIncomeB){ option.series.push({ name:'收入(B)', type:'line', data: incomesB, itemStyle:{ color:'#06b6d4' }, smooth:true }); }
     if(arrExpenseB){ option.series.push({ name:'支出(B)', type:'line', data: expensesB, itemStyle:{ color:'#f59e0b' }, smooth:true }); }
     chart.setOption(option);
+    chart.off('click');
     chart.on('click', function (param) {
         var idx = (typeof param.dataIndex === 'number') ? param.dataIndex : 0;
         var code = (idx>=0 && idx<codes.length) ? codes[idx] : getMonthCodeByName(param.name);
         var series = param.seriesName || '';
         var yearA = safeComboboxValue('#cmbYear');
         var yearB = safeComboboxValue('#cmbYear2');
-        if($('#chkYoY').prop('checked')){
-             var y1 = parseInt(yearA);
-             if(!isNaN(y1)) yearB = (y1 - 1).toString();
-        }
+        if(series === '差额'){ return; }
         var year = (series && series.indexOf('(B)')>=0 && yearB) ? yearB : yearA;
         var type = (series && series.indexOf('收入')>=0) ? 'income' : 'expense';
         openDialog(param.name + ' · ' + (type==='income'?'收入':'支出'));
@@ -456,7 +532,7 @@ function getTransactions(monthCode, year, txnTypes){
 
 function getCategoryPie(monthCode, year, txnTypes){
     var y = year || safeComboboxValue('#cmbYear');
-    var lastDay = lastDayOfMonth(year, monthCode);
+    var lastDay = lastDayOfMonth(y, monthCode);
     var start = monthCode+'/01/'+y;
     var end = monthCode+'/'+lastDay+'/'+y;
     var base = getParamsBase();

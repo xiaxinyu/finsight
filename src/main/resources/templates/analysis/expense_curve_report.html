@@ -68,10 +68,6 @@
                     data-options="url:'/api/v1/consume/tree?txnType=expense',method:'get',onChange:scheduleStatistic" multiple
                     style="width:200px;"></select>
         </span>
-        <span class="filter-item">
-            <label>Description</label>
-            <input id="txtDemo" class="easyui-textbox" style="width:160px" onkeyup="scheduleStatistic();">
-        </span>
     </div>
 </div>
 
@@ -108,14 +104,14 @@
                 <div class="hint" id="kpiLowHint">--</div>
             </div>
             <div class="sub-kpi">
-                <div class="label">Volatility (CV)</div>
+                <div class="label">Active Months</div>
                 <div class="value" id="kpiVol">--</div>
-                <div class="hint">StdDev / Avg</div>
+                <div class="hint" id="kpiVolHint">Months with expense</div>
             </div>
             <div class="sub-kpi">
-                <div class="label">Run-rate (Annualized)</div>
+                <div class="label">Latest Active</div>
                 <div class="value" id="kpiRunRate">--</div>
-                <div class="hint">Avg × 12</div>
+                <div class="hint" id="kpiRunRateHint">Most recent month with expense</div>
             </div>
         </div>
     </div>
@@ -190,6 +186,15 @@ function moneyText(v){
     var n = Number(v || 0);
     if(isNaN(n)){ n = 0; }
     return '¥' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function moneyAxisLabel(v){
+    var n = Number(v||0);
+    if(!isFinite(n)) n = 0;
+    var abs = Math.abs(n);
+    if(abs >= 1000000000) return '¥' + (n/1000000000).toFixed(1) + 'b';
+    if(abs >= 1000000) return '¥' + (n/1000000).toFixed(1) + 'm';
+    if(abs >= 1000) return '¥' + (n/1000).toFixed(0) + 'k';
+    return '¥' + n;
 }
 function pctText(v){
     var n = Number(v);
@@ -287,9 +292,8 @@ function scheduleStatistic(){
 function getParamsBase(){
     var year = safeComboboxValue('#cmbYear');
     var cardtype = safeComboboxValue('#cmbCardTypes'); if(cardtype==='0') cardtype='';
-    var demoArea = safeTextboxValue('#txtDemo');
     var consume = expandedConsumeValues('#cmbConsume');
-    return {'year':year,'cardTypeName':cardtype,'demoArea':demoArea,'consumeID':consume};
+    return {'year':year,'cardTypeName':cardtype,'consumeID':consume};
 }
 
 function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','10','11','12']; }
@@ -539,11 +543,37 @@ function renderExpenseTrend(arrA, arrB, yearA, yearB){
     var avgA = totalA/12.0;
     var running=0; for(var ii=0; ii<expA.length; ii++){ running += (Number(expA[ii])||0); cumA.push(running); var a0=Number(expA[ii])||0; var a1=(ii-1>=0)?(Number(expA[ii-1])||0):a0; var a2=(ii-2>=0)?(Number(expA[ii-2])||0):a1; ma3.push((a0+a1+a2)/3.0); }
     var peakIdx=0, lowIdx=0; for(var pi=0; pi<expA.length; pi++){ if((Number(expA[pi])||0)>(Number(expA[peakIdx])||0)) peakIdx=pi; if((Number(expA[pi])||0)<(Number(expA[lowIdx])||0)) lowIdx=pi; }
-    var variance=0; for(var si=0; si<expA.length; si++){ var dv=(Number(expA[si])||0)-avgA; variance += dv*dv; } variance = variance/Math.max(1, expA.length); var std=Math.sqrt(Math.max(0,variance)); var cv=(avgA>0)?(std/avgA):0;
+    var activeMonths=0, lastActiveIdx=-1;
+    for(var si=0; si<expA.length; si++){
+        var cur = Number(expA[si])||0;
+        if(cur > 0){
+            activeMonths += 1;
+            lastActiveIdx = si;
+        }
+    }
     try{
         $('#kpiPeak').text(names[peakIdx]+' · '+moneyText(expA[peakIdx])); $('#kpiPeakHint').text('Peak spend');
         $('#kpiLow').text(names[lowIdx]+' · '+moneyText(expA[lowIdx])); $('#kpiLowHint').text('Low spend');
-        $('#kpiVol').text((cv*100).toFixed(1)+'%'); $('#kpiRunRate').text(moneyText(avgA*12.0));
+        $('#kpiVol').text(activeMonths + ' / 12');
+        $('#kpiVolHint').text(activeMonths > 0 ? 'Months with expense booked' : 'No expense booked');
+        if(lastActiveIdx >= 0){
+            $('#kpiRunRate').text(names[lastActiveIdx] + ' · ' + moneyText(expA[lastActiveIdx]));
+            var prevActiveIdx = -1;
+            for(var lp=lastActiveIdx-1; lp>=0; lp--){
+                if((Number(expA[lp])||0) > 0){ prevActiveIdx = lp; break; }
+            }
+            if(prevActiveIdx >= 0){
+                var latest = Number(expA[lastActiveIdx])||0;
+                var prevLatest = Number(expA[prevActiveIdx])||0;
+                var deltaPct = prevLatest > 0 ? ((latest - prevLatest) / prevLatest * 100) : null;
+                $('#kpiRunRateHint').text(deltaPct == null ? ('Prev active ' + names[prevActiveIdx]) : ((deltaPct>=0?'+':'') + deltaPct.toFixed(1) + '% vs ' + names[prevActiveIdx]));
+            }else{
+                $('#kpiRunRateHint').text('First active month in this year');
+            }
+        }else{
+            $('#kpiRunRate').text('--');
+            $('#kpiRunRateHint').text('No expense booked');
+        }
     }catch(e){}
     for(var r=0;r<rows.length;r++){ rows[r].share = (totalA>0)?pctText((Number(rows[r].expense)||0)/totalA):'--'; }
     $('#summaryGrid').datagrid('loadData', rows);
@@ -605,7 +635,7 @@ function renderExpenseTrend(arrA, arrB, yearA, yearB){
         legend:{ data:['支出','累计','MA(3)'].concat(arrB?['支出(B)','差额']:[]) },
         grid:{ left:52,right:20,bottom:70,top:48 },
         xAxis:[{ type:'category', boundaryGap:false, data:names }],
-        yAxis:[{ type:'value', axisLabel:{formatter:'¥{value}'}, splitArea:{show:true} }, { type:'value', splitLine:{show:false}, axisLabel:{formatter:''} }],
+        yAxis:[{ type:'value', axisLabel:{formatter:function(v){ return moneyAxisLabel(v); }}, splitArea:{show:true} }, { type:'value', splitLine:{show:false}, axisLabel:{formatter:''} }],
         series:[
             { name:'支出', type:'line', data: expA, smooth:true, itemStyle:{color:'#EF4444'}, areaStyle:{color:'rgba(239,68,68,0.10)'}, markPoint:{data:[{type:'max',name:'Max'},{type:'min',name:'Min'}]} },
             { name:'MA(3)', type:'line', data: ma3, smooth:true, symbol:'none', lineStyle:{width:2,color:'#0ea5e9'} },
@@ -624,6 +654,7 @@ function renderExpenseTrend(arrA, arrB, yearA, yearB){
             var idx = (typeof param.dataIndex === 'number') ? param.dataIndex : 0;
             var code = (idx>=0 && idx<codes.length) ? codes[idx] : getMonthCodeByName(param.name);
             var series = String(param.seriesName || '');
+            if(series === 'MA(3)' || series === '累计' || series === '差额'){ return; }
             var yearPick = yearA;
             if(series.indexOf('(B)') >= 0 && yearB){ yearPick = yearB; }
             setPopupKpis({ total:null, rows:null, uncRows:null, uncTotal:null, top:null });
