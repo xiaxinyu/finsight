@@ -312,10 +312,28 @@
         where 1 = 1
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes != ''">
-                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
+                and (
+                    cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
+                    or (cat.code is null and (
+                        <choose>
+                            <when test="q.txnTypes == 'expense'">
+                                coalesce(c.balance_money,0) &gt; 0
+                            </when>
+                            <when test="q.txnTypes == 'income'">
+                                (coalesce(c.income_money,0) &gt; 0 or coalesce(c.balance_money,0) &lt; 0)
+                            </when>
+                            <otherwise>
+                                1 = 0
+                            </otherwise>
+                        </choose>
+                    ))
+                )
             </if>
             <if test="q.txnTypes == null or q.txnTypes == ''">
-                and cat.txn_types like '%expense%'
+                and (
+                    cat.txn_types like '%expense%'
+                    or (cat.code is null and coalesce(c.balance_money,0) &gt; 0)
+                )
             </if>
             <if test="q.transactionDateStart != null">
                 and c.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}

@@ -86,6 +86,8 @@ async function loadHomeSummary(year) {
         var insightText = buildRealFinancialInsights(payload, prevPayload, resolvedYear, resolvedYear - 1);
         document.getElementById('kpiInsight').innerText = insightText || (payload.summary_text || '—').replace('📌 ', '') || '—';
         renderProblemsAndActions(payload, prevPayload);
+        // Expense breakdown charts (Top categories + YoY)
+        try { loadExpenseTopCategories(resolvedYear); } catch (e) {}
         document.getElementById('kpiTopBucket').innerText = findTopBucketText(buckets) || '—';
         var arr = [
             { value: buckets.life || 0, name: 'Life (Essentials)' },
@@ -237,10 +239,44 @@ function formatDelta(curr, prev){
 function formatDeltaPct(curr, prev){
     var c = Number(curr || 0);
     var p = Number(prev || 0);
-    if (!p) return 'n/a';
+    if (!p) {
+        if (c > 0) return 'new';
+        if (c < 0) return '↓ from 0';
+        return '0.0%';
+    }
     var d = ((c - p) / Math.abs(p)) * 100;
     var sign = d > 0 ? '+' : '';
     return sign + d.toFixed(1) + '%';
+}
+
+function formatDeltaPctForAmount(curr, prev){
+    var c = Number(curr || 0);
+    var p = Number(prev || 0);
+    if (p > 0) {
+        var d = ((c - p) / p) * 100.0;
+        return (d > 0 ? '+' : '') + d.toFixed(1) + '%';
+    }
+    if (p === 0 && c > 0) {
+        return 'new';
+    }
+    if (p === 0 && c === 0) {
+        return '0.0%';
+    }
+    return 'n/a';
+}
+
+function formatYoYKpi(amount, prevAmount, isExpense){
+    var a = Number(amount || 0);
+    var b = Number(prevAmount || 0);
+    var delta = a - b;
+    var signAmt = delta > 0 ? '+' : '';
+    var pct = formatDeltaPctForAmount(a, b);
+    var badge = pct;
+    if (pct === 'new') {
+        badge = 'new vs 0';
+    }
+    // For expense, delta>0 is worse; for income, delta>0 is better. We keep neutral text here.
+    return formatRmb0(a) + ' (' + signAmt + formatRmb0(delta) + ', ' + badge + ')';
 }
 function renderFinanceKpis(payload, prevPayload){
     var income = Number(payload && payload.income_total || 0);
@@ -252,10 +288,163 @@ function renderFinanceKpis(payload, prevPayload){
     var prevSurplus = prevIncome - prevExpense;
     var prevSavings = prevIncome <= 0 ? 0 : Math.max(0, prevSurplus / prevIncome) * 100.0;
 
-    setText('kpiIncome', formatRmb0(income) + ' (' + formatDelta(income, prevIncome) + ')');
-    setText('kpiExpense', formatRmb0(expense) + ' (' + formatDelta(expense, prevExpense) + ')');
-    setText('kpiSurplus', formatRmb0(surplus) + ' (' + formatDelta(surplus, prevSurplus) + ')');
+    setText('kpiIncome', formatYoYKpi(income, prevIncome, false));
+    setText('kpiExpense', formatYoYKpi(expense, prevExpense, true));
+    setText('kpiSurplus', formatRmb0(surplus) + ' (' + formatDelta(surplus, prevSurplus) + ', ' + formatDeltaPctForAmount(surplus, prevSurplus) + ')');
     setText('kpiSavings', formatPct(savings) + ' (' + formatDeltaPct(savings, prevSavings) + ')');
+}
+
+async function loadExpenseTopCategories(year){
+    var y = Number(year) || new Date().getFullYear();
+    var yPrev = y - 1;
+    setText('expenseBreakdownTitle', y + ' Expense Breakdown (Top Categories)');
+    var noteEl = document.getElementById('expenseBreakdownNote');
+    if (noteEl) noteEl.innerText = 'Loading…';
+    toggleEmpty('expenseTopPieEmpty', false);
+    toggleEmpty('expenseTopBarEmpty', false);
+
+    function postConsumeReport(yy){
+        var body = new URLSearchParams();
+        body.set('transactionDateStartStr', '01/01/' + yy);
+        body.set('transactionDateEndStr', '12/31/' + yy);
+        body.set('txnTypes', 'expense');
+        return fetch('/transaction-report/consume', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body.toString()
+        }).then(function(r){ return r.json(); });
+    }
+
+    function parseKeyValues(res){
+        var normalized = normalizeApiResult(res);
+        if (!normalized || !normalized.ok) return [];
+        var raw = normalized.data;
+        var jsonStr = (typeof raw === 'string') ? raw : (res.returnMessage || '[]');
+        try {
+            var arr = JSON.parse(jsonStr);
+            if (!Array.isArray(arr)) return [];
+            return arr.map(function(x){
+                return { name: String((x && x.key) || '').trim() || '—', value: Math.abs(Number((x && x.value) || 0) || 0) };
+            });
+        } catch (e) {
+            return [];
+        }
+    }
+
+    var cur = [], prev = [];
+    try{
+        var resCur = await postConsumeReport(y);
+        cur = parseKeyValues(resCur);
+    }catch(e){}
+    try{
+        var resPrev = await postConsumeReport(yPrev);
+        prev = parseKeyValues(resPrev);
+    }catch(e){}
+
+    cur.sort(function(a,b){ return (b.value||0)-(a.value||0); });
+    prev.sort(function(a,b){ return (b.value||0)-(a.value||0); });
+    var total = cur.reduce(function(s,x){ return s + (Number(x.value)||0); }, 0);
+    if (!cur.length || total <= 0) {
+        toggleEmpty('expenseTopPieEmpty', true);
+        toggleEmpty('expenseTopBarEmpty', true);
+        if (noteEl) noteEl.innerText = 'No data';
+        return;
+    }
+
+    var mapPrev = {};
+    for (var i=0;i<prev.length;i++){
+        var it = prev[i];
+        mapPrev[it.name] = (mapPrev[it.name]||0) + (Number(it.value)||0);
+    }
+
+    var colors = ['#EF4444','#F97316','#F59E0B','#EAB308','#84CC16','#22C55E','#14B8A6','#0EA5E9','#6366F1','#A855F7','#EC4899','#64748B'];
+    var topN = 10;
+    var agg = cur.slice(0, topN);
+    var others = cur.slice(topN).reduce(function(s,x){ return s + (Number(x.value)||0); }, 0);
+    if (others > 0) agg.push({ name:'Others', value: others });
+
+    var topSum = cur.slice(0, Math.min(topN, cur.length)).reduce(function(s,x){ return s + (Number(x.value)||0); }, 0);
+    if (noteEl) noteEl.innerText = 'Top ' + Math.min(topN, cur.length) + ' cover ' + ((topSum/total)*100).toFixed(1) + '% · vs ' + yPrev;
+
+    // Pie
+    try{
+        var domPie = document.getElementById('expenseTopPie');
+        if(domPie){
+            var instPie = echarts.getInstanceByDom(domPie);
+            if(instPie) echarts.dispose(instPie);
+            var pie = echarts.init(domPie);
+            pie.setOption({
+                color: colors,
+                tooltip: { trigger:'item', formatter: function(p){
+                    var nm = p.name || '';
+                    var pv = mapPrev[nm] || 0;
+                    var cv = Number(p.value)||0;
+                    var dlt = pv > 0 ? ((cv - pv)/pv*100) : null;
+                    var yoyLine = (dlt == null) ? ('Prior ' + yPrev + ': ' + formatRmb0(pv)) : ('YoY: ' + (dlt>=0?'+':'') + dlt.toFixed(1) + '%');
+                    return nm + '<br/>' + formatRmb0(cv) + ' (' + (p.percent||0).toFixed(1) + '%)<br/>' + yoyLine;
+                }},
+                legend: { type:'scroll', orient:'vertical', left: 8, top: 28, bottom: 12, width:'38%' },
+                series: [{
+                    type:'pie',
+                    roseType:'area',
+                    radius:['26%','68%'],
+                    center:['72%','52%'],
+                    minAngle:2,
+                    itemStyle:{ borderRadius: 6, borderColor:'#fff', borderWidth:1 },
+                    label: { formatter: function(p){
+                        var nm = String(p.name||'');
+                        if (nm.length > 14) nm = nm.slice(0,12) + '…';
+                        return nm + '\n' + formatRmb0(p.value);
+                    }, fontSize: 10 },
+                    data: agg
+                }]
+            }, true);
+        }
+    }catch(e){}
+
+    // Bar
+    try{
+        var domBar = document.getElementById('expenseTopBar');
+        if(domBar){
+            var instBar = echarts.getInstanceByDom(domBar);
+            if(instBar) echarts.dispose(instBar);
+            var bar = echarts.init(domBar);
+            var barRows = [];
+            for (var j=0; j<agg.length && barRows.length<12; j++){
+                var row = agg[j];
+                if(!row || row.name === 'Others') continue;
+                var pv0 = mapPrev[row.name] || 0;
+                var cv0 = Number(row.value)||0;
+                var dlt0 = pv0 > 0 ? ((cv0 - pv0)/pv0*100) : (pv0===0 && cv0>0 ? null : 0);
+                barRows.push({ name: row.name, value: cv0, prev: pv0, deltaPct: dlt0 });
+            }
+            if (!barRows.length){
+                toggleEmpty('expenseTopBarEmpty', true);
+            } else {
+                var yNames = barRows.map(function(r){ return r.name.length>22 ? r.name.slice(0,20)+'…' : r.name; });
+                bar.setOption({
+                    grid:{ left: 8, right: 108, top: 8, bottom: 8, containLabel:true },
+                    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:function(items){
+                        var p0 = items && items[0]; if(!p0) return '';
+                        var br = barRows[p0.dataIndex]; if(!br) return '';
+                        var dlt = br.deltaPct;
+                        var yoyLine = (dlt == null) ? ('Prior ' + yPrev + ': ' + formatRmb0(br.prev)) : ('YoY vs ' + yPrev + ': ' + (dlt>=0?'+':'') + dlt.toFixed(1) + '%');
+                        return br.name + '<br/>' + formatRmb0(br.value) + '<br/>' + yoyLine;
+                    }},
+                    xAxis:{ type:'value', splitLine:{ lineStyle:{ type:'dashed' } }, axisLabel:{ formatter:function(v){ var k=Number(v)/1000; return (k>=1||k<=-1)?('¥'+k.toFixed(0)+'k'):('¥'+v); } } },
+                    yAxis:{ type:'category', data: yNames, axisLabel:{ fontSize:10, width:100, overflow:'truncate' }, inverse:true },
+                    series:[{
+                        type:'bar',
+                        data: barRows.map(function(r,idx){ return { value: r.value, itemStyle:{ color: colors[idx%colors.length], borderRadius:[0,4,4,0] } }; }),
+                        label:{ show:true, position:'right', formatter:function(p){
+                            var br = barRows[p.dataIndex]; if(!br || br.deltaPct == null) return '';
+                            var dlt = br.deltaPct; return (dlt>=0?'+':'') + dlt.toFixed(0) + '%';
+                        }, fontSize:10, color:'#475569', fontWeight:700 }
+                    }]
+                }, true);
+            }
+        }
+    }catch(e){}
 }
 function renderList(id, items){
     var el = document.getElementById(id);

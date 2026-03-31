@@ -140,6 +140,23 @@
             width: 100%;
             margin-top: 4px;
         }
+        .dashboard-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            width: 100%;
+            margin-top: 16px;
+        }
+        .split-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            align-items: stretch;
+        }
+        .chart-container.chart-small { height: 320px; }
+        @media (max-width: 980px) {
+            .split-row { grid-template-columns: 1fr; }
+        }
 
         .card {
             background: var(--card-bg);
@@ -413,6 +430,25 @@
                 <div class="insight-item">
                     <span>🔄 Savings Rate (20%)</span>
                     <span class="insight-value" id="savingsRateText">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid-2">
+        <div class="card" style="--theme-color: #EF4444;">
+            <div class="card-header">
+                <h2 class="card-title" id="expenseBreakdownTitle">Expense Breakdown (Top Categories)</h2>
+                <div class="page-meta" id="expenseBreakdownNote">Loading…</div>
+            </div>
+            <div class="split-row">
+                <div>
+                    <div id="expenseTopPie" class="chart-container chart-small"></div>
+                    <div id="expenseTopPieEmpty" class="empty-tip">No expense breakdown data.</div>
+                </div>
+                <div>
+                    <div id="expenseTopBar" class="chart-container chart-small"></div>
+                    <div id="expenseTopBarEmpty" class="empty-tip">No YoY comparison data.</div>
                 </div>
             </div>
         </div>

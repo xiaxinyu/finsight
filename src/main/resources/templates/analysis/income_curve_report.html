@@ -52,6 +52,7 @@
         .kpi-donut { width: 130px; height: 90px; }
         .kpi-gauge { width: 130px; height: 90px; }
         .kpi-donut-text { margin-top: 4px; font-size: 14px; font-weight: 700; color: #0f172a; text-align: center; }
+        .kpi-donut-sub { margin-top: 2px; font-size: 11px; color: #64748b; font-weight: 600; text-align: center; max-width: 140px; line-height: 1.25; }
 
         .sub-kpi-row { display:flex; gap: 12px; margin: 10px 0 2px; flex-wrap: wrap; }
         .sub-kpi { background:#f8fafc; border:1px solid #eef2f7; border-radius:10px; padding:10px 12px; min-width: 180px; flex: 1 1 180px; }
@@ -62,7 +63,9 @@
         .split-col { flex: 1; background:#fff; border-radius:8px; border:1px solid #eef2f7; box-shadow: 0 2px 6px rgba(0,0,0,0.04); overflow:hidden; display:flex; flex-direction:column; }
         .split-col .header { padding: 10px 12px; border-bottom: 1px solid #eef2f7; font-weight: 800; color:#0f172a; font-size: 13px; display:flex; justify-content:space-between; }
         .split-col .body { flex: 1; overflow:hidden; }
-        #pieIncome { width:100%; height: 300px; }
+        #pieIncome { width:100%; height: 280px; }
+        #barIncomeTop { width:100%; height: 300px; }
+        .breakdown-split-title { font-size: 11px; color:#64748b; font-weight:700; padding: 6px 12px 0; border-top: 1px solid #eef2f7; }
         .mini-note { font-size: 12px; color:#64748b; font-weight:600; }
         .chart-main { width: 100%; height: 320px; }
         @media (max-width: 1200px){
@@ -116,9 +119,10 @@
                 <div id="donutAvgText" class="kpi-donut-text">--</div>
             </div>
             <div class="kpi-donut-card">
-                <div class="kpi-donut-title">YoY Change</div>
+                <div class="kpi-donut-title">YoY Change (total)</div>
                 <div id="gaugeYoY" class="kpi-gauge"></div>
                 <div id="gaugeYoYText" class="kpi-donut-text">--</div>
+                <div id="gaugeYoYSub" class="kpi-donut-sub"></div>
             </div>
         </div>
         <div id="main" class="chart-main"></div>
@@ -153,6 +157,8 @@
             </div>
             <div class="body">
                 <div id="pieIncome"></div>
+                <div class="breakdown-split-title">Top categories vs prior year (same filters)</div>
+                <div id="barIncomeTop"></div>
             </div>
         </div>
         <div class="split-col">
@@ -317,25 +323,55 @@ function monthCodeList(){ return ['01','02','03','04','05','06','07','08','09','
 function monthNameList(){ return ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月']; }
 function getMonthCodeByName(en){
     var map = {
-        'Janunary':'01','January':'01','一月':'01',
-        'February':'02','二月':'02',
-        'March':'03','三月':'03',
-        'April':'04','四月':'04',
+        'Janunary':'01','January':'01','Jan':'01','一月':'01',
+        'February':'02','Feb':'02','二月':'02',
+        'March':'03','Mar':'03','三月':'03',
+        'April':'04','Apr':'04','四月':'04',
         'May':'05','五月':'05',
-        'June':'06','六月':'06',
-        'July':'07','七月':'07',
-        'August':'08','八月':'08',
-        'September':'09','九月':'09',
-        'October':'10','十月':'10',
-        'November':'11','十一月':'11',
-        'December':'12','十二月':'12'
+        'June':'06','Jun':'06','六月':'06',
+        'July':'07','Jul':'07','七月':'07',
+        'August':'08','Aug':'08','八月':'08',
+        'September':'09','Sep':'09','Sept':'09','九月':'09',
+        'October':'10','Oct':'10','十月':'10',
+        'November':'11','Nov':'11','十一月':'11',
+        'December':'12','Dec':'12','十二月':'12'
     };
     return map[en]||'';
+}
+
+function computeIncomeYoY(totalA, totalB, hasCompare, yearA, yearB){
+    var out = { pct: null, gaugeVal: 0, gaugeMin: -50, gaugeMax: 50, mainText: '--', subText: '', detailFmt: function(){ return ''; }, hasPointer: false, showGaugeDetail: false, needleColor: '#64748b' };
+    if(!hasCompare){ out.mainText = 'Off'; out.subText = 'Check “YoY” above'; return out; }
+    var a = Number(totalA)||0, b = Number(totalB)||0;
+    out.subText = yearA + ' vs ' + yearB;
+    if(a <= 0 && b <= 0){ out.mainText = 'No data'; return out; }
+    if(b > 0){
+        out.pct = (a - b) / b * 100;
+        out.gaugeVal = Math.max(-100, Math.min(100, out.pct));
+        if(Math.abs(out.pct) > 50){ out.gaugeMin = -100; out.gaugeMax = 100; }
+        out.hasPointer = true;
+        out.showGaugeDetail = true;
+        out.needleColor = (out.pct >= 0) ? '#10B981' : '#EF4444';
+        out.mainText = (out.pct >= 0 ? '+' : '') + out.pct.toFixed(1) + '%';
+        out.detailFmt = function(v){ if(v===0) return '0.0%'; return (v>0?'+':'') + Number(v).toFixed(1) + '%'; };
+        return out;
+    }
+    out.mainText = 'No prior-year base';
+    out.subText = (a > 0) ? ('Income in ' + yearA + ' · ¥0 in ' + yearB) : ('No income in ' + yearA + ' / ' + yearB);
+    return out;
 }
 
 function statistic(){
     var base = getParamsBase();
     var y1 = parseInt(base.year, 10);
+    if(isNaN(y1)){
+        try{
+            var cur = new Date().getFullYear();
+            $('#cmbYear').combobox('setValue', String(cur));
+            base = getParamsBase();
+            y1 = parseInt(base.year, 10);
+        }catch(e){}
+    }
     if(isNaN(y1)){ return; }
 
     var y2 = ($('#chkYoY').prop('checked') ? (y1 - 1).toString() : '');
@@ -394,8 +430,7 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
     var incomeTotalB = 0;
     for(var tb=0; tb<(incomesB||[]).length; tb++){ incomeTotalB += (Number(incomesB[tb])||0); }
     var hasCompare = !!arrIncomeB;
-    var hasPrevBase = hasCompare && incomeTotalB > 0;
-    var yoyPct = hasPrevBase ? ((incomeTotalA - incomeTotalB) / incomeTotalB * 100.0) : null;
+    var yoyUi = computeIncomeYoY(incomeTotalA, incomeTotalB, hasCompare, yearA, yearB);
     var avgA = incomeTotalA / 12.0;
     var maxA = 0; for(var ma=0; ma<(incomesA||[]).length; ma++){ if(incomesA[ma] > maxA) maxA = incomesA[ma]; }
 
@@ -449,8 +484,8 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
     try{
         $('#donutTotalText').text(moneyText(incomeTotalA));
         $('#donutAvgText').text(moneyText(avgA));
-        var yoyText = (!hasCompare) ? 'Enable YoY' : (!hasPrevBase ? 'N/A' : (yoyPct>=0? ('+'+yoyPct.toFixed(1)+'%') : (yoyPct.toFixed(1)+'%')));
-        $('#gaugeYoYText').text(yoyText);
+        $('#gaugeYoYText').text(yoyUi.mainText);
+        $('#gaugeYoYSub').text(yoyUi.subText);
     }catch(e){}
 
     try{
@@ -508,42 +543,34 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
 
         // YoY gauge: render only when comparison year is available; keep it clean in small card.
         var chartYoY = echarts.init(document.getElementById('gaugeYoY'));
-        var hasYoY = (hasPrevBase && typeof yoyPct === 'number' && isFinite(yoyPct));
-        var clamp = hasYoY ? Math.max(-50, Math.min(50, yoyPct)) : 0;
-        var gaugeColor = (hasYoY && yoyPct >= 0) ? '#10B981' : '#EF4444';
+        var gv = (yoyUi.pct != null && isFinite(yoyUi.pct)) ? Math.max(yoyUi.gaugeMin, Math.min(yoyUi.gaugeMax, yoyUi.pct)) : 0;
+        var showGaugeDetail = (yoyUi.showGaugeDetail === true);
         var optionYoY = {
             series: [{
                 type: 'gauge',
                 startAngle: 180,
                 endAngle: 0,
-                min: -50,
-                max: 50,
+                min: yoyUi.gaugeMin,
+                max: yoyUi.gaugeMax,
                 center: ['50%', '62%'],
                 radius: '82%',
-                progress: { show: true, width: 10, itemStyle:{ color: hasYoY ? gaugeColor : '#cbd5e1' } },
-                axisLine: {
-                    roundCap: true,
-                    // Avoid Thymeleaf inlining parsing conflicts in this JS config.
-                    lineStyle: { width: 10, color: [ [1, '#e5e7eb'] ] }
-                },
+                progress: { show: yoyUi.hasPointer, width: 10, itemStyle:{ color: yoyUi.hasPointer ? yoyUi.needleColor : '#cbd5e1' } },
+                axisLine: { roundCap: true, lineStyle: { width: 10, color: [ [1, '#e5e7eb'] ] } },
                 splitLine: { show: false },
                 axisTick: { show: false },
                 axisLabel: { show: false },
-                pointer: { show: hasYoY, length: '35%', width: 4, itemStyle:{ color:gaugeColor } },
+                pointer: { show: yoyUi.hasPointer, length: '38%', width: 4, itemStyle:{ color: yoyUi.needleColor } },
                 title: { show: false },
                 detail: {
                     valueAnimation: false,
-                    formatter: function(v){
-                        if(!hasCompare){ return 'Enable YoY'; }
-                        if(!hasPrevBase){ return 'N/A'; }
-                        if(v===0){ return '0.0%'; }
-                        return (v>0? ('+'+v.toFixed(1)+'%') : (v.toFixed(1)+'%'));
-                    },
-                    offsetCenter:[0,'10%'],
-                    color: hasYoY ? '#0f172a' : '#64748b',
+                    show: showGaugeDetail,
+                    formatter: function(v){ try{ var s = yoyUi.detailFmt(v); return s || ''; }catch(e){ return ''; } },
+                    offsetCenter:[0,'8%'],
+                    color: '#0f172a',
                     fontSize: 12,
                     fontWeight: 700
-                }
+                },
+                data: [{ value: gv }]
             }]
         };
         chartYoY.setOption(optionYoY, true);
@@ -603,65 +630,134 @@ function renderIncomeTrend(arrIncomeA, arrIncomeB, yearA, yearB){
     renderIncomeCategoryBreakdown(yearA);
 }
 
+var INCOME_PIE_COLORS = ['#10B981','#059669','#14B8A6','#06b6d4','#0ea5e9','#22c55e','#84cc16','#eab308','#f59e0b','#f97316','#a855f7','#64748B'];
+
+function parseIncomeConsumeRows(res){
+    var list = [];
+    try{
+        if(isSuccessResult(res)){
+            var rows = $.parseJSON(getResultData(res)||'[]')||[];
+            for(var i=0;i<rows.length;i++){
+                var r = rows[i]||{};
+                var v = Number(r.value||0);
+                if(!isFinite(v)) v = 0;
+                list.push({ name: String(r.key||'').trim() || '—', value: Math.abs(v) });
+            }
+        }
+    }catch(e){}
+    return list;
+}
+
 function renderIncomeCategoryBreakdown(year){
     var y = String(year||'').trim();
     if(!/^\d{4}$/.test(y)){ return; }
+    var yNum = parseInt(y, 10);
+    var yPrev = String(yNum - 1);
     var base = getParamsBase();
-    // Use full year window for category breakdown.
     var start = '01/01/' + y;
     var end = '12/31/' + y;
-    var params = $.extend({}, base, { transactionDateStartStr: start, transactionDateEndStr: end, txnTypes: 'income' });
-    transaction.consumeReport(params, function(res){
-        var list = [];
-        try{
-            if(isSuccessResult(res)){
-                var rows = $.parseJSON(getResultData(res)||'[]')||[];
-                for(var i=0;i<rows.length;i++){
-                    var r = rows[i] || {};
-                    var v = Number(r.value||0);
-                    if(!isFinite(v)) v = 0;
-                    list.push({ name: String(r.key||''), value: Math.abs(v) });
-                }
-            }
-        }catch(e){}
-        list.sort(function(a,b){ return (b.value||0) - (a.value||0); });
+    var startP = '01/01/' + yPrev;
+    var endP = '12/31/' + yPrev;
+    var paramsCur = $.extend({}, base, { transactionDateStartStr: start, transactionDateEndStr: end, txnTypes: 'income' });
+    var paramsPrev = $.extend({}, base, { transactionDateStartStr: startP, transactionDateEndStr: endP, txnTypes: 'income' });
+    var listCur = [], listPrev = [], done = 0;
+    function finish(){
+        if(done < 2) return;
+        listCur.sort(function(a,b){ return (b.value||0)-(a.value||0); });
+        var mapPrev = {};
+        for(var p=0;p<listPrev.length;p++){
+            var it = listPrev[p];
+            mapPrev[String(it.name||'')] = (mapPrev[String(it.name||'')]||0) + (Number(it.value)||0);
+        }
         var total = 0;
-        for(var t=0;t<list.length;t++){ total += (Number(list[t].value)||0); }
-        var topN = 8;
-        var agg = [];
-        var others = 0;
-        for(var k=0;k<list.length;k++){
-            if(k < topN){ agg.push(list[k]); }
-            else { others += (Number(list[k].value)||0); }
+        for(var t=0;t<listCur.length;t++){ total += (Number(listCur[t].value)||0); }
+        var topN = 10;
+        var agg = [], others = 0;
+        for(var k=0;k<listCur.length;k++){
+            if(k<topN) agg.push(listCur[k]);
+            else others += (Number(listCur[k].value)||0);
         }
-        if(list.length > topN && others > 0){
-            agg.push({ name:'Others', value: others });
-        }
+        if(listCur.length>topN && others>0){ agg.push({ name:'Others', value:others }); }
+        var topSum = 0;
+        for(var i2=0; i2<Math.min(topN, listCur.length); i2++){ topSum += (Number(listCur[i2].value)||0); }
         try{
-            var note = (total > 0 && agg.length) ? ('Top ' + Math.min(topN, list.length) + ' cover ' + ( (agg.slice(0,Math.min(topN,agg.length)).reduce(function(s,x){return s+(x.value||0);},0) / total)*100 ).toFixed(1) + '%') : 'No breakdown data';
+            var note = (total>0 && agg.length) ? (y + ' · Top ' + Math.min(topN, listCur.length) + ' · ' + ((topSum/total)*100).toFixed(1) + '% of year') : 'No breakdown data';
+            if(total>0 && listPrev.length){ note += ' · vs ' + yPrev; }
             $('#pieNote').text(note);
         }catch(e){}
         try{
-            var dom = document.getElementById('pieIncome');
-            if(!dom){ return; }
-            var inst = echarts.getInstanceByDom(dom);
-            if(inst){ echarts.dispose(inst); }
+            var dom = document.getElementById('pieIncome'); if(!dom) return;
+            var inst = echarts.getInstanceByDom(dom); if(inst) echarts.dispose(inst);
             var pie = echarts.init(dom);
             pie.setOption({
-                tooltip: { trigger:'item', formatter:function(p){ return (p.name||'') + '<br/>' + moneyText(p.value) + ' (' + (p.percent||0).toFixed(1) + '%)'; } },
-                legend: { type:'scroll', orient:'vertical', left: 10, top: 10, bottom: 10 },
-                series: [{
-                    type:'pie',
-                    radius:['55%','78%'],
-                    center:['70%','52%'],
-                    minAngle:2,
-                    label:{ formatter:function(p){ return p.name + '\\n' + moneyText(p.value); } },
-                    data: agg
+                color: INCOME_PIE_COLORS,
+                tooltip:{ trigger:'item', formatter:function(p){
+                    var prevV = mapPrev[p.name] != null ? mapPrev[p.name] : 0;
+                    var curV = Number(p.value)||0;
+                    var delta = (prevV > 0) ? ((curV - prevV) / prevV * 100) : null;
+                    var line2 = (delta == null) ? ('Prior ' + yPrev + ': ' + moneyText(prevV)) : ('YoY: ' + (delta>=0?'+':'') + delta.toFixed(1) + '%');
+                    return (p.name||'') + '<br/>' + moneyText(p.value) + ' (' + (p.percent||0).toFixed(1) + '%)<br/>' + line2;
+                }},
+                legend:{ type:'scroll', orient:'vertical', left:8, top:36, bottom:28, width:'38%' },
+                series:[{
+                    type:'pie', roseType:'area', radius:['26%','68%'], center:['72%','50%'], minAngle:2,
+                    itemStyle:{ borderRadius:6, borderColor:'#fff', borderWidth:1 },
+                    label:{ formatter:function(p){ return (p.name.length>14 ? p.name.slice(0,12)+'…' : p.name) + '\n' + moneyText(p.value); }, fontSize:10 },
+                    data: agg.map(function(x,idx){
+                        return { name:x.name, value:x.value, itemStyle:{ color: INCOME_PIE_COLORS[idx % INCOME_PIE_COLORS.length] } };
+                    })
                 }]
             }, true);
             setTimeout(function(){ try{ pie.resize(); }catch(e){} }, 0);
         }catch(e){}
-    }, function(){});
+        try{
+            var domB = document.getElementById('barIncomeTop'); if(!domB) return;
+            var instB = echarts.getInstanceByDom(domB); if(instB) echarts.dispose(instB);
+            var bar = echarts.init(domB);
+            var barRows = [];
+            for(var bi=0; bi<agg.length && barRows.length<12; bi++){
+                var row = agg[bi];
+                if(!row || row.name==='Others') continue;
+                var pv0 = mapPrev[row.name] != null ? mapPrev[row.name] : 0;
+                var cv0 = Number(row.value)||0;
+                var dlt0 = (pv0 > 0) ? ((cv0 - pv0) / pv0 * 100) : (pv0 <= 0 && cv0 > 0 ? null : 0);
+                barRows.push({ name: row.name, value: cv0, prev: pv0, deltaPct: dlt0 });
+            }
+            if(!barRows.length){
+                bar.setOption({ title:{ text:'No categories', left:'center', top:'middle', textStyle:{ color:'#94a3b8', fontSize:14 } } }, true);
+                return;
+            }
+            var namesB = barRows.map(function(r){ return r.name.length>22 ? r.name.slice(0,20)+'…' : r.name; });
+            bar.setOption({
+                color: INCOME_PIE_COLORS,
+                grid:{ left:8, right:108, top:8, bottom:8, containLabel:true },
+                tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, formatter:function(items){
+                    var p0 = items && items[0]; if(!p0) return '';
+                    var br = barRows[p0.dataIndex]; if(!br) return '';
+                    var dlt = br.deltaPct;
+                    var yoyLine = (dlt == null) ? ('Prior ' + yPrev + ': ' + moneyText(br.prev)) : ('YoY vs ' + yPrev + ': ' + (dlt>=0?'+':'') + dlt.toFixed(1) + '%');
+                    return br.name + '<br/>' + moneyText(br.value) + '<br/>' + yoyLine;
+                }},
+                xAxis:{ type:'value', axisLabel:{ formatter:function(v){ var k=Number(v)/1000; return (k>=1||k<=-1)?('¥'+k.toFixed(0)+'k'):('¥'+v); } }, splitLine:{ lineStyle:{ type:'dashed' } } },
+                yAxis:{ type:'category', data:namesB, axisLabel:{ fontSize:10, width:100, overflow:'truncate' }, inverse:true },
+                series:[{
+                    type:'bar',
+                    data: barRows.map(function(r,i){
+                        return { value: r.value, itemStyle:{ color: INCOME_PIE_COLORS[i % INCOME_PIE_COLORS.length], borderRadius:[0,4,4,0] } };
+                    }),
+                    label:{ show:true, position:'right', formatter:function(p){
+                        var br = barRows[p.dataIndex];
+                        if(!br || br.deltaPct == null) return '';
+                        var dlt = br.deltaPct;
+                        return (dlt>=0?'+':'') + dlt.toFixed(0) + '%';
+                    }, fontSize:10, color:'#475569', fontWeight:700 }
+                }]
+            }, true);
+            setTimeout(function(){ try{ bar.resize(); }catch(e){} }, 0);
+        }catch(e){}
+    }
+    transaction.consumeReport(paramsCur, function(res){ listCur = parseIncomeConsumeRows(res); done++; finish(); }, function(){ done++; finish(); });
+    transaction.consumeReport(paramsPrev, function(res){ listPrev = parseIncomeConsumeRows(res); done++; finish(); }, function(){ done++; finish(); });
 }
 </script>
 </body>
