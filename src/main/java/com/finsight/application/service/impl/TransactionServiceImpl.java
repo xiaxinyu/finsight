@@ -235,6 +235,19 @@ public class TransactionServiceImpl implements ITransactionService {
     }
 
     @Override
+    public String monthIncomeReport(Transaction transaction) throws AppServiceException {
+        String result = StringTool.EMPTY;
+        try {
+            fetchTransactionParam(transaction);
+            List<KeyValue> list = transactionMapper.monthIncomeReport(transaction);
+            result = JSONArray.toJSONString(list).toString();
+        } catch (Exception e) {
+            throw new AppServiceException(e);
+        }
+        return result;
+    }
+
+    @Override
     public String homeSummary(Integer year) throws AppServiceException {
         try {
             if (year == null) {

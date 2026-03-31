@@ -69,6 +69,16 @@ var transaction = {
 	           error: efn
 	       });
 	},
+	monthIncomeReport : function(params, sfn, efn){
+		$.ajax({
+			   type:"post",
+	           url: "/transaction-report/month-income",
+	           data:params,
+	           dataType:'json',
+	           success: sfn,
+	           error: efn
+	       });
+	},
 	homeSummary : function(year, sfn, efn){
 		$.ajax({
 			type: 'get',

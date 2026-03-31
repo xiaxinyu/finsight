@@ -31,5 +31,7 @@ public interface ITransactionService {
 
     String monthConsumeReport(Transaction transaction) throws AppServiceException;
 
+    String monthIncomeReport(Transaction transaction) throws AppServiceException;
+
     String homeSummary(Integer year) throws AppServiceException;
 }

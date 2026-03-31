@@ -424,6 +424,67 @@
         ) t1 group by cmonth) t2 order by cmonth
     </select>
 
+    <!-- Monthly income curve: prefers income_money, falls back to negative balance_money -->
+    <select id="monthIncomeReport" resultType="com.finsight.domain.model.KeyValue">
+        select round(sum(amount)) as `value`,
+        case when cmonth = 1 then 'Janunary'
+        when cmonth = 2 then 'February'
+        when cmonth = 3 then 'March'
+        when cmonth = 4 then 'April'
+        when cmonth = 5 then 'May'
+        when cmonth = 6 then 'June'
+        when cmonth = 7 then 'July'
+        when cmonth = 8 then 'August'
+        when cmonth = 9 then 'September'
+        when cmonth = 10 then 'October'
+        when cmonth = 11 then 'November'
+        when cmonth = 12 then 'December' else cmonth end as `key`
+        from (
+            select
+                month(c.transaction_date) as cmonth,
+                case
+                    when (coalesce(c.income_money,0) &gt; 0) then coalesce(c.income_money,0)
+                    when (coalesce(c.balance_money,0) &lt; 0) then abs(coalesce(c.balance_money,0))
+                    else 0
+                end as amount
+            from transaction c
+            left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+            where 1 = 1
+            <if test="transaction != null">
+                <if test="transaction.year != null and transaction.year != ''">
+                    and year(c.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+                </if>
+                <if test="transaction.transactionDateStart != null">
+                    and c.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+                </if>
+                <if test="transaction.transactionDateEnd != null">
+                    and c.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+                </if>
+                <if test="transaction.cardTypeName != null and transaction.cardTypeName != ''">
+                    and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+                </if>
+                <if test="transaction.consumes != null">
+                    and c.consume_code in
+                    <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                        #{consumeID,jdbcType=VARCHAR}
+                    </foreach>
+                </if>
+                <if test="transaction.demoArea != null and transaction.demoArea != ''">
+                    and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                    or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
+                </if>
+                <!-- Income semantics: include explicit income_money OR negative balance OR income-tagged categories -->
+                and (
+                    coalesce(c.income_money,0) &gt; 0
+                    or coalesce(c.balance_money,0) &lt; 0
+                    or (cat.txn_types is not null and cat.txn_types like '%income%')
+                )
+            </if>
+        ) t
+        group by cmonth
+        order by cmonth
+    </select>
+
     <!-- Home summary: bucketized expense by heuristics for a given year -->
     <select id="homeSummaryExpenseBuckets" resultType="com.finsight.domain.model.KeyValue">
         select round(sum(abs(t.balance_money))) as `value`, bucket as `key`

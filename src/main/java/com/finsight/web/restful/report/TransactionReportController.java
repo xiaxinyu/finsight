@@ -40,6 +40,13 @@ public class TransactionReportController extends ControllerHelper {
 				CommonResult.success(transactionService.monthConsumeReport(transaction)));
 	}
 
+	@RequestMapping("/transaction-report/month-income")
+	@ResponseBody
+	public CommonResult monthIncomeReport(Transaction transaction){
+		return runCommon(logger, "month income report", () ->
+				CommonResult.success(transactionService.monthIncomeReport(transaction)));
+	}
+
 	@RequestMapping("/transaction-report/home-summary")
 	@ResponseBody
 	public CommonResult homeSummary(String year){
