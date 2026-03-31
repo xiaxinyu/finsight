@@ -1,7 +1,7 @@
 package com.finsight.web.restful.insurance;
 
-import com.finsight.application.service.IEndowmentListingService;
-import com.finsight.application.service.IEndowmentService;
+import com.finsight.application.benefit.IEndowmentListingService;
+import com.finsight.application.benefit.IEndowmentService;
 import com.finsight.domain.model.Endowment;
 import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.CollectionResult;

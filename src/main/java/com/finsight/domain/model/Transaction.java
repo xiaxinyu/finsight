@@ -70,35 +70,6 @@ public class Transaction extends BaseEntity {
     @TableField(exist = false)
     private String transactionDateTime;
 
-    @TableField(exist = false)
-    private String transactionDateStartStr;
-
-    @TableField(exist = false)
-    private Date transactionDateStart;
-
-    @TableField(exist = false)
-    private String transactionDateEndStr;
-
-    @TableField(exist = false)
-    private Date transactionDateEnd;
-
-    @TableField(exist = false)
-    private String[] consumes;
-
-    @TableField(exist = false)
-    private String weekName;
-
-    @TableField(exist = false)
-    private String year;
-
-    @TableField(exist = false)
-    private String month;
-
-    @TableField(exist = false)
-    private Boolean emptyConsume;
-    @TableField(exist = false)
-    private String txnTypes;
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getCardId() { return cardId; }
@@ -135,24 +106,4 @@ public class Transaction extends BaseEntity {
     public void setDemoArea(String demoArea) { this.demoArea = demoArea; }
     public String getRecordID() { return recordID; }
     public void setRecordID(String recordID) { this.recordID = recordID; }
-    public String getTransactionDateStartStr() { return transactionDateStartStr; }
-    public void setTransactionDateStartStr(String transactionDateStartStr) { this.transactionDateStartStr = transactionDateStartStr; }
-    public Date getTransactionDateStart() { return transactionDateStart; }
-    public void setTransactionDateStart(Date transactionDateStart) { this.transactionDateStart = transactionDateStart; }
-    public String getTransactionDateEndStr() { return transactionDateEndStr; }
-    public void setTransactionDateEndStr(String transactionDateEndStr) { this.transactionDateEndStr = transactionDateEndStr; }
-    public Date getTransactionDateEnd() { return transactionDateEnd; }
-    public void setTransactionDateEnd(Date transactionDateEnd) { this.transactionDateEnd = transactionDateEnd; }
-    public String[] getConsumes() { return consumes; }
-    public void setConsumes(String[] consumes) { this.consumes = consumes; }
-    public String getWeekName() { return weekName; }
-    public void setWeekName(String weekName) { this.weekName = weekName; }
-    public String getYear() { return year; }
-    public void setYear(String year) { this.year = year; }
-    public String getMonth() { return month; }
-    public void setMonth(String month) { this.month = month; }
-    public Boolean getEmptyConsume() { return emptyConsume; }
-    public void setEmptyConsume(Boolean emptyConsume) { this.emptyConsume = emptyConsume; }
-    public String getTxnTypes() { return txnTypes; }
-    public void setTxnTypes(String txnTypes) { this.txnTypes = txnTypes; }
 }

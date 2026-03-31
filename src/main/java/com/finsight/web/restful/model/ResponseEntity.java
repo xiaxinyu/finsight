@@ -1,4 +1,4 @@
-package com.finsight.domain.common;
+package com.finsight.web.restful.model;
 
 import lombok.ToString;
 
@@ -34,12 +34,12 @@ public class ResponseEntity<T> {
 
     private String message;
 
-    public static ResponseEntity ok() {
-        return new ResponseEntity();
+    public static ResponseEntity<Void> ok() {
+        return new ResponseEntity<>();
     }
 
-    public static ResponseEntity error(String message) {
-        return new ResponseEntity(ERROR_CODE, message);
+    public static ResponseEntity<Void> error(String message) {
+        return new ResponseEntity<>(ERROR_CODE, message);
     }
 
     public boolean isOk() {

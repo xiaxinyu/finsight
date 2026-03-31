@@ -1,4 +1,4 @@
-package com.finsight.application.service;
+package com.finsight.application.rent;
 
 import java.util.List;
 

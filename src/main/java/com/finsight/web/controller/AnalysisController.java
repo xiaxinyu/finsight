@@ -1,4 +1,4 @@
-package com.finsight.web.contoller;
+package com.finsight.web.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,5 +20,11 @@ public class AnalysisController {
     public String incomeCurve(ModelMap model) {
         log.info("************ Open: Income Curve Report ************");
         return "analysis/income_curve_report";
+    }
+
+    @RequestMapping("/analysis/expense-curve.html")
+    public String expenseCurve(ModelMap model) {
+        log.info("************ Open: Expense Curve Report ************");
+        return "analysis/expense_curve_report";
     }
 }

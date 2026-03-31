@@ -1,4 +1,4 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.ledger.impl;
 
 import java.util.Date;
 import java.util.List;
@@ -12,7 +12,7 @@ import com.finsight.infrastructure.mapper.SalaryMapper;
 import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Salary;
 import com.finsight.core.AppServiceException;
-import com.finsight.application.service.ISalaryService;
+import com.finsight.application.ledger.ISalaryService;
 
 /**
  * Created by Summer.Xia on 12/12/2018.

@@ -1,4 +1,4 @@
-package com.finsight.web.contoller;
+package com.finsight.web.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,6 +75,18 @@ public class AccountController {
     public String houseRentRest(ModelMap model) {
         log.info("************ Hello, HouseRent REST in Private Account ************");
         return "account/house-rent/HouseRent";
+    }
+
+    @RequestMapping("/account/expense/Expense.html")
+    public String expenseHtml(ModelMap model) {
+        log.info("************ Hello, Expense HTML in Private Account ************");
+        return "account/expense/Expense";
+    }
+
+    @RequestMapping("/account/expense")
+    public String expenseRest(ModelMap model) {
+        log.info("************ Hello, Expense REST in Private Account ************");
+        return "account/expense/Expense";
     }
 
 

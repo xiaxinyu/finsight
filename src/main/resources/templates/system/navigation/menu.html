@@ -99,8 +99,18 @@
    <div title="Expense Management" data-options="iconCls:'icon-fs icon-fs-rent'" style="overflow:auto;">
    	   <div class="menuspace"></div>
    	   <div class="fs-menu-row">
-        		<a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-rent',plain:true"
-        		onclick="selectTab(this)" title="Rent - Ledger" url="account/house-rent" >Ledger</a>  
+        		<a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-transactions',plain:true"
+        		onclick="selectTab(this)" title="Expense - Ledger" url="account/expense" >Ledger</a>
+      </div>
+      <div class="menuspace"></div>
+      <div class="fs-menu-row">
+            <a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-trend',plain:true"
+            onclick="selectTab(this)" title="Expense Curve" url="analysis/expense-curve.html" >Expense Curve</a>
+      </div>
+      <div class="menuspace"></div>
+      <div class="fs-menu-row">
+            <a href="#" class="easyui-linkbutton menu-link" data-options="iconCls:'icon-fs icon-fs-rent',plain:true"
+            onclick="selectTab(this)" title="Rent - Ledger" url="account/house-rent" >Rent Ledger</a>
       </div>
    </div>
    <div title="Benefit" data-options="iconCls:'icon-fs icon-fs-pension'" style="overflow:auto;" >

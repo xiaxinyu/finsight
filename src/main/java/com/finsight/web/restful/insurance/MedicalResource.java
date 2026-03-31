@@ -1,7 +1,7 @@
 package com.finsight.web.restful.insurance;
 
-import com.finsight.application.service.IMedicalListingService;
-import com.finsight.application.service.IMedicalService;
+import com.finsight.application.benefit.IMedicalListingService;
+import com.finsight.application.benefit.IMedicalService;
 import com.finsight.domain.model.Medical;
 import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.CollectionResult;

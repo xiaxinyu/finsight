@@ -1,6 +1,6 @@
 package com.finsight.web.restful.salary;
 
-import com.finsight.application.service.ISalaryListingService;
+import com.finsight.application.ledger.ISalaryListingService;
 import com.finsight.domain.model.Transaction;
 import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.CollectionResult;

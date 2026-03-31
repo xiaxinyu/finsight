@@ -1,4 +1,4 @@
-package com.finsight.application.service;
+package com.finsight.application.transaction;
 
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.Page;
@@ -32,6 +32,8 @@ public interface ITransactionService {
     String monthConsumeReport(Transaction transaction) throws AppServiceException;
 
     String monthIncomeReport(Transaction transaction) throws AppServiceException;
+
+    String monthExpenseReport(Transaction transaction) throws AppServiceException;
 
     String homeSummary(Integer year) throws AppServiceException;
 }

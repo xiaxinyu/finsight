@@ -1,7 +1,7 @@
 package com.finsight.web.restful.insurance;
 
-import com.finsight.application.service.IUnEmploymentListingService;
-import com.finsight.application.service.IUnEmploymentService;
+import com.finsight.application.benefit.IUnEmploymentListingService;
+import com.finsight.application.benefit.IUnEmploymentService;
 import com.finsight.domain.model.UnEmployment;
 import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.CollectionResult;

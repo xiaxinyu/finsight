@@ -1,9 +1,7 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.transaction.impl;
 
-import com.finsight.core.DateParseException;
 import com.finsight.core.DateTool;
 import com.finsight.core.StringTool;
-import com.finsight.infrastructure.mapper.TransactionMapper;
 import com.finsight.domain.model.Card;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.KeyValue;
@@ -11,7 +9,9 @@ import com.finsight.domain.model.Page;
 import com.finsight.application.card.CardService;
 import com.finsight.core.AppException;
 import com.finsight.core.AppServiceException;
-import com.finsight.application.service.ITransactionService;
+import com.finsight.application.transaction.ITransactionService;
+import com.finsight.domain.port.TransactionRepository;
+import com.finsight.application.query.TransactionQuery;
 import com.alibaba.fastjson.JSONArray;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -33,13 +33,13 @@ public class TransactionServiceImpl implements ITransactionService {
     CardService cardService;
 
     @Autowired
-    TransactionMapper transactionMapper;
+    TransactionRepository transactionRepository;
 
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
         try {
             transaction.setUpdateUser(userName);
-            transactionMapper.updateTransaction(transaction);
+            transactionRepository.updateTransaction(transaction);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -51,7 +51,7 @@ public class TransactionServiceImpl implements ITransactionService {
             if (ids == null || ids.isEmpty()) {
                 return 0;
             }
-            return transactionMapper.incomeToExpense(ids, userName);
+            return transactionRepository.incomeToExpense(ids, userName);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -63,7 +63,7 @@ public class TransactionServiceImpl implements ITransactionService {
             if (ids == null || ids.isEmpty()) {
                 return 0;
             }
-            return transactionMapper.expenseToIncome(ids, userName);
+            return transactionRepository.expenseToIncome(ids, userName);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -72,7 +72,7 @@ public class TransactionServiceImpl implements ITransactionService {
     @Override
     public void deleteTransaction(String id) throws AppServiceException {
         try {
-            transactionMapper.deleteTransaction(id);
+            transactionRepository.deleteTransaction(id);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -83,7 +83,7 @@ public class TransactionServiceImpl implements ITransactionService {
         List<Transaction> result = null;
         try {
             log.info("Query transactions：page={}", page);
-            result = transactionMapper.getTransactions(transaction, page);
+            result = transactionRepository.getTransactions(toQuery(transaction), page);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -94,7 +94,7 @@ public class TransactionServiceImpl implements ITransactionService {
     public int countTransaction(Transaction transaction) throws AppServiceException {
         int result = 0;
         try {
-            result = transactionMapper.countTransaction(transaction);
+            result = transactionRepository.countTransaction(toQuery(transaction));
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -103,12 +103,7 @@ public class TransactionServiceImpl implements ITransactionService {
 
     @Override
     public void deleteByStatementId(String statementId) {
-        if (StringUtils.isBlank(statementId)) {
-            return;
-        }
-        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Transaction> wrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-        wrapper.eq("recordID", statementId);
-        transactionMapper.delete(wrapper);
+        transactionRepository.deleteByStatementId(statementId);
     }
 
     @Override
@@ -148,7 +143,7 @@ public class TransactionServiceImpl implements ITransactionService {
                 Card card = cardMap.get(cardId);
                 transaction.setCardTypeName(card != null ? card.getCardName() : "Unknown Card");
                 transaction.setRecordID(recordID);
-                transactionMapper.insert(transaction);
+                transactionRepository.insert(transaction);
             } catch (Exception e) {
                 log.error("Saving transaction has error: transaction={}", StringUtils.join(rowDatas, ","), e);
             }
@@ -163,12 +158,12 @@ public class TransactionServiceImpl implements ITransactionService {
         int success = 0;
         for (Transaction transaction : transactions) {
             try {
-                if (transaction.getId() == null || transaction.getId().trim().isEmpty() || transactionMapper.selectById(transaction.getId()) != null) {
+                if (transaction.getId() == null || transaction.getId().trim().isEmpty() || transactionRepository.selectById(transaction.getId()) != null) {
                     transaction.setId(com.finsight.core.StringTool.generateID());
                 }
                 transaction.setCreateUser(userName);
                 transaction.setUpdateUser(userName);
-                transactionMapper.insert(transaction);
+                transactionRepository.insert(transaction);
                 success++;
             } catch (Exception e) {
                 log.error("Saving transaction has error: transaction={}", transaction, e);
@@ -177,22 +172,28 @@ public class TransactionServiceImpl implements ITransactionService {
         return success;
     }
 
-    private void fetchTransactionParam(Transaction transaction) throws DateParseException {
+    private void fetchTransactionParam(Transaction transaction) {
         if (StringTool.isNullOrEmpty(transaction.getCardTypeName())) {
             transaction.setCardTypeName(null);
-        }
-        if (!StringTool.isNullOrEmpty(transaction.getConsumeID())) {
-            transaction.setConsumes(transaction.getConsumeID().split(","));
-        }
-        if (!StringTool.isNullOrEmpty(transaction.getTransactionDateStartStr())) {
-            transaction.setTransactionDateStart(DateTool.changeStringToDate(transaction.getTransactionDateStartStr(), DateTool.DF_MM_DD_YYYY));
-        }
-        if (!StringTool.isNullOrEmpty(transaction.getTransactionDateEndStr())) {
-            transaction.setTransactionDateEnd(DateTool.changeStringToDate(transaction.getTransactionDateEndStr(), DateTool.DF_MM_DD_YYYY));
         }
         if (StringTool.isNullOrEmpty(transaction.getDemoArea())) {
             transaction.setDemoArea(null);
         }
+    }
+
+    private static TransactionQuery toQuery(Transaction t) {
+        TransactionQuery q = new TransactionQuery();
+        if (t == null) {
+            return q;
+        }
+        q.setConsumptionType(t.getConsumptionType());
+        q.setBankCardId(t.getBankCardId());
+        q.setCardTypeName(t.getCardTypeName());
+        q.setConsumeID(t.getConsumeID());
+        q.setConsumeCode(t.getConsumeCode());
+        q.setConsumeName(t.getConsumeName());
+        q.setDemoArea(t.getDemoArea());
+        return q;
     }
 
     @Override
@@ -200,7 +201,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionMapper.consumeReport(transaction);
+            List<KeyValue> list = transactionRepository.consumeReport(toQuery(transaction));
             result = JSONArray.toJSONString(list);
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -213,7 +214,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionMapper.weekConsumeReport(transaction);
+            List<KeyValue> list = transactionRepository.weekConsumeReport(toQuery(transaction));
             result = JSONArray.toJSONString(list);
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -226,7 +227,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionMapper.monthConsumeReport(transaction);
+            List<KeyValue> list = transactionRepository.monthConsumeReport(toQuery(transaction));
             result = JSONArray.toJSONString(list).toString();
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -239,7 +240,20 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionMapper.monthIncomeReport(transaction);
+            List<KeyValue> list = transactionRepository.monthIncomeReport(toQuery(transaction));
+            result = JSONArray.toJSONString(list).toString();
+        } catch (Exception e) {
+            throw new AppServiceException(e);
+        }
+        return result;
+    }
+
+    @Override
+    public String monthExpenseReport(Transaction transaction) throws AppServiceException {
+        String result = StringTool.EMPTY;
+        try {
+            fetchTransactionParam(transaction);
+            List<KeyValue> list = transactionRepository.monthExpenseReport(toQuery(transaction));
             result = JSONArray.toJSONString(list).toString();
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -260,11 +274,11 @@ public class TransactionServiceImpl implements ITransactionService {
                 return cached.getPayload();
             }
 
-            List<KeyValue> buckets = transactionMapper.homeSummaryExpenseBuckets(year);
-            List<KeyValue> bucketsPrev = transactionMapper.homeSummaryExpenseBucketsPrev(year);
-            Double incomeResult = transactionMapper.sumIncomeByYear(year);
-            Double debtResult = transactionMapper.sumDebtPaymentsByYear(year);
-            Integer refundsResult = transactionMapper.countRefundsByYear(year);
+            List<KeyValue> buckets = transactionRepository.homeSummaryExpenseBuckets(year);
+            List<KeyValue> bucketsPrev = transactionRepository.homeSummaryExpenseBucketsPrev(year);
+            Double incomeResult = transactionRepository.sumIncomeByYear(year);
+            Double debtResult = transactionRepository.sumDebtPaymentsByYear(year);
+            Integer refundsResult = transactionRepository.countRefundsByYear(year);
             double income = incomeResult == null ? 0.0 : incomeResult;
             double debt = debtResult == null ? 0.0 : debtResult;
             int refunds = refundsResult == null ? 0 : refundsResult;

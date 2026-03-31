@@ -1,13 +1,13 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.statement.impl;
 
 import com.finsight.application.card.BankCardService;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.importer.StatementImporterFactory;
-import com.finsight.application.service.StatementProcessingService;
+import com.finsight.application.statement.StatementProcessingService;
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.TransactionTemp;
-import com.finsight.application.service.ITransactionTempService;
+import com.finsight.domain.port.TransactionTempRepository;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
     private ClassificationService classificationService;
 
     @Autowired
-    private ITransactionTempService transactionTempService;
+    private TransactionTempRepository transactionTempRepository;
 
     @Override
     public List<Transaction> parseAndEnrichTransactions(List<String[]> dataRows, String bankCode, String cardTypeCode, String cardNo, String statementId) {
@@ -53,7 +53,7 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
 
     @Override
     public void savePreviewTemps(String statementId, List<Transaction> transactions, String userName) {
-        transactionTempService.deleteByStatementId(statementId);
+        transactionTempRepository.softDeleteByStatementId(statementId);
         if (transactions == null || transactions.isEmpty()) {
             return;
         }
@@ -70,7 +70,7 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
             temp.setTransactionDateTime(buildDateTime(t.getTransactionDate(), t.getTransactionTime()));
             temps.add(temp);
         }
-        transactionTempService.saveBatch(temps);
+        transactionTempRepository.saveBatch(temps);
     }
 
     private BankCard resolveBankCard(String bankCode, String cardTypeCode, String cardNo) {

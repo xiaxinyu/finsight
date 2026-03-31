@@ -1,4 +1,4 @@
-package com.finsight.web.contoller;
+package com.finsight.web.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;

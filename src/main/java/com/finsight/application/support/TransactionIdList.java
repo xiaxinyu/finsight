@@ -1,4 +1,4 @@
-package com.finsight.application.service.support;
+package com.finsight.application.support;
 
 import org.apache.commons.lang3.StringUtils;
 

@@ -1,10 +1,11 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.ledger.impl;
 
-import com.finsight.application.service.ISalaryListingService;
-import com.finsight.application.service.ITransactionService;
-import com.finsight.application.service.support.ListingDateSupport;
+import com.finsight.application.ledger.ISalaryListingService;
+import com.finsight.application.support.ListingDateSupport;
 import com.finsight.core.AppServiceException;
 import com.finsight.core.StringTool;
+import com.finsight.domain.port.TransactionRepository;
+import com.finsight.application.query.TransactionQuery;
 import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Transaction;
 import com.finsight.web.restful.model.CollectionResult;
@@ -23,28 +24,28 @@ import org.springframework.stereotype.Service;
 public class SalaryListingServiceImpl implements ISalaryListingService {
 
     @Autowired
-    private ITransactionService transactionService;
+    private TransactionRepository transactionRepository;
 
     @Override
     public CollectionResult<Transaction> listSalaryTransactions(TransactionParam param) throws AppServiceException {
-        Transaction transaction = new Transaction();
+        TransactionQuery q = new TransactionQuery();
         java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
-        transaction.setTransactionDateStart(range[0]);
-        transaction.setTransactionDateEnd(range[1]);
+        q.setTransactionDateStart(range[0]);
+        q.setTransactionDateEnd(range[1]);
         // Query all categories tagged as income instead of only INC-01.
-        transaction.setTxnTypes("income");
+        q.setTxnTypes("income");
         if (!StringTool.isNullOrEmpty(param.getConsumeID())) {
-            transaction.setConsumeID(param.getConsumeID());
+            q.setConsumeID(param.getConsumeID());
         }
         if (!StringTool.isNullOrEmpty(param.getDemoArea())) {
-            transaction.setDemoArea(param.getDemoArea());
+            q.setDemoArea(param.getDemoArea());
         }
 
         Page page = new Page(param.getPage(), param.getRows());
         CollectionResult<Transaction> result = new CollectionResult<>();
-        result.setRows(transactionService.getTransactions(transaction, page));
-        result.setTotal(transactionService.countTransaction(transaction));
+        result.setRows(transactionRepository.getTransactions(q, page));
+        result.setTotal(transactionRepository.countTransaction(q));
         return result;
     }
 }

@@ -1,7 +1,7 @@
 package com.finsight.web.restful.insurance;
 
-import com.finsight.application.service.IAccumulationListingService;
-import com.finsight.application.service.IAccumulationService;
+import com.finsight.application.benefit.IAccumulationListingService;
+import com.finsight.application.benefit.IAccumulationService;
 import com.finsight.domain.model.Accumulation;
 import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.AccumulationParam;

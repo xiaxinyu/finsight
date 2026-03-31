@@ -79,6 +79,16 @@ var transaction = {
 	           error: efn
 	       });
 	},
+	monthExpenseReport : function(params, sfn, efn){
+		$.ajax({
+			   type:"post",
+	           url: "/transaction-report/month-expense",
+	           data:params,
+	           dataType:'json',
+	           success: sfn,
+	           error: efn
+	       });
+	},
 	homeSummary : function(year, sfn, efn){
 		$.ajax({
 			type: 'get',

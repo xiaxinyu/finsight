@@ -3,7 +3,8 @@ package com.finsight.web.restful.consume;
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.consume.ConsumeRuleService;
-import com.finsight.application.service.ITransactionService;
+import com.finsight.application.query.TransactionQuery;
+import com.finsight.domain.port.TransactionRepository;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -24,7 +25,7 @@ public class ConsumeRuleController {
     @Autowired
     private ClassificationService classificationService;
     @Autowired
-    private ITransactionService transactionService;
+    private TransactionRepository transactionRepository;
 
     @GetMapping
     public List<ConsumeRule> list(@RequestParam(value = "categoryId", required = false) String categoryId,
@@ -128,10 +129,10 @@ public class ConsumeRuleController {
         String id = categoryId == null ? "" : categoryId.trim();
         if(id.isEmpty()) return out;
         try{
-            Transaction q = new Transaction();
+            TransactionQuery q = new TransactionQuery();
             q.setConsumes(new String[]{id});
             Page page = new Page(1, 500);
-            java.util.List<Transaction> list = transactionService.getTransactions(q, page);
+            java.util.List<Transaction> list = transactionRepository.getTransactions(q, page);
             java.util.Map<String, Integer> freq = new java.util.HashMap<>();
             for(Transaction t : list){
                 String desc = t.getTransactionDesc();

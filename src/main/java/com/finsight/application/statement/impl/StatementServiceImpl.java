@@ -1,6 +1,6 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.statement.impl;
 
-import com.finsight.application.service.IStatementService;
+import com.finsight.application.statement.IStatementService;
 import com.finsight.domain.model.Statement;
 import com.finsight.infrastructure.mapper.StatementMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

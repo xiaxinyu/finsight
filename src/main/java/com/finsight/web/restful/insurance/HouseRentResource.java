@@ -1,6 +1,6 @@
 package com.finsight.web.restful.insurance;
 
-import com.finsight.application.service.IHouseRentListingService;
+import com.finsight.application.rent.IHouseRentListingService;
 import com.finsight.domain.model.HouseRent;
 import com.finsight.web.restful.common.ControllerHelper;
 import com.finsight.web.restful.model.CollectionResult;

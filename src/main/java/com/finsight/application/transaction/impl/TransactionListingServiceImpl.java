@@ -1,11 +1,10 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.transaction.impl;
 
-import com.finsight.application.service.ITransactionListingService;
-import com.finsight.application.service.ITransactionService;
-import com.finsight.application.service.support.ListingDateSupport;
+import com.finsight.application.transaction.ITransactionListingService;
 import com.finsight.core.AppServiceException;
-import com.finsight.core.DateTool;
-import com.finsight.core.StringTool;
+import com.finsight.domain.port.TransactionRepository;
+import com.finsight.application.query.TransactionQuery;
+import com.finsight.application.query.TransactionQueryAssembler;
 import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Transaction;
 import com.finsight.web.restful.model.CollectionResult;
@@ -26,22 +25,22 @@ public class TransactionListingServiceImpl implements ITransactionListingService
     private static final Logger log = LoggerFactory.getLogger(TransactionListingServiceImpl.class);
 
     @Autowired
-    private ITransactionService transactionService;
+    private TransactionRepository transactionRepository;
 
     @Override
     public CollectionResult<Transaction> listTransactions(TransactionParam param) throws AppServiceException {
-        Transaction transaction = buildQuery(param);
+        TransactionQuery query = TransactionQueryAssembler.from(param);
         Page page = new Page(param.getPage(), param.getRows());
 
         CollectionResult<Transaction> result = new CollectionResult<>();
         StopWatch stopWatch = new StopWatch("消费数据查询统计");
         stopWatch.start("查询列表数据");
-        result.setRows(transactionService.getTransactions(transaction, page));
+        result.setRows(transactionRepository.getTransactions(query, page));
         enrichTransactionDateTime(result.getRows());
         stopWatch.stop();
 
         stopWatch.start("查询统计数据");
-        result.setTotal(transactionService.countTransaction(transaction));
+        result.setTotal(transactionRepository.countTransaction(query));
         stopWatch.stop();
 
         log.info("耗时打印：{}", stopWatch.prettyPrint());
@@ -64,48 +63,4 @@ public class TransactionListingServiceImpl implements ITransactionListingService
         }
     }
 
-    private static Transaction buildQuery(TransactionParam param) throws AppServiceException {
-        Transaction transaction = new Transaction();
-        java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
-                param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
-        transaction.setTransactionDateStart(range[0]);
-        transaction.setTransactionDateEnd(range[1]);
-        if (!StringTool.isNullOrEmpty(param.getConsumptionType())) {
-            transaction.setConsumptionType(StringTool.changeObjToInt(StringUtils.trim(param.getConsumptionType())));
-        }
-        if (!StringTool.isNullOrEmpty(param.getCardTypeName())) {
-            transaction.setCardTypeName(StringUtils.trim(param.getCardTypeName()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getCardId())) {
-            transaction.setBankCardId(StringUtils.trim(param.getCardId()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getConsumeName())) {
-            transaction.setConsumeName(StringUtils.trim(param.getConsumeName()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getConsumeID())) {
-            transaction.setConsumes(param.getConsumeID().split(","));
-        }
-        if (!StringTool.isNullOrEmpty(param.getDemoArea())) {
-            transaction.setDemoArea(StringUtils.trim(param.getDemoArea()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getWeekName())) {
-            transaction.setWeekName(StringUtils.trim(param.getWeekName()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getYear())) {
-            transaction.setYear(StringUtils.trim(param.getYear()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getMonth())) {
-            transaction.setMonth(DateTool.getMonthCode(StringUtils.trim(param.getMonth())));
-        }
-        if (!StringTool.isNullOrEmpty(param.getTxnTypes())) {
-            transaction.setTxnTypes(StringUtils.trim(param.getTxnTypes()));
-        }
-        if (!StringTool.isNullOrEmpty(param.getEmptyConsume())) {
-            String v = StringUtils.trim(param.getEmptyConsume());
-            if ("1".equals(v) || "true".equalsIgnoreCase(v)) {
-                transaction.setEmptyConsume(Boolean.TRUE);
-            }
-        }
-        return transaction;
-    }
 }

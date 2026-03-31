@@ -1,4 +1,4 @@
-package com.finsight.application.service;
+package com.finsight.application.statement;
 
 import com.finsight.domain.model.Statement;
 import com.baomidou.mybatisplus.extension.service.IService;

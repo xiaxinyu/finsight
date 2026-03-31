@@ -1,4 +1,4 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.benefit.impl;
 
 import java.util.List;
 
@@ -11,7 +11,7 @@ import com.finsight.infrastructure.mapper.AccumulationMapper;
 import com.finsight.domain.model.Accumulation;
 import com.finsight.domain.model.Page;
 import com.finsight.core.AppServiceException;
-import com.finsight.application.service.IAccumulationService;
+import com.finsight.application.benefit.IAccumulationService;
 
 /**
  * Created by Summer.Xia on 10/13/2015.

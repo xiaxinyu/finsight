@@ -1,4 +1,4 @@
-package com.finsight.application.service.support;
+package com.finsight.application.support;
 
 import com.finsight.core.AppServiceException;
 import com.finsight.core.DateParseException;

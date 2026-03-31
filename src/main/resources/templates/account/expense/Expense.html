@@ -1,0 +1,277 @@
+<html>
+<head>
+    <title>== Expense Ledger ==</title>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.min.js"></script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/scripts/app-plugin.js"></script>
+    <script type="text/javascript" src="/scripts/date.js"></script>
+    <script type="text/javascript" src="/scripts/report-focus.js"></script>
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
+    <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
+    <script type="text/javascript">var app_url = '';</script>
+    <script type="text/javascript" src="/plugins/jquery-easyui-1.11.4/datagrid-groupview.js"></script>
+    <style>
+        .datagrid-row-selected { background-color:#e6f2ff !important; }
+        .datagrid-row-selected .datagrid-cell { color:#333 !important; }
+        .datagrid-row-over .datagrid-cell { color:#333 !important; }
+    </style>
+</head>
+<body class="easyui-layout">
+<div data-options="region:'north',border:false" style="height: 56px">
+    <div class="toolbar fs-toolbar" style="height: 100%;">
+        <span class="item_intervel fs-toolbar-group">
+            <label>Date</label>
+            <input id="dateStart" class="easyui-datebox" style="width: 110px;" data-options="onSelect:searchExpenses"/>
+            ~
+            <input id="dateEnd" class="easyui-datebox" style="width: 110px;" data-options="onSelect:searchExpenses"/>
+        </span>
+
+        <span class="item_intervel fs-toolbar-group">
+            <label>Expense</label>
+            <select id="cmbConsume" class="easyui-combotree"
+                    data-options="url:'/api/v1/consume/tree?txnType=expense',method:'get',onChange:searchExpenses,multiple:true"
+                    style="width:220px;"></select>
+        </span>
+
+        <span class="item_intervel fs-toolbar-group">
+            <label>Quick</label>
+            <select id="cmbExpensePreset" class="easyui-combobox" style="width:150px;"
+                    data-options="editable:false,onSelect:function(rec){ applyExpensePreset(rec && rec.value); }">
+                <option value="">All expense</option>
+                <option value="fixed">Fixed</option>
+                <option value="living">Living</option>
+                <option value="shopping">Shopping</option>
+                <option value="ent">Entertainment</option>
+            </select>
+        </span>
+
+        <span class="item_intervel fs-toolbar-group">
+            <label>Filter</label>
+            <input id="txtDemo" class="easyui-textbox" data-options="prompt:'Keyword'" style="width:140px">
+        </span>
+
+        <span class="item_intervel fs-toolbar-actions">
+            <span class="fs-kpi">Rows <b id="kpiRows">0</b></span>
+            <a class="easyui-linkbutton fs-btn-primary" data-options="iconCls:'icon-search'" onclick="searchExpenses()">Query</a>
+            <a class="easyui-linkbutton" data-options="iconCls:'icon-save'" onclick="">Export</a>
+        </span>
+    </div>
+</div>
+
+<div data-options="region:'center',border:false">
+    <table id="datagrid" fit="true"
+           data-options="rownumbers:true,singleSelect:true,pagination:true,pageSize:100,pageList:[50,100,150,200,500]">
+        <thead>
+        <tr>
+            <th data-options="field:'id',hidden:true">ID</th>
+            <th data-options="field:'bankCardName',width:160">Card Name</th>
+            <th data-options="field:'bookKeepingDate',width:90,align:'center',formatter:app.date.format">Posting Date</th>
+            <th data-options="field:'transactionDate',width:90,align:'center',formatter:app.date.format">TXN Date</th>
+            <th data-options="field:'transactionDesc',width:280,align:'left'">Narration</th>
+            <th data-options="field:'balanceCurrency',width:70,align:'center'">Currency</th>
+            <th data-options="field:'balanceMoney',width:95,align:'right',formatter:function(v,r,i){
+                var expense = 0;
+                var b = Number(v || 0);
+                if(b > 0){ expense = b; }
+                var cls = expense > 0 ? 'fs-money-expense' : 'fs-money-neutral';
+                return '<span class=&quot;'+cls+'&quot;>' + app.money.rmb(expense,r,i) + '</span>';
+            }">Expense</th>
+            <th data-options="field:'incomeMoney',width:90,align:'right',formatter:function(v,r,i){
+                var income = 0;
+                var im = Number(v || 0);
+                if(im > 0){ income = im; }
+                var cls = income > 0 ? 'fs-money-income' : 'fs-money-neutral';
+                return '<span class=&quot;'+cls+'&quot;>' + app.money.rmb(income,r,i) + '</span>';
+            }">Income</th>
+            <th data-options="field:'accountBalance',width:95,align:'right',formatter:app.money.rmb">Balance</th>
+            <th data-options="field:'consumeName',width:180,align:'left'">Category</th>
+            <th data-options="field:'demoArea',width:300,align:'left'">Remarks</th>
+        </tr>
+        </thead>
+    </table>
+</div>
+
+<script type="text/javascript">
+var datagrid = '#datagrid';
+var query_url = app_url + '/expense/getExpenses';
+var searchTimer = null;
+var autoSearchReady = false;
+var DEFAULT_PAGE_SIZE = 100;
+
+function formatDateMMDDYYYY(dt){
+    if(!dt){ return ''; }
+    var m = dt.getMonth() + 1;
+    var d = dt.getDate();
+    var y = dt.getFullYear();
+    return (m < 10 ? ('0' + m) : m) + '/' + (d < 10 ? ('0' + d) : d) + '/' + y;
+}
+function ensureCurrentYearDateRange(dateStart, dateEnd){
+    var s = String(dateStart||'').trim();
+    var e = String(dateEnd||'').trim();
+    if(s || e){ return { start:s, end:e }; }
+    var y = new Date().getFullYear();
+    var ds = '01/01/' + y;
+    var de = '12/31/' + y;
+    try{ if($('#dateStart').data('datebox')){ $('#dateStart').datebox('setValue', ds); } }catch(ignore){}
+    try{ if($('#dateEnd').data('datebox')){ $('#dateEnd').datebox('setValue', de); } }catch(ignore){}
+    return { start: ds, end: de };
+}
+function scheduleSearch(){
+    if(searchTimer){ clearTimeout(searchTimer); }
+    searchTimer = setTimeout(function(){ searchExpenses(); }, 220);
+}
+
+function collectSearchParams(){
+    var dateStart = '';
+    var dateEnd = '';
+    var demoArea = '';
+    var consumeID = '';
+    if($('#dateStart').data('datebox')){ dateStart = $('#dateStart').datebox('getValue'); }
+    if($('#dateEnd').data('datebox')){ dateEnd = $('#dateEnd').datebox('getValue'); }
+    var fixed = ensureCurrentYearDateRange(dateStart, dateEnd);
+    dateStart = fixed.start; dateEnd = fixed.end;
+    if($('#txtDemo').data('textbox')){ demoArea = $('#txtDemo').textbox('getValue'); }
+    if($('#cmbConsume').data('combotree')){
+        var arr = $('#cmbConsume').combotree('getValues');
+        if(arr && arr.length){ consumeID = arr.join(','); }
+    }
+    return { transactionDateStartStr: dateStart, transactionDateEndStr: dateEnd, demoArea: demoArea, consumeID: consumeID };
+}
+
+function searchExpenses(resetToFirstPage){
+    if(!autoSearchReady){ return; }
+    if($(datagrid).data('datagrid')){
+        var opts = $(datagrid).datagrid('options');
+        opts.queryParams = collectSearchParams();
+        if(resetToFirstPage !== false){
+            $(datagrid).datagrid('getPager').pagination('select', 1);
+        }else{
+            $(datagrid).datagrid('reload');
+        }
+    }
+}
+
+function applyExpensePreset(preset){
+    var p = String(preset || '').toLowerCase();
+    if(!p){
+        try{ $('#cmbConsume').combotree('clear'); }catch(e){}
+        searchExpenses();
+        return;
+    }
+    // Use reportFocus mapping style (exact + fallback) if available.
+    if(window.reportFocus && reportFocus.autoSelectConsume){
+        try{
+            reportFocus.autoSelectConsume('#cmbConsume', p, function(){ searchExpenses(); });
+            return;
+        }catch(e){}
+    }
+    // Fallback keyword mapping
+    var kwMap = {
+        fixed: ['FIXED','房贷','房租','物业','水电','燃气','宽带','保险'],
+        living: ['LIVING','生活','餐饮','买菜','交通'],
+        shopping: ['SHOPPING','购物','电商','淘宝','京东'],
+        ent: ['ENT','娱乐','电影','游戏','旅游']
+    };
+    var kws = kwMap[p] || [];
+    if(!kws.length){ searchExpenses(); return; }
+    $.get('/api/v1/consume/tree?txnType=expense', function(nodes){
+        try{
+            var ids = [];
+            function hitNode(n){
+                var txt = String((n && (n.text || n.name || n.label)) || '').toLowerCase();
+                var code = String((n && n.code) || '').toLowerCase();
+                for(var i=0;i<kws.length;i++){
+                    var w = String(kws[i] || '').toLowerCase();
+                    if(!w) continue;
+                    if(txt.indexOf(w)>=0 || code.indexOf(w)>=0) return true;
+                }
+                return false;
+            }
+            function collect(node){
+                if(!node) return;
+                var id = node.id || node.code || node.value;
+                if(id) ids.push(String(id));
+                var ch = node.children || node.childrens || [];
+                for(var j=0;j<ch.length;j++){ collect(ch[j]); }
+            }
+            function walk(arr){
+                if(!arr || !arr.length) return;
+                for(var i=0;i<arr.length;i++){
+                    var n = arr[i] || {};
+                    if(hitNode(n)){ collect(n); }
+                    walk(n.children || n.childrens || []);
+                }
+            }
+            walk(nodes || []);
+            var uniq = [];
+            var seen = {};
+            for(var k=0;k<ids.length;k++){
+                var idv = ids[k];
+                if(!seen[idv]){ seen[idv] = true; uniq.push(idv); }
+            }
+            if(uniq.length){ $('#cmbConsume').combotree('setValues', uniq.slice(0, 16)); }
+            else { $('#cmbConsume').combotree('clear'); }
+            searchExpenses();
+        }catch(e){ searchExpenses(); }
+    }).fail(function(){ searchExpenses(); });
+}
+
+$(function(){
+    try{
+        var y = new Date().getFullYear();
+        $('#dateStart').datebox('setValue', '01/01/' + y);
+        $('#dateEnd').datebox('setValue', '12/31/' + y);
+    }catch(e){}
+
+    $(datagrid).datagrid({
+        method:'post',
+        url: query_url,
+        pageSize: DEFAULT_PAGE_SIZE,
+        pageList:[50,100,150,200,500],
+        pageNumber:1,
+        title:'Total Expense:<span id="totalExpense" class="fs-total-count">0</span>',
+        loadMsg:'Loading expense ledger...',
+        fitColumns:false,
+        nowrap:true,
+        striped:true,
+        autoRowHeight:true,
+        scrollbarSize:14,
+        onBeforeLoad:function(param){
+            param = param || {};
+            var pageNo = parseInt(param.page, 10);
+            var pageSize = parseInt(param.rows, 10);
+            param.page = (isNaN(pageNo) || pageNo < 1) ? 1 : pageNo;
+            param.rows = (isNaN(pageSize) || pageSize < 1) ? DEFAULT_PAGE_SIZE : pageSize;
+            $.extend(param, collectSearchParams());
+        },
+        onLoadSuccess:function(data){
+            var rows = (data && data.rows) ? data.rows : [];
+            var total = 0;
+            for(var i=0;i<rows.length;i++){
+                var rv = rows[i] || {};
+                var b = Number(rv.balanceMoney || 0);
+                if(b > 0){ total += b; }
+            }
+            $('#totalExpense').text(Math.round(total));
+            $('#kpiRows').text((data && typeof data.total !== 'undefined') ? data.total : rows.length);
+        },
+        singleSelect:true
+    });
+
+    var pager = $(datagrid).datagrid('getPager');
+    pager.pagination({ pageSize: DEFAULT_PAGE_SIZE, pageList:[50,100,150,200,500] });
+
+    try{
+        $('#txtDemo').textbox('textbox').on('input', scheduleSearch).on('keydown', function(e){
+            if(e.keyCode === 13){ searchExpenses(); }
+        });
+    }catch(e){}
+
+    autoSearchReady = true;
+    searchExpenses();
+});
+</script>
+</body>
+</html>
+

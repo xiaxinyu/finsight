@@ -1,8 +1,8 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.benefit.impl;
 
-import com.finsight.application.service.IEndowmentListingService;
-import com.finsight.application.service.IEndowmentService;
-import com.finsight.application.service.support.ListingDateSupport;
+import com.finsight.application.benefit.IEndowmentListingService;
+import com.finsight.application.benefit.IEndowmentService;
+import com.finsight.application.support.ListingDateSupport;
 import com.finsight.core.AppServiceException;
 import com.finsight.core.StringTool;
 import com.finsight.domain.model.Endowment;

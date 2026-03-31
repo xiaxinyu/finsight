@@ -1,4 +1,4 @@
-package com.finsight.application.service.impl;
+package com.finsight.application.rent.impl;
 
 import java.util.Date;
 import java.util.List;
@@ -12,7 +12,7 @@ import com.finsight.infrastructure.mapper.HouseRentMapper;
 import com.finsight.domain.model.HouseRent;
 import com.finsight.domain.model.Page;
 import com.finsight.core.AppServiceException;
-import com.finsight.application.service.IHouseRentService;
+import com.finsight.application.rent.IHouseRentService;
 
 /**
  * Created by Summer.Xia on 12/12/2018.

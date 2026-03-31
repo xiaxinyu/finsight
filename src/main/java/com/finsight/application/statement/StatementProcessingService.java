@@ -1,4 +1,4 @@
-package com.finsight.application.service;
+package com.finsight.application.statement;
 
 import com.finsight.domain.model.Transaction;
 

@@ -190,57 +190,57 @@
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
-        <if test="transaction != null">
-            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
-                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+        <if test="q != null">
+            <if test="q.txnTypes != null and q.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
-            <if test="transaction.transactionDateStart != null">
-                and t.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            <if test="q.transactionDateStart != null">
+                and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
-            <if test="transaction.transactionDateEnd != null">
-                and t.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            <if test="q.transactionDateEnd != null">
+                and t.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
             </if>
-            <if test="transaction.consumptionType != null">
-                and t.consumption_type = #{transaction.consumptionType,jdbcType=NUMERIC}
+            <if test="q.consumptionType != null">
+                and t.consumption_type = #{q.consumptionType,jdbcType=NUMERIC}
             </if>
-            <if test="transaction.bankCardId != null">
-                and t.bank_card_id = #{transaction.bankCardId,jdbcType=VARCHAR}
+            <if test="q.bankCardId != null">
+                and t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.cardTypeName != null">
-                and t.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            <if test="q.cardTypeName != null">
+                and t.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumeID != null">
-                and t.consume_id = #{transaction.consumeID,jdbcType=VARCHAR}
+            <if test="q.consumeID != null">
+                and t.consume_id = #{q.consumeID,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumeCode != null">
-                and t.consume_code = #{transaction.consumeCode,jdbcType=VARCHAR}
+            <if test="q.consumeCode != null">
+                and t.consume_code = #{q.consumeCode,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumes != null">
+            <if test="q.consumes != null">
                 and t.consume_code in
-                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
                     #{consumeID,jdbcType=VARCHAR}
                 </foreach>
             </if>
-            <if test="transaction.emptyConsume != null and transaction.emptyConsume == true">
+            <if test="q.emptyConsume != null and q.emptyConsume == true">
                 and (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
             </if>
-            <if test="transaction.consumeName != null">
-                and t.consume_name = #{transaction.consumeName,jdbcType=VARCHAR}
+            <if test="q.consumeName != null">
+                and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.demoArea != null">
+            <if test="q.demoArea != null">
                 and (
-                    t.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
-                    or t.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
+                    t.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 )
             </if>
-            <if test="transaction.weekName != null">
-                and weekday(t.bookkeeping_date) = #{transaction.weekName,jdbcType=VARCHAR}
+            <if test="q.weekName != null">
+                and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.year != null">
-                and year(t.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            <if test="q.year != null">
+                and year(t.transaction_date) = #{q.year,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.month != null">
-                and month(t.transaction_date) = #{transaction.month,jdbcType=VARCHAR}
+            <if test="q.month != null">
+                and month(t.transaction_date) = #{q.month,jdbcType=VARCHAR}
             </if>
         </if>
         order by t.transaction_date desc
@@ -251,55 +251,55 @@
         select count(t.id) from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
-        <if test="transaction != null">
-            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
-                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+        <if test="q != null">
+            <if test="q.txnTypes != null and q.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
-            <if test="transaction.transactionDateStart != null">
-                and t.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            <if test="q.transactionDateStart != null">
+                and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
-            <if test="transaction.transactionDateEnd != null">
-                and t.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            <if test="q.transactionDateEnd != null">
+                and t.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
             </if>
-            <if test="transaction.consumptionType != null">
-                and t.consumption_type = #{transaction.consumptionType,jdbcType=NUMERIC}
+            <if test="q.consumptionType != null">
+                and t.consumption_type = #{q.consumptionType,jdbcType=NUMERIC}
             </if>
-            <if test="transaction.bankCardId != null">
-                and t.bank_card_id = #{transaction.bankCardId,jdbcType=VARCHAR}
+            <if test="q.bankCardId != null">
+                and t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.cardTypeName != null">
-                and t.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            <if test="q.cardTypeName != null">
+                and t.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumeID != null">
-                and t.consume_id = #{transaction.consumeID,jdbcType=VARCHAR}
+            <if test="q.consumeID != null">
+                and t.consume_id = #{q.consumeID,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumeCode != null">
-                and t.consume_code = #{transaction.consumeCode,jdbcType=VARCHAR}
+            <if test="q.consumeCode != null">
+                and t.consume_code = #{q.consumeCode,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumes != null">
+            <if test="q.consumes != null">
                 and t.consume_code in
-                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
                     #{consumeID,jdbcType=VARCHAR}
                 </foreach>
             </if>
-            <if test="transaction.emptyConsume != null and transaction.emptyConsume == true">
+            <if test="q.emptyConsume != null and q.emptyConsume == true">
                 and (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
             </if>
-            <if test="transaction.consumeName != null">
-                and t.consume_name = #{transaction.consumeName,jdbcType=VARCHAR}
+            <if test="q.consumeName != null">
+                and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.demoArea != null">
-                and (t.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
-                or t.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
+            <if test="q.demoArea != null">
+                and (t.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
-            <if test="transaction.weekName != null">
-                and weekday(t.bookkeeping_date) = #{transaction.weekName,jdbcType=VARCHAR}
+            <if test="q.weekName != null">
+                and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.year != null">
-                and year(t.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            <if test="q.year != null">
+                and year(t.transaction_date) = #{q.year,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.month != null">
-                and month(t.transaction_date) = #{transaction.month,jdbcType=VARCHAR}
+            <if test="q.month != null">
+                and month(t.transaction_date) = #{q.month,jdbcType=VARCHAR}
             </if>
         </if>
     </select>
@@ -310,31 +310,31 @@
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
-        <if test="transaction != null">
-            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
-                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+        <if test="q != null">
+            <if test="q.txnTypes != null and q.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
-            <if test="transaction.txnTypes == null or transaction.txnTypes == ''">
+            <if test="q.txnTypes == null or q.txnTypes == ''">
                 and cat.txn_types like '%expense%'
             </if>
-            <if test="transaction.transactionDateStart != null">
-                and c.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            <if test="q.transactionDateStart != null">
+                and c.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
-            <if test="transaction.transactionDateEnd != null">
-                and c.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            <if test="q.transactionDateEnd != null">
+                and c.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
             </if>
-            <if test="transaction.cardTypeName != null">
-                and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            <if test="q.cardTypeName != null">
+                and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumes != null">
+            <if test="q.consumes != null">
                 and c.consume_code in
-                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
                     #{consumeID,jdbcType=VARCHAR}
                 </foreach>
             </if>
-            <if test="transaction.demoArea != null">
-                and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
-                or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
+            <if test="q.demoArea != null">
+                and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
         group by case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end
@@ -347,31 +347,31 @@
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
-        <if test="transaction != null">
-            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
-                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+        <if test="q != null">
+            <if test="q.txnTypes != null and q.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
-            <if test="transaction.txnTypes == null or transaction.txnTypes == ''">
+            <if test="q.txnTypes == null or q.txnTypes == ''">
                 and cat.txn_types like '%expense%'
             </if>
-            <if test="transaction.transactionDateStart != null">
-                and c.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+            <if test="q.transactionDateStart != null">
+                and c.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
-            <if test="transaction.transactionDateEnd != null">
-                and c.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+            <if test="q.transactionDateEnd != null">
+                and c.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
             </if>
-            <if test="transaction.cardTypeName != null">
-                and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            <if test="q.cardTypeName != null">
+                and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumes != null">
+            <if test="q.consumes != null">
                 and c.consume_code in
-                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
                     #{consumeID,jdbcType=VARCHAR}
                 </foreach>
             </if>
-            <if test="transaction.demoArea != null">
-                and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
-                or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
+            <if test="q.demoArea != null">
+                and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
         ) view1
@@ -381,7 +381,7 @@
 
     <select id="monthConsumeReport" resultType="com.finsight.domain.model.KeyValue">
         select round(abs(balance_money)) 'value',
-        case when cmonth = 1 then 'Janunary'
+        case when cmonth = 1 then 'January'
         when cmonth = 2 then 'February'
         when cmonth = 3 then 'March'
         when cmonth = 4 then 'April'
@@ -397,28 +397,28 @@
         from (select c.balance_money, month(c.transaction_date) cmonth from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
-        <if test="transaction != null">
-            <if test="transaction.txnTypes != null and transaction.txnTypes != ''">
-                and cat.txn_types like CONCAT('%', #{transaction.txnTypes,jdbcType=VARCHAR}, '%')
+        <if test="q != null">
+            <if test="q.txnTypes != null and q.txnTypes != ''">
+                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
-            <if test="transaction.txnTypes == null or transaction.txnTypes == ''">
+            <if test="q.txnTypes == null or q.txnTypes == ''">
                 and cat.txn_types like '%expense%'
             </if>
-            <if test="transaction.year != null">
-                and year(c.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            <if test="q.year != null">
+                and year(c.transaction_date) = #{q.year,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.cardTypeName != null">
-                and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+            <if test="q.cardTypeName != null">
+                and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="transaction.consumes != null">
+            <if test="q.consumes != null">
                 and c.consume_code in
-                <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
                     #{consumeID,jdbcType=VARCHAR}
                 </foreach>
             </if>
-            <if test="transaction.demoArea != null">
-                and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
-                or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
+            <if test="q.demoArea != null">
+                and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
         ) t1 group by cmonth) t2 order by cmonth
@@ -427,7 +427,7 @@
     <!-- Monthly income curve: prefers income_money, falls back to negative balance_money -->
     <select id="monthIncomeReport" resultType="com.finsight.domain.model.KeyValue">
         select round(sum(amount)) as `value`,
-        case when cmonth = 1 then 'Janunary'
+        case when cmonth = 1 then 'January'
         when cmonth = 2 then 'February'
         when cmonth = 3 then 'March'
         when cmonth = 4 then 'April'
@@ -450,28 +450,28 @@
             from transaction c
             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
-            <if test="transaction != null">
-                <if test="transaction.year != null and transaction.year != ''">
-                    and year(c.transaction_date) = #{transaction.year,jdbcType=VARCHAR}
+            <if test="q != null">
+                <if test="q.year != null and q.year != ''">
+                    and year(c.transaction_date) = #{q.year,jdbcType=VARCHAR}
                 </if>
-                <if test="transaction.transactionDateStart != null">
-                    and c.transaction_date &gt;= #{transaction.transactionDateStart,jdbcType=DATE}
+                <if test="q.transactionDateStart != null">
+                    and c.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
                 </if>
-                <if test="transaction.transactionDateEnd != null">
-                    and c.transaction_date &lt;= #{transaction.transactionDateEnd,jdbcType=DATE}
+                <if test="q.transactionDateEnd != null">
+                    and c.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
                 </if>
-                <if test="transaction.cardTypeName != null and transaction.cardTypeName != ''">
-                    and c.card_type_name = #{transaction.cardTypeName,jdbcType=VARCHAR}
+                <if test="q.cardTypeName != null and q.cardTypeName != ''">
+                    and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
                 </if>
-                <if test="transaction.consumes != null">
+                <if test="q.consumes != null">
                     and c.consume_code in
-                    <foreach collection="transaction.consumes" item="consumeID" open="(" separator="," close=")">
+                    <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
                         #{consumeID,jdbcType=VARCHAR}
                     </foreach>
                 </if>
-                <if test="transaction.demoArea != null and transaction.demoArea != ''">
-                    and (c.demoarea like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%')
-                    or c.transaction_desc like CONCAT('%', #{transaction.demoArea,jdbcType=VARCHAR}, '%') )
+                <if test="q.demoArea != null and q.demoArea != ''">
+                    and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
                 </if>
                 <!-- Income semantics: include explicit income_money OR negative balance OR income-tagged categories -->
                 and (
@@ -479,6 +479,61 @@
                     or coalesce(c.balance_money,0) &lt; 0
                     or (cat.txn_types is not null and cat.txn_types like '%income%')
                 )
+            </if>
+        ) t
+        group by cmonth
+        order by cmonth
+    </select>
+
+    <!-- Monthly expense curve: positive balance_money (classic expense) -->
+    <select id="monthExpenseReport" resultType="com.finsight.domain.model.KeyValue">
+        select round(sum(amount)) as `value`,
+        case when cmonth = 1 then 'January'
+        when cmonth = 2 then 'February'
+        when cmonth = 3 then 'March'
+        when cmonth = 4 then 'April'
+        when cmonth = 5 then 'May'
+        when cmonth = 6 then 'June'
+        when cmonth = 7 then 'July'
+        when cmonth = 8 then 'August'
+        when cmonth = 9 then 'September'
+        when cmonth = 10 then 'October'
+        when cmonth = 11 then 'November'
+        when cmonth = 12 then 'December' else cmonth end as `key`
+        from (
+            select
+                month(c.transaction_date) as cmonth,
+                case
+                    when (coalesce(c.balance_money,0) &gt; 0) then coalesce(c.balance_money,0)
+                    else 0
+                end as amount
+            from transaction c
+            left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+            where 1 = 1
+            <if test="q != null">
+                <if test="q.year != null and q.year != ''">
+                    and year(c.transaction_date) = #{q.year,jdbcType=VARCHAR}
+                </if>
+                <if test="q.transactionDateStart != null">
+                    and c.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
+                </if>
+                <if test="q.transactionDateEnd != null">
+                    and c.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
+                </if>
+                <if test="q.cardTypeName != null and q.cardTypeName != ''">
+                    and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
+                </if>
+                <if test="q.consumes != null">
+                    and c.consume_code in
+                    <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
+                        #{consumeID,jdbcType=VARCHAR}
+                    </foreach>
+                </if>
+                <if test="q.demoArea != null and q.demoArea != ''">
+                    and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
+                </if>
+                and (coalesce(c.balance_money,0) &gt; 0 or (cat.txn_types is not null and cat.txn_types like '%expense%'))
             </if>
         ) t
         group by cmonth

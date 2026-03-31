@@ -1,4 +1,4 @@
-package com.finsight.application.service;
+package com.finsight.application.benefit;
 
 import com.finsight.core.AppServiceException;
 import com.finsight.domain.model.Accumulation;

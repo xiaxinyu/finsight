@@ -1,0 +1,69 @@
+package com.finsight.application.report;
+
+import com.alibaba.fastjson.JSONArray;
+import com.finsight.application.query.TransactionQuery;
+import com.finsight.application.query.TransactionQueryAssembler;
+import com.finsight.application.transaction.ITransactionService;
+import com.finsight.core.AppServiceException;
+import com.finsight.domain.port.TransactionRepository;
+import com.finsight.web.restful.model.TransactionParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+
+@Service
+public class TransactionReportFacade {
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private ITransactionService transactionService;
+
+    public String consumeReportJson(TransactionParam param) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        return JSONArray.toJSONString(transactionRepository.consumeReport(q));
+    }
+
+    public String weekConsumeReportJson(TransactionParam param) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        return JSONArray.toJSONString(transactionRepository.weekConsumeReport(q));
+    }
+
+    public String monthConsumeReportJson(TransactionParam param) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        return JSONArray.toJSONString(transactionRepository.monthConsumeReport(q));
+    }
+
+    public String monthIncomeReportJson(TransactionParam param) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        return JSONArray.toJSONString(transactionRepository.monthIncomeReport(q));
+    }
+
+    public String monthExpenseReportJson(TransactionParam param) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        return JSONArray.toJSONString(transactionRepository.monthExpenseReport(q));
+    }
+
+    /**
+     * Dashboard KPI JSON; validates year like the former controller.
+     */
+    public String homeSummary(String year) throws AppServiceException {
+        Integer y;
+        if (year == null || year.trim().isEmpty()) {
+            y = LocalDate.now().getYear();
+        } else {
+            try {
+                y = Integer.parseInt(year.trim());
+            } catch (NumberFormatException ex) {
+                throw new AppServiceException("year must be a valid integer");
+            }
+        }
+        int currentYear = LocalDate.now().getYear();
+        if (y < 2000 || y > currentYear + 1) {
+            throw new AppServiceException("year out of range");
+        }
+        return transactionService.homeSummary(y);
+    }
+}
