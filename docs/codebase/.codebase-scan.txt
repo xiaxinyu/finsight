@@ -1,0 +1,351 @@
+
+=== DIRECTORY TREE (max depth 3, source files only) ===
+.classpath
+.cursor
+.cursor/skills
+.cursor/skills/acquire-codebase-knowledge
+.cursor/skills/acquire-codebase-knowledge/SKILL.md
+.cursor/skills/acquire-codebase-knowledge/assets
+.cursor/skills/acquire-codebase-knowledge/references
+.cursor/skills/acquire-codebase-knowledge/scripts
+.cursor/skills/k8s-docs-skeleton-refactor
+.cursor/skills/k8s-docs-skeleton-refactor/MIGRATION_GUIDE.md
+.cursor/skills/k8s-docs-skeleton-refactor/SKILL.md
+.cursor/skills/k8s-docs-skeleton-refactor/TEMPLATES.md
+.factorypath
+.gitignore
+.idea
+.idea/compiler.xml
+.idea/encodings.xml
+.idea/inspectionProfiles
+.idea/inspectionProfiles/Project_Default.xml
+.idea/jarRepositories.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.project
+.settings
+.settings/org.eclipse.core.resources.prefs
+.settings/org.eclipse.jdt.apt.core.prefs
+.settings/org.eclipse.jdt.core.prefs
+.settings/org.eclipse.m2e.core.prefs
+.vscode
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json
+LICENSE
+README.md
+README.zh-CN.md
+build.log
+checkstyle.xml
+db
+db/init
+docs
+docs/FUNCTION_LIST.md
+docs/FUNCTION_LIST.zh-CN.md
+docs/PRODUCT_GUIDE.md
+docs/PRODUCT_GUIDE.zh-CN.md
+docs/README.md
+docs/README.zh-CN.md
+docs/RULES_GUIDE.md
+docs/RULES_GUIDE.zh-CN.md
+docs/TECHNICAL.md
+docs/TECHNICAL.zh-CN.md
+docs/_index.md
+docs/codebase
+docs/codebase/.codebase-scan.txt
+docs/tech
+docs/tech/architecture
+docs/tech/architecture/finalization-2026-03.md
+docs/tech/architecture/milestones.md
+docs/tech/architecture/milestones.zh-cn.md
+docs/tech/architecture/notes-1.md
+docs/tech/architecture/technical.md
+docs/tech/architecture/technical.zh-cn.md
+docs/tech/contributing
+docs/tech/contributing/next-dev-prompt.md
+docs/tech/contributing/next-dev-prompt.zh-cn.md
+docs/tech/contributing/rules-guide.md
+docs/tech/contributing/rules-guide.zh-cn.md
+docs/tech/reference
+docs/tech/reference/function-list.md
+docs/tech/reference/function-list.zh-cn.md
+docs/user
+docs/user/concepts
+docs/user/concepts/branding.md
+docs/user/concepts/branding.zh-cn.md
+docs/user/concepts/business-model.md
+docs/user/concepts/business-model.zh-cn.md
+docs/user/concepts/manifesto.md
+docs/user/concepts/manifesto.zh-cn.md
+docs/user/concepts/overview.md
+docs/user/concepts/overview.zh-cn.md
+docs/user/concepts/product-guide.md
+docs/user/concepts/product-guide.zh-cn.md
+docs/user/concepts/swot.md
+docs/user/concepts/swot.zh-cn.md
+docs/user/setup
+docs/user/setup/local-development.md
+docs/user/tasks
+docs/user/tutorials
+finsight.iml
+pom.xml
+src
+src/main
+src/main/java
+src/main/java/com
+src/main/resources
+src/main/resources/application.yml
+src/main/resources/mapper
+src/main/resources/messages
+src/main/resources/sql
+src/main/resources/static
+src/main/resources/templates
+src/main/sql
+src/main/sql/Untitled.csv
+src/main/sql/effect.sql
+src/main/sql/function.txt
+src/main/sql/招商银行交易流水(申请时间2025年07月08日18时42分10秒).pdf
+src/test
+src/test/java
+src/test/java/com
+
+=== STACK DETECTION (manifest files) ===
+
+--- pom.xml ---
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>finsight</groupId>
+    <artifactId>finsight</artifactId>
+    <version>1.6.0</version>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+    </parent>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.proc>full</maven.compiler.proc>
+        <commons-io.version>2.16.0</commons-io.version>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
+        </dependency>
+
+        
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+
+        
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.60</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>easyexcel</artifactId>
+            <version>3.3.2</version>
+
+[TRUNCATED] Showing first 80 of 195 lines.
+
+=== ENTRY POINTS ===
+No common entry points found. Check 'main' or 'scripts.start' in manifest files above.
+
+=== LINTING AND FORMATTING CONFIG ===
+No linting or formatting config files found in project root.
+
+=== ENVIRONMENT VARIABLE TEMPLATES ===
+No .env.example or .env.template found. Identify required environment variables by searching the code and config for environment variable reads.
+
+=== TODO / FIXME / HACK (production code only, test dirs excluded) ===
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:28: TODO_LIMIT = 60
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:291: """Search for TODO/FIXME/HACK comments."""
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:291: """Search for TODO/FIXME/HACK comments."""
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:291: """Search for TODO/FIXME/HACK comments."""
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:293: patterns = ["TODO", "FIXME", "HACK"]
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:293: patterns = ["TODO", "FIXME", "HACK"]
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:293: patterns = ["TODO", "FIXME", "HACK"]
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:320: return todos[:TODO_LIMIT]
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:617: # TODOs
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:620: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", todos, output_file)
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:620: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", todos, output_file)
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:620: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", todos, output_file)
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:622: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", ["None found."], output_file)
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:622: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", ["None found."], output_file)
+.cursor/skills/acquire-codebase-knowledge/scripts/scan.py:622: print_section("TODO / FIXME / HACK (production code only, test dirs excluded)", ["None found."], output_file)
+src/main/resources/static/plugins/bmap/codemirror.js:1660: } else if (!end) { // FIXME dangerously hacky
+src/main/resources/static/plugins/bmap/codemirror.js:1908: // FIXME this is all really shaky. might handle the few cases it needs to handle, but likely to cause problems
+src/main/resources/static/plugins/bmap/codemirror.js:5283: throw new Error("inputStyle can not (yet) be changed in a running editor"); // FIXME
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:7681: // FIXME: the default precision should not be provided, since there is no universally adaptable
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:8253: //     // FIXME: deprecated, check and remove it.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:8953: rootClz.$constructor = rootClz; // FIXME: not necessary?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:9159: // FIXME It seems broken in IE8 simulation of IE11
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:9195: // TODO Text or image?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:12616: // TODO: not store dataIndex on children.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:12762: // TODO Share with textContent?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:12776: // TODO Share with textContent?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:12924: // TODO blurScope: coordinate system
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:13002: // TODO Should put it on seriesModel?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:13063: // TODO. progressive mode.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:13154: // TODO dataIndex may be set after this function. This check is not useful.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:14749: // TODO It's only for pictorial bar now.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:14859: // TODO: TYPE AnimatableModel
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:14914: // TODO Also use fade out animation?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15206: // FIXME: This way might be incorrect when graphic clipped by a corner
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15423: // TODO
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15524: // FIXME: Ideally all the labels should be above all the glyphs by default,
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15554: // TODO if el.emphasis.z2 is spcefied, what about textContent.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15680: // TODO specified position?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15908: // TODO TextStyleModel
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15930: // FIXME: check/refactor for ellipsis handling of rich text.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:15994: // TODO
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16063: // FIXME in node-canvas fontWeight is before fontStyle
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16121: // TODO Performance improvement?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16128: // TODO Callback
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16214: // TODO: TYPE strict key check?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16228: // FIXME:TS do not know how to make it works
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16236: // TODO 'a.b.c' is deprecated
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:16272: // FIXME:TS check whether put this method here
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:17388: * FIXME:
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:17446: // FIXME: hardcode, @see nonSeriesBoxCoordSysCreators
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:17678: // FIXME compare before adding gap?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:17685: // FIXME: consider rect.y is not `0`?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:17834: // FIXME
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:18291: // FIXME: remove this approach?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:18640: // TODO
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:18651: // ??? TODO give a better default series name rule?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:18932: // TODO palettes must be in order
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:19214: // TODO Before multiple tooltips get supported, we do this check to avoid unexpected exception.
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:19449: * FIXME: rename to getRawSeriesByType?
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js:19581: // TODO Needs clone when merging to the unexisted property
+
+=== GIT RECENT COMMITS (last 20) ===
+e7a7cb4 docs: update README and remove outdated branding and business model documents
+5c7ac1e feat(report): enhance income and expense reporting with new metrics and UI improvements
+3ff076a feat(expense): add expense breakdown charts and enhance YoY comparison functionality
+117aaf7 refactor(package): reorganize service packages for better structure
+8b65836 feat(benefit): implement accumulation, endowment, medical, and unemployment services
+8b92d53 feat(transaction): add monthly income report functionality
+57dffb6 feat(date-range): update date range functions to default to current calendar year
+abf22f6 feat(consume): add transaction type filtering to category tree
+9ef9ea2 feat(dashboard): enhance account dashboard with new KPIs and advice sections
+dbfde71 refactor(mapper): simplify SQL queries in HouseRentMapper and SalaryMapper
+fe0304d feat(report): enhance financial report UI and data handling
+d398721 feat(consume): enhance category update functionality and UI feedback
+fc326f1 feat(ui): enhance admin templates with improved styling and functionality
+4233a17 feat(statement): enhance CMB transaction importer to support credit card transactions
+5125fe1 refactor(authentication): enhance authentication facade with documentation
+dd6e7ce feat(ui): add sidebar toggle button to navigation header
+b300278 style(templates): update UI theme and improve visual consistency
+1dd8992 refactor(navigation): reorder admin menu items for better grouping
+7f8f5ab refactor(admin-ui): remove redundant tree helper UI elements
+dddb1a1 feat(transaction): add income-to-expense and expense-to-income conversion
+
+=== HIGH-CHURN FILES (last 90 days, top 20) ===
+   8 src/main/resources/templates/account/transaction/transaction_bill.html
+   8 src/main/resources/templates/system/admin/consume_rules.html
+   6 src/main/resources/mapper/TransactionMapper.xml
+   6 src/main/resources/templates/system/navigation/menu.html
+   5 src/main/resources/static/css/default/transaction/TransactionBill.css
+   4 src/main/resources/templates/analysis/income_curve_report.html
+   4 src/main/resources/templates/analysis/month_income_expense_trend.html
+   4 src/main/resources/static/scripts/account-dashboard.js
+   4 src/main/resources/templates/account/index.html
+   4 src/main/resources/static/scripts/transaction.js
+   4 src/main/resources/templates/account/accumulation/accumulation.html
+   4 src/main/resources/templates/account/endowment/Endowment.html
+   4 src/main/resources/templates/account/house-rent/HouseRent.html
+   4 src/main/resources/templates/account/medical/Medical.html
+   4 src/main/resources/templates/account/salary/Salary.html
+   4 src/main/resources/templates/account/unemployment/UnEmployment.html
+   4 src/main/resources/templates/account/transaction/report/consume_pie_report.html
+   4 src/main/resources/templates/account/transaction/report/month_consume_report.html
+   4 src/main/resources/templates/account/transaction/report/week_consume_report.html
+   4 src/main/resources/templates/system/admin/consume_categories.html
+
+=== MONOREPO SIGNALS ===
+No monorepo signals detected.
+
+=== CODE METRICS ===
+Total files scanned: 979
+Total lines of code: 64378
+
+Files by language:
+  Other: 703
+  Java: 157
+  JavaScript: 118
+  Python: 1
+
+Top 10 largest files:
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js.map: 7666.2KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.esm.mjs.map: 7666.1KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.esm.js.map: 7666.1KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.common.js.map: 4861.3KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.js: 3613.2KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.simple.js.map: 3486.0KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.esm.mjs: 3250.4KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.esm.js: 3250.4KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.common.js: 2346.0KB
+src/main/resources/static/plugins/echarts-6.0.0/echarts.simple.js: 1677.0KB
+
+=== CI/CD PIPELINES ===
+No CI/CD pipelines detected.
+
+=== CONTAINERS & ORCHESTRATION ===
+No containerization configs detected.
+
+=== SECURITY & COMPLIANCE ===
+No security configs detected.
+
+=== PERFORMANCE & TESTING ===
+No performance testing configs detected.
+
+=== SCAN COMPLETE ===
