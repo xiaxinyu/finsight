@@ -1,6 +1,6 @@
 # FinSight — 战略 SWOT 分析
 
-语言: 中文 | [English](SWOT.md)
+语言: 中文 | [English](swot.md)
 
 > 基于高层战略备忘梳理。本文件将“隐私优先”的定位、市场现实与执行风险凝练为可操作视图。
 

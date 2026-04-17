@@ -4,7 +4,7 @@
 
 FinSight is built on a simple premise: **Trust is our most valuable asset.** We do not sell user data. We do not show ads. We do not lock your data behind a paywall. Our business model is aligned with your financial success.
 
-**Tier labels (Free / Plus / Pro)** below describe a **roadmap and commercial narrative**. They do not strictly map to this repository’s license, packaging, or pricing—see [PRODUCT_GUIDE](PRODUCT_GUIDE.md) and [FUNCTION_LIST](FUNCTION_LIST.md) for what is implemented today.
+**Tier labels (Free / Plus / Pro)** below describe a **roadmap and commercial narrative**. They do not strictly map to this repository’s license, packaging, or pricing—see [`docs/user/concepts/product-guide.md`](product-guide.md) and [`docs/tech/reference/function-list.md`](../../tech/reference/function-list.md) for what is implemented today.
 
 ---
 

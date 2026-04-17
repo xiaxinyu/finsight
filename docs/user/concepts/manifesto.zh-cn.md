@@ -1,6 +1,6 @@
 # FinSight 宣言
 
-语言: 中文 | [English](MANIFESTO.md)
+语言: 中文 | [English](manifesto.md)
 
 > “理解你的钱，理解你自己。”
 

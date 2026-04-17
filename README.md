@@ -20,8 +20,8 @@ FinSight turns bank and card activity into **classified transactions, trends, an
 
 | Audience | Start here |
 | :--- | :--- |
-| **Product & strategy** | [docs/README.md](docs/README.md) |
-| **Engineering** | [Technical](docs/TECHNICAL.md) · [Function list](docs/FUNCTION_LIST.md) |
+| **Product & strategy** | [Docs landing](docs/_index.md) · [Overview](docs/user/concepts/overview.md) |
+| **Engineering** | [Technical](docs/tech/architecture/technical.md) · [Function list](docs/tech/reference/function-list.md) |
 
 ## License
 

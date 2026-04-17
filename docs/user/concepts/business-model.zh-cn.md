@@ -1,12 +1,12 @@
 # FinSight 商业模式
 
-语言: 中文 | [English](BUSINESS_MODEL.md)
+语言: 中文 | [English](business-model.md)
 
 > 可持续、透明、以价值为驱动。
 
 FinSight 建立在一个朴素的前提之上：**信任是我们最重要的资产。** 我们的商业模式旨在与用户的财务成功保持一致，而非利用用户的数据。我们不出售数据、不展示广告、不用付费墙锁定你的服务。
 
-文中 **Free / Plus / Pro** 用于**产品叙事与路线沟通**，与开源仓库的许可、发行形态**无严格一一对应**；当前交付以 [产品指南](PRODUCT_GUIDE.zh-CN.md) 与 [功能清单](FUNCTION_LIST.zh-CN.md) 为准。
+文中 **Free / Plus / Pro** 用于**产品叙事与路线沟通**，与开源仓库的许可、发行形态**无严格一一对应**；当前交付以 [`docs/user/concepts/product-guide.zh-cn.md`](product-guide.zh-cn.md) 与 [`docs/tech/reference/function-list.zh-cn.md`](../../tech/reference/function-list.zh-cn.md) 为准。
 
 ---
 

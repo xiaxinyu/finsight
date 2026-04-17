@@ -20,8 +20,8 @@ FinSight 将银行与卡片流水转化为**可分类、可对账、可报表**�
 
 | 读者 | 入口 |
 | :--- | :--- |
-| **产品与战略** | [docs/README.zh-CN.md](docs/README.zh-CN.md) |
-| **研发与交付** | [技术说明](docs/TECHNICAL.zh-CN.md) · [功能清单](docs/FUNCTION_LIST.zh-CN.md) |
+| **产品与战略** | [文档入口](docs/_index.md) · [总览](docs/user/concepts/overview.zh-cn.md) |
+| **研发与交付** | [技术说明](docs/tech/architecture/technical.zh-cn.md) · [功能清单](docs/tech/reference/function-list.zh-cn.md) |
 
 ## 许可
 
