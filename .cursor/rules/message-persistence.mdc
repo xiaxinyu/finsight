@@ -1,0 +1,12 @@
+---
+description: CRITICAL — financial and domain data persistence rules (DB, imports, integrity)
+alwaysApply: true
+---
+
+# Data persistence (CRITICAL)
+
+- **Source of truth**: MySQL via MyBatis/MyBatis-Plus. Schema and query behavior changes belong in mapper XML + matching mapper interface; keep transactional boundaries in application services where multi-step writes occur.
+- **Integrity**: Imports and batch updates must avoid duplicate or partial writes where the domain expects atomicity; use existing patterns (`TransactionRepository`, statement flows) instead of ad-hoc JDBC.
+- **IDs and auditing**: Respect existing id generation and `createuser`/`updateuser` (or equivalent) fields when touching persisted entities.
+- **Prohibited**: Raw SQL in controllers; silent swallowing of persistence failures for money-moving operations without logging and clear user-visible outcome.
+- **Privacy**: Never persist or log full PANs, CVVs, or raw credential strings; follow existing masking/redaction in importers.

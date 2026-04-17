@@ -1,0 +1,13 @@
+---
+description: Thymeleaf, static assets, and jQuery/EasyUI/ECharts conventions
+globs: src/main/resources/{templates,static}/**/*
+alwaysApply: false
+---
+
+# Frontend (server-rendered UI)
+
+- **Stack**: Thymeleaf templates under `src/main/resources/templates/`; JS/CSS and vendored libs under `src/main/resources/static/`.
+- **Patterns**: Prefer existing EasyUI + jQuery patterns in sibling pages; keep layout/navigation consistent with `system/navigation/` and shared fragments.
+- **AJAX**: JSON endpoints follow existing controller paths (e.g. `/transaction/*`); use same response shapes (`CommonResult`, etc.) as neighboring code.
+- **Charts**: ECharts is vendored under `static/plugins/`; match options/style from existing report pages.
+- **Scope**: Do not introduce a new SPA framework without an explicit product decision; incremental UI changes should stay compatible with current stack.

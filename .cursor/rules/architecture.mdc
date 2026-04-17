@@ -1,0 +1,11 @@
+---
+description: Layered architecture and boundaries for FinSight (Java/Spring)
+alwaysApply: true
+---
+
+# Architecture
+
+- **Flow**: `web` → `application` → `domain` (models + ports) → `infrastructure` (MyBatis). Controllers must not embed SQL or call mappers directly; go through application services or facades.
+- **Persistence**: SQL lives in `src/main/resources/mapper/*.xml`; Java mapper interfaces in `com.finsight.infrastructure.mapper`. Domain ports in `com.finsight.domain.port` are the abstraction for repositories.
+- **Changes**: When adding features, extend the right layer first (domain model + port, then infra adapter, then app service, then controller).
+- **Config**: Environment-specific values use `application.yml` + env vars (`SPRING_DATASOURCE_*`, `ACCOUNT_DES_SIGN_KEY`); never commit secrets or real exports.

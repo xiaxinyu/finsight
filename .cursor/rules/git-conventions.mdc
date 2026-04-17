@@ -1,0 +1,11 @@
+---
+description: Git commits, branches, and PR hygiene for this repo
+alwaysApply: true
+---
+
+# Git conventions
+
+- **Commits**: Use clear, imperative subject lines; optional scope in parentheses, e.g. `feat(report): add monthly income curve`. One logical change per commit when possible.
+- **Content**: Do not commit secrets, `.env` with real values, real bank exports, or large generated artifacts unrelated to the change.
+- **Branches**: Prefer short-lived branches from main; name by purpose, e.g. `fix/transaction-filter`, `feat/admin-users`.
+- **PRs**: Describe what changed, why, and risk/verification (e.g. `mvn clean package`, pages/APIs touched). Link issues if applicable.
