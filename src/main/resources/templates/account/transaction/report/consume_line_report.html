@@ -7,8 +7,11 @@
     <script type="text/javascript" src="/scripts/date.js"></script>
     <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-charts.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-ui.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/finsight-ui.css">
     <script type="text/javascript" src="/scripts/transaction.js"></script>
     <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
     
@@ -48,7 +51,7 @@
 	          </span>
 
         <span class="item_intervel">
-	              <a class="easyui-linkbutton" data-options="iconCls:'icon-search'" onclick="statistic()">Statistic</a>  
+	              <a class="easyui-linkbutton fs-btn-apply fs-btn-primary" data-options="iconCls:'icon-search'" onclick="statistic()">Apply</a>  
 	          </span>
     </div>
 </div>
@@ -93,13 +96,18 @@
 <script type="text/javascript">
 var pieX = 320;
 $(function(){
-    $.parser.onComplete = function(){
+    var booted = false;
+    function bootReport(){
+        if(booted) return;
+        booted = true;
         initYearQuick();
         applyFocusHint();
         $('#main').height($('#chartArea').height()-90);
         pieX = $('#chartArea').width() - pieX;
         statistic();
-    };
+    }
+    $.parser.onComplete = bootReport;
+    setTimeout(bootReport, 120);
 });
 
 function applyFocusHint(){
@@ -138,17 +146,21 @@ function initYearQuick(){
         }
         $('#cmbYearQuick').combobox('loadData', years);
         $('#cmbYearQuick').combobox('setValue', ''+curY);
-        var startStr = curY + '-01-01';
-        var endStr = curY + '-12-31';
-        $('#dateStart').datebox('setValue', startStr);
-        $('#dateEnd').datebox('setValue', endStr);
+        var range = (typeof yearRangeMmDdYyyy === 'function')
+            ? yearRangeMmDdYyyy(curY)
+            : { start: '01/01/' + curY, end: '12/31/' + curY };
+        $('#dateStart').datebox('setValue', range.start);
+        $('#dateEnd').datebox('setValue', range.end);
 
         $('#cmbYearQuick').combobox({
             onSelect: function(rec){
                 var yy = rec && rec.value ? rec.value : $('#cmbYearQuick').combobox('getValue');
                 if(!yy) return;
-                $('#dateStart').datebox('setValue', yy + '-01-01');
-                $('#dateEnd').datebox('setValue', yy + '-12-31');
+                var yr = (typeof yearRangeMmDdYyyy === 'function')
+                    ? yearRangeMmDdYyyy(yy)
+                    : { start: '01/01/' + yy, end: '12/31/' + yy };
+                $('#dateStart').datebox('setValue', yr.start);
+                $('#dateEnd').datebox('setValue', yr.end);
                 statistic();
             }
         });
@@ -235,6 +247,7 @@ function show(data){
     if(clean.length === 0){
         $('#kpiBar').html('<span class="fs-kpi"><b>¥0</b> Total Expense</span>');
         try{ $('#topCatGrid').datagrid('loadData', []); }catch(e){}
+        render([], [], 0);
         return;
     }
 
@@ -322,7 +335,16 @@ function ajaxError(xhr){
 
 function render(keys,values,total){
         ensureMainSize();
-        var myChart = echarts.init(document.getElementById('main'));
+        var dom = document.getElementById('main');
+        var existing = echarts.getInstanceByDom(dom);
+        if(existing){ echarts.dispose(existing); }
+        var myChart = echarts.init(dom);
+        if(!keys || !keys.length){
+            myChart.setOption({
+                title: { text: 'No expense data in range', left: 'center', top: 'middle', textStyle: { color: '#94a3b8', fontSize: 14, fontWeight: 600 } }
+            });
+            return;
+        }
 
         function fmtMoney(n){
             var num = Number(n || 0);

@@ -1,3 +1,17 @@
+/** Server/EasyUI date string: MM/dd/yyyy (matches ListingDateSupport). */
+function formatDateMmDdYyyy(dt) {
+    if (!dt) { return ''; }
+    var m = dt.getMonth() + 1;
+    var d = dt.getDate();
+    var y = dt.getFullYear();
+    return (m < 10 ? '0' + m : '' + m) + '/' + (d < 10 ? '0' + d : '' + d) + '/' + y;
+}
+
+function yearRangeMmDdYyyy(year) {
+    var y = String(year || new Date().getFullYear());
+    return { start: '01/01/' + y, end: '12/31/' + y };
+}
+
 Date.prototype.format = function (fmt) { 
     var o = {
         "M+": this.getMonth() + 1, //month 

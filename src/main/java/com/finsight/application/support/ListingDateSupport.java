@@ -53,12 +53,23 @@ public final class ListingDateSupport {
         return new String[]{from, to};
     }
 
-    /** Parses UI date string (MM/dd/yyyy) for {@link com.finsight.domain.model.Transaction} and similar queries. */
+    /** Parses UI date strings (yyyy-MM-dd, MM-dd-yyyy, MM/dd/yyyy). */
     public static Date parseMmDdYyyy(String mmddyyyy) throws AppServiceException {
+        if (StringTool.isNullOrEmpty(mmddyyyy)) {
+            throw new AppServiceException("Invalid date format");
+        }
+        String raw = mmddyyyy.trim();
         try {
-            return DateTool.changeStringToDate(mmddyyyy, DateTool.DF_MM_DD_YYYY);
+            if (raw.matches("\\d{4}-\\d{1,2}-\\d{1,2}")) {
+                return DateTool.changeStringToDate(raw, DateTool.DF_YYYY_MM_DD);
+            }
+            String normalized = raw.replace('/', '-');
+            if (normalized.matches("\\d{1,2}-\\d{1,2}-\\d{4}")) {
+                return DateTool.changeStringToDate(normalized, DateTool.DF_MM_DD_YYYY);
+            }
+            return DateTool.changeStringToDate(raw, "MM/dd/yyyy");
         } catch (DateParseException e) {
-            throw new AppServiceException("Invalid date format", e);
+            throw new AppServiceException("Invalid date format: " + mmddyyyy, e);
         }
     }
 

@@ -7,8 +7,11 @@
     <script type="text/javascript" src="/scripts/date.js"></script>
     <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-charts.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-ui.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/finsight-ui.css">
     <script type="text/javascript" src="/scripts/transaction.js"></script>
     <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
     
@@ -123,14 +126,20 @@ function initYearQuick(){
         }
         $('#cmbYearQuick').combobox('loadData', years);
         $('#cmbYearQuick').combobox('setValue', ''+curY);
-        $('#dateStart').datebox('setValue', curY + '-01-01');
-        $('#dateEnd').datebox('setValue', curY + '-12-31');
+        var range = (typeof yearRangeMmDdYyyy === 'function')
+            ? yearRangeMmDdYyyy(curY)
+            : { start: '01/01/' + curY, end: '12/31/' + curY };
+        $('#dateStart').datebox('setValue', range.start);
+        $('#dateEnd').datebox('setValue', range.end);
         $('#cmbYearQuick').combobox({
             onSelect: function(rec){
                 var yy = rec && rec.value ? rec.value : $('#cmbYearQuick').combobox('getValue');
                 if(!yy) return;
-                $('#dateStart').datebox('setValue', yy + '-01-01');
-                $('#dateEnd').datebox('setValue', yy + '-12-31');
+                var yr = (typeof yearRangeMmDdYyyy === 'function')
+                    ? yearRangeMmDdYyyy(yy)
+                    : { start: '01/01/' + yy, end: '12/31/' + yy };
+                $('#dateStart').datebox('setValue', yr.start);
+                $('#dateEnd').datebox('setValue', yr.end);
                 statistic();
                 getTransactions(0);
             }

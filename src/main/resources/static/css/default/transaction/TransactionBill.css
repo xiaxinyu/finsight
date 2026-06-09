@@ -159,3 +159,23 @@ body{ background: var(--bg-body); color: var(--text-main); }
 .fs-report-side-card .datagrid-row-selected{
     background: var(--primary-light) !important;
 }
+
+/* Two-line datagrid headers (label + unit) */
+.datagrid-header .datagrid-cell-group .fs-col-unit{
+    display:block;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    color:#94a3b8;
+    margin-top:2px;
+}
+
+.datagrid-header .datagrid-cell.fs-sort-active{
+    color:var(--primary);
+}
+
+.datagrid-row.fs-total-row .datagrid-cell{
+    font-weight:700;
+    background:#f1f5f9 !important;
+}

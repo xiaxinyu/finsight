@@ -7,8 +7,11 @@
     <script type="text/javascript" src="/scripts/date.js"></script>
     <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-charts.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-ui.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/finsight-ui.css">
     <script type="text/javascript" src="/scripts/transaction.js"></script>
     <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
     <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
@@ -168,9 +171,9 @@
                            data-options="rownumbers:true,singleSelect:true,border:false,fitColumns:true">
                     <thead>
                     <tr>
-                        <th data-options="field:'month',width:120">Month</th>
-                        <th data-options="field:'income',width:150,align:'right',formatter:function(v){ return moneyText(v); }">Income</th>
-                        <th data-options="field:'share',width:100,align:'right'">Share</th>
+                        <th data-options="field:'month',width:120,sortable:true">Month</th>
+                        <th data-options="field:'income',width:150,align:'right',sortable:true,formatter:app.money.numberOnly">Income<br/><span class="fs-col-unit">CNY</span></th>
+                        <th data-options="field:'share',width:100,align:'right',sortable:true">Share<br/><span class="fs-col-unit">%</span></th>
                     </tr>
                     </thead>
                     </table>

@@ -7,8 +7,11 @@
     <script type="text/javascript" src="/scripts/date.js"></script>
     <script type="text/javascript" src="/scripts/report-focus.js"></script>
     <script type="text/javascript" src="/plugins/echarts-6.0.0/echarts.min.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-charts.js"></script>
+    <script type="text/javascript" src="/scripts/finsight-ui.js"></script>
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/bootstrap/easyui.css">
     <link rel="stylesheet" type="text/css" href="/plugins/jquery-easyui-1.11.4/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="/css/finsight-ui.css">
     <script type="text/javascript" src="/scripts/transaction.js"></script>
     <script type="text/javascript" src="/datasource/transaction-datasource.js"></script>
     <link rel="stylesheet" type="text/css" href="/css/default/transaction/TransactionBill.css">
@@ -79,7 +82,7 @@
                     style="width:200px;"></select>
         </span>
         <span class="filter-item">
-            <a class="easyui-linkbutton" data-options="iconCls:'icon-reload',plain:true" onclick="statistic()">Refresh</a>
+            <a class="easyui-linkbutton fs-btn-apply fs-btn-primary" data-options="iconCls:'icon-reload'" onclick="statistic()">Apply</a>
         </span>
     </div>
 </div>
@@ -99,11 +102,11 @@
                data-options="rownumbers:true,singleSelect:true,border:false,fitColumns:true">
             <thead>
             <tr>
-                <th data-options="field:'month',width:120">Month</th>
-                <th data-options="field:'income',width:120,align:'right',formatter:app.money.rmb">Income</th>
-                <th data-options="field:'expense',width:120,align:'right',formatter:app.money.rmb">Expense</th>
-                <th data-options="field:'surplus',width:120,align:'right',formatter:app.money.rmb">Surplus</th>
-                <th data-options="field:'savingsRate',width:100,align:'right'">Savings</th>
+                <th data-options="field:'month',width:120,sortable:true">Month</th>
+                <th data-options="field:'income',width:120,align:'right',sortable:true,formatter:app.money.numberOnly">Income<br/><span class="fs-col-unit">CNY</span></th>
+                <th data-options="field:'expense',width:120,align:'right',sortable:true,formatter:app.money.numberOnly">Expense<br/><span class="fs-col-unit">CNY</span></th>
+                <th data-options="field:'surplus',width:120,align:'right',sortable:true,formatter:app.money.numberOnly">Surplus<br/><span class="fs-col-unit">CNY</span></th>
+                <th data-options="field:'savingsRate',width:100,align:'right',sortable:true">Savings<br/><span class="fs-col-unit">%</span></th>
                 <th data-options="field:'status',width:110,align:'center'">Status</th>
             </tr>
             </thead>
@@ -371,6 +374,15 @@ function renderTrend(arrIncome, arrExpense, arrIncomeB, arrExpenseB){
         '</div>'
     );
 
+    rows.push({
+        month: 'Total',
+        income: incomeTotal,
+        expense: expenseTotal,
+        surplus: surplusTotal,
+        savingsRate: incomeTotal > 0 ? savingsRate.toFixed(1) + '%' : '--',
+        status: '',
+        _totalRow: true
+    });
     $('#summaryGrid').datagrid('loadData', rows);
     echarts.dispose(document.getElementById('main'));
     var chart = echarts.init(document.getElementById('main'));

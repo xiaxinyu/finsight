@@ -48,7 +48,19 @@ var app = {
 		rmb : function(value, row, index) {
 			var n = Number(value);
 			if(isNaN(n)) return '';
-			return '<span style="font-size:12px;font-family:\'Times New Roman\';margin-right:2px;">¥</span><span>' + n.toFixed(2) + '</span>';
+			return '<span style="font-size:12px;font-family:\'Times New Roman\';margin-right:2px;">¥</span><span class="fs-money-num">' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '</span>';
+		},
+		numberOnly : function(value) {
+			var n = Number(value);
+			if(isNaN(n)) return '';
+			return '<span class="fs-money-num">' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '</span>';
+		},
+		deltaPercent : function(value) {
+			var n = Number(value);
+			if(isNaN(n)) return '';
+			var cls = n < 0 ? 'fs-delta-negative' : (n > 0 ? 'fs-delta-positive' : 'fs-delta-neutral');
+			var sign = n > 0 ? '+' : '';
+			return '<span class="' + cls + ' fs-money-num">' + sign + n.toFixed(1) + '%</span>';
 		}
 	},
 	
