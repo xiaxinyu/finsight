@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Form, Input, Typography } from 'antd'
+import { BarChartOutlined, LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons'
 import { getJson, verifySession } from '../../api/client'
+import { BrandLogo } from '../../components/BrandLogo'
 
 export function LoginPage() {
   const [error, setError] = useState('')
@@ -42,21 +44,44 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)' }}>
-      <Card style={{ width: 400, boxShadow: '0 8px 32px rgba(15,23,42,0.08)' }}>
-        <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8 }}>FinSight</Typography.Title>
-        <Typography.Paragraph type="secondary" style={{ textAlign: 'center' }}>Personal Finance Intelligence</Typography.Paragraph>
-        {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
-        <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item name="username" label="Username" rules={[{ required: true }]}>
-            <Input autoComplete="username" />
-          </Form.Item>
-          <Form.Item name="password" label="Password" rules={[{ required: true }]}>
-            <Input.Password autoComplete="current-password" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={loading}>Sign in</Button>
-        </Form>
-      </Card>
+    <div className="fs-login-page">
+      <div className="fs-login-brand">
+        <BrandLogo variant="dark" />
+        <Typography.Title level={2} style={{ color: '#fff', marginTop: 32, marginBottom: 8 }}>
+          Personal Finance Intelligence
+        </Typography.Title>
+        <Typography.Paragraph style={{ color: '#bfdbfe', marginBottom: 32 }}>
+          Local-first insights for income, spending, and long-term trends.
+        </Typography.Paragraph>
+        <div className="fs-login-value-prop">
+          <SafetyOutlined className="fs-login-value-icon" />
+          <span>Your data stays on your infrastructure — session-based, secure access.</span>
+        </div>
+        <div className="fs-login-value-prop">
+          <BarChartOutlined className="fs-login-value-icon" />
+          <span>Professional reports, ledgers, and category breakdowns at a glance.</span>
+        </div>
+        <div className="fs-login-value-prop">
+          <UserOutlined className="fs-login-value-icon" />
+          <span>Import statements, classify transactions, and track savings over time.</span>
+        </div>
+      </div>
+      <div className="fs-login-form-wrap">
+        <Card className="fs-login-card">
+          <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 4 }}>Welcome back</Typography.Title>
+          <Typography.Paragraph type="secondary" style={{ textAlign: 'center', marginBottom: 20 }}>Sign in to FinSight</Typography.Paragraph>
+          {error && <Alert type="error" message={error} style={{ marginBottom: 16 }} />}
+          <Form layout="vertical" onFinish={onFinish}>
+            <Form.Item name="username" label="Username" rules={[{ required: true }]}>
+              <Input prefix={<UserOutlined />} autoComplete="username" placeholder="Username" />
+            </Form.Item>
+            <Form.Item name="password" label="Password" rules={[{ required: true }]}>
+              <Input.Password prefix={<LockOutlined />} autoComplete="current-password" placeholder="Password" />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" block loading={loading} size="large">Sign in</Button>
+          </Form>
+        </Card>
+      </div>
     </div>
   )
 }

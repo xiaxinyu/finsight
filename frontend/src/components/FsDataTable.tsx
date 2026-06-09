@@ -3,7 +3,9 @@ import { Table, type TableProps } from 'antd'
 import type { ColumnsType, ColumnType } from 'antd/es/table'
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons'
 import { formatNumber } from '../utils/format'
+import { formatTableDate } from '../utils/cell'
 import { ContentCard } from './ContentCard'
+import { EmptyState } from './EmptyState'
 
 export type FsColumn<T> = ColumnType<T> & {
   unit?: string
@@ -104,6 +106,9 @@ export function FsDataTable<T extends Record<string, unknown>>({
           const cls = n < 0 ? 'fs-delta-negative' : n > 0 ? 'fs-delta-positive' : 'fs-delta-neutral'
           return <span className={cls}>{n >= 0 ? '+' : ''}{Number(n).toFixed(1)}%</span>
         }
+        if (col.sortType === 'date') {
+          return <span className="fs-mono">{formatTableDate(value)}</span>
+        }
         if (col.unit === 'CNY' || col.unit === 'USD') {
           return <span className="fs-money">{formatNumber(Number(value))}</span>
         }
@@ -131,6 +136,9 @@ export function FsDataTable<T extends Record<string, unknown>>({
         pagination={false}
         scroll={scroll ?? { y: 360 }}
         rowClassName={() => 'fs-table-row'}
+        locale={{
+          emptyText: <EmptyState compact title="No rows" description="Adjust filters or date range." />,
+        }}
         summary={() => summary ? (
           <Table.Summary fixed>
             <Table.Summary.Row className="fs-summary-row">

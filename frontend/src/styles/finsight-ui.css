@@ -15,7 +15,7 @@
 .fs-app-content {
   padding: 12px !important;
   margin: 0 !important;
-  background: #f1f5f9 !important;
+  background: var(--fs-canvas) !important;
   overflow: auto;
   flex: 1;
   min-height: 0;
@@ -25,6 +25,54 @@
   height: 48px !important;
   line-height: 48px !important;
   padding: 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px;
+}
+
+.fs-app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fs-app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fs-app-tagline {
+  font-size: 12px;
+  color: var(--fs-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .fs-app-tagline { display: none; }
+}
+
+.fs-sider-menu.ant-menu-dark .ant-menu-item-selected {
+  position: relative;
+  background: rgba(29, 78, 216, 0.18) !important;
+}
+
+.fs-sider-menu.ant-menu-dark .ant-menu-item-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--fs-primary);
+}
+
+.ant-menu-item,
+.ant-btn {
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
 }
 
 /* ── Data page layout ── */
@@ -39,7 +87,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0 8px;
+  padding: 0 0 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--fs-border);
+  flex-shrink: 0;
+}
+
+.fs-page-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fs-page-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--fs-radius);
+  background: #eff6ff;
+  color: var(--fs-primary);
+  font-size: 16px;
   flex-shrink: 0;
 }
 
@@ -47,13 +117,22 @@
   margin: 0 !important;
   font-size: 16px !important;
   font-weight: 600 !important;
-  color: #0f172a !important;
+  color: var(--fs-text) !important;
+  line-height: 1.3 !important;
+}
+
+.fs-page-subtitle {
+  display: block;
+  font-size: 12px !important;
+  line-height: 1.3;
+  margin-top: 2px;
 }
 
 .fs-page-actions {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .fs-page-body {
@@ -64,10 +143,18 @@
 }
 
 /* ── Toolbar ── */
+.fs-filter-dirty-tag {
+  margin: 0 !important;
+  font-size: 11px;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--fs-primary);
+}
+
 .fs-toolbar-bar {
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
   padding: 8px 12px;
   margin-bottom: 8px;
   position: sticky;
@@ -124,6 +211,33 @@
   margin-bottom: 2px;
 }
 
+.fs-kpi-card {
+  transition: border-color 150ms ease;
+}
+
+.fs-kpi-card:hover {
+  border-color: #cbd5e1 !important;
+}
+
+.fs-kpi-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.fs-kpi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--fs-radius);
+  background: #f8fafc;
+  color: var(--fs-text-secondary);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
 .fs-kpi-card .ant-statistic-content {
   font-size: 20px;
   font-weight: 700;
@@ -138,7 +252,8 @@
   padding: 4px;
 }
 
-.fs-chart-overlay {
+.fs-chart-overlay,
+.fs-chart-empty-overlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -147,6 +262,10 @@
   background: rgba(255, 255, 255, 0.72);
   border-radius: 6px;
   z-index: 2;
+}
+
+.fs-chart-empty-overlay {
+  background: rgba(255, 255, 255, 0.92);
 }
 
 /* ── Tables ── */
@@ -246,4 +365,161 @@
 
 .ant-table-cell-ellipsis {
   cursor: default;
+}
+
+/* ── Empty state ── */
+.fs-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 16px;
+  gap: 6px;
+}
+
+.fs-empty-state-compact {
+  padding: 16px 12px;
+}
+
+.fs-empty-icon {
+  font-size: 36px;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+
+.fs-empty-title {
+  font-size: 14px !important;
+}
+
+.fs-empty-desc {
+  font-size: 12px !important;
+  max-width: 280px;
+}
+
+.fs-empty-action {
+  margin-top: 8px;
+}
+
+/* ── Quick links ── */
+.fs-quick-link-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fs-quick-link-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--fs-radius);
+  border: 1px solid var(--fs-border);
+  text-decoration: none;
+  color: var(--fs-text);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.fs-quick-link-tile:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: var(--fs-primary);
+}
+
+.fs-quick-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--fs-primary);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.fs-quick-link-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.fs-quick-link-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.fs-quick-link-desc {
+  font-size: 11px;
+  color: var(--fs-text-secondary);
+}
+
+.fs-quick-link-arrow {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* ── Login ── */
+.fs-login-page {
+  min-height: 100vh;
+  display: flex;
+}
+
+.fs-login-brand {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #3b82f6 100%);
+  color: #fff;
+}
+
+.fs-login-form-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--fs-canvas);
+}
+
+.fs-login-card {
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--fs-shadow) !important;
+  border-radius: var(--fs-radius) !important;
+}
+
+.fs-login-value-prop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+.fs-login-value-icon {
+  font-size: 18px;
+  margin-top: 2px;
+  color: #93c5fd;
+}
+
+@media (min-width: 992px) {
+  .fs-login-brand { display: flex; }
+}
+
+.fs-page-skeleton {
+  padding: 4px 0;
+}
+
+.fs-insight-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
 }

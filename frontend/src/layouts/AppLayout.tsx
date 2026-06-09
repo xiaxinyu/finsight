@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { verifySession } from '../api/client'
-import { Layout, Menu, Typography, Button, theme, type MenuProps } from 'antd'
+import { Layout, Menu, Typography, Button, Breadcrumb, Popconfirm, theme, type MenuProps } from 'antd'
 import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { menuItems, type FsMenuItem } from '../routes/menuConfig'
+import { BrandLogo } from '../components/BrandLogo'
+import { resolveRouteMeta } from '../config/routes'
 
 const { Header, Sider, Content } = Layout
 
@@ -45,9 +47,11 @@ function renderMenuItems(items: FsMenuItem[]): MenuProps['items'] {
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [openKeys, setOpenKeys] = useState<string[]>([])
   const location = useLocation()
   const navigate = useNavigate()
   const { token } = theme.useToken()
+  const routeMeta = resolveRouteMeta(location.pathname)
 
   useEffect(() => {
     verifySession().then((ok) => {
@@ -55,17 +59,28 @@ export function AppLayout() {
     })
   }, [navigate])
 
+  useEffect(() => {
+    setOpenKeys(findOpenKeys(location.pathname))
+  }, [location.pathname])
+
+  const breadcrumbItems = routeMeta.breadcrumb.map((label, i) => ({
+    key: String(i),
+    title: i === routeMeta.breadcrumb.length - 1
+      ? <Typography.Text strong style={{ fontSize: 13 }}>{label}</Typography.Text>
+      : <span style={{ fontSize: 13 }}>{label}</span>,
+  }))
+
   return (
     <Layout style={{ height: '100vh', overflow: 'hidden' }}>
       <Sider collapsible collapsed={collapsed} trigger={null} width={200} theme="dark">
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', padding: '0 12px', color: '#fff', fontWeight: 700, fontSize: 16 }}>
-          {collapsed ? 'FS' : 'FinSight'}
-        </div>
+        <BrandLogo collapsed={collapsed} variant="dark" />
         <Menu
+          className="fs-sider-menu"
           theme="dark"
           mode="inline"
           selectedKeys={findSelectedKeys(location.pathname)}
-          defaultOpenKeys={findOpenKeys(location.pathname)}
+          openKeys={openKeys}
+          onOpenChange={setOpenKeys}
           items={renderMenuItems(menuItems)}
           style={{ borderRight: 0 }}
         />
@@ -75,15 +90,24 @@ export function AppLayout() {
           className="fs-app-header"
           style={{
             background: token.colorBgContainer,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             borderBottom: `1px solid ${token.colorBorder}`,
           }}
         >
-          <Button type="text" size="small" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => setCollapsed(!collapsed)} />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>Personal Finance Intelligence</Typography.Text>
-          <Button type="text" size="small" icon={<LogoutOutlined />} href="/logout">Logout</Button>
+          <div className="fs-app-header-left">
+            <Button
+              type="text"
+              size="small"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+            />
+            <Breadcrumb items={breadcrumbItems} />
+          </div>
+          <Typography.Text type="secondary" className="fs-app-tagline">Personal Finance Intelligence</Typography.Text>
+          <div className="fs-app-header-right">
+            <Popconfirm title="Sign out of FinSight?" okText="Sign out" cancelText="Cancel" onConfirm={() => { window.location.href = '/logout' }}>
+              <Button type="text" size="small" icon={<LogoutOutlined />}>Sign out</Button>
+            </Popconfirm>
+          </div>
         </Header>
         <Content className="fs-app-content">
           <Outlet />

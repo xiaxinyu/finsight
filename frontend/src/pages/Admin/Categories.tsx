@@ -1,13 +1,25 @@
 import { Tree } from 'antd'
-import { PageContainer } from '@ant-design/pro-components'
+import { ClusterOutlined } from '@ant-design/icons'
 import { useConsumeAntTree } from '../../hooks/useConsumeTree'
+import { DataPageLayout } from '../../components/DataPageLayout'
+import { PageSkeleton } from '../../components/PageSkeleton'
 
 export function CategoriesAdminPage() {
   const { treeData, isLoading } = useConsumeAntTree()
 
   return (
-    <PageContainer title="Categories" loading={isLoading}>
-      <Tree showLine defaultExpandAll treeData={treeData} />
-    </PageContainer>
+    <DataPageLayout
+      title="Categories"
+      subtitle="Expense and income category hierarchy"
+      icon={<ClusterOutlined />}
+    >
+      <div className="fs-table-panel" style={{ padding: 12 }}>
+        {isLoading ? (
+          <PageSkeleton variant="table" />
+        ) : (
+          <Tree showLine defaultExpandAll treeData={treeData} />
+        )}
+      </div>
+    </DataPageLayout>
   )
 }

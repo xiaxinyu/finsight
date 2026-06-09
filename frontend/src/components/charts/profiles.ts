@@ -31,12 +31,17 @@ function merge(target: EChartsOption, source: EChartsOption): EChartsOption {
 function baseTooltip(): EChartsOption['tooltip'] {
   return {
     trigger: 'axis',
+    backgroundColor: '#ffffff',
+    borderColor: '#e2e8f0',
+    borderWidth: 1,
+    padding: [8, 12],
+    extraCssText: 'box-shadow: 0 4px 16px rgba(15,23,42,0.08); border-radius: 8px;',
     axisPointer: {
       type: 'cross',
       crossStyle: { color: '#94a3b8', width: 1 },
       lineStyle: { color: '#94a3b8', type: 'dashed' },
     },
-    textStyle: { fontSize: FONT_TOOLTIP },
+    textStyle: { fontSize: FONT_TOOLTIP, color: '#0f172a', fontFamily: 'Inter, sans-serif' },
     confine: true,
     formatter(params: unknown) {
       const items = Array.isArray(params) ? params : [params]
@@ -75,6 +80,8 @@ function enhanceSeries(series: SeriesOption[] | undefined, pointCount: number): 
       ...(s.type === 'line' && !hideSymbols ? { symbolSize: 8 } : {}),
       ...(s.type === 'line'
         ? {
+            smooth: true,
+            areaStyle: isCompareBaseline ? undefined : { opacity: 0.06 },
             lineStyle: {
               ...(line.lineStyle || {}),
               type: isCompareBaseline ? 'dashed' : 'solid',

@@ -1,10 +1,21 @@
 @import './styles/finsight-ui.css';
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fs-primary: #1d4ed8;
+  --fs-income: #059669;
+  --fs-expense: #d97706;
+  --fs-sider: #0f172a;
+  --fs-canvas: #f1f5f9;
+  --fs-border: #e2e8f0;
+  --fs-text: #0f172a;
+  --fs-text-secondary: #64748b;
+  --fs-radius: 8px;
+  --fs-shadow: 0 4px 24px rgba(15, 23, 42, 0.08);
+
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
-  color: #111827;
-  background: #f1f5f9;
+  color: var(--fs-text);
+  background: var(--fs-canvas);
 }
 
 body {

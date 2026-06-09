@@ -11,6 +11,23 @@ export const finsightColors = {
   textSecondary: '#64748b',
 }
 
+export const finsightFontFamily =
+  '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+
+/** CSS custom properties for finsight-ui.css */
+export const finsightCssVars: Record<string, string> = {
+  '--fs-primary': finsightColors.primary,
+  '--fs-income': finsightColors.income,
+  '--fs-expense': finsightColors.expense,
+  '--fs-sider': finsightColors.sider,
+  '--fs-canvas': finsightColors.canvas,
+  '--fs-border': finsightColors.border,
+  '--fs-text': finsightColors.text,
+  '--fs-text-secondary': finsightColors.textSecondary,
+  '--fs-radius': '8px',
+  '--fs-shadow': '0 4px 24px rgba(15, 23, 42, 0.08)',
+}
+
 export const finsightTheme: ThemeConfig = {
   token: {
     colorPrimary: finsightColors.primary,
@@ -22,10 +39,11 @@ export const finsightTheme: ThemeConfig = {
     colorBorder: finsightColors.border,
     colorText: finsightColors.text,
     colorTextSecondary: finsightColors.textSecondary,
-    borderRadius: 6,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    borderRadius: 8,
+    fontFamily: finsightFontFamily,
     fontSize: 13,
     controlHeight: 30,
+    boxShadow: finsightCssVars['--fs-shadow'],
   },
   components: {
     Layout: {

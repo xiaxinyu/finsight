@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button, DatePicker, Input, Select, Space, TreeSelect, message } from 'antd'
+import {
+  DeleteOutlined, SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
+} from '@ant-design/icons'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
@@ -12,8 +15,10 @@ import { useFilterApply } from '../../hooks/useFilterApply'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { EmptyState } from '../../components/EmptyState'
+import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
 import { TableHeader } from '../../components/TableHeader'
-import { formatDateMmDdYyyy, formatNumber } from '../../utils/format'
+import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { dateRangePresets } from '../../utils/datePresets'
 
@@ -41,7 +46,7 @@ export function TransactionsPage() {
     keyword: '',
   }
 
-  const { draft, setDraft, applied, applying, applySync } = useFilterApply(initial)
+  const { draft, setDraft, applied, applying, isDirty, applySync } = useFilterApply(initial)
 
   const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
   const { treeData } = useConsumeTreeSelect()
@@ -68,7 +73,9 @@ export function TransactionsPage() {
       width: 110,
       align: 'right',
       sorter: true,
-      render: (_, r) => <span className="fs-money">{formatNumber(r.balanceMoney)}</span>,
+      render: (_, r) => (
+        <MoneyText value={Number(r.balanceMoney)} type={moneyTypeFromRow(undefined, r.balanceMoney)} />
+      ),
     },
     {
       title: <TableHeader name="Card" />,
@@ -117,18 +124,26 @@ export function TransactionsPage() {
 
   const batchActions = (
     <Space size="small" wrap>
-      <Button size="small" danger disabled={disabled} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
-      <Button size="small" disabled={disabled} onClick={() => runBatch(() => classifyTransactions(selectedRowKeys.join(',')), 'Classified')}>Auto-classify</Button>
-      <Button size="small" disabled={disabled} onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
-      <Button size="small" disabled={disabled} onClick={() => runBatch(() => expenseToIncome(selectedRowKeys.join(',')), 'Moved to income')}>→ Income</Button>
+      <Button size="small" danger disabled={disabled} icon={<DeleteOutlined />} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
+      <Button size="small" disabled={disabled} icon={<ThunderboltOutlined />} onClick={() => runBatch(() => classifyTransactions(selectedRowKeys.join(',')), 'Classified')}>Auto-classify</Button>
+      <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
+      <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => expenseToIncome(selectedRowKeys.join(',')), 'Moved to income')}>→ Income</Button>
     </Space>
   )
 
   return (
     <DataPageLayout
       title="Transactions"
+      subtitle="Search, classify, and edit transaction records"
+      icon={<UnorderedListOutlined />}
       toolbar={(
-        <FilterToolbar loading={tableLoading || applying} onApply={reload} actions={batchActions}>
+        <FilterToolbar
+          loading={tableLoading || applying}
+          onApply={reload}
+          dirty={isDirty}
+          selectedCount={selectedRowKeys.length}
+          actions={batchActions}
+        >
           <RangePicker
             size="small"
             disabled={disabled}
@@ -161,6 +176,9 @@ export function TransactionsPage() {
           loading={tableLoading}
           options={{ density: true, reload: true, setting: true }}
           rowSelection={{ selectedRowKeys, onChange: (keys) => setSelectedRowKeys(keys as string[]) }}
+          locale={{
+            emptyText: <EmptyState compact title="No transactions" description="Try widening the date range or clearing filters." />,
+          }}
           request={async (params) => {
             try {
               const res = await listTransactions({

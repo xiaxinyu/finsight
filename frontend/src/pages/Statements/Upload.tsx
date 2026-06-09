@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Button, Card, message, Steps, Table, Upload } from 'antd'
-import { PageContainer } from '@ant-design/pro-components'
-import { UploadOutlined } from '@ant-design/icons'
+import { Button, Card, message, Result, Steps, Table, Upload } from 'antd'
+import { CheckCircleOutlined, EyeOutlined, UploadOutlined } from '@ant-design/icons'
 import { commitStatement, previewStatement, uploadStatement } from '../../api/statement'
-import { MoneyText } from '../../components/MoneyText'
+import { DataPageLayout } from '../../components/DataPageLayout'
+import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
 import { cellText, formatTableDate } from '../../utils/cell'
 
 export function StatementUploadPage() {
@@ -44,29 +44,51 @@ export function StatementUploadPage() {
   }
 
   return (
-    <PageContainer title="Import Statement">
-      <Steps current={step} style={{ marginBottom: 24 }} items={[
-        { title: 'Upload' },
-        { title: 'Preview' },
-        { title: 'Commit' },
-      ]} />
+    <DataPageLayout
+      title="Import Statement"
+      subtitle="Upload, preview, and commit bank statement data"
+      icon={<UploadOutlined />}
+    >
+      <Steps
+        current={step}
+        style={{ marginBottom: 16 }}
+        items={[
+          { title: 'Upload', icon: <UploadOutlined /> },
+          { title: 'Preview', icon: <EyeOutlined /> },
+          { title: 'Commit', icon: <CheckCircleOutlined /> },
+        ]}
+      />
       {step === 0 && (
-        <Card>
+        <Card className="fs-content-card">
           <Upload beforeUpload={onUpload} showUploadList={false} accept=".csv,.xlsx,.xls,.pdf">
-            <Button icon={<UploadOutlined />} loading={loading}>Select statement file</Button>
+            <Button type="primary" icon={<UploadOutlined />} loading={loading}>Select statement file</Button>
           </Upload>
         </Card>
       )}
-      {step >= 1 && (
-        <Card title="Preview" extra={step === 1 && <Button type="primary" loading={loading} onClick={onCommit}>Commit to ledger</Button>}>
-          <Table size="small" rowKey="id" dataSource={preview} pagination={{ pageSize: 20 }} columns={[
-            { title: 'Date', dataIndex: 'transactionDate', width: 100, render: (v) => formatTableDate(v) },
-            { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true, render: (v) => cellText(v) },
-            { title: 'Amount', dataIndex: 'balanceMoney', align: 'right', render: (_, r) => <MoneyText value={Number(r.balanceMoney)} unit /> },
-            { title: 'Category', dataIndex: 'consumeName', render: (v) => cellText(v) },
-          ]} />
+      {step === 1 && (
+        <Card
+          className="fs-content-card"
+          title="Preview"
+          extra={<Button type="primary" loading={loading} onClick={onCommit}>Commit to ledger</Button>}
+        >
+          <div className="fs-table-panel" style={{ border: 'none' }}>
+            <Table size="small" className="fs-data-table" rowKey="id" dataSource={preview} pagination={{ pageSize: 20 }} columns={[
+              { title: 'Date', dataIndex: 'transactionDate', width: 100, render: (v) => formatTableDate(v) },
+              { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true, render: (v) => cellText(v) },
+              { title: 'Amount', dataIndex: 'balanceMoney', align: 'right', render: (_, r) => <MoneyText value={Number(r.balanceMoney)} type={moneyTypeFromRow(r.txnType as string, r.balanceMoney as number)} unit /> },
+              { title: 'Category', dataIndex: 'consumeName', render: (v) => cellText(v) },
+            ]} />
+          </div>
         </Card>
       )}
-    </PageContainer>
+      {step === 2 && (
+        <Result
+          status="success"
+          title="Statement committed"
+          subTitle={`${preview.length} transactions imported to the ledger.`}
+          extra={<Button type="primary" onClick={() => { setStep(0); setPreview([]); setStatementId('') }}>Import another</Button>}
+        />
+      )}
+    </DataPageLayout>
   )
 }

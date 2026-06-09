@@ -1,12 +1,25 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Col, Row, Select, Space, Typography } from 'antd'
-import { Link } from 'react-router-dom'
+import {
+  Alert, Col, Row, Select,
+} from 'antd'
+import {
+  DashboardOutlined,
+  FallOutlined,
+  FundOutlined,
+  LineChartOutlined,
+  RiseOutlined,
+  SwapOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons'
 import { homeSummary, fetchReport } from '../../api/report'
 import { FsChart } from '../../components/FsChart'
 import { KpiGrid } from '../../components/KpiGrid'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { EmptyState } from '../../components/EmptyState'
+import { PageSkeleton } from '../../components/PageSkeleton'
+import { QuickLinkGrid } from '../../components/QuickLinkGrid'
 import { finsightColors } from '../../styles/finsight-tokens'
 import { formatMoney, yearOptions, yearRange } from '../../utils/format'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
@@ -36,10 +49,13 @@ export function DashboardPage() {
 
   const pieData = (topCats || []).filter((r) => r.value > 0).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
   const loadError = isError ? error : catsError ? catsErr : null
+  const loading = isLoading || catsLoading
 
   return (
     <DataPageLayout
       title="Dashboard"
+      subtitle="Overview of income, spending, and category mix"
+      icon={<DashboardOutlined />}
       actions={(
         <Select size="small" value={year} onChange={setYear} style={{ width: 100 }} options={yearOptions(16, curYear)} />
       )}
@@ -53,43 +69,54 @@ export function DashboardPage() {
           description={loadError instanceof Error ? loadError.message : 'Please sign in again.'}
         />
       )}
-      <KpiGrid items={[
-        { key: 'income', label: 'Income', value: formatMoney(income), color: finsightColors.income },
-        { key: 'expense', label: 'Expense', value: formatMoney(expense), color: finsightColors.expense },
-        { key: 'surplus', label: 'Surplus', value: formatMoney(surplus) },
-        { key: 'savings', label: 'Savings rate', value: `${savingsRate}%` },
-      ]} />
-      <Row gutter={[12, 12]}>
-        <Col xs={24} lg={14}>
-          <ContentCard title="Top expense categories" size="small" styles={{ body: { padding: 8 } }}>
-            <FsChart
-              profile="donut"
-              height={chartHeight}
-              loading={isLoading || catsLoading}
-              option={{
-                title: { text: 'Category mix', left: 'center', textStyle: { fontSize: 13 } },
-                series: [{ type: 'pie', radius: ['44%', '70%'], center: ['55%', '52%'], data: pieData, label: { fontSize: 11 } }],
-                legend: { orient: 'vertical', left: 'left', top: 'middle', textStyle: { fontSize: 11 } },
-              }}
-            />
-          </ContentCard>
-        </Col>
-        <Col xs={24} lg={10}>
-          <ContentCard title="Quick links" size="small" styles={{ body: { padding: '10px 12px' } }}>
-            <Space direction="vertical" size={4}>
-              <Link to="/reports/income-vs-expense">Income vs Expense</Link>
-              <Link to="/reports/monthly-comparison">Monthly Comparison</Link>
-              <Link to="/transactions">Transaction detail</Link>
-              <Link to="/ledgers/expense">Expense ledger</Link>
-            </Space>
-            {summary?.summary_text != null && (
-              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12 }} title={String(summary.summary_text)}>
-                {String(summary.summary_text)}
-              </Typography.Text>
-            )}
-          </ContentCard>
-        </Col>
-      </Row>
+      {loading && !summary ? (
+        <PageSkeleton />
+      ) : (
+        <>
+          <KpiGrid items={[
+            { key: 'income', label: 'Income', value: formatMoney(income), color: finsightColors.income, icon: <RiseOutlined style={{ color: finsightColors.income }} /> },
+            { key: 'expense', label: 'Expense', value: formatMoney(expense), color: finsightColors.expense, icon: <FallOutlined style={{ color: finsightColors.expense }} /> },
+            { key: 'surplus', label: 'Surplus', value: formatMoney(surplus), icon: <FundOutlined /> },
+            { key: 'savings', label: 'Savings rate', value: `${savingsRate}%`, icon: <LineChartOutlined /> },
+          ]} />
+          <Row gutter={[12, 12]}>
+            <Col xs={24} lg={14}>
+              <ContentCard title="Top expense categories" size="small" styles={{ body: { padding: 8 } }}>
+                <FsChart
+                  profile="donut"
+                  height={chartHeight}
+                  loading={loading}
+                  empty={<EmptyState compact title="No categories" description="No expense data for this year." />}
+                  option={{
+                    title: { text: 'Category mix', left: 'center', textStyle: { fontSize: 13 } },
+                    series: [{
+                      type: 'pie',
+                      radius: ['44%', '70%'],
+                      center: ['55%', '52%'],
+                      data: pieData,
+                      label: { fontSize: 11 },
+                    }],
+                    legend: { orient: 'vertical', left: 'left', top: 'middle', textStyle: { fontSize: 11 } },
+                  }}
+                />
+              </ContentCard>
+            </Col>
+            <Col xs={24} lg={10}>
+              <ContentCard title="Quick links" size="small" styles={{ body: { padding: '10px 12px' } }}>
+                <QuickLinkGrid items={[
+                  { key: 'ive', label: 'Income vs Expense', to: '/reports/income-vs-expense', icon: <SwapOutlined />, description: 'Monthly cash flow' },
+                  { key: 'mc', label: 'Monthly Comparison', to: '/reports/monthly-comparison', icon: <LineChartOutlined />, description: 'Expense by month' },
+                  { key: 'tx', label: 'Transaction detail', to: '/transactions', icon: <UnorderedListOutlined />, description: 'Search and edit' },
+                  { key: 'exp', label: 'Expense ledger', to: '/ledgers/expense', icon: <FundOutlined />, description: 'All expenses' },
+                ]} />
+                {summary?.summary_text != null && (
+                  <Alert type="info" showIcon message={String(summary.summary_text)} style={{ marginTop: 12 }} />
+                )}
+              </ContentCard>
+            </Col>
+          </Row>
+        </>
+      )}
     </DataPageLayout>
   )
 }

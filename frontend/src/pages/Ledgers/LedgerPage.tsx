@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { DatePicker, TreeSelect } from 'antd'
+import { BookOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import { ledgerConfigs } from '../../config/ledgers'
@@ -11,8 +12,10 @@ import { useFilterApply } from '../../hooks/useFilterApply'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { EmptyState } from '../../components/EmptyState'
+import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
 import { TableHeader } from '../../components/TableHeader'
-import { formatDateMmDdYyyy, formatNumber } from '../../utils/format'
+import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { dateRangePresets } from '../../utils/datePresets'
 
@@ -33,10 +36,10 @@ export function LedgerPage() {
     consume: '',
   }
 
-  const { draft, setDraft, applied, applying, applySync } = useFilterApply(initial)
+  const { draft, setDraft, applied, applying, isDirty, applySync } = useFilterApply(initial)
   const { treeData } = useConsumeTreeSelect(cfg?.txnType)
 
-  if (!cfg) return <DataPageLayout title="Ledger not found"><div /></DataPageLayout>
+  if (!cfg) return <DataPageLayout title="Ledger not found"><EmptyState title="Ledger not found" description="This ledger type does not exist." /></DataPageLayout>
 
   const disabled = tableLoading || applying
 
@@ -60,7 +63,9 @@ export function LedgerPage() {
       width: 110,
       align: 'right',
       sorter: true,
-      render: (_, r) => <span className="fs-money">{formatNumber(r.balanceMoney)}</span>,
+      render: (_, r) => (
+        <MoneyText value={Number(r.balanceMoney)} type={moneyTypeFromRow(cfg.txnType, r.balanceMoney)} />
+      ),
     },
     {
       title: <TableHeader name="Category" />,
@@ -91,8 +96,10 @@ export function LedgerPage() {
   return (
     <DataPageLayout
       title={cfg.title}
+      subtitle="Ledger entries for the selected period"
+      icon={<BookOutlined />}
       toolbar={(
-        <FilterToolbar loading={tableLoading || applying} onApply={reload}>
+        <FilterToolbar loading={tableLoading || applying} onApply={reload} dirty={isDirty}>
           <RangePicker
             size="small"
             disabled={disabled}
@@ -117,6 +124,9 @@ export function LedgerPage() {
           loading={tableLoading}
           search={false}
           scroll={{ x: 'max-content', y: tableHeight }}
+          locale={{
+            emptyText: <EmptyState compact title="No ledger entries" description="Adjust the date range or category filter." />,
+          }}
           request={async (params) => {
             const res = await listLedger(cfg.listEndpoint, {
               page: params.current || 1,

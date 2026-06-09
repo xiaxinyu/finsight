@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Col, DatePicker, Drawer, Row, Select, TreeSelect } from 'antd'
+import { Col, DatePicker, Drawer, Row, Select, Spin, TreeSelect } from 'antd'
+import { BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { reportConfigs } from '../../config/reports'
 import { fetchReport } from '../../api/report'
@@ -15,6 +16,7 @@ import { FilterToolbar } from '../../components/FilterToolbar'
 import { KpiGrid } from '../../components/KpiGrid'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { EmptyState } from '../../components/EmptyState'
 import { finsightColors } from '../../styles/finsight-tokens'
 import { FsDataTable, type FsColumn } from '../../components/FsDataTable'
 import { emptyChartOption } from '../../components/charts/profiles'
@@ -60,7 +62,7 @@ export function ReportPageView() {
     consume: '',
   }
 
-  const { draft, setDraft, applied, applying, apply } = useFilterApply(initialFilters)
+  const { draft, setDraft, applied, applying, isDirty, apply } = useFilterApply(initialFilters)
   const [drillOpen, setDrillOpen] = useState(false)
   const [drillParams, setDrillParams] = useState<Record<string, string>>({})
 
@@ -104,7 +106,7 @@ export function ReportPageView() {
 
   const chartLoading = isLoading || isFetching || applying
 
-  const { data: drillRows } = useQuery({
+  const { data: drillRows, isFetching: drillLoading } = useQuery({
     queryKey: ['drill', drillParams],
     enabled: drillOpen && !!drillParams.start,
     queryFn: () => listTransactions({ ...drillParams, page: 1, rows: 50 } as never),
@@ -113,7 +115,7 @@ export function ReportPageView() {
   const viewportH = useViewportTableHeight(320)
   const chartHeight = Math.min(viewportH, 380)
 
-  if (!cfg) return <DataPageLayout title="Report not found"><div /></DataPageLayout>
+  if (!cfg) return <DataPageLayout title="Report not found"><EmptyState title="Report not found" /></DataPageLayout>
 
   const disabled = chartLoading
 
@@ -240,8 +242,10 @@ export function ReportPageView() {
   return (
     <DataPageLayout
       title={cfg.title}
+      subtitle={cfg.subtitle}
+      icon={<BarChartOutlined />}
       toolbar={(
-        <FilterToolbar loading={chartLoading} onApply={handleApply}>
+        <FilterToolbar loading={chartLoading} onApply={handleApply} dirty={isDirty}>
           <Select size="small" value={draft.year} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year: v }))} style={{ width: 90 }} options={yearOptions(16, curYear)} />
           {cfg.compareYear && (
             <Select size="small" value={draft.year2} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year2: v }))} style={{ width: 90 }} options={yearOptions(16, curYear)} />
@@ -269,7 +273,14 @@ export function ReportPageView() {
       <Row gutter={[12, 12]} style={{ flex: 1, minHeight: 0 }}>
         <Col xs={24} lg={tableData.length ? 14 : 24}>
           <ContentCard title={cfg.title} size="small" styles={{ body: { padding: 8 } }}>
-            <FsChart profile={cfg.chartProfile || 'timeSeries'} height={chartHeight} loading={chartLoading} option={chartOption} onEvents={{ click: onChartClick }} />
+            <FsChart
+              profile={cfg.chartProfile || 'timeSeries'}
+              height={chartHeight}
+              loading={chartLoading}
+              option={chartOption}
+              onEvents={{ click: onChartClick }}
+              empty={<EmptyState compact title="No chart data" description="Adjust filters and click Apply." />}
+            />
           </ContentCard>
         </Col>
         {tableData.length > 0 && (
@@ -288,15 +299,19 @@ export function ReportPageView() {
       </Row>
 
       <Drawer title="Transaction drill-down" width={680} open={drillOpen} onClose={() => setDrillOpen(false)}>
-        <FsDataTable
-          columns={[
-            { title: 'Date', dataIndex: 'transactionDate', sortType: 'date', width: 100 },
-            { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true },
-            { title: 'Amount', dataIndex: 'balanceMoney', unit: 'CNY', align: 'right', sortType: 'number' },
-          ]}
-          dataSource={(drillRows?.rows || []) as unknown as Record<string, unknown>[]}
-          rowKey="id"
-        />
+        {drillLoading ? (
+          <div style={{ textAlign: 'center', padding: 48 }}><Spin tip="Loading transactions…" /></div>
+        ) : (
+          <FsDataTable
+            columns={[
+              { title: 'Date', dataIndex: 'transactionDate', sortType: 'date', width: 100 },
+              { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true },
+              { title: 'Amount', dataIndex: 'balanceMoney', unit: 'CNY', align: 'right', sortType: 'number' },
+            ]}
+            dataSource={(drillRows?.rows || []) as unknown as Record<string, unknown>[]}
+            rowKey="id"
+          />
+        )}
       </Drawer>
     </DataPageLayout>
   )

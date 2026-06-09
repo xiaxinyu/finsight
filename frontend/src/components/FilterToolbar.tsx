@@ -1,5 +1,5 @@
 import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
-import { Button, Space } from 'antd'
+import { Badge, Button, Space, Tag } from 'antd'
 
 type Props = {
   children: ReactNode
@@ -7,9 +7,19 @@ type Props = {
   onApply: () => void
   applyLabel?: string
   actions?: ReactNode
+  dirty?: boolean
+  selectedCount?: number
 }
 
-export function FilterToolbar({ children, loading = false, onApply, applyLabel = 'Apply', actions }: Props) {
+export function FilterToolbar({
+  children,
+  loading = false,
+  onApply,
+  applyLabel = 'Apply',
+  actions,
+  dirty = false,
+  selectedCount,
+}: Props) {
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
       e.preventDefault()
@@ -27,11 +37,19 @@ export function FilterToolbar({ children, loading = false, onApply, applyLabel =
       <form onSubmit={onSubmit} onKeyDown={onKeyDown} className="fs-toolbar-form">
         <Space wrap size="small" className={loading ? 'fs-filter-disabled' : undefined}>
           {children}
-          <Button type="primary" htmlType="submit" size="small" loading={loading} disabled={loading}>
-            {loading ? 'Loading…' : applyLabel}
-          </Button>
+          <Badge dot={dirty && !loading}>
+            <Button type="primary" htmlType="submit" size="small" loading={loading} disabled={loading}>
+              {loading ? 'Loading…' : applyLabel}
+            </Button>
+          </Badge>
+          {dirty && !loading && <Tag className="fs-filter-dirty-tag">Filters changed</Tag>}
         </Space>
-        {actions && <div className="fs-toolbar-actions">{actions}</div>}
+        <div className="fs-toolbar-actions">
+          {selectedCount != null && selectedCount > 0 && (
+            <Tag color="blue">{selectedCount} selected</Tag>
+          )}
+          {actions}
+        </div>
       </form>
     </div>
   )
