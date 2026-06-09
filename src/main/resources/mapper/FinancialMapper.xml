@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.finsight.infrastructure.mapper.FinancialMapper">
+
+    <sql id="excludeTransfer">
+        and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
+    </sql>
+
+    <update id="markTransactionsTransfer">
+        update transaction
+        set txn_kind = 'transfer',
+            transfer_group_id = #{groupId,jdbcType=VARCHAR},
+            updatetime = current_timestamp
+        where id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id,jdbcType=VARCHAR}
+        </foreach>
+    </update>
+
+    <select id="countUnclassified" resultType="int">
+        select count(*) from transaction t
+        where (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
+        <include refid="excludeTransfer"/>
+    </select>
+
+    <select id="countDuplicateFingerprints" resultType="int">
+        select count(*) from (
+            select md5(concat(
+                coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
+                '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
+                '|', coalesce(t.transaction_desc,''),
+                '|', coalesce(t.bank_card_id,'')
+            )) fp
+            from transaction t
+            where 1=1
+            <include refid="excludeTransfer"/>
+            group by fp having count(*) &gt; 1
+        ) d
+    </select>
+
+    <select id="latestAccountBalances" resultType="com.finsight.domain.model.KeyValue">
+        select fa.name as `key`, round(coalesce(s.balance, 0), 2) as `value`
+        from financial_account fa
+        left join (
+            select account_id, balance
+            from account_balance_snapshot abs1
+            inner join (
+                select account_id aid, max(snapshot_date) maxd
+                from account_balance_snapshot
+                group by account_id
+            ) abs2 on abs1.account_id = abs2.aid and abs1.snapshot_date = abs2.maxd
+        ) s on s.account_id = fa.id
+        where coalesce(fa.deleted, 0) = 0
+        order by fa.display_order, fa.name
+    </select>
+
+    <select id="sumExpenseSince" resultType="double">
+        select coalesce(sum(coalesce(t.balance_money, 0)), 0)
+        from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where t.transaction_date &gt;= #{since,jdbcType=DATE}
+        and (cat.txn_types like '%expense%' or (cat.code is null and coalesce(t.balance_money,0) &gt; 0))
+        <include refid="excludeTransfer"/>
+    </select>
+
+    <select id="sumIncomeSince" resultType="double">
+        select coalesce(sum(
+            case
+                when coalesce(t.income_money,0) &gt; 0 then t.income_money
+                when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
+                else 0
+            end
+        ), 0)
+        from transaction t
+        where t.transaction_date &gt;= #{since,jdbcType=DATE}
+        <include refid="excludeTransfer"/>
+    </select>
+
+    <select id="sumFixedBucketYear" resultType="double">
+        select coalesce(sum(coalesce(t.balance_money, 0)), 0)
+        from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where year(t.transaction_date) = #{year,jdbcType=INTEGER}
+        and (
+            cat.code like '%rent%' or cat.code like '%mortgage%' or t.transaction_desc like '%房贷%'
+            or t.transaction_desc like '%房租%' or cat.code like '%fixed%'
+        )
+        <include refid="excludeTransfer"/>
+    </select>
+
+    <select id="findDuplicatePreviewFingerprints" resultType="string">
+        select md5(concat(
+            coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
+            '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
+            '|', coalesce(t.transaction_desc,''),
+            '|', coalesce(t.bank_card_id,'')
+        )) as fp
+        from transaction t
+        where md5(concat(
+            coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
+            '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
+            '|', coalesce(t.transaction_desc,''),
+            '|', coalesce(#{bankCardId,jdbcType=VARCHAR},'')
+        )) in (
+            select md5(concat(
+                coalesce(date_format(x.transaction_date,'%Y-%m-%d'),''),
+                '|', coalesce(round(abs(coalesce(x.balance_money,0) + coalesce(x.income_money,0)),2),''),
+                '|', coalesce(x.transaction_desc,''),
+                '|', coalesce(x.bank_card_id,'')
+            ))
+            from transaction x
+        )
+    </select>
+
+    <select id="findDuplicatePreviewTempIds" resultType="string">
+        select distinct tt.id
+        from transaction_temp tt
+        inner join transaction t on
+            date_format(tt.transaction_date,'%Y-%m-%d') = date_format(t.transaction_date,'%Y-%m-%d')
+            and round(abs(coalesce(tt.balance_money,0) + coalesce(tt.income_money,0)), 2)
+                = round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)), 2)
+            and coalesce(tt.transaction_desc,'') = coalesce(t.transaction_desc,'')
+            and coalesce(tt.bank_card_id,'') = coalesce(t.bank_card_id,'')
+        where tt.recordID = #{statementId,jdbcType=VARCHAR}
+          and coalesce(tt.deleted, 0) = 0
+          and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
+    </select>
+
+</mapper>

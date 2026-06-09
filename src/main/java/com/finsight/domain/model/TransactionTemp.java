@@ -100,6 +100,9 @@ public class TransactionTemp extends BaseEntity {
     @TableField(exist = false)
     private String txnTypes;
 
+    @TableField(exist = false)
+    private Boolean possibleDuplicate;
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getCardId() { return cardId; }

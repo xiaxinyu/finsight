@@ -6,6 +6,7 @@ import com.finsight.application.transaction.ITransactionService;
 import com.finsight.domain.model.Statement;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.TransactionTemp;
+import com.finsight.application.finance.DataQualityService;
 import com.finsight.domain.port.TransactionTempRepository;
 import com.finsight.web.restful.model.CollectionResult;
 import com.finsight.web.restful.model.CommonResult;
@@ -18,9 +19,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class StatementFacade {
@@ -41,6 +44,9 @@ public class StatementFacade {
 
     @Autowired
     private StatementProcessingService statementProcessingService;
+
+    @Autowired
+    private DataQualityService dataQualityService;
 
     public CollectionResult<Statement> list(int page, int rows) {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<Statement> p =
@@ -209,6 +215,15 @@ public class StatementFacade {
             List<TransactionTemp> list = transactionTempRepository.findByStatementId(statementId);
             if (list != null && !list.isEmpty()) {
                 java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                Set<String> duplicateIds = new HashSet<>();
+                try {
+                    List<String> dupIds = dataQualityService.duplicatePreviewTempIds(statementId);
+                    if (dupIds != null) {
+                        duplicateIds.addAll(dupIds);
+                    }
+                } catch (Exception e) {
+                    log.warn("statement/preview dedup check failed: statementId={}", statementId, e);
+                }
                 for (TransactionTemp t : list) {
                     try {
                         String ds = t.getTransactionDate() == null ? "" : sdf.format(t.getTransactionDate());
@@ -216,6 +231,7 @@ public class StatementFacade {
                         t.setTransactionDateTime(StringUtils.isNotBlank(ts) ? (ds + " " + ts) : ds);
                     } catch (Exception ignore) {
                     }
+                    t.setPossibleDuplicate(duplicateIds.contains(t.getId()));
                 }
             }
             log.info("statement/preview fetch: statementId={}, size={}", statementId, list == null ? 0 : list.size());

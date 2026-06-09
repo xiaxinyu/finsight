@@ -35,6 +35,10 @@ spring:
 account:
   des-sign-key: ${ACCOUNT_DES_SIGN_KEY:change-me-in-env}
 
+finsight:
+  features:
+    transfers: true
+
 server:
   servlet:
     encoding:

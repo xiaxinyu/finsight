@@ -5,8 +5,11 @@ import { DashboardPage } from '../pages/Dashboard'
 import { TransactionsPage } from '../pages/Transactions'
 import { StatementUploadPage } from '../pages/Statements/Upload'
 import { StatementListPage } from '../pages/Statements/List'
-import { ReportPageView } from '../pages/Reports/ReportPageView'
+import { ReportRoute } from './ReportRoute'
 import { LedgerPage } from '../pages/Ledgers/LedgerPage'
+import { PlanningPage } from '../pages/Planning'
+import { WealthPage } from '../pages/Wealth'
+import { GoalsPage } from '../pages/Goals'
 import { UsersAdminPage } from '../pages/Admin/Users'
 import { CardsAdminPage } from '../pages/Admin/Cards'
 import { RulesAdminPage } from '../pages/Admin/Rules'
@@ -19,10 +22,13 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/planning" element={<PlanningPage />} />
+        <Route path="/wealth" element={<WealthPage />} />
+        <Route path="/goals" element={<GoalsPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/statements/upload" element={<StatementUploadPage />} />
         <Route path="/statements" element={<StatementListPage />} />
-        <Route path="/reports/:reportId" element={<ReportPageView />} />
+        <Route path="/reports/:reportId" element={<ReportRoute />} />
         <Route path="/ledgers/:ledgerId" element={<LedgerPage />} />
         <Route path="/admin/users" element={<UsersAdminPage />} />
         <Route path="/admin/cards" element={<CardsAdminPage />} />

@@ -23,6 +23,8 @@ import { emptyChartOption } from '../../components/charts/profiles'
 import { formatDateMmDdYyyy, formatMoney, MONTH_NAMES, yearOptions, yearRange } from '../../utils/format'
 import { dateRangePresets } from '../../utils/datePresets'
 import { fromCategorySpend, fromIncomeExpense, fromYearCompare } from '../../utils/insights'
+import { billCalendar } from '../../api/finance'
+import { homeSummary } from '../../api/report'
 
 const { RangePicker } = DatePicker
 
@@ -76,6 +78,14 @@ export function ReportPageView() {
     enabled: !!cfg,
     queryFn: async () => {
       if (!cfg) return null
+      if (cfg.type === 'billsCalendar') {
+        return { calendar: await billCalendar() }
+      }
+      if (cfg.type === 'homeBuckets') {
+        const summary = await homeSummary(applied.year)
+        const week = await fetchReport('/transaction-report/week-consume', baseParams)
+        return { summary, week }
+      }
       if (cfg.type === 'incomeVsExpense') {
         const r = yearRange(applied.year)
         const base = { transactionDateStartStr: r.start, transactionDateEndStr: r.end, cardTypeName: applied.card, consumeID: applied.consume }
@@ -117,6 +127,25 @@ export function ReportPageView() {
 
   if (!cfg) return <DataPageLayout title="Report not found"><EmptyState title="Report not found" /></DataPageLayout>
 
+  if (cfg.type === 'billsCalendar') {
+    const rows = (data && 'calendar' in data ? data.calendar : []) as Record<string, unknown>[]
+    return (
+      <DataPageLayout title={cfg.title} subtitle={cfg.subtitle} icon={<BarChartOutlined />}>
+        <FsDataTable
+          title="Next 30 days"
+          columns={[
+            { title: 'Date', dataIndex: 'date', sortType: 'date', width: 110 },
+            { title: 'Bill', dataIndex: 'name' },
+            { title: 'Amount', dataIndex: 'amount', unit: 'CNY', align: 'right', sortType: 'number' },
+          ]}
+          dataSource={rows}
+          rowKey="billId"
+          loading={chartLoading}
+        />
+      </DataPageLayout>
+    )
+  }
+
   const disabled = chartLoading
 
   let chartOption = emptyChartOption()
@@ -126,7 +155,24 @@ export function ReportPageView() {
   let tableSummary: Record<string, number | string> | undefined
   let kpis: { key: string; label: string; value: string; color?: string }[] = []
 
-  if (data && 'rows' in data && data.rows) {
+  if (data && 'summary' in data && data.summary) {
+    const buckets = (data.summary as Record<string, unknown>).buckets_pct as Record<string, number> || {}
+    const weekRows = ('week' in data && data.week) ? data.week.filter((r) => r.value > 0) : []
+    chartOption = {
+      title: { text: 'Expense structure' },
+      xAxis: { data: Object.keys(buckets) },
+      series: [{ type: 'bar', data: Object.values(buckets), itemStyle: { color: '#2563eb' } }],
+    }
+    if (weekRows.length) {
+      tableCols = [
+        { title: 'Weekday', dataIndex: 'key', sortType: 'text' },
+        { title: 'Amount', dataIndex: 'value', unit: 'CNY', align: 'right', sortType: 'number' },
+      ]
+      tableData = weekRows.map((r) => ({ key: r.key, value: r.value }))
+    }
+    insights = [{ text: `Fixed vs variable view for ${applied.year}. Review fixed burden in Planning.` }]
+    kpis = [{ key: 'fixed', label: 'Fixed bucket %', value: `${buckets.fixed || 0}%` }]
+  } else if (data && 'rows' in data && data.rows) {
     const rows = data.rows.filter((r) => r.key && Number.isFinite(r.value))
     const total = rows.reduce((t, r) => t + r.value, 0)
     insights = fromCategorySpend(rows, total, String(applied.year))

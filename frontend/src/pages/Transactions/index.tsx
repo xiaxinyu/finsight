@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, DatePicker, Input, Select, Space, TreeSelect, message } from 'antd'
+import { Button, DatePicker, Input, Modal, Select, Space, TreeSelect, message } from 'antd'
 import {
   DeleteOutlined, SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
+import { createTransfer } from '../../api/finance'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
@@ -36,6 +37,7 @@ export function TransactionsPage() {
   const actionRef = useRef<ActionType>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [tableLoading, setTableLoading] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
   const tableHeight = useViewportTableHeight(200)
 
   const initial: TxFilters = {
@@ -122,8 +124,25 @@ export function TransactionsPage() {
     }
   }
 
+  const markTransfer = async () => {
+    if (selectedRowKeys.length !== 2) {
+      message.warning('Select exactly 2 rows for a transfer pair')
+      return
+    }
+    try {
+      await createTransfer(selectedRowKeys[0], selectedRowKeys[1], 'Marked as transfer')
+      message.success('Marked as transfer')
+      setSelectedRowKeys([])
+      setTransferOpen(false)
+      await reload()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Failed')
+    }
+  }
+
   const batchActions = (
     <Space size="small" wrap>
+      <Button size="small" disabled={disabled || selectedRowKeys.length !== 2} icon={<SwapOutlined />} onClick={() => setTransferOpen(true)}>Mark transfer</Button>
       <Button size="small" danger disabled={disabled} icon={<DeleteOutlined />} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
       <Button size="small" disabled={disabled} icon={<ThunderboltOutlined />} onClick={() => runBatch(() => classifyTransactions(selectedRowKeys.join(',')), 'Classified')}>Auto-classify</Button>
       <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
@@ -205,6 +224,10 @@ export function TransactionsPage() {
           pagination={{ defaultPageSize: 20, showSizeChanger: true, size: 'small' }}
         />
       </div>
+      <Modal title="Mark as transfer" open={transferOpen} onOk={markTransfer} onCancel={() => setTransferOpen(false)}>
+        Pair two transactions as an internal transfer (excluded from income/expense reports).
+        <div style={{ marginTop: 8, fontSize: 12 }}>From: {selectedRowKeys[0]} → To: {selectedRowKeys[1]}</div>
+      </Modal>
     </DataPageLayout>
   )
 }

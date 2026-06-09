@@ -4,7 +4,7 @@ import { resolveRouteMeta } from './routes'
 describe('resolveRouteMeta', () => {
   it('resolves static dashboard route', () => {
     const meta = resolveRouteMeta('/dashboard')
-    expect(meta.title).toBe('Dashboard')
+    expect(meta.title).toBe('Financial Pulse')
     expect(meta.breadcrumb).toEqual(['Dashboard'])
   })
 

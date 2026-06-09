@@ -1,5 +1,5 @@
 import {
-  AreaChartOutlined,
+  AimOutlined,
   BankOutlined,
   BarChartOutlined,
   BookOutlined,
@@ -7,7 +7,6 @@ import {
   ClusterOutlined,
   CreditCardOutlined,
   DashboardOutlined,
-  FallOutlined,
   FileTextOutlined,
   FundOutlined,
   HistoryOutlined,
@@ -35,6 +34,9 @@ export type FsMenuItem = {
 
 export const menuItems: FsMenuItem[] = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard', path: '/dashboard' },
+  { key: '/planning', icon: <FundOutlined />, label: 'Planning', path: '/planning' },
+  { key: '/wealth', icon: <BankOutlined />, label: 'Wealth', path: '/wealth' },
+  { key: '/goals', icon: <AimOutlined />, label: 'Goals', path: '/goals' },
   {
     key: 'transactions',
     icon: <FileTextOutlined />,
@@ -50,12 +52,11 @@ export const menuItems: FsMenuItem[] = [
     icon: <BarChartOutlined />,
     label: 'Reports',
     children: [
-      { key: '/reports/transaction-trend', icon: <RiseOutlined />, label: 'Transaction Trend', path: '/reports/transaction-trend' },
-      { key: '/reports/category-breakdown', icon: <PieChartOutlined />, label: 'Category Breakdown', path: '/reports/category-breakdown' },
-      { key: '/reports/category-comparison', icon: <SwapOutlined />, label: 'Category Comparison', path: '/reports/category-comparison' },
-      { key: '/reports/weekly-summary', icon: <CalendarOutlined />, label: 'Weekly Summary', path: '/reports/weekly-summary' },
-      { key: '/reports/monthly-comparison', icon: <AreaChartOutlined />, label: 'Monthly Comparison', path: '/reports/monthly-comparison' },
-      { key: '/reports/income-vs-expense', icon: <FundOutlined />, label: 'Income vs Expense', path: '/reports/income-vs-expense' },
+      { key: '/reports/cashflow', icon: <SwapOutlined />, label: 'Cashflow', path: '/reports/cashflow' },
+      { key: '/reports/budget-vs-actual', icon: <PieChartOutlined />, label: 'Budget vs Actual', path: '/reports/budget-vs-actual' },
+      { key: '/reports/fixed-vs-variable', icon: <CalendarOutlined />, label: 'Fixed vs Variable', path: '/reports/fixed-vs-variable' },
+      { key: '/reports/spending-drift', icon: <RiseOutlined />, label: 'Spending Drift', path: '/reports/spending-drift' },
+      { key: '/reports/bills-calendar', icon: <LineChartOutlined />, label: 'Bills Calendar', path: '/reports/bills-calendar' },
     ],
   },
   {
@@ -64,7 +65,6 @@ export const menuItems: FsMenuItem[] = [
     label: 'Income',
     children: [
       { key: '/ledgers/salary', icon: <BookOutlined />, label: 'Ledger', path: '/ledgers/salary' },
-      { key: '/reports/income-curve', icon: <LineChartOutlined />, label: 'Income Curve', path: '/reports/income-curve' },
     ],
   },
   {
@@ -73,7 +73,6 @@ export const menuItems: FsMenuItem[] = [
     label: 'Expense',
     children: [
       { key: '/ledgers/expense', icon: <BookOutlined />, label: 'Ledger', path: '/ledgers/expense' },
-      { key: '/reports/expense-curve', icon: <FallOutlined />, label: 'Expense Curve', path: '/reports/expense-curve' },
       { key: '/ledgers/house-rent', icon: <HomeOutlined />, label: 'Rent Ledger', path: '/ledgers/house-rent' },
     ],
   },

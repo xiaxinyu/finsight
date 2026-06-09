@@ -5,6 +5,7 @@ import com.finsight.application.importer.impl.CcbDebitTransactionStatementImport
 import com.finsight.application.importer.impl.CrbankDebitTransactionStatementImporter;
 import com.finsight.application.importer.impl.CmbDebitTransactionStatementImporter;
 import com.finsight.application.importer.impl.CgbCreditTransactionStatementImporter;
+import com.finsight.application.importer.impl.AlipayWeChatCsvImporter;
 
 /**
  * Selects a {@link StatementImporter} implementation from bank and card type codes.
@@ -34,6 +35,8 @@ public final class StatementImporterFactory {
             if ("debit".equalsIgnoreCase(cardTypeCode) || "credit".equalsIgnoreCase(cardTypeCode)) {
                 return new CmbDebitTransactionStatementImporter();
             }
+        } else if ("ALIPAY".equalsIgnoreCase(bankCode) || "WECHAT".equalsIgnoreCase(bankCode)) {
+            return new AlipayWeChatCsvImporter();
         }
         return new CcbTransactionStatementImporter();
     }

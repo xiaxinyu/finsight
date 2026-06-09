@@ -143,7 +143,27 @@ public class LegacyRedirectController {
 
     @GetMapping("/reports/income-vs-expense.html")
     public String reportsIncomeVsExpense() {
-        return "redirect:/app/reports/income-vs-expense";
+        return "redirect:/app/reports/cashflow";
+    }
+
+    @GetMapping({"/app/reports/income-vs-expense", "/app/reports/monthly-comparison", "/app/reports/income-curve", "/app/reports/expense-curve"})
+    public String legacyToCashflow() {
+        return "redirect:/app/reports/cashflow";
+    }
+
+    @GetMapping({"/app/reports/category-breakdown", "/app/reports/transaction-trend"})
+    public String legacyToBudget() {
+        return "redirect:/app/reports/budget-vs-actual";
+    }
+
+    @GetMapping("/app/reports/weekly-summary")
+    public String legacyToFixed() {
+        return "redirect:/app/reports/fixed-vs-variable";
+    }
+
+    @GetMapping("/app/reports/category-comparison")
+    public String legacyToDrift() {
+        return "redirect:/app/reports/spending-drift";
     }
 
     @GetMapping("/reports/transaction-trend.html")

@@ -30,6 +30,7 @@ function findOpenKeys(pathname: string): string[] {
   }
   if (pathname.startsWith('/admin')) return ['admin']
   if (pathname.startsWith('/transactions') || pathname.startsWith('/statements')) return ['transactions']
+  if (pathname === '/planning' || pathname === '/wealth' || pathname === '/goals') return []
   return []
 }
 

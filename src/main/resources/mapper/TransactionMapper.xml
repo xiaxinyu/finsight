@@ -319,6 +319,7 @@
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
+        and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes != ''">
                 and (
@@ -374,6 +375,7 @@
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
+        and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes != ''">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
@@ -424,6 +426,7 @@
         from (select c.balance_money, month(c.transaction_date) cmonth from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
+        and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes != ''">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
@@ -477,6 +480,7 @@
             from transaction c
             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
+            and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
                 <if test="q.year != null and q.year != ''">
                     and year(c.transaction_date) = #{q.year,jdbcType=VARCHAR}
@@ -537,6 +541,7 @@
             from transaction c
             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
+            and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
                 <if test="q.year != null and q.year != ''">
                     and year(c.transaction_date) = #{q.year,jdbcType=VARCHAR}
@@ -585,6 +590,7 @@
              from transaction c
              left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
              where 1 = 1
+             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
              and year(c.transaction_date) = #{year,jdbcType=NUMERIC}
         ) t
@@ -609,6 +615,7 @@
              from transaction c
              left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
              where 1 = 1
+             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
              and year(c.transaction_date) = (#{year,jdbcType=NUMERIC} - 1)
         ) t
@@ -627,6 +634,7 @@
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+        and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
     </select>
 
     <!-- Home summary: debt-related payments (repayments/loans) by year -->
@@ -635,6 +643,7 @@
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+          and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
           and (
               cat.parentId = 'LIABILITY'
               or cat.code like 'LIABILITY-%'
@@ -647,6 +656,7 @@
     <select id="countRefundsByYear" resultType="java.lang.Integer">
         select count(1) from transaction t
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+          and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
           and (t.transaction_desc like '%退款%' or t.demoarea like '%退款%')
     </select>
 </mapper>

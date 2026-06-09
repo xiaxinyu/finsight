@@ -67,6 +67,12 @@ public class Transaction extends BaseEntity {
     @TableField(value = "account_balance")
     private Double accountBalance;
 
+    @TableField(value = "txn_kind")
+    private String txnKind;
+
+    @TableField(value = "transfer_group_id")
+    private String transferGroupId;
+
     @TableField(exist = false)
     private String transactionDateTime;
 

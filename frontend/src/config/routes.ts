@@ -6,7 +6,10 @@ export type RouteMeta = {
 }
 
 const staticRoutes: RouteMeta[] = [
-  { path: '/dashboard', title: 'Dashboard', breadcrumb: ['Dashboard'] },
+  { path: '/dashboard', title: 'Financial Pulse', breadcrumb: ['Dashboard'] },
+  { path: '/planning', title: 'Planning', breadcrumb: ['Planning'] },
+  { path: '/wealth', title: 'Wealth', breadcrumb: ['Wealth'] },
+  { path: '/goals', title: 'Goals', breadcrumb: ['Goals'] },
   { path: '/transactions', title: 'Transactions', breadcrumb: ['Transactions', 'Detail'] },
   { path: '/statements/upload', title: 'Import Statement', breadcrumb: ['Transactions', 'Import'] },
   { path: '/statements', title: 'Import History', breadcrumb: ['Transactions', 'Import History'] },
@@ -17,6 +20,11 @@ const staticRoutes: RouteMeta[] = [
 ]
 
 const reportTitles: Record<string, string> = {
+  cashflow: 'Cashflow',
+  'budget-vs-actual': 'Budget vs Actual',
+  'fixed-vs-variable': 'Fixed vs Variable',
+  'spending-drift': 'Spending Drift',
+  'bills-calendar': 'Bills Calendar',
   'transaction-trend': 'Transaction Trend',
   'category-breakdown': 'Category Breakdown',
   'category-comparison': 'Category Comparison',
