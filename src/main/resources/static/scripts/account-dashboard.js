@@ -539,25 +539,25 @@ function renderProblemsAndActions(payload, prevPayload){
         actions.push({ text: 'Freeze non-essential spend for 1 month and target breakeven first.', title: 'Income vs Expense', url: 'analysis/month-income-expense.html', focus: 'deficit' });
     }
     if (savings < 15) {
-        problems.push({ text: 'Low Savings Rate: Current savings rate is ' + formatPct(savings) + '.', title: 'Monthly Comparison', url: 'account/transaction/report/month_consume_report.html', focus: 'savings' });
-        actions.push({ text: 'Set a hard monthly budget cap and review over-budget categories weekly.', title: 'Monthly Comparison', url: 'account/transaction/report/month_consume_report.html', focus: 'savings' });
+        problems.push({ text: 'Low Savings Rate: Current savings rate is ' + formatPct(savings) + '.', title: 'Monthly Comparison', url: 'reports/monthly-comparison.html', focus: 'savings' });
+        actions.push({ text: 'Set a hard monthly budget cap and review over-budget categories weekly.', title: 'Monthly Comparison', url: 'reports/monthly-comparison.html', focus: 'savings' });
     }
     if (prevPayload && surplus < prevSurplus) {
-        problems.push({ text: 'YoY Deterioration: Net surplus declined by ' + formatRmb0(prevSurplus - surplus) + '.', title: 'Category Comparison', url: 'account/transaction/report/consume_compare_report.html', focus: 'yoy' });
-        actions.push({ text: 'Prioritize categories with fastest growth and cut 10%-15% in next cycle.', title: 'Category Comparison', url: 'account/transaction/report/consume_compare_report.html', focus: 'yoy' });
+        problems.push({ text: 'YoY Deterioration: Net surplus declined by ' + formatRmb0(prevSurplus - surplus) + '.', title: 'Category Comparison', url: 'reports/category-comparison.html', focus: 'yoy' });
+        actions.push({ text: 'Prioritize categories with fastest growth and cut 10%-15% in next cycle.', title: 'Category Comparison', url: 'reports/category-comparison.html', focus: 'yoy' });
     }
     if (fixedPct >= 35) {
-        problems.push({ text: 'High Fixed-Cost Pressure: Fixed costs account for ' + fixedPct.toFixed(1) + '% of spending.', title: 'Category Breakdown', url: 'account/transaction/report/consume_pie_report.html', focus: 'fixed' });
-        actions.push({ text: 'Renegotiate recurring bills/subscriptions and reduce fixed obligations.', title: 'Category Breakdown', url: 'account/transaction/report/consume_pie_report.html', focus: 'fixed' });
+        problems.push({ text: 'High Fixed-Cost Pressure: Fixed costs account for ' + fixedPct.toFixed(1) + '% of spending.', title: 'Category Breakdown', url: 'reports/category-breakdown.html', focus: 'fixed' });
+        actions.push({ text: 'Renegotiate recurring bills/subscriptions and reduce fixed obligations.', title: 'Category Breakdown', url: 'reports/category-breakdown.html', focus: 'fixed' });
     }
     if ((shoppingPct + entertainmentPct) >= 30) {
-        problems.push({ text: 'Variable Spending Concentration: Shopping + Entertainment is ' + (shoppingPct + entertainmentPct).toFixed(1) + '%.', title: 'Transaction Trend', url: 'account/transaction/report/consume_line_report.html', focus: 'variable' });
-        actions.push({ text: 'Set category-level limits for shopping/entertainment and enforce alerts.', title: 'Transaction Trend', url: 'account/transaction/report/consume_line_report.html', focus: 'variable' });
+        problems.push({ text: 'Variable Spending Concentration: Shopping + Entertainment is ' + (shoppingPct + entertainmentPct).toFixed(1) + '%.', title: 'Transaction Trend', url: 'reports/transaction-trend.html', focus: 'variable' });
+        actions.push({ text: 'Set category-level limits for shopping/entertainment and enforce alerts.', title: 'Transaction Trend', url: 'reports/transaction-trend.html', focus: 'variable' });
     }
 
     if (!problems.length) {
-        problems.push({ text: 'No major structural issue detected for the selected year.', title: 'Monthly Comparison', url: 'account/transaction/report/month_consume_report.html', focus: 'steady' });
-        actions.push({ text: 'Keep current budget discipline and continue monthly variance review.', title: 'Monthly Comparison', url: 'account/transaction/report/month_consume_report.html', focus: 'steady' });
+        problems.push({ text: 'No major structural issue detected for the selected year.', title: 'Monthly Comparison', url: 'reports/monthly-comparison.html', focus: 'steady' });
+        actions.push({ text: 'Keep current budget discipline and continue monthly variance review.', title: 'Monthly Comparison', url: 'reports/monthly-comparison.html', focus: 'steady' });
     }
     renderList('problemList', problems.slice(0, 3));
     renderList('actionList', actions.slice(0, 3));

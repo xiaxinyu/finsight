@@ -1,13 +1,19 @@
 ---
-description: Thymeleaf, static assets, and jQuery/EasyUI/ECharts conventions
-globs: src/main/resources/{templates,static}/**/*
+description: React SPA frontend conventions
+globs: frontend/**/*,src/main/resources/static/app/**/*
 alwaysApply: false
 ---
 
-# Frontend (server-rendered UI)
+# Frontend (React SPA)
 
-- **Stack**: Thymeleaf templates under `src/main/resources/templates/`; JS/CSS and vendored libs under `src/main/resources/static/`.
-- **Patterns**: Prefer existing EasyUI + jQuery patterns in sibling pages; keep layout/navigation consistent with `system/navigation/` and shared fragments.
-- **AJAX**: JSON endpoints follow existing controller paths (e.g. `/transaction/*`); use same response shapes (`CommonResult`, etc.) as neighboring code.
-- **Charts**: ECharts is vendored under `static/plugins/`; match options/style from existing report pages.
-- **Scope**: Do not introduce a new SPA framework without an explicit product decision; incremental UI changes should stay compatible with current stack.
+- **Stack**: React 19 + TypeScript + Vite 8 + Ant Design 5 + `@ant-design/pro-components` under `frontend/`.
+- **Output**: Production build writes to `src/main/resources/static/app/` (`base: /app/`).
+- **Routing**: React Router 7 with `basename="/app"`; server fallback via `SpaController` + `SpaWebConfig`.
+- **Auth**: Session cookie (`credentials: 'include'`); login `POST /authentication/form`; 401 → `/app/login`.
+- **API**: Use `frontend/src/api/client.ts` adapters for `CommonResult`, `CollectionResult`, and raw `/api/v1/*` JSON.
+- **Dates**: Send `MM/dd/yyyy` for legacy report/ledger endpoints (`ListingDateSupport`).
+- **Money**: Right-aligned tabular nums via `MoneyText`; amounts in tables without mixed `¥` columns.
+- **Charts**: ECharts via `echarts-for-react` + profiles in `frontend/src/components/charts/profiles.ts`.
+- **Build**: `cd frontend && npm run build` or `mvn package` (frontend-maven-plugin).
+- **Local run**: `mvn spring-boot:run` → http://localhost:8080/app/login; dev HMR: `cd frontend && npm run dev` → http://localhost:5173/app/. See [docs/tech/REPORT_UI.md](../../docs/tech/REPORT_UI.md).
+- **Legacy**: Old Thymeleaf/EasyUI pages removed; bookmarked URLs redirect to `/app/*` via controllers.

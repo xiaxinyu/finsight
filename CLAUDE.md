@@ -7,7 +7,7 @@ Project rules for Cursor live under **`.cursor/rules/`** (`.mdc` files with YAML
 | Topic | Cursor rule file |
 |--------|-------------------|
 | Architecture (layering, ports, SQL location) | [`.cursor/rules/architecture.mdc`](.cursor/rules/architecture.mdc) |
-| Frontend (Thymeleaf, static, jQuery/EasyUI/ECharts) | [`.cursor/rules/frontend.mdc`](.cursor/rules/frontend.mdc) |
+| Frontend (React SPA, Ant Design, Vite) | [`.cursor/rules/frontend.mdc`](.cursor/rules/frontend.mdc) |
 | **Data persistence (CRITICAL)** — DB, imports, integrity | [`.cursor/rules/message-persistence.mdc`](.cursor/rules/message-persistence.mdc) |
 | Main process (Boot entry, security, lifecycle) | [`.cursor/rules/main-process.mdc`](.cursor/rules/main-process.mdc) |
 | Git conventions | [`.cursor/rules/git-conventions.mdc`](.cursor/rules/git-conventions.mdc) |
@@ -16,7 +16,7 @@ Project rules for Cursor live under **`.cursor/rules/`** (`.mdc` files with YAML
 
 - Product: FinSight (personal finance intelligence, local-first).
 - Stack: Java 21 + Spring Boot 3.5.x + Maven + MyBatis-Plus + MySQL 8.x.
-- UI: Thymeleaf + jQuery EasyUI + ECharts.
+- UI: React 19 + Ant Design SPA (`frontend/` → `/app/`). See [docs/tech/REPORT_UI.md](docs/tech/REPORT_UI.md).
 - Main entry: `src/main/java/com/finsight/FinsightApplication.java`.
 - Key config: `src/main/resources/application.yml`.
 
@@ -27,27 +27,37 @@ Project rules for Cursor live under **`.cursor/rules/`** (`.mdc` files with YAML
 - `src/main/java/com/finsight/infrastructure/`: MyBatis mappers and persistence adapters.
 - `src/main/java/com/finsight/web/`: MVC/REST controllers.
 - `src/main/resources/mapper/`: MyBatis XML SQL mappings.
-- `src/main/resources/templates/`: Thymeleaf pages.
-- `src/main/resources/static/`: frontend assets (js/css/plugins).
+- `frontend/`: React SPA 源码（Vite + TypeScript + Ant Design）。
+- `src/main/resources/static/app/`: SPA 构建产物（`npm run build` 输出）。
+- `src/main/resources/templates/`: 仅保留错误页等兜底模板。
 
 ## Commands
 
 ```bash
-# run locally
+# 本地启动（后端）
 mvn spring-boot:run
+# → http://localhost:8080/app/login
 
-# build package
+# 开发热更新（另开终端）
+cd frontend && npm run dev
+# → http://localhost:5173/app/
+
+# 生产打包（含前端构建）
 mvn clean package
 
-# fast package (skip tests)
+# 快速打包（跳过测试）
 mvn clean package -DskipTests
 
-# style check
-mvn checkstyle:check
+# 前端单独构建 / 测试
+cd frontend && npm run build
+cd frontend && npm test
 
-# tests (if present)
+# 代码检查
+mvn checkstyle:check
 mvn test
 ```
+
+完整 UI 启动说明见 [docs/tech/REPORT_UI.md](docs/tech/REPORT_UI.md)。
 
 ## Environment Variables
 

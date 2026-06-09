@@ -23,12 +23,12 @@ public class StatementController {
 
     @GetMapping("/upload.html")
     public String uploadPage() {
-        return "account/statement/upload";
+        return "redirect:/app/statements/upload";
     }
-    
+
     @GetMapping("/list.html")
     public String listPage() {
-        return "account/statement/list";
+        return "redirect:/app/statements";
     }
 
     @GetMapping("/api/list")

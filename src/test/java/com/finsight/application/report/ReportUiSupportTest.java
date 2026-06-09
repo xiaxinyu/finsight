@@ -67,4 +67,11 @@ class ReportUiSupportTest {
     void formatNumberOnly_formatsWithoutCurrencySymbol() {
         assertEquals("1,234.50", ReportUiSupport.formatNumberOnly(1234.5));
     }
+
+    @Test
+    void isSeriesEmpty_detectsZeroOrMissingValues() {
+        assertTrue(ReportUiSupport.isSeriesEmpty(Collections.emptyList()));
+        assertTrue(ReportUiSupport.isSeriesEmpty(Arrays.asList(0, 0.0, null)));
+        assertFalse(ReportUiSupport.isSeriesEmpty(Arrays.asList(0, 42.5)));
+    }
 }

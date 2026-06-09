@@ -1,172 +1,106 @@
 package com.finsight.web.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+/**
+ * Legacy Thymeleaf routes → React SPA redirects.
+ */
 @Controller
 public class AccountController {
-    private static final Logger log = LoggerFactory.getLogger(AccountController.class);
+
     @RequestMapping("account/index.html")
-    public String index(ModelMap model) {
-        log.info("************ Hello, Account in Private Account ************");
-        return "account/index";
+    public String index() {
+        return "redirect:/app/dashboard";
     }
 
     @RequestMapping("/account/transaction/transaction_bill.html")
-    public String transactionBill(ModelMap model) {
-        log.info("************ Hello, Transaction Bill in Private Account ************");
-        return "account/transaction/transaction_bill";
+    public String transactionBill() {
+        return "redirect:/app/transactions";
     }
 
     @RequestMapping("/account/transaction/report/consume_line_report.html")
-    public String consumeLineReport(ModelMap model) {
-        log.info("************ Hello, Consume Line Report Private Account ************");
-        return "account/transaction/report/consume_line_report";
+    public String consumeLineReport() {
+        return "redirect:/app/reports/transaction-trend";
     }
 
     @RequestMapping("/account/transaction/report/consume_pie_report.html")
-    public String consumePieReport(ModelMap model) {
-        log.info("************ Hello, Consume Pie Report Private Account ************");
-        return "account/transaction/report/consume_pie_report";
+    public String consumePieReport() {
+        return "redirect:/app/reports/category-breakdown";
     }
 
     @RequestMapping("/account/transaction/report/consume_compare_report.html")
-    public String consumeCompareReport(ModelMap model) {
-        log.info("************ Hello, Consume Compare Report Private Account ************");
-        return "account/transaction/report/consume_compare_report";
+    public String consumeCompareReport() {
+        return "redirect:/app/reports/category-comparison";
     }
 
     @RequestMapping("/account/transaction/report/month_consume_report.html")
-    public String monthConsumeReport(ModelMap model) {
-        log.info("************ Hello, Month Consume Report Private Account ************");
-        return "account/transaction/report/month_consume_report";
+    public String monthConsumeReport() {
+        return "redirect:/app/reports/monthly-comparison";
     }
 
     @RequestMapping("/account/transaction/report/week_consume_report.html")
-    public String weekConsumeReport(ModelMap model) {
-        log.info("************ Hello, Week Consume Report Private Account ************");
-        return "account/transaction/report/week_consume_report";
+    public String weekConsumeReport() {
+        return "redirect:/app/reports/weekly-summary";
     }
 
-
-    @RequestMapping("/account/salary/Salary.html")
-    public String salaryHtml(ModelMap model) {
-        log.info("************ Hello, Salary HTML in Private Account ************");
-        return "account/salary/Salary";
+    @RequestMapping({"/account/salary", "/account/salary/Salary.html"})
+    public String salary() {
+        return "redirect:/app/ledgers/salary";
     }
 
-    @RequestMapping("/account/salary")
-    public String salaryRest(ModelMap model) {
-        log.info("************ Hello, Salary REST in Private Account ************");
-        return "account/salary/Salary";
+    @RequestMapping({"/account/house-rent", "/account/house-rent/HouseRent.html"})
+    public String houseRent() {
+        return "redirect:/app/ledgers/house-rent";
     }
 
-
-    @RequestMapping("/account/house-rent/HouseRent.html")
-    public String houseRentHtml(ModelMap model) {
-        log.info("************ Hello, HouseRent HTML in Private Account ************");
-        return "account/house-rent/HouseRent";
+    @RequestMapping({"/account/expense", "/account/expense/Expense.html"})
+    public String expense() {
+        return "redirect:/app/ledgers/expense";
     }
 
-    @RequestMapping("/account/house-rent")
-    public String houseRentRest(ModelMap model) {
-        log.info("************ Hello, HouseRent REST in Private Account ************");
-        return "account/house-rent/HouseRent";
+    @RequestMapping({"/account/endowment", "/account/endowment/Endowment.html"})
+    public String endowment() {
+        return "redirect:/app/ledgers/endowment";
     }
 
-    @RequestMapping("/account/expense/Expense.html")
-    public String expenseHtml(ModelMap model) {
-        log.info("************ Hello, Expense HTML in Private Account ************");
-        return "account/expense/Expense";
+    @RequestMapping({"/account/accumulation", "/account/accumulation/accumulation.html"})
+    public String accumulation() {
+        return "redirect:/app/ledgers/accumulation";
     }
 
-    @RequestMapping("/account/expense")
-    public String expenseRest(ModelMap model) {
-        log.info("************ Hello, Expense REST in Private Account ************");
-        return "account/expense/Expense";
+    @RequestMapping({"/account/medical", "/account/medical/Medical.html"})
+    public String medical() {
+        return "redirect:/app/ledgers/medical";
     }
 
-
-    @RequestMapping("/account/endowment/Endowment.html")
-    public String endowmentHtml(ModelMap model) {
-        log.info("************ Hello, Endowment HTML in Private Account ************");
-        return "account/endowment/Endowment";
-    }
-
-    @RequestMapping("/account/endowment")
-    public String endowmentRest(ModelMap model) {
-        log.info("************ Hello, Endowment REST in Private Account ************");
-        return "account/endowment/Endowment";
-    }
-
-
-    @RequestMapping("/account/accumulation/accumulation.html")
-    public String accumulationHtml(ModelMap model) {
-        log.info("************ Hello, Accumulation HTML in Private Account ************");
-        return "account/accumulation/accumulation";
-    }
-
-    @RequestMapping("/account/accumulation")
-    public String accumulationRest(ModelMap model) {
-        log.info("************ Hello, Accumulation REST in Private Account ************");
-        return "account/accumulation/accumulation";
-    }
-
-    @RequestMapping("/account/medical/Medical.html")
-    public String medicalHtml(ModelMap model) {
-        log.info("************ Hello, Medical HTML in Private Account ************");
-        return "account/medical/Medical";
-    }
-
-    @RequestMapping("/account/medical")
-    public String medicalRest(ModelMap model) {
-        log.info("************ Hello, Medical REST in Private Account ************");
-        return "account/medical/Medical";
-    }
-
-
-    @RequestMapping("/account/unemployment/UnEmployment.html")
-    public String unemploymentHtml(ModelMap model) {
-        log.info("************ Hello, UnEmployment HTML in Private Account ************");
-        return "account/unemployment/UnEmployment";
-    }
-
-    @RequestMapping("/account/unemployment")
-    public String unemploymentRest(ModelMap model) {
-        log.info("************ Hello, UnEmployment REST in Private Account ************");
-        return "account/unemployment/UnEmployment";
+    @RequestMapping({"/account/unemployment", "/account/unemployment/UnEmployment.html"})
+    public String unemployment() {
+        return "redirect:/app/ledgers/unemployment";
     }
 
     @RequestMapping("/system/admin/consume_rules.html")
-    public String consumeRules(ModelMap model) {
-        log.info("************ Hello, Category Rules in Private Account ************");
-        return "system/admin/consume_rules";
+    public String consumeRules() {
+        return "redirect:/app/admin/rules";
     }
 
     @RequestMapping("/system/admin/consume_categories.html")
-    public String consumeCategories(ModelMap model) {
-        log.info("************ Hello, Category Types in Private Account ************");
-        return "system/admin/consume_categories";
+    public String consumeCategories() {
+        return "redirect:/app/admin/categories";
     }
 
     @RequestMapping("/system/admin/cards.html")
-    public String bankCards(ModelMap model) {
-        log.info("************ Hello, Bank Cards in Private Account ************");
-        return "system/admin/cards";
+    public String bankCards() {
+        return "redirect:/app/admin/cards";
     }
 
     @RequestMapping("/system/admin/users.html")
-    public String users(ModelMap model) {
-        log.info("************ Hello, Users in Private Account ************");
-        return "system/admin/users";
+    public String users() {
+        return "redirect:/app/admin/users";
     }
 
     @RequestMapping("/account/statement/upload.html")
-    public String statementUpload(ModelMap model) {
-        log.info("************ Hello, Statement Upload in Private Account ************");
-        return "account/statement/upload";
+    public String statementUpload() {
+        return "redirect:/app/statements/upload";
     }
 }

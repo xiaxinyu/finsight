@@ -29,12 +29,12 @@ public class SecurityConfig {
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
         http.csrf(csrf -> csrf.disable());
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/oauth/**", "/login/**", "/logout/**", "/actuator/**", "/plugins/**", "/encrypt/**", "/login-error.json").permitAll()
+                .requestMatchers("/oauth/**", "/login/**", "/logout/**", "/actuator/**", "/plugins/**", "/encrypt/**", "/login-error.json", "/app/**").permitAll()
                 .anyRequest().authenticated()
         );
         http.authenticationManager(authenticationManager);
         http.formLogin(form -> form
-                .loginPage("/login.html")
+                .loginPage("/app/login")
                 .loginProcessingUrl("/authentication/form")
                 .failureHandler((request, response, exception) -> {
                     String code = "BAD_CREDENTIALS";
@@ -63,9 +63,9 @@ public class SecurityConfig {
                     jakarta.servlet.http.HttpSession sess = request.getSession(true);
                     sess.setAttribute("LOGIN_ERROR_CODE", code);
                     sess.setAttribute("LOGIN_ERROR_MSG", msg);
-                    response.sendRedirect("/login.html");
+                    response.sendRedirect("/app/login");
                 })
-                .defaultSuccessUrl("/index.html", true)
+                .defaultSuccessUrl("/app/dashboard", true)
                 .permitAll()
         );
         return http.build();

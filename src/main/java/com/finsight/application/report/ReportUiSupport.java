@@ -97,6 +97,23 @@ public final class ReportUiSupport {
         return String.format(Locale.US, "%,.2f", value);
     }
 
+    /** True when all values are null, NaN, or zero — mirrors report-charts empty detection. */
+    public static boolean isSeriesEmpty(List<? extends Number> values) {
+        if (values == null || values.isEmpty()) {
+            return true;
+        }
+        for (Number value : values) {
+            if (value == null) {
+                continue;
+            }
+            double n = value.doubleValue();
+            if (!Double.isNaN(n) && n != 0d) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static LocalDate tryParseDate(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
