@@ -14,17 +14,41 @@ export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler
 }
 
+function isHtmlLoginPage(text: string, res: Response): boolean {
+  const url = res.url || ''
+  if (url.includes('/app/login') || url.includes('/login')) return true
+  const lower = text.trim().slice(0, 200).toLowerCase()
+  return lower.startsWith('<!doctype') || lower.startsWith('<html')
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.status === 401 || res.status === 403) {
     onUnauthorized?.()
-    throw new ApiError('Unauthorized', res.status)
+    throw new ApiError('Session expired — please sign in again', res.status)
   }
   const contentType = res.headers.get('content-type') || ''
   if (contentType.includes('application/json')) {
     return res.json() as Promise<T>
   }
   const text = await res.text()
-  throw new ApiError(text || res.statusText, res.status)
+  if (isHtmlLoginPage(text, res)) {
+    onUnauthorized?.()
+    throw new ApiError('Session expired — please sign in again', 401)
+  }
+  throw new ApiError(text || res.statusText || 'Request failed', res.status)
+}
+
+/** Probe whether the current browser session is authenticated for API calls. */
+export async function verifySession(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/v1/cards/list', { credentials: 'include' })
+    if (res.status === 401 || res.status === 403) return false
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) return false
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 export async function getJson<T = unknown>(url: string): Promise<T> {

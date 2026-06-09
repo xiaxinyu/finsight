@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, DatePicker, Input, Select, Space, TreeSelect, message } from 'antd'
+import { Button, DatePicker, Input, Select, TreeSelect, message } from 'antd'
 import { PageContainer, ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
@@ -8,35 +8,74 @@ import {
   incomeToExpense, listCards, listTransactions, updateTransaction, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
-import { MoneyText } from '../../components/MoneyText'
-import { formatDateMmDdYyyy } from '../../utils/format'
+import { useFilterApply } from '../../hooks/useFilterApply'
+import { FilterToolbar } from '../../components/FilterToolbar'
+import { ContentCard } from '../../components/ContentCard'
+import { TableHeader } from '../../components/TableHeader'
+import { formatDateMmDdYyyy, formatNumber } from '../../utils/format'
+import { dateRangePresets } from '../../utils/datePresets'
 
 const { RangePicker } = DatePicker
+
+type TxFilters = {
+  start: string
+  end: string
+  card: string
+  consume: string
+  keyword: string
+}
 
 export function TransactionsPage() {
   const actionRef = useRef<ActionType>(null)
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
-  const [filters, setFilters] = useState({
+  const [tableLoading, setTableLoading] = useState(false)
+
+  const initial: TxFilters = {
     start: formatDateMmDdYyyy(dayjs().startOf('year')),
     end: formatDateMmDdYyyy(dayjs()),
     card: '',
     consume: '',
     keyword: '',
-  })
+  }
+
+  const { draft, setDraft, applied, applying, applySync } = useFilterApply(initial)
 
   const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
   const { treeData } = useConsumeTreeSelect()
 
+  const disabled = tableLoading || applying
+
   const columns: ProColumns<TransactionRow>[] = [
-    { title: 'Date', dataIndex: 'transactionDate', width: 110, valueType: 'date' },
-    { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true, width: 220 },
-    { title: 'Amount', dataIndex: 'balanceMoney', width: 120, align: 'right', render: (_, r) => <MoneyText value={r.balanceMoney} type="expense" unit /> },
-    { title: 'Card', dataIndex: 'cardTypeName', width: 100 },
-    { title: 'Category', dataIndex: 'consumeName', width: 140 },
-    { title: 'Memo', dataIndex: 'demoArea', width: 120, ellipsis: true },
+    { title: <TableHeader name="Date" />, dataIndex: 'transactionDate', width: 110, sorter: true },
+    {
+      title: <TableHeader name="Description" />,
+      dataIndex: 'transactionDesc',
+      ellipsis: true,
+      width: 220,
+      render: (_, r) => <span title={r.transactionDesc}>{r.transactionDesc}</span>,
+    },
+    {
+      title: <TableHeader name="Amount" unit="CNY" />,
+      dataIndex: 'balanceMoney',
+      width: 120,
+      align: 'right',
+      sorter: true,
+      render: (_, r) => <span className="fs-money">{formatNumber(r.balanceMoney)}</span>,
+    },
+    { title: <TableHeader name="Card" />, dataIndex: 'cardTypeName', width: 100, ellipsis: true, render: (v) => <span title={String(v ?? '')}>{String(v ?? '')}</span> },
+    { title: <TableHeader name="Category" />, dataIndex: 'consumeName', width: 140, ellipsis: true, render: (v) => <span title={String(v ?? '')}>{String(v ?? '')}</span> },
+    { title: <TableHeader name="Memo" />, dataIndex: 'demoArea', width: 120, ellipsis: true, render: (v) => <span title={String(v ?? '')}>{String(v ?? '')}</span> },
   ]
 
-  const reload = () => actionRef.current?.reload()
+  const reload = async () => {
+    setTableLoading(true)
+    applySync()
+    try {
+      await actionRef.current?.reload?.()
+    } finally {
+      setTableLoading(false)
+    }
+  }
 
   const runBatch = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
@@ -44,7 +83,7 @@ export function TransactionsPage() {
       await fn()
       message.success(okMsg)
       setSelectedRowKeys([])
-      reload()
+      await reload()
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Failed')
     }
@@ -52,48 +91,70 @@ export function TransactionsPage() {
 
   return (
     <PageContainer title="Transactions">
-      <Space wrap style={{ marginBottom: 16 }}>
-        <RangePicker defaultValue={[dayjs(filters.start, 'MM/DD/YYYY'), dayjs(filters.end, 'MM/DD/YYYY')]}
-          onChange={(v) => v && setFilters((f) => ({ ...f, start: formatDateMmDdYyyy(v[0]!), end: formatDateMmDdYyyy(v[1]!) }))} />
-        <Select allowClear placeholder="Card" style={{ width: 140 }} options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
-          onChange={(v) => setFilters((f) => ({ ...f, card: v || '' }))} />
-        <TreeSelect allowClear placeholder="Category" style={{ width: 200 }} treeData={treeData} treeDefaultExpandAll
-          onChange={(v) => setFilters((f) => ({ ...f, consume: v || '' }))} />
-        <Input.Search placeholder="Keyword" allowClear style={{ width: 180 }} onSearch={(v) => { setFilters((f) => ({ ...f, keyword: v })); reload() }} />
-        <Button type="primary" onClick={reload}>Apply</Button>
-        <Button danger onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
-        <Button onClick={() => runBatch(() => classifyTransactions(selectedRowKeys.join(',')), 'Classified')}>Auto-classify</Button>
-        <Button onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
-        <Button onClick={() => runBatch(() => expenseToIncome(selectedRowKeys.join(',')), 'Moved to income')}>→ Income</Button>
-      </Space>
-      <ProTable<TransactionRow>
-        actionRef={actionRef}
-        rowKey="id"
-        size="small"
-        scroll={{ x: 900 }}
-        search={false}
-        options={{ density: true, reload: true }}
-        rowSelection={{ selectedRowKeys, onChange: (keys) => setSelectedRowKeys(keys as string[]) }}
+      <FilterToolbar loading={tableLoading || applying} onApply={reload}>
+        <RangePicker
+          disabled={disabled}
+          value={[dayjs(draft.start, 'MM/DD/YYYY'), dayjs(draft.end, 'MM/DD/YYYY')]}
+          presets={dateRangePresets}
+          onChange={(v) => v && setDraft((f) => ({ ...f, start: formatDateMmDdYyyy(v[0]!), end: formatDateMmDdYyyy(v[1]!) }))}
+        />
+        <Select allowClear placeholder="Card" disabled={disabled} style={{ width: 140 }}
+          options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
+          value={draft.card || undefined}
+          onChange={(v) => setDraft((f) => ({ ...f, card: v || '' }))} />
+        <TreeSelect allowClear placeholder="Category" disabled={disabled} style={{ width: 200 }} treeData={treeData} treeDefaultExpandAll
+          value={draft.consume || undefined}
+          onChange={(v) => setDraft((f) => ({ ...f, consume: v || '' }))} />
+        <Input.Search placeholder="Keyword" allowClear disabled={disabled} style={{ width: 180 }}
+          value={draft.keyword}
+          onChange={(e) => setDraft((f) => ({ ...f, keyword: e.target.value }))}
+          onSearch={(v) => { setDraft((f) => ({ ...f, keyword: v })); reload() }} />
+      </FilterToolbar>
+
+      <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <Button danger disabled={disabled} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
+        <Button disabled={disabled} onClick={() => runBatch(() => classifyTransactions(selectedRowKeys.join(',')), 'Classified')}>Auto-classify</Button>
+        <Button disabled={disabled} onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
+        <Button disabled={disabled} onClick={() => runBatch(() => expenseToIncome(selectedRowKeys.join(',')), 'Moved to income')}>→ Income</Button>
+      </div>
+
+      <ContentCard className="fs-table-card">
+        <ProTable<TransactionRow>
+          className="fs-data-table"
+          actionRef={actionRef}
+          rowKey="id"
+          size="small"
+          scroll={{ x: 900, y: 480 }}
+          search={false}
+          loading={tableLoading}
+          options={{ density: true, reload: true }}
+          rowSelection={{ selectedRowKeys, onChange: (keys) => setSelectedRowKeys(keys as string[]) }}
         request={async (params) => {
-          const res = await listTransactions({
-            page: params.current || 1,
-            rows: params.pageSize || 20,
-            transactionDateStartStr: filters.start,
-            transactionDateEndStr: filters.end,
-            cardTypeName: filters.card,
-            consumeID: filters.consume,
-            demoArea: filters.keyword,
-          })
-          return { data: res.rows, total: res.total, success: true }
+          try {
+            const res = await listTransactions({
+              page: params.current || 1,
+              rows: params.pageSize || 20,
+              transactionDateStartStr: applied.start,
+              transactionDateEndStr: applied.end,
+              cardTypeName: applied.card,
+              consumeID: applied.consume,
+              demoArea: applied.keyword,
+            })
+            return { data: res.rows, total: res.total, success: true }
+          } catch (e) {
+            message.error(e instanceof Error ? e.message : 'Failed to load transactions')
+            return { data: [], total: 0, success: false }
+          }
         }}
-        columns={columns}
-        editable={{
-          type: 'single',
-          onSave: async (_, row) => { await updateTransaction(row); message.success('Saved'); reload() },
-          editableKeys: ['demoArea'],
-        }}
-        pagination={{ defaultPageSize: 20, showSizeChanger: true }}
-      />
+          columns={columns}
+          editable={{
+            type: 'single',
+            onSave: async (_, row) => { await updateTransaction(row); message.success('Saved'); reload() },
+            editableKeys: ['demoArea'],
+          }}
+          pagination={{ defaultPageSize: 20, showSizeChanger: true }}
+        />
+      </ContentCard>
     </PageContainer>
   )
 }

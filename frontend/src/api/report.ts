@@ -7,7 +7,10 @@ export async function fetchReport(endpoint: string, params: Record<string, unkno
   const raw = await postForm(endpoint, params)
   const n = normalizeResult(raw)
   if (!n.ok) throw new Error(n.message || 'Request failed')
-  return parseJsonArray(n.data) as ReportPoint[]
+  return parseJsonArray(n.data).map((row) => {
+    const p = row as ReportPoint
+    return { key: String(p.key ?? ''), value: Number(p.value) || 0 }
+  })
 }
 
 export async function homeSummary(year: string | number) {

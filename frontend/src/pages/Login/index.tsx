@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Form, Input, Typography } from 'antd'
-import { getJson } from '../../api/client'
+import { getJson, verifySession } from '../../api/client'
 
 export function LoginPage() {
   const [error, setError] = useState('')
@@ -21,14 +21,14 @@ export function LoginPage() {
     body.append('username', values.username)
     body.append('password', values.password)
     try {
-      const res = await fetch('/authentication/form', {
+      await fetch('/authentication/form', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString(),
-        redirect: 'manual',
+        redirect: 'follow',
       })
-      if (res.type === 'opaqueredirect' || res.status === 0 || res.ok) {
+      if (await verifySession()) {
         navigate('/dashboard', { replace: true })
         return
       }

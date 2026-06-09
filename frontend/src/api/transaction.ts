@@ -1,4 +1,4 @@
-import { getJson, postCommon, postForm } from './client'
+import { ApiError, getJson, postCommon, postForm } from './client'
 import { isCollectionResult, normalizeResult, parseJsonArray, type CollectionResult } from './normalize'
 
 export interface TransactionRow {
@@ -30,7 +30,9 @@ export interface TransactionQuery {
 export async function listTransactions(params: TransactionQuery) {
   const raw = await postForm<CollectionResult<TransactionRow>>('/transaction/getTransactions', params as Record<string, unknown>)
   if (isCollectionResult<TransactionRow>(raw)) return raw
-  return { total: 0, rows: [] as TransactionRow[] }
+  const n = normalizeResult(raw)
+  if (!n.ok) throw new ApiError(n.message || 'Failed to load transactions', 500)
+  throw new ApiError('Unexpected server response — check login session', 500)
 }
 
 export async function updateTransaction(tx: Partial<TransactionRow>) {

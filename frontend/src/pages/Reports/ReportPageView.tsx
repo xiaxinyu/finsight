@@ -1,60 +1,80 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Col, DatePicker, Drawer, Row, Select, Space, Statistic, Table, TreeSelect } from 'antd'
+import { Col, DatePicker, Drawer, Row, Select, TreeSelect } from 'antd'
 import { PageContainer } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import { reportConfigs } from '../../config/reports'
 import { fetchReport } from '../../api/report'
 import { listCards, listTransactions } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
+import { useFilterApply } from '../../hooks/useFilterApply'
 import { FsChart } from '../../components/FsChart'
 import { InsightPanel } from '../../components/InsightPanel'
+import { FilterToolbar } from '../../components/FilterToolbar'
+import { KpiGrid } from '../../components/KpiGrid'
+import { ContentCard } from '../../components/ContentCard'
+import { FsDataTable, type FsColumn } from '../../components/FsDataTable'
 import { emptyChartOption } from '../../components/charts/profiles'
 import { formatDateMmDdYyyy, formatMoney, MONTH_NAMES, yearOptions, yearRange } from '../../utils/format'
+import { dateRangePresets } from '../../utils/datePresets'
 import { fromCategorySpend, fromIncomeExpense, fromYearCompare } from '../../utils/insights'
-import { MoneyText } from '../../components/MoneyText'
 
 const { RangePicker } = DatePicker
+
+type ReportFilters = {
+  year: number
+  year2: number
+  dateRange: [dayjs.Dayjs, dayjs.Dayjs]
+  card: string
+  consume: string
+}
+
+function buildParams(cfg: NonNullable<(typeof reportConfigs)[string]>, f: ReportFilters) {
+  const p: Record<string, unknown> = { txnTypes: cfg.txnType || 'expense' }
+  if (f.card) p.cardTypeName = f.card
+  if (f.consume) p.consumeID = f.consume
+  if (cfg.dateRange) {
+    p.transactionDateStartStr = formatDateMmDdYyyy(f.dateRange[0])
+    p.transactionDateEndStr = formatDateMmDdYyyy(f.dateRange[1])
+  } else {
+    const r = yearRange(f.year)
+    p.transactionDateStartStr = r.start
+    p.transactionDateEndStr = r.end
+  }
+  return p
+}
 
 export function ReportPageView() {
   const { reportId = '' } = useParams()
   const cfg = reportConfigs[reportId]
   const curYear = new Date().getFullYear()
-  const [year, setYear] = useState(curYear)
-  const [year2, setYear2] = useState(curYear - 1)
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([dayjs().startOf('year'), dayjs()])
-  const [card, setCard] = useState('')
-  const [consume, setConsume] = useState('')
+
+  const initialFilters: ReportFilters = {
+    year: curYear,
+    year2: curYear - 1,
+    dateRange: [dayjs().startOf('year'), dayjs()],
+    card: '',
+    consume: '',
+  }
+
+  const { draft, setDraft, applied, applying, apply } = useFilterApply(initialFilters)
   const [drillOpen, setDrillOpen] = useState(false)
   const [drillParams, setDrillParams] = useState<Record<string, string>>({})
 
   const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
   const { treeData } = useConsumeTreeSelect(cfg?.txnType)
 
-  const baseParams = useMemo(() => {
-    const p: Record<string, unknown> = { txnTypes: cfg?.txnType || 'expense' }
-    if (card) p.cardTypeName = card
-    if (consume) p.consumeID = consume
-    if (cfg?.dateRange) {
-      p.transactionDateStartStr = formatDateMmDdYyyy(dateRange[0])
-      p.transactionDateEndStr = formatDateMmDdYyyy(dateRange[1])
-    } else {
-      const r = yearRange(year)
-      p.transactionDateStartStr = r.start
-      p.transactionDateEndStr = r.end
-    }
-    return p
-  }, [cfg, card, consume, dateRange, year])
+  const baseParams = useMemo(() => (cfg ? buildParams(cfg, applied) : {}), [cfg, applied])
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['report', reportId, baseParams, year2],
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['report', reportId, baseParams, applied.year2],
     enabled: !!cfg,
     queryFn: async () => {
       if (!cfg) return null
       if (cfg.type === 'incomeVsExpense') {
-        const r = yearRange(year)
-        const base = { transactionDateStartStr: r.start, transactionDateEndStr: r.end, cardTypeName: card, consumeID: consume }
+        const r = yearRange(applied.year)
+        const base = { transactionDateStartStr: r.start, transactionDateEndStr: r.end, cardTypeName: applied.card, consumeID: applied.consume }
         const [inc, exp] = await Promise.all([
           fetchReport('/transaction-report/month-income', { ...base, txnTypes: 'income' }),
           fetchReport('/transaction-report/month-expense', { ...base, txnTypes: 'expense' }),
@@ -62,8 +82,8 @@ export function ReportPageView() {
         return { inc, exp }
       }
       if (cfg.type === 'yearCompare') {
-        const rA = yearRange(year)
-        const rB = yearRange(year2)
+        const rA = yearRange(applied.year)
+        const rB = yearRange(applied.year2)
         const [a, b] = await Promise.all([
           fetchReport('/transaction-report/consume', { ...baseParams, transactionDateStartStr: rA.start, transactionDateEndStr: rA.end }),
           fetchReport('/transaction-report/consume', { ...baseParams, transactionDateStartStr: rB.start, transactionDateEndStr: rB.end }),
@@ -80,6 +100,8 @@ export function ReportPageView() {
     },
   })
 
+  const chartLoading = isLoading || isFetching || applying
+
   const { data: drillRows } = useQuery({
     queryKey: ['drill', drillParams],
     enabled: drillOpen && !!drillParams.start,
@@ -88,35 +110,54 @@ export function ReportPageView() {
 
   if (!cfg) return <PageContainer title="Report not found" />
 
+  const disabled = chartLoading
+
   let chartOption = emptyChartOption()
-  let insights = [{ text: 'Loading...' }]
-  let tableCols: { title: string; dataIndex: string; align?: 'right' }[] = []
+  let insights = [{ text: 'Adjust filters and click Apply.' }]
   let tableData: Record<string, unknown>[] = []
-  let kpis: { label: string; value: string }[] = []
+  let tableCols: FsColumn<Record<string, unknown>>[] = []
+  let tableSummary: Record<string, number | string> | undefined
+  let kpis: { key: string; label: string; value: string; color?: string }[] = []
 
   if (data && 'rows' in data && data.rows) {
-    const rows = data.rows.filter((r) => r.key && r.value)
+    const rows = data.rows.filter((r) => r.key && Number.isFinite(r.value))
     const total = rows.reduce((t, r) => t + r.value, 0)
-    insights = fromCategorySpend(rows, total, String(year))
-    kpis = [{ label: 'Total', value: formatMoney(total) }, { label: 'Categories', value: String(rows.length) }]
-    const top = rows.sort((a, b) => b.value - a.value).slice(0, 10)
+    insights = fromCategorySpend(rows, total, String(applied.year))
+    kpis = [
+      { key: 'total', label: 'Total', value: formatMoney(total) },
+      { key: 'cats', label: 'Categories', value: String(rows.length) },
+    ]
+    const top = [...rows].sort((a, b) => b.value - a.value).slice(0, 10)
     if (cfg.chartKind === 'donut') {
-      chartOption = { series: [{ type: 'pie', radius: ['42%', '68%'], data: top.map((r) => ({ name: r.key, value: r.value })) }] }
+      chartOption = { title: { text: cfg.title }, series: [{ type: 'pie', radius: ['42%', '68%'], data: top.map((r) => ({ name: r.key, value: r.value })) }] }
     } else if (cfg.type === 'weekSummary') {
       const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
       const vals = [0, 0, 0, 0, 0, 0, 0]
       rows.forEach((r) => { const i = parseInt(r.key, 10); if (i >= 0 && i < 7) vals[i] = r.value })
-      chartOption = { title: { text: cfg.title }, xAxis: { data: labels }, series: [{ type: 'bar', data: vals }] }
+      chartOption = { title: { text: cfg.title }, xAxis: { data: labels }, series: [{ type: 'bar', data: vals, itemStyle: { color: '#2563eb' } }] }
     } else if (cfg.type === 'monthlyCompare' || cfg.type === 'timeCurve') {
       const vals = MONTH_NAMES.map((_, i) => Number(data.rows?.[i]?.value || 0))
-      chartOption = { title: { text: cfg.title }, xAxis: { data: MONTH_NAMES }, series: [{ type: 'line', data: vals, smooth: true, areaStyle: { opacity: 0.1 } }] }
-      kpis = [{ label: 'Year total', value: formatMoney(vals.reduce((a, b) => a + b, 0)) }]
-      insights = [{ text: `${cfg.title} for ${year}.` }]
+      chartOption = {
+        title: { text: cfg.title },
+        xAxis: { data: MONTH_NAMES },
+        series: [{ name: cfg.title, type: 'line', data: vals, smooth: true, areaStyle: { opacity: 0.08 }, itemStyle: { color: '#2563eb' } }],
+      }
+      const yearTotal = vals.reduce((a, b) => a + b, 0)
+      kpis = [{ key: 'yt', label: 'Year total', value: formatMoney(yearTotal) }]
+      insights = [{ text: `${cfg.title} for ${applied.year}.` }]
     } else {
-      chartOption = { title: { text: cfg.title }, xAxis: { data: top.map((r) => r.key) }, series: [{ type: 'bar', data: top.map((r) => r.value) }] }
+      chartOption = {
+        title: { text: cfg.title },
+        xAxis: { data: top.map((r) => r.key) },
+        series: [{ type: 'bar', data: top.map((r) => r.value), itemStyle: { color: '#2563eb' } }],
+      }
     }
-    tableCols = [{ title: 'Category', dataIndex: 'key' }, { title: 'Amount', dataIndex: 'value', align: 'right' }]
+    tableCols = [
+      { title: 'Category', dataIndex: 'key', sortType: 'text', ellipsis: true },
+      { title: 'Amount', dataIndex: 'value', unit: 'CNY', align: 'right', sortType: 'number' },
+    ]
     tableData = top.map((r) => ({ key: r.key, value: r.value }))
+    tableSummary = { key: summaryLabel(), value: total }
   }
 
   if (data && 'inc' in data && data.inc && data.exp) {
@@ -126,44 +167,60 @@ export function ReportPageView() {
       expense: Number(data.exp[i]?.value || 0),
       surplus: Number(data.inc[i]?.value || 0) - Number(data.exp[i]?.value || 0),
     }))
-    insights = fromIncomeExpense(rows, String(year))
+    insights = fromIncomeExpense(rows, String(applied.year))
     const incomeTotal = rows.reduce((t, r) => t + r.income, 0)
     const expenseTotal = rows.reduce((t, r) => t + r.expense, 0)
     kpis = [
-      { label: 'Income', value: formatMoney(incomeTotal) },
-      { label: 'Expense', value: formatMoney(expenseTotal) },
-      { label: 'Surplus', value: formatMoney(incomeTotal - expenseTotal) },
+      { key: 'inc', label: 'Income', value: formatMoney(incomeTotal), color: '#10b981' },
+      { key: 'exp', label: 'Expense', value: formatMoney(expenseTotal), color: '#f59e0b' },
+      { key: 'sur', label: 'Surplus', value: formatMoney(incomeTotal - expenseTotal) },
     ]
     chartOption = {
-      title: { text: `Income vs Expense · ${year}` },
+      title: { text: `Income vs Expense · ${applied.year}` },
       legend: { data: ['Income', 'Expense', 'Surplus'] },
       xAxis: { data: MONTH_NAMES },
       series: [
         { name: 'Income', type: 'bar', data: rows.map((r) => r.income), itemStyle: { color: '#10b981' } },
         { name: 'Expense', type: 'bar', data: rows.map((r) => r.expense), itemStyle: { color: '#f59e0b' } },
-        { name: 'Surplus', type: 'line', data: rows.map((r) => r.surplus), smooth: true },
+        { name: 'Surplus', type: 'line', data: rows.map((r) => r.surplus), smooth: true, itemStyle: { color: '#2563eb' } },
       ],
     }
-    tableCols = [{ title: 'Month', dataIndex: 'month' }, { title: 'Income', dataIndex: 'income', align: 'right' }, { title: 'Expense', dataIndex: 'expense', align: 'right' }, { title: 'Surplus', dataIndex: 'surplus', align: 'right' }]
+    tableCols = [
+      { title: 'Month', dataIndex: 'month', sortType: 'text' },
+      { title: 'Income', dataIndex: 'income', unit: 'CNY', align: 'right', sortType: 'number' },
+      { title: 'Expense', dataIndex: 'expense', unit: 'CNY', align: 'right', sortType: 'number' },
+      { title: 'Surplus', dataIndex: 'surplus', unit: 'CNY', align: 'right', sortType: 'number' },
+    ]
     tableData = rows
+    tableSummary = { month: 'Total', income: incomeTotal, expense: expenseTotal, surplus: incomeTotal - expenseTotal }
   }
 
   if (data && 'a' in data && data.a) {
-    const totalA = data.a.reduce((t, r) => t + r.value, 0)
-    const totalB = (data.b || []).reduce((t, r) => t + r.value, 0)
-    insights = fromYearCompare(totalA, totalB, String(year), String(year2))
-    kpis = [{ label: `Year ${year}`, value: formatMoney(totalA) }, { label: `Year ${year2}`, value: formatMoney(totalB) }]
-    const topA = data.a.sort((x, y) => y.value - x.value).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
-    const topB = (data.b || []).sort((x, y) => y.value - x.value).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
-    chartOption = { series: [
-      { type: 'pie', radius: ['40%', '65%'], center: ['30%', '55%'], data: topA },
-      { type: 'pie', radius: ['40%', '65%'], center: ['72%', '55%'], data: topB },
-    ] }
+    const totalA = data.a.reduce((t, r) => t + Number(r.value), 0)
+    const totalB = (data.b || []).reduce((t, r) => t + Number(r.value), 0)
+    insights = fromYearCompare(totalA, totalB, String(applied.year), String(applied.year2))
+    const deltaPct = totalA > 0 ? ((totalB - totalA) / totalA) * 100 : 0
+    kpis = [
+      { key: 'y1', label: `Year ${applied.year}`, value: formatMoney(totalA) },
+      { key: 'y2', label: `Year ${applied.year2}`, value: formatMoney(totalB) },
+      { key: 'delta', label: 'Δ%', value: `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%`, color: deltaPct > 0 ? '#f59e0b' : '#06b6d4' },
+    ]
+    const topA = [...data.a].sort((x, y) => y.value - x.value).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
+    const topB = [...(data.b || [])].sort((x, y) => y.value - x.value).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
+    chartOption = {
+      title: { text: `Category comparison · ${applied.year} vs ${applied.year2}` },
+      series: [
+        { type: 'pie', radius: ['40%', '65%'], center: ['30%', '55%'], data: topA, label: { fontSize: 11 } },
+        { type: 'pie', radius: ['40%', '65%'], center: ['72%', '55%'], data: topB, label: { fontSize: 11 } },
+      ],
+    }
   }
 
   const onChartClick = (params: unknown) => {
-    const p = params as { name?: string; seriesName?: string }
-    const r = cfg.dateRange ? { start: formatDateMmDdYyyy(dateRange[0]), end: formatDateMmDdYyyy(dateRange[1]) } : yearRange(year)
+    const p = params as { name?: string }
+    const r = cfg.dateRange
+      ? { start: formatDateMmDdYyyy(applied.dateRange[0]), end: formatDateMmDdYyyy(applied.dateRange[1]) }
+      : yearRange(applied.year)
     setDrillParams({
       transactionDateStartStr: r.start,
       transactionDateEndStr: r.end,
@@ -173,47 +230,68 @@ export function ReportPageView() {
     setDrillOpen(true)
   }
 
+  const handleApply = () => apply(() => refetch())
+
   return (
-    <PageContainer title={cfg.title} loading={isLoading}>
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Select value={year} onChange={setYear} style={{ width: 100 }} options={yearOptions(16, curYear)} />
-          {cfg.compareYear && <Select value={year2} onChange={setYear2} style={{ width: 100 }} options={yearOptions(16, curYear)} />}
-          {cfg.dateRange && <RangePicker value={dateRange} onChange={(v) => v && setDateRange([v[0]!, v[1]!])} />}
-          <Select allowClear placeholder="Card" style={{ width: 140 }} options={(cards || []).map((c) => ({ value: c.key, label: c.value }))} onChange={(v) => setCard(v || '')} />
-          <TreeSelect allowClear placeholder="Category" style={{ width: 180 }} treeData={treeData} onChange={(v) => setConsume(v || '')} />
-          <Button type="primary" onClick={() => refetch()}>Apply</Button>
-        </Space>
-      </Card>
+    <PageContainer title={cfg.title}>
+      <FilterToolbar loading={chartLoading} onApply={handleApply}>
+        <Select value={draft.year} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year: v }))} style={{ width: 100 }} options={yearOptions(16, curYear)} />
+        {cfg.compareYear && (
+          <Select value={draft.year2} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year2: v }))} style={{ width: 100 }} options={yearOptions(16, curYear)} />
+        )}
+        {cfg.dateRange && (
+          <RangePicker
+            value={draft.dateRange}
+            disabled={disabled}
+            presets={dateRangePresets}
+            onChange={(v) => v && setDraft((d) => ({ ...d, dateRange: [v[0]!, v[1]!] }))}
+          />
+        )}
+        <Select allowClear placeholder="Card" disabled={disabled} style={{ width: 140 }}
+          options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
+          value={draft.card || undefined} onChange={(v) => setDraft((d) => ({ ...d, card: v || '' }))} />
+        <TreeSelect allowClear placeholder="Category" disabled={disabled} style={{ width: 180 }} treeData={treeData}
+          value={draft.consume || undefined} onChange={(v) => setDraft((d) => ({ ...d, consume: v || '' }))} />
+      </FilterToolbar>
+
       <InsightPanel bullets={insights} />
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        {kpis.map((k) => <Col key={k.label} xs={12} sm={8} lg={6}><Card><Statistic title={k.label} value={k.value} /></Card></Col>)}
-      </Row>
-      <Row gutter={16}>
+      {kpis.length > 0 && <KpiGrid items={kpis} />}
+
+      <Row gutter={[20, 20]}>
         <Col xs={24} lg={tableData.length ? 14 : 24}>
-          <Card title={cfg.title}>
-            <FsChart profile={cfg.chartProfile || 'timeSeries'} height={400} option={chartOption} onEvents={{ click: onChartClick }} />
-          </Card>
+          <ContentCard title={cfg.title}>
+            <FsChart profile={cfg.chartProfile || 'timeSeries'} height={420} loading={chartLoading} option={chartOption} onEvents={{ click: onChartClick }} />
+          </ContentCard>
         </Col>
         {tableData.length > 0 && (
           <Col xs={24} lg={10}>
-            <Card title="Breakdown">
-              <Table size="small" pagination={false} dataSource={tableData} rowKey="key" columns={tableCols.map((c) => ({
-                ...c,
-                render: c.dataIndex === 'value' || c.dataIndex === 'income' || c.dataIndex === 'expense' || c.dataIndex === 'surplus'
-                  ? (v: number) => <MoneyText value={v} unit /> : undefined,
-              }))} />
-            </Card>
+            <FsDataTable
+              title="Breakdown"
+              columns={tableCols}
+              dataSource={tableData}
+              rowKey="key"
+              loading={chartLoading}
+              summary={tableSummary}
+            />
           </Col>
         )}
       </Row>
+
       <Drawer title="Transaction drill-down" width={720} open={drillOpen} onClose={() => setDrillOpen(false)}>
-        <Table size="small" rowKey="id" dataSource={drillRows?.rows || []} columns={[
-          { title: 'Date', dataIndex: 'transactionDate', width: 100 },
-          { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true },
-          { title: 'Amount', dataIndex: 'balanceMoney', align: 'right', render: (v) => <MoneyText value={v} unit /> },
-        ]} />
+        <FsDataTable
+          columns={[
+            { title: 'Date', dataIndex: 'transactionDate', sortType: 'date', width: 100 },
+            { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true },
+            { title: 'Amount', dataIndex: 'balanceMoney', unit: 'CNY', align: 'right', sortType: 'number' },
+          ]}
+          dataSource={(drillRows?.rows || []) as unknown as Record<string, unknown>[]}
+          rowKey="id"
+        />
       </Drawer>
     </PageContainer>
   )
+}
+
+function summaryLabel() {
+  return 'Total'
 }

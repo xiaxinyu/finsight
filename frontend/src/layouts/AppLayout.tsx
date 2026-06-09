@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { verifySession } from '../api/client'
 import { Layout, Menu, Typography, Button, theme, type MenuProps } from 'antd'
 import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { menuItems, type FsMenuItem } from '../routes/menuConfig'
@@ -45,7 +46,14 @@ function renderMenuItems(items: FsMenuItem[]): MenuProps['items'] {
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
   const { token } = theme.useToken()
+
+  useEffect(() => {
+    verifySession().then((ok) => {
+      if (!ok) navigate('/login', { replace: true })
+    })
+  }, [navigate])
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -68,7 +76,7 @@ export function AppLayout() {
           <Typography.Text type="secondary">Personal Finance Intelligence</Typography.Text>
           <Button type="text" icon={<LogoutOutlined />} href="/logout">Logout</Button>
         </Header>
-        <Content style={{ margin: 16, padding: 20, background: token.colorBgContainer, borderRadius: token.borderRadiusLG, minHeight: 280 }}>
+        <Content style={{ margin: 20, padding: 24, background: '#f1f5f9', borderRadius: token.borderRadiusLG, minHeight: 280 }}>
           <Outlet />
         </Content>
       </Layout>
