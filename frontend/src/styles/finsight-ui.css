@@ -1,7 +1,8 @@
 /* ── Focus rings ── */
 .fs-filter-toolbar :is(button, input, select, .ant-select, .ant-picker, .ant-input, .ant-tree-select):focus-within,
-.fs-filter-toolbar :is(button, input, select):focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.45);
+.fs-toolbar-bar :is(button, input, select, .ant-select, .ant-picker, .ant-input, .ant-tree-select):focus-within,
+.fs-filter-disabled :is(button, input, select):focus-visible {
+  outline: 2px solid rgba(29, 78, 216, 0.45);
   outline-offset: 2px;
 }
 
@@ -10,45 +11,131 @@
   pointer-events: none;
 }
 
-/* ── Cards ── */
-.fs-content-card {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 12px !important;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+/* ── App shell ── */
+.fs-app-content {
+  padding: 12px !important;
+  margin: 0 !important;
+  background: #f1f5f9 !important;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
 
-.fs-content-card:hover {
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+.fs-app-header {
+  height: 48px !important;
+  line-height: 48px !important;
+  padding: 0 12px !important;
+}
+
+/* ── Data page layout ── */
+.fs-data-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 72px);
+  gap: 0;
+}
+
+.fs-page-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+
+.fs-page-title {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+.fs-page-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fs-page-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toolbar ── */
+.fs-toolbar-bar {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.fs-toolbar-form {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fs-toolbar-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* ── Cards (KPI / charts only) ── */
+.fs-content-card {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+}
+
+.fs-content-card.fs-table-card,
+.fs-table-panel {
+  background: #fff !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fs-content-card.fs-table-card:hover,
+.fs-table-panel:hover {
+  box-shadow: none;
+  transform: none;
 }
 
 .fs-kpi-grid {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .fs-kpi-card .ant-statistic-title {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .fs-kpi-card .ant-statistic-content {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-
-.fs-filter-toolbar {
-  margin-bottom: 20px;
 }
 
 /* ── Charts ── */
 .fs-chart-wrap {
   cursor: crosshair;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
-  padding: 8px 4px 4px;
+  padding: 4px;
 }
 
 .fs-chart-overlay {
@@ -57,41 +144,41 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(248, 250, 252, 0.72);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 6px;
   z-index: 2;
 }
 
 /* ── Tables ── */
-.fs-table-card .ant-card-body {
-  padding: 12px !important;
-}
-
 .fs-data-table .ant-table {
   background: transparent;
 }
 
 .fs-data-table .ant-table-thead > tr > th {
-  background: #f1f5f9 !important;
+  background: #f8fafc !important;
   border-bottom: 1px solid #e2e8f0 !important;
-  padding: 8px 12px !important;
+  padding: 6px 8px !important;
+}
+
+.fs-data-table .ant-table-tbody > tr > td {
+  padding: 6px 8px !important;
 }
 
 .fs-col-header-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #334155;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .fs-col-header-unit {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  line-height: 1.2;
-  margin-top: 2px;
+  line-height: 1.1;
+  margin-top: 1px;
 }
 
 .fs-sortable-th {
@@ -103,7 +190,7 @@
 }
 
 .fs-sortable-th:hover .fs-col-header-name {
-  color: #2563eb;
+  color: #1d4ed8;
 }
 
 .fs-sort-icon {
@@ -113,7 +200,7 @@
 }
 
 .fs-sort-icon.active {
-  color: #2563eb;
+  color: #1d4ed8;
 }
 
 .fs-col-sorted {
@@ -125,7 +212,7 @@
 }
 
 .fs-summary-row > td {
-  background: #f1f5f9 !important;
+  background: #f8fafc !important;
   border-top: 2px solid #e2e8f0 !important;
   font-weight: 600;
   position: sticky;
@@ -133,19 +220,9 @@
   z-index: 1;
 }
 
-.fs-delta-negative {
-  color: #06b6d4;
-  font-variant-numeric: tabular-nums;
-}
-
-.fs-delta-positive {
-  color: #f59e0b;
-  font-variant-numeric: tabular-nums;
-}
-
-.fs-delta-neutral {
-  color: #64748b;
-}
+.fs-delta-negative { color: #0891b2; font-variant-numeric: tabular-nums; }
+.fs-delta-positive { color: #d97706; font-variant-numeric: tabular-nums; }
+.fs-delta-neutral { color: #64748b; }
 
 .fs-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -156,16 +233,17 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Page layout breathing room ── */
+/* ── PageContainer compact (non-data pages) ── */
+.fs-data-page .ant-pro-page-container-children-content,
 .ant-pro-page-container-children-content {
-  padding-block: 8px 24px;
+  padding: 0 !important;
 }
 
 .ant-pro-page-container .ant-page-header {
   margin-bottom: 8px;
+  padding: 0 !important;
 }
 
-/* ── Truncated text tooltips via title (ellipsis cells) ── */
 .ant-table-cell-ellipsis {
   cursor: default;
 }

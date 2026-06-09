@@ -56,9 +56,9 @@ export function AppLayout() {
   }, [navigate])
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible collapsed={collapsed} trigger={null} width={240} theme="dark">
-        <div style={{ height: 56, display: 'flex', alignItems: 'center', padding: '0 16px', color: '#fff', fontWeight: 800, fontSize: 18 }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+      <Sider collapsible collapsed={collapsed} trigger={null} width={200} theme="dark">
+        <div style={{ height: 48, display: 'flex', alignItems: 'center', padding: '0 12px', color: '#fff', fontWeight: 700, fontSize: 16 }}>
           {collapsed ? 'FS' : 'FinSight'}
         </div>
         <Menu
@@ -70,13 +70,22 @@ export function AppLayout() {
           style={{ borderRight: 0 }}
         />
       </Sider>
-      <Layout>
-        <Header style={{ background: token.colorBgContainer, padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
-          <Button type="text" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => setCollapsed(!collapsed)} />
-          <Typography.Text type="secondary">Personal Finance Intelligence</Typography.Text>
-          <Button type="text" icon={<LogoutOutlined />} href="/logout">Logout</Button>
+      <Layout style={{ minHeight: 0 }}>
+        <Header
+          className="fs-app-header"
+          style={{
+            background: token.colorBgContainer,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${token.colorBorder}`,
+          }}
+        >
+          <Button type="text" size="small" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => setCollapsed(!collapsed)} />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>Personal Finance Intelligence</Typography.Text>
+          <Button type="text" size="small" icon={<LogoutOutlined />} href="/logout">Logout</Button>
         </Header>
-        <Content style={{ margin: 20, padding: 24, background: '#f1f5f9', borderRadius: token.borderRadiusLG, minHeight: 280 }}>
+        <Content className="fs-app-content">
           <Outlet />
         </Content>
       </Layout>

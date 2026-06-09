@@ -4,6 +4,7 @@ import { PageContainer } from '@ant-design/pro-components'
 import { UploadOutlined } from '@ant-design/icons'
 import { commitStatement, previewStatement, uploadStatement } from '../../api/statement'
 import { MoneyText } from '../../components/MoneyText'
+import { cellText, formatTableDate } from '../../utils/cell'
 
 export function StatementUploadPage() {
   const [step, setStep] = useState(0)
@@ -59,10 +60,10 @@ export function StatementUploadPage() {
       {step >= 1 && (
         <Card title="Preview" extra={step === 1 && <Button type="primary" loading={loading} onClick={onCommit}>Commit to ledger</Button>}>
           <Table size="small" rowKey="id" dataSource={preview} pagination={{ pageSize: 20 }} columns={[
-            { title: 'Date', dataIndex: 'transactionDate', width: 110 },
-            { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true },
-            { title: 'Amount', dataIndex: 'balanceMoney', align: 'right', render: (v) => <MoneyText value={Number(v)} unit /> },
-            { title: 'Category', dataIndex: 'consumeName' },
+            { title: 'Date', dataIndex: 'transactionDate', width: 100, render: (v) => formatTableDate(v) },
+            { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true, render: (v) => cellText(v) },
+            { title: 'Amount', dataIndex: 'balanceMoney', align: 'right', render: (_, r) => <MoneyText value={Number(r.balanceMoney)} unit /> },
+            { title: 'Category', dataIndex: 'consumeName', render: (v) => cellText(v) },
           ]} />
         </Card>
       )}

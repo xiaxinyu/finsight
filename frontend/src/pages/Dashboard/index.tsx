@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Col, Row, Select, Typography } from 'antd'
-import { PageContainer } from '@ant-design/pro-components'
+import { Alert, Col, Row, Select, Space, Typography } from 'antd'
 import { Link } from 'react-router-dom'
 import { homeSummary, fetchReport } from '../../api/report'
 import { FsChart } from '../../components/FsChart'
 import { KpiGrid } from '../../components/KpiGrid'
 import { ContentCard } from '../../components/ContentCard'
+import { DataPageLayout } from '../../components/DataPageLayout'
+import { finsightColors } from '../../styles/finsight-tokens'
 import { formatMoney, yearOptions, yearRange } from '../../utils/format'
+import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 
 export function DashboardPage() {
   const curYear = new Date().getFullYear()
   const [year, setYear] = useState(curYear)
+  const chartHeight = Math.min(useViewportTableHeight(280), 400)
 
   const { data: summary, isLoading, isError, error } = useQuery({
     queryKey: ['home-summary', year],
@@ -32,63 +35,61 @@ export function DashboardPage() {
   const savingsRate = income > 0 ? ((Math.max(0, surplus) / income) * 100).toFixed(1) : '0.0'
 
   const pieData = (topCats || []).filter((r) => r.value > 0).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
-
   const loadError = isError ? error : catsError ? catsErr : null
 
   return (
-    <PageContainer title="Dashboard" subTitle={`Year ${year}`}>
+    <DataPageLayout
+      title="Dashboard"
+      actions={(
+        <Select size="small" value={year} onChange={setYear} style={{ width: 100 }} options={yearOptions(16, curYear)} />
+      )}
+    >
       {loadError && (
         <Alert
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 8 }}
           message="Failed to load dashboard data"
-          description={loadError instanceof Error ? loadError.message : 'Please sign in again or check the server logs.'}
+          description={loadError instanceof Error ? loadError.message : 'Please sign in again.'}
         />
       )}
-      <Select
-        value={year}
-        onChange={setYear}
-        style={{ width: 120, marginBottom: 20 }}
-        options={yearOptions(16, curYear)}
-      />
       <KpiGrid items={[
-        { key: 'income', label: 'Income', value: formatMoney(income), color: '#10b981' },
-        { key: 'expense', label: 'Expense', value: formatMoney(expense), color: '#f59e0b' },
+        { key: 'income', label: 'Income', value: formatMoney(income), color: finsightColors.income },
+        { key: 'expense', label: 'Expense', value: formatMoney(expense), color: finsightColors.expense },
         { key: 'surplus', label: 'Surplus', value: formatMoney(surplus) },
         { key: 'savings', label: 'Savings rate', value: `${savingsRate}%` },
       ]} />
-      <Row gutter={[20, 20]}>
-        <Col xs={24} lg={12}>
-          <ContentCard title="Top expense categories">
+      <Row gutter={[12, 12]}>
+        <Col xs={24} lg={14}>
+          <ContentCard title="Top expense categories" size="small" styles={{ body: { padding: 8 } }}>
             <FsChart
               profile="donut"
-              height={360}
+              height={chartHeight}
               loading={isLoading || catsLoading}
               option={{
-                title: { text: 'Category mix', left: 'center' },
+                title: { text: 'Category mix', left: 'center', textStyle: { fontSize: 13 } },
                 series: [{ type: 'pie', radius: ['44%', '70%'], center: ['55%', '52%'], data: pieData, label: { fontSize: 11 } }],
-                legend: { orient: 'vertical', left: 'left', top: 'middle' },
+                legend: { orient: 'vertical', left: 'left', top: 'middle', textStyle: { fontSize: 11 } },
               }}
             />
           </ContentCard>
         </Col>
-        <Col xs={24} lg={12}>
-          <ContentCard title="Quick links">
-            <Typography.Paragraph style={{ marginBottom: 16 }}>
-              <Link to="/reports/income-vs-expense">Income vs Expense</Link><br />
-              <Link to="/reports/monthly-comparison">Monthly Comparison</Link><br />
-              <Link to="/transactions">Transaction detail</Link><br />
+        <Col xs={24} lg={10}>
+          <ContentCard title="Quick links" size="small" styles={{ body: { padding: '10px 12px' } }}>
+            <Space direction="vertical" size={4}>
+              <Link to="/reports/income-vs-expense">Income vs Expense</Link>
+              <Link to="/reports/monthly-comparison">Monthly Comparison</Link>
+              <Link to="/transactions">Transaction detail</Link>
               <Link to="/ledgers/expense">Expense ledger</Link>
-            </Typography.Paragraph>
+            </Space>
             {summary?.summary_text != null && (
-              <Typography.Text type="secondary" title={String(summary.summary_text)}>
+              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12 }} title={String(summary.summary_text)}>
                 {String(summary.summary_text)}
               </Typography.Text>
             )}
           </ContentCard>
         </Col>
       </Row>
-    </PageContainer>
+    </DataPageLayout>
   )
 }

@@ -2,18 +2,20 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Col, DatePicker, Drawer, Row, Select, TreeSelect } from 'antd'
-import { PageContainer } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import { reportConfigs } from '../../config/reports'
 import { fetchReport } from '../../api/report'
 import { listCards, listTransactions } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useFilterApply } from '../../hooks/useFilterApply'
+import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { FsChart } from '../../components/FsChart'
 import { InsightPanel } from '../../components/InsightPanel'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { KpiGrid } from '../../components/KpiGrid'
 import { ContentCard } from '../../components/ContentCard'
+import { DataPageLayout } from '../../components/DataPageLayout'
+import { finsightColors } from '../../styles/finsight-tokens'
 import { FsDataTable, type FsColumn } from '../../components/FsDataTable'
 import { emptyChartOption } from '../../components/charts/profiles'
 import { formatDateMmDdYyyy, formatMoney, MONTH_NAMES, yearOptions, yearRange } from '../../utils/format'
@@ -108,7 +110,10 @@ export function ReportPageView() {
     queryFn: () => listTransactions({ ...drillParams, page: 1, rows: 50 } as never),
   })
 
-  if (!cfg) return <PageContainer title="Report not found" />
+  const viewportH = useViewportTableHeight(320)
+  const chartHeight = Math.min(viewportH, 380)
+
+  if (!cfg) return <DataPageLayout title="Report not found"><div /></DataPageLayout>
 
   const disabled = chartLoading
 
@@ -171,8 +176,8 @@ export function ReportPageView() {
     const incomeTotal = rows.reduce((t, r) => t + r.income, 0)
     const expenseTotal = rows.reduce((t, r) => t + r.expense, 0)
     kpis = [
-      { key: 'inc', label: 'Income', value: formatMoney(incomeTotal), color: '#10b981' },
-      { key: 'exp', label: 'Expense', value: formatMoney(expenseTotal), color: '#f59e0b' },
+      { key: 'inc', label: 'Income', value: formatMoney(incomeTotal), color: finsightColors.income },
+      { key: 'exp', label: 'Expense', value: formatMoney(expenseTotal), color: finsightColors.expense },
       { key: 'sur', label: 'Surplus', value: formatMoney(incomeTotal - expenseTotal) },
     ]
     chartOption = {
@@ -203,7 +208,7 @@ export function ReportPageView() {
     kpis = [
       { key: 'y1', label: `Year ${applied.year}`, value: formatMoney(totalA) },
       { key: 'y2', label: `Year ${applied.year2}`, value: formatMoney(totalB) },
-      { key: 'delta', label: 'Δ%', value: `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%`, color: deltaPct > 0 ? '#f59e0b' : '#06b6d4' },
+      { key: 'delta', label: 'Δ%', value: `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%`, color: deltaPct > 0 ? finsightColors.expense : '#0891b2' },
     ]
     const topA = [...data.a].sort((x, y) => y.value - x.value).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
     const topB = [...(data.b || [])].sort((x, y) => y.value - x.value).slice(0, 8).map((r) => ({ name: r.key, value: r.value }))
@@ -233,34 +238,38 @@ export function ReportPageView() {
   const handleApply = () => apply(() => refetch())
 
   return (
-    <PageContainer title={cfg.title}>
-      <FilterToolbar loading={chartLoading} onApply={handleApply}>
-        <Select value={draft.year} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year: v }))} style={{ width: 100 }} options={yearOptions(16, curYear)} />
-        {cfg.compareYear && (
-          <Select value={draft.year2} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year2: v }))} style={{ width: 100 }} options={yearOptions(16, curYear)} />
-        )}
-        {cfg.dateRange && (
-          <RangePicker
-            value={draft.dateRange}
-            disabled={disabled}
-            presets={dateRangePresets}
-            onChange={(v) => v && setDraft((d) => ({ ...d, dateRange: [v[0]!, v[1]!] }))}
-          />
-        )}
-        <Select allowClear placeholder="Card" disabled={disabled} style={{ width: 140 }}
-          options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
-          value={draft.card || undefined} onChange={(v) => setDraft((d) => ({ ...d, card: v || '' }))} />
-        <TreeSelect allowClear placeholder="Category" disabled={disabled} style={{ width: 180 }} treeData={treeData}
-          value={draft.consume || undefined} onChange={(v) => setDraft((d) => ({ ...d, consume: v || '' }))} />
-      </FilterToolbar>
-
+    <DataPageLayout
+      title={cfg.title}
+      toolbar={(
+        <FilterToolbar loading={chartLoading} onApply={handleApply}>
+          <Select size="small" value={draft.year} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year: v }))} style={{ width: 90 }} options={yearOptions(16, curYear)} />
+          {cfg.compareYear && (
+            <Select size="small" value={draft.year2} disabled={disabled} onChange={(v) => setDraft((d) => ({ ...d, year2: v }))} style={{ width: 90 }} options={yearOptions(16, curYear)} />
+          )}
+          {cfg.dateRange && (
+            <RangePicker
+              size="small"
+              value={draft.dateRange}
+              disabled={disabled}
+              presets={dateRangePresets}
+              onChange={(v) => v && setDraft((d) => ({ ...d, dateRange: [v[0]!, v[1]!] }))}
+            />
+          )}
+          <Select size="small" allowClear placeholder="Card" disabled={disabled} style={{ width: 120 }}
+            options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
+            value={draft.card || undefined} onChange={(v) => setDraft((d) => ({ ...d, card: v || '' }))} />
+          <TreeSelect size="small" allowClear placeholder="Category" disabled={disabled} style={{ width: 150 }} treeData={treeData}
+            value={draft.consume || undefined} onChange={(v) => setDraft((d) => ({ ...d, consume: v || '' }))} />
+        </FilterToolbar>
+      )}
+    >
       <InsightPanel bullets={insights} />
       {kpis.length > 0 && <KpiGrid items={kpis} />}
 
-      <Row gutter={[20, 20]}>
+      <Row gutter={[12, 12]} style={{ flex: 1, minHeight: 0 }}>
         <Col xs={24} lg={tableData.length ? 14 : 24}>
-          <ContentCard title={cfg.title}>
-            <FsChart profile={cfg.chartProfile || 'timeSeries'} height={420} loading={chartLoading} option={chartOption} onEvents={{ click: onChartClick }} />
+          <ContentCard title={cfg.title} size="small" styles={{ body: { padding: 8 } }}>
+            <FsChart profile={cfg.chartProfile || 'timeSeries'} height={chartHeight} loading={chartLoading} option={chartOption} onEvents={{ click: onChartClick }} />
           </ContentCard>
         </Col>
         {tableData.length > 0 && (
@@ -272,12 +281,13 @@ export function ReportPageView() {
               rowKey="key"
               loading={chartLoading}
               summary={tableSummary}
+              scroll={{ y: chartHeight - 40 }}
             />
           </Col>
         )}
       </Row>
 
-      <Drawer title="Transaction drill-down" width={720} open={drillOpen} onClose={() => setDrillOpen(false)}>
+      <Drawer title="Transaction drill-down" width={680} open={drillOpen} onClose={() => setDrillOpen(false)}>
         <FsDataTable
           columns={[
             { title: 'Date', dataIndex: 'transactionDate', sortType: 'date', width: 100 },
@@ -288,7 +298,7 @@ export function ReportPageView() {
           rowKey="id"
         />
       </Drawer>
-    </PageContainer>
+    </DataPageLayout>
   )
 }
 
