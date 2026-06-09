@@ -22,3 +22,10 @@ export function yearRange(year?: number | string) {
 }
 
 export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function yearOptions(count = 16, fromYear = dayjs().year()) {
+  return Array.from({ length: count }, (_, i) => {
+    const y = fromYear - i
+    return { value: y, label: String(y) }
+  })
+}

@@ -7,9 +7,9 @@ type Props = {
   unit?: boolean
 }
 
-export function MoneyText({ value, type = 'neutral', unit = false }: Props) {
+export function MoneyText({ value, type = 'neutral' }: Props) {
   const color = type === 'income' ? '#10b981' : type === 'expense' ? '#f59e0b' : undefined
-  const text = unit ? formatNumber(value) : formatNumber(value)
+  const text = formatNumber(value)
   return (
     <Typography.Text style={{ color, fontVariantNumeric: 'tabular-nums' }} className="fs-money">
       {text}

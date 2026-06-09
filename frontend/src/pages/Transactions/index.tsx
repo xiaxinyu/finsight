@@ -4,9 +4,10 @@ import { Button, DatePicker, Input, Select, Space, TreeSelect, message } from 'a
 import { PageContainer, ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
-  classifyTransactions, consumeTree, deleteTransaction, expenseToIncome,
+  classifyTransactions, deleteTransaction, expenseToIncome,
   incomeToExpense, listCards, listTransactions, updateTransaction, type TransactionRow,
 } from '../../api/transaction'
+import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { MoneyText } from '../../components/MoneyText'
 import { formatDateMmDdYyyy } from '../../utils/format'
 
@@ -24,11 +25,7 @@ export function TransactionsPage() {
   })
 
   const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
-  const { data: tree } = useQuery({ queryKey: ['consume-tree'], queryFn: () => consumeTree() })
-
-  const treeData = (tree || []).map(function mapNode(n): { title: string; value: string; children?: ReturnType<typeof mapNode>[] } {
-    return { title: n.text, value: n.id, children: n.children?.map(mapNode) }
-  })
+  const { treeData } = useConsumeTreeSelect()
 
   const columns: ProColumns<TransactionRow>[] = [
     { title: 'Date', dataIndex: 'transactionDate', width: 110, valueType: 'date' },

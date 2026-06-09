@@ -3,10 +3,10 @@ import { useParams } from 'react-router-dom'
 import { Button, DatePicker, Space, TreeSelect } from 'antd'
 import { PageContainer, ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
-import { useQuery } from '@tanstack/react-query'
-import { ledgerConfigs } from './ledgerConfigs'
+import { ledgerConfigs } from '../../config/ledgers'
 import { listLedger } from '../../api/ledger'
-import { consumeTree, type TransactionRow } from '../../api/transaction'
+import { type TransactionRow } from '../../api/transaction'
+import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { MoneyText } from '../../components/MoneyText'
 import { formatDateMmDdYyyy } from '../../utils/format'
 
@@ -19,17 +19,9 @@ export function LedgerPage() {
   const [range, setRange] = useState({ start: formatDateMmDdYyyy(dayjs().startOf('year')), end: formatDateMmDdYyyy(dayjs()) })
   const [consume, setConsume] = useState('')
 
-  const { data: tree } = useQuery({
-    queryKey: ['consume-tree', cfg?.txnType],
-    queryFn: () => consumeTree(cfg?.txnType),
-    enabled: !!cfg?.txnType,
-  })
+  const { treeData } = useConsumeTreeSelect(cfg?.txnType)
 
   if (!cfg) return <PageContainer title="Ledger not found" />
-
-  const treeData = (tree || []).map(function map(n): { title: string; value: string; children?: ReturnType<typeof map>[] } {
-    return { title: n.text, value: n.id, children: n.children?.map(map) }
-  })
 
   const columns: ProColumns<TransactionRow>[] = [
     { title: 'Date', dataIndex: 'transactionDate', width: 110 },

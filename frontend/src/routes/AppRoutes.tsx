@@ -1,0 +1,35 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AppLayout } from '../layouts/AppLayout'
+import { LoginPage } from '../pages/Login'
+import { DashboardPage } from '../pages/Dashboard'
+import { TransactionsPage } from '../pages/Transactions'
+import { StatementUploadPage } from '../pages/Statements/Upload'
+import { StatementListPage } from '../pages/Statements/List'
+import { ReportPageView } from '../pages/Reports/ReportPageView'
+import { LedgerPage } from '../pages/Ledgers/LedgerPage'
+import { UsersAdminPage } from '../pages/Admin/Users'
+import { CardsAdminPage } from '../pages/Admin/Cards'
+import { RulesAdminPage } from '../pages/Admin/Rules'
+import { CategoriesAdminPage } from '../pages/Admin/Categories'
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<AppLayout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/statements/upload" element={<StatementUploadPage />} />
+        <Route path="/statements" element={<StatementListPage />} />
+        <Route path="/reports/:reportId" element={<ReportPageView />} />
+        <Route path="/ledgers/:ledgerId" element={<LedgerPage />} />
+        <Route path="/admin/users" element={<UsersAdminPage />} />
+        <Route path="/admin/cards" element={<CardsAdminPage />} />
+        <Route path="/admin/rules" element={<RulesAdminPage />} />
+        <Route path="/admin/categories" element={<CategoriesAdminPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  )
+}

@@ -35,7 +35,3 @@ export async function deleteCard(id: string) {
 export async function listRules() {
   return getJson('/api/v1/consume/rules')
 }
-
-export async function listCategories() {
-  return getJson('/api/v1/consume/categories')
-}

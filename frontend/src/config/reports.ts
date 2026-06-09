@@ -19,3 +19,5 @@ export const reportConfigs: Record<string, ReportConfig> = {
   'income-curve': { title: 'Income Curve', type: 'timeCurve', txnType: 'income', chartProfile: 'timeSeries' },
   'expense-curve': { title: 'Expense Curve', type: 'timeCurve', txnType: 'expense', chartProfile: 'timeSeries' },
 }
+
+export const reportIds = Object.keys(reportConfigs)

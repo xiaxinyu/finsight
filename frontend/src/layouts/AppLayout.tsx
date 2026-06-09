@@ -15,7 +15,11 @@ function findSelectedKeys(pathname: string): string[] {
 }
 
 function findOpenKeys(pathname: string): string[] {
-  if (pathname.startsWith('/reports')) return ['reports']
+  if (pathname.startsWith('/reports')) {
+    if (pathname.includes('income-curve')) return ['income']
+    if (pathname.includes('expense-curve')) return ['expense']
+    return ['reports']
+  }
   if (pathname.startsWith('/ledgers')) {
     if (pathname.includes('salary') || pathname.includes('income-curve')) return ['income']
     if (pathname.includes('expense') || pathname.includes('house-rent') || pathname.includes('expense-curve')) return ['expense']

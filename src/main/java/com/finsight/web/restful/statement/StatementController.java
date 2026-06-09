@@ -21,16 +21,6 @@ public class StatementController {
     // Temporary storage for preview before commit
     // private static final ConcurrentHashMap<String, List<Transaction>> TEMP_STORE = new ConcurrentHashMap<>();
 
-    @GetMapping("/upload.html")
-    public String uploadPage() {
-        return "redirect:/app/statements/upload";
-    }
-
-    @GetMapping("/list.html")
-    public String listPage() {
-        return "redirect:/app/statements";
-    }
-
     @GetMapping("/api/list")
     @ResponseBody
     public com.finsight.web.restful.model.CollectionResult<Statement> list(@RequestParam(value = "page", defaultValue = "1") int page,

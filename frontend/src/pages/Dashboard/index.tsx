@@ -5,7 +5,7 @@ import { PageContainer } from '@ant-design/pro-components'
 import { Link } from 'react-router-dom'
 import { homeSummary, fetchReport } from '../../api/report'
 import { FsChart } from '../../components/FsChart'
-import { formatMoney, yearRange } from '../../utils/format'
+import { formatMoney, yearOptions, yearRange } from '../../utils/format'
 
 export function DashboardPage() {
   const curYear = new Date().getFullYear()
@@ -34,7 +34,7 @@ export function DashboardPage() {
   return (
     <PageContainer title="Dashboard" subTitle={`Year ${year}`} loading={isLoading}>
       <Select value={year} onChange={setYear} style={{ width: 120, marginBottom: 16 }}
-        options={Array.from({ length: 16 }, (_, i) => ({ value: curYear - i, label: String(curYear - i) }))} />
+        options={yearOptions(16, curYear)} />
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="Income" value={formatMoney(income)} valueStyle={{ color: '#10b981' }} /></Card></Col>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="Expense" value={formatMoney(expense)} valueStyle={{ color: '#f59e0b' }} /></Card></Col>

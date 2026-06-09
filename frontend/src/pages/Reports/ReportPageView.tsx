@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Col, DatePicker, Drawer, Row, Select, Space, Statistic, Table, TreeSelect } from 'antd'
 import { PageContainer } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
-import { reportConfigs } from './reportConfigs'
+import { reportConfigs } from '../../config/reports'
 import { fetchReport } from '../../api/report'
-import { consumeTree, listCards, listTransactions } from '../../api/transaction'
+import { listCards, listTransactions } from '../../api/transaction'
+import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { FsChart } from '../../components/FsChart'
 import { InsightPanel } from '../../components/InsightPanel'
 import { emptyChartOption } from '../../components/charts/profiles'
-import { formatDateMmDdYyyy, formatMoney, MONTH_NAMES, yearRange } from '../../utils/format'
+import { formatDateMmDdYyyy, formatMoney, MONTH_NAMES, yearOptions, yearRange } from '../../utils/format'
 import { fromCategorySpend, fromIncomeExpense, fromYearCompare } from '../../utils/insights'
 import { MoneyText } from '../../components/MoneyText'
 
@@ -29,7 +30,7 @@ export function ReportPageView() {
   const [drillParams, setDrillParams] = useState<Record<string, string>>({})
 
   const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
-  const { data: tree } = useQuery({ queryKey: ['consume-tree', cfg?.txnType], queryFn: () => consumeTree(cfg?.txnType), enabled: !!cfg })
+  const { treeData } = useConsumeTreeSelect(cfg?.txnType)
 
   const baseParams = useMemo(() => {
     const p: Record<string, unknown> = { txnTypes: cfg?.txnType || 'expense' }
@@ -86,10 +87,6 @@ export function ReportPageView() {
   })
 
   if (!cfg) return <PageContainer title="Report not found" />
-
-  const treeData = (tree || []).map(function map(n): { title: string; value: string; children?: ReturnType<typeof map>[] } {
-    return { title: n.text, value: n.id, children: n.children?.map(map) }
-  })
 
   let chartOption = emptyChartOption()
   let insights = [{ text: 'Loading...' }]
@@ -180,8 +177,8 @@ export function ReportPageView() {
     <PageContainer title={cfg.title} loading={isLoading}>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space wrap>
-          <Select value={year} onChange={setYear} style={{ width: 100 }} options={Array.from({ length: 16 }, (_, i) => ({ value: curYear - i, label: String(curYear - i) }))} />
-          {cfg.compareYear && <Select value={year2} onChange={setYear2} style={{ width: 100 }} options={Array.from({ length: 16 }, (_, i) => ({ value: curYear - i, label: String(curYear - i) }))} />}
+          <Select value={year} onChange={setYear} style={{ width: 100 }} options={yearOptions(16, curYear)} />
+          {cfg.compareYear && <Select value={year2} onChange={setYear2} style={{ width: 100 }} options={yearOptions(16, curYear)} />}
           {cfg.dateRange && <RangePicker value={dateRange} onChange={(v) => v && setDateRange([v[0]!, v[1]!])} />}
           <Select allowClear placeholder="Card" style={{ width: 140 }} options={(cards || []).map((c) => ({ value: c.key, label: c.value }))} onChange={(v) => setCard(v || '')} />
           <TreeSelect allowClear placeholder="Category" style={{ width: 180 }} treeData={treeData} onChange={(v) => setConsume(v || '')} />

@@ -41,10 +41,6 @@ export async function deleteTransaction(id: string) {
   return postCommon('/transaction/delete', { id })
 }
 
-export async function batchUpdate(ids: string, consumeID: string) {
-  return postCommon('/transaction/update-batch', { ids, consumeID })
-}
-
 export async function classifyTransactions(ids: string) {
   return postCommon('/transaction/classify', { ids })
 }
@@ -55,12 +51,6 @@ export async function incomeToExpense(ids: string) {
 
 export async function expenseToIncome(ids: string) {
   return postCommon('/transaction/expense-to-income', { ids })
-}
-
-export async function fetchKeywords(desc: string) {
-  const raw = await postForm('/transaction/keywords', { transactionDesc: desc })
-  const n = normalizeResult(raw)
-  return parseJsonArray(n.data)
 }
 
 export interface KeyValue { key: string; value: string }

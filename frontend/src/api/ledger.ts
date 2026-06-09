@@ -7,8 +7,3 @@ export async function listLedger(endpoint: string, params: Record<string, unknow
   if (isCollectionResult<TransactionRow>(raw)) return raw
   return { total: 0, rows: [] as TransactionRow[] }
 }
-
-export async function mutateLedger(endpoint: string, params: Record<string, unknown> = {}) {
-  const raw = await postForm(endpoint, params)
-  return raw
-}
