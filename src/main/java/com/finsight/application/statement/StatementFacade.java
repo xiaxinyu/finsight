@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -242,6 +243,7 @@ public class StatementFacade {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public CommonResult commit(String statementId) {
         if (StringUtils.isBlank(statementId)) {
             return CommonResult.fail("Invalid Statement ID");
@@ -252,16 +254,36 @@ public class StatementFacade {
                 return CommonResult.fail("No transactions found to commit");
             }
 
+            Set<String> duplicateIds = new HashSet<>();
+            try {
+                List<String> dupIds = dataQualityService.duplicatePreviewTempIds(statementId);
+                if (dupIds != null) {
+                    duplicateIds.addAll(dupIds);
+                }
+            } catch (Exception e) {
+                log.warn("statement/commit dedup check failed: statementId={}", statementId, e);
+            }
+
             List<Transaction> transactions = new ArrayList<>();
+            int skippedDuplicates = 0;
             for (TransactionTemp temp : temps) {
                 if (temp == null) {
+                    continue;
+                }
+                if (duplicateIds.contains(temp.getId())) {
+                    skippedDuplicates++;
                     continue;
                 }
                 Transaction t = new Transaction();
                 org.springframework.beans.BeanUtils.copyProperties(temp, t);
                 transactions.add(t);
             }
-            int imported = transactionService.addTransactions(transactions, authenticationFacade.getUserName());
+            if (transactions.isEmpty()) {
+                return CommonResult.fail("No new transactions to commit (all rows flagged as possible duplicates)");
+            }
+
+            String userName = authenticationFacade.getUserName();
+            int imported = transactionService.importTransactionsStrict(transactions, userName);
 
             transactionTempRepository.softDeleteByStatementId(statementId);
 
@@ -273,14 +295,15 @@ public class StatementFacade {
 
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("statementId", statementId);
-            int total = transactions.size();
-            payload.put("total", total);
+            payload.put("total", temps.size());
             payload.put("imported", imported);
-            payload.put("failed", Math.max(0, total - imported));
+            payload.put("skippedDuplicates", skippedDuplicates);
+            payload.put("failed", 0);
+            transactionService.invalidateHomeSummaryCache();
             return CommonResult.success(JSON.toJSONString(payload));
         } catch (Exception e) {
             log.error("Commit failed", e);
-            return CommonResult.fail("系统出现错误");
+            return CommonResult.fail("Import failed — no rows were saved. " + friendlyError(e));
         }
     }
 

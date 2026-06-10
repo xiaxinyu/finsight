@@ -45,5 +45,7 @@ public interface TransactionRepository {
     Double sumDebtPaymentsByYear(Integer year);
 
     Integer countRefundsByYear(Integer year);
+
+    List<String> listIdsNeedingAmountNormalization();
 }
 

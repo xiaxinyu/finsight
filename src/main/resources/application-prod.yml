@@ -1,0 +1,9 @@
+# Production profile — set all secrets via environment variables (no defaults).
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+account:
+  desSignKey: ${ACCOUNT_DES_SIGN_KEY}

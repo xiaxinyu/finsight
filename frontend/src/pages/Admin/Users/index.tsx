@@ -16,7 +16,16 @@ export function UsersAdminPage() {
       title="Users"
       subtitle="Manage application user accounts"
       icon={<TeamOutlined />}
-      actions={<Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => message.info('Use row edit to add')}>Add</Button>}
+      actions={(
+        <Button
+          type="primary"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={() => actionRef.current?.addEditRecord?.({ userName: '', enabled: true }, { position: 'top' })}
+        >
+          Add
+        </Button>
+      )}
     >
       <div className="fs-table-panel">
         <ProTable

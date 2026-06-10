@@ -26,6 +26,7 @@ import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
 import { defaultPeriodRange } from '../../utils/periodPresets'
+import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 
 type TxFilters = {
   start: string
@@ -34,18 +35,6 @@ type TxFilters = {
   consume: string
   keyword: string
   unclassified: boolean
-}
-
-function rowAmount(r: TransactionRow): number {
-  if (r.incomeMoney && Math.abs(r.incomeMoney) > 0) return Math.abs(r.incomeMoney)
-  return Math.abs(Number(r.balanceMoney || 0))
-}
-
-function rowTxnKind(r: TransactionRow): string {
-  if (r.txnKind) return r.txnKind
-  if (r.incomeMoney && r.incomeMoney > 0) return 'income'
-  if (r.balanceMoney != null && r.balanceMoney < 0) return 'income'
-  return 'expense'
 }
 
 function findTreeTitle(nodes: { title: string; value: string; children?: typeof nodes }[], value: string): string {
@@ -64,6 +53,7 @@ export function TransactionsPage() {
   const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
+  const [selectedRows, setSelectedRows] = useState<TransactionRow[]>([])
   const [editableKeys, setEditableKeys] = useState<React.Key[]>([])
   const [tableLoading, setTableLoading] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
@@ -173,8 +163,8 @@ export function TransactionsPage() {
         transfer: { text: 'Transfer' },
       },
       render: (_, r) => {
+        if (r.txnKind === 'transfer') return <Tag className="fs-tag" color="orange">Transfer</Tag>
         const k = rowTxnKind(r)
-        if (k === 'transfer') return <Tag className="fs-tag" color="orange">Transfer</Tag>
         return <Tag className="fs-tag" color={k === 'income' ? 'green' : 'default'}>{k}</Tag>
       },
     },
@@ -412,7 +402,13 @@ export function TransactionsPage() {
           search={false}
           loading={tableLoading}
           options={{ density: true, reload: true, setting: true }}
-          rowSelection={{ selectedRowKeys, onChange: (keys) => setSelectedRowKeys(keys as string[]) }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys, rows) => {
+              setSelectedRowKeys(keys as string[])
+              setSelectedRows(rows as TransactionRow[])
+            },
+          }}
           rowClassName={(record) => (editableKeys.includes(record.id) ? 'fs-row-editing' : 'fs-table-row')}
           onRow={(record) => ({
             onDoubleClick: () => {
@@ -472,7 +468,17 @@ export function TransactionsPage() {
       </div>
       <Modal title="Mark as transfer" open={transferOpen} onOk={markTransfer} onCancel={() => setTransferOpen(false)}>
         Pair two transactions as an internal transfer (excluded from income/expense reports).
-        <div style={{ marginTop: 8, fontSize: 12 }}>From: {selectedRowKeys[0]} → To: {selectedRowKeys[1]}</div>
+        {selectedRows.length === 2 && (
+          <div style={{ marginTop: 12, fontSize: 12, display: 'grid', gap: 8 }}>
+            {selectedRows.map((r, i) => (
+              <div key={r.id}>
+                <strong>{i === 0 ? 'From' : 'To'}:</strong>{' '}
+                {formatTableDate(r.transactionDate)} · {cellText(r.transactionDesc)} ·{' '}
+                <MoneyText value={rowAmount(r)} type={moneyTypeFromRow(rowTxnKind(r), r.balanceMoney)} />
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </DataPageLayout>
   )

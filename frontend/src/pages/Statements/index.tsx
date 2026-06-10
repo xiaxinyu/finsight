@@ -1,7 +1,8 @@
 import { useRef } from 'react'
 import { FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType } from '@ant-design/pro-components'
-import { Tag, Tooltip } from 'antd'
+import { Alert, Tag, Tooltip } from 'antd'
+import { useState } from 'react'
 import { listStatements } from '../../api/statement'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -35,6 +36,7 @@ function shortId(id: unknown) {
 export function StatementListPage() {
   const actionRef = useRef<ActionType>(null)
   const tableHeight = useViewportTableHeight(180)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   return (
     <DataPageLayout
@@ -42,6 +44,9 @@ export function StatementListPage() {
       subtitle="Past statement uploads and commit status"
       icon={<HistoryOutlined />}
     >
+      {loadError && (
+        <Alert type="error" showIcon style={{ marginBottom: 8 }} message="Failed to load imports" description={loadError} />
+      )}
       <div className="fs-table-panel">
         <ProTable
           className="fs-data-table"
@@ -54,8 +59,15 @@ export function StatementListPage() {
           rowClassName={() => 'fs-table-row'}
           locale={{ emptyText: <EmptyState compact title="No imports yet" description="Upload a statement to get started." /> }}
           request={async (params) => {
-            const res = await listStatements(params.current || 1, params.pageSize || 20)
-            return { data: res.rows as Record<string, unknown>[], total: res.total, success: true }
+            try {
+              setLoadError(null)
+              const res = await listStatements(params.current || 1, params.pageSize || 20)
+              return { data: res.rows as Record<string, unknown>[], total: res.total, success: true }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : 'Request failed'
+              setLoadError(msg)
+              return { data: [], total: 0, success: false }
+            }
           }}
           columns={[
             {

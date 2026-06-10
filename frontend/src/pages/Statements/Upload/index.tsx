@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
+import { EmptyState } from '../../../components/EmptyState'
 import { Button, message, Result, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
 import { CheckCircleOutlined, CloudUploadOutlined, EyeOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
-import { commitStatement, previewStatement, uploadStatement, type StatementPreviewRow } from '../../../api/statement'
+import { commitStatement, previewStatement, uploadStatement, type StatementCommitResult, type StatementPreviewRow } from '../../../api/statement'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { MoneyText, moneyTypeFromRow } from '../../../components/MoneyText'
 import { TransactionSummaryBar } from '../../../components/TransactionSummaryBar'
 import { cellText, formatTableDate } from '../../../utils/cell'
+import { formatNumber } from '../../../utils/format'
 
 const { Dragger } = Upload
 
@@ -58,6 +62,8 @@ function summarizePreview(rows: StatementPreviewRow[]) {
 }
 
 export function StatementUploadPage() {
+  const qc = useQueryClient()
+  const previewTableHeight = useViewportTableHeight(280)
   const [step, setStep] = useState(0)
   const [statementId, setStatementId] = useState('')
   const [preview, setPreview] = useState<StatementPreviewRow[]>([])
@@ -65,6 +71,7 @@ export function StatementUploadPage() {
   const [loading, setLoading] = useState(false)
   const [bankCode, setBankCode] = useState('CMB')
   const [cardTypeCode, setCardTypeCode] = useState('debit')
+  const [commitResult, setCommitResult] = useState<StatementCommitResult | null>(null)
 
   const duplicateCount = preview.filter((r) => Boolean(r.possibleDuplicate)).length
   const stats = useMemo(() => summarizePreview(preview), [preview])
@@ -109,7 +116,13 @@ export function StatementUploadPage() {
     setLoading(true)
     try {
       const result = await commitStatement(statementId)
-      message.success(`Imported ${result.imported} of ${result.total} transactions`)
+      setCommitResult(result)
+      const dupNote = result.skippedDuplicates ? ` · ${result.skippedDuplicates} duplicate(s) skipped` : ''
+      message.success(`Imported ${result.imported} of ${result.total} transactions${dupNote}`)
+      qc.invalidateQueries({ queryKey: ['home-summary'] })
+      qc.invalidateQueries({ queryKey: ['financial-pulse'] })
+      qc.invalidateQueries({ queryKey: ['budget-vs-actual'] })
+      qc.invalidateQueries({ queryKey: ['dash-totals'] })
       setStep(2)
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Commit failed')
@@ -123,6 +136,7 @@ export function StatementUploadPage() {
     setPreview([])
     setStatementId('')
     setUploadMeta(null)
+    setCommitResult(null)
   }
 
   return (
@@ -210,8 +224,8 @@ export function StatementUploadPage() {
               dataSource={preview}
               pagination={{ pageSize: 20, size: 'small', showTotal: (t) => `${t} rows` }}
               rowClassName={(r) => (r.possibleDuplicate ? 'fs-row-warning' : 'fs-table-row')}
-              locale={{ emptyText: 'No transactions in preview — verify bank/account type and re-upload.' }}
-              scroll={{ x: 1100 }}
+              locale={{ emptyText: <EmptyState compact title="No preview rows" description="Verify bank/account type and re-upload." /> }}
+              scroll={{ x: 1100, y: previewTableHeight }}
               columns={[
                 { title: 'Date', dataIndex: 'transactionDate', width: 96, fixed: 'left', render: (v) => <span className="fs-mono">{formatTableDate(v)}</span> },
                 {
@@ -236,7 +250,6 @@ export function StatementUploadPage() {
                     <MoneyText
                       value={previewAmount(r)}
                       type={moneyTypeFromRow(previewTxnType(r), r.balanceMoney)}
-                      unit
                     />
                   ),
                 },
@@ -246,7 +259,7 @@ export function StatementUploadPage() {
                   width: 108,
                   align: 'right',
                   render: (v) => (v != null && Number(v) !== 0
-                    ? <span className="fs-mono fs-cell-muted">{Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
+                    ? <span className="fs-mono fs-cell-muted">{formatNumber(v)}</span>
                     : <span className="fs-cell-muted">—</span>),
                 },
                 {
@@ -274,7 +287,12 @@ export function StatementUploadPage() {
           <Result
             status="success"
             title="Statement committed"
-            subTitle={`${preview.length} transactions imported to the ledger.`}
+            subTitle={
+              commitResult
+                ? `${commitResult.imported} transaction${commitResult.imported === 1 ? '' : 's'} imported`
+                  + (commitResult.skippedDuplicates ? ` · ${commitResult.skippedDuplicates} duplicate(s) skipped` : '')
+                : 'Import complete.'
+            }
             extra={<Button type="primary" onClick={reset}>Import another</Button>}
           />
         </div>

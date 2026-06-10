@@ -139,11 +139,11 @@ export function DashboardPage() {
             />
           ))}
           <KpiGrid items={[
-            { key: 'income', label: 'Income', value: formatMoney(income), color: finsightColors.income, icon: <RiseOutlined style={{ color: finsightColors.income }} /> },
-            { key: 'expense', label: 'Expense', value: formatMoney(expense), color: finsightColors.expense, icon: <FallOutlined style={{ color: finsightColors.expense }} /> },
-            { key: 'mtd', label: 'Net flow MTD', value: formatMoney(Number(pulse?.netFlowMtd || 0)), icon: <FundOutlined /> },
-            { key: 'liquid', label: 'Liquid assets', value: formatMoney(Number(pulse?.liquidAssets || 0)), icon: <LineChartOutlined /> },
-            { key: 'savings', label: 'Savings rate', value: `${savingsRate}%`, icon: <RiseOutlined style={{ color: finsightColors.income }} /> },
+            { key: 'income', label: `Income (${periodLabel})`, value: formatMoney(income), color: finsightColors.income, icon: <RiseOutlined style={{ color: finsightColors.income }} /> },
+            { key: 'expense', label: `Expense (${periodLabel})`, value: formatMoney(expense), color: finsightColors.expense, icon: <FallOutlined style={{ color: finsightColors.expense }} /> },
+            { key: 'savings', label: `Savings rate (${periodLabel})`, value: `${savingsRate}%`, icon: <RiseOutlined style={{ color: finsightColors.income }} /> },
+            { key: 'mtd', label: 'Net flow (MTD)', value: formatMoney(Number(pulse?.netFlowMtd || 0)), icon: <FundOutlined /> },
+            { key: 'liquid', label: 'Liquid assets (current)', value: formatMoney(Number(pulse?.liquidAssets || 0)), icon: <LineChartOutlined /> },
           ]} />
           {pulse?.dataQuality && (
             <Space wrap style={{ marginBottom: 8 }}>
@@ -189,7 +189,7 @@ export function DashboardPage() {
             </Col>
             {healthScore && (
               <Col xs={24} lg={4}>
-                <ContentCard title="Health score" size="small" styles={{ body: { padding: '8px 12px' } }}>
+                <ContentCard title={`Health score (${period[0].year()})`} size="small" styles={{ body: { padding: '8px 12px' } }}>
                   <div style={{ marginBottom: 8 }}><strong>{Math.round(Number(healthScore.total || 0))}</strong> / 100</div>
                   {Object.entries(healthScore).filter(([k]) => k !== 'total').map(([k, v]) => (
                     <div key={k} style={{ marginBottom: 6 }}>

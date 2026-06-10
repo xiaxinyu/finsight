@@ -13,6 +13,7 @@ export interface StatementCommitResult {
   total: number
   imported: number
   failed: number
+  skippedDuplicates?: number
 }
 
 export interface StatementPreviewRow {

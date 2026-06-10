@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
+import { Alert, TreeSelect } from 'antd'
 import { useParams } from 'react-router-dom'
-import { TreeSelect } from 'antd'
 import { BookOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import { ledgerConfigs } from '../../config/ledgers'
@@ -15,6 +15,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
 import { TableHeader } from '../../components/TableHeader'
 import { cellText, formatTableDate } from '../../utils/cell'
+import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
 import { defaultPeriodRange } from '../../utils/periodPresets'
 
@@ -25,6 +26,7 @@ export function LedgersPage() {
   const cfg = ledgerConfigs[ledgerId]
   const actionRef = useRef<ActionType>(null)
   const [tableLoading, setTableLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const tableHeight = useViewportTableHeight(200)
 
   const initial: LedgerFilters = {
@@ -60,7 +62,7 @@ export function LedgersPage() {
       align: 'right',
       sorter: true,
       render: (_, r) => (
-        <MoneyText value={Number(r.balanceMoney)} type={moneyTypeFromRow(cfg.txnType, r.balanceMoney)} />
+        <MoneyText value={rowAmount(r)} type={moneyTypeFromRow(cfg.txnType ?? rowTxnKind(r), r.balanceMoney)} />
       ),
     },
     {
@@ -110,6 +112,9 @@ export function LedgersPage() {
         </FilterToolbar>
       )}
     >
+      {loadError && (
+        <Alert type="error" showIcon style={{ marginBottom: 8 }} message="Failed to load ledger" description={loadError} />
+      )}
       <div className="fs-table-panel">
         <ProTable<TransactionRow>
           className="fs-data-table"
@@ -123,18 +128,25 @@ export function LedgersPage() {
             emptyText: <EmptyState compact title="No ledger entries" description="Adjust the date range or category filter." />,
           }}
           request={async (params) => {
-            const res = await listLedger(cfg.listEndpoint, {
-              page: params.current || 1,
-              rows: params.pageSize || 20,
-              transactionDateStartStr: applied.start,
-              transactionDateEndStr: applied.end,
-              consumeID: applied.consume,
-              txnTypes: cfg.txnType,
-            })
-            return { data: res.rows, total: res.total, success: true }
+            try {
+              setLoadError(null)
+              const res = await listLedger(cfg.listEndpoint, {
+                page: params.current || 1,
+                rows: params.pageSize || 20,
+                transactionDateStartStr: applied.start,
+                transactionDateEndStr: applied.end,
+                consumeID: applied.consume,
+                txnTypes: cfg.txnType,
+              })
+              return { data: res.rows, total: res.total, success: true }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : 'Request failed'
+              setLoadError(msg)
+              return { data: [], total: 0, success: false }
+            }
           }}
           columns={columns}
-          pagination={{ defaultPageSize: 20, size: 'small' }}
+          pagination={{ defaultPageSize: 20, size: 'small', showTotal: (t) => `${t} rows` }}
         />
       </div>
     </DataPageLayout>

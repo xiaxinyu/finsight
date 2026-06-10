@@ -29,7 +29,8 @@ public class SecurityConfig {
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
         http.csrf(csrf -> csrf.disable());
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/oauth/**", "/login/**", "/logout/**", "/actuator/**", "/plugins/**", "/encrypt/**", "/login-error.json", "/app/**").permitAll()
+                .requestMatchers("/oauth/**", "/login/**", "/logout/**", "/actuator/health", "/plugins/**", "/login-error.json", "/app/**").permitAll()
+                .requestMatchers("/actuator/**", "/encrypt/**").authenticated()
                 .anyRequest().authenticated()
         );
         http.authenticationManager(authenticationManager);

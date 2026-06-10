@@ -27,4 +27,6 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     Double sumDebtPaymentsByYear(@Param("year") Integer year);
     Integer countRefundsByYear(@Param("year") Integer year);
     List<KeyValue> homeSummaryExpenseBucketsPrev(@Param("year") Integer year);
+
+    List<String> listIdsNeedingAmountNormalization();
 }

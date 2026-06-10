@@ -22,6 +22,8 @@ import { FsDataTable, type FsColumn } from '../../components/FsDataTable'
 import { emptyChartOption } from '../../components/charts/profiles'
 import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRangePicker'
 import { formatMoney, MONTH_NAMES } from '../../utils/format'
+import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
+import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { fromCategorySpend, fromIncomeExpense, fromYearCompare } from '../../utils/insights'
 import { billCalendar, budgetVsActual } from '../../api/finance'
@@ -126,7 +128,16 @@ export function ReportsPage() {
   if (cfg.type === 'billsCalendar') {
     const rows = (data && 'calendar' in data ? data.calendar : []) as Record<string, unknown>[]
     return (
-      <DataPageLayout title={cfg.title} subtitle={cfg.subtitle} icon={<BarChartOutlined />}>
+      <DataPageLayout
+        title={cfg.title}
+        subtitle={cfg.subtitle}
+        icon={<BarChartOutlined />}
+        toolbar={(
+          <FilterToolbar loading={chartLoading} onApply={() => refetch()} dirty={false}>
+            <span className="fs-import-hint">Upcoming bills from Planning · next 30 days</span>
+          </FilterToolbar>
+        )}
+      >
         {rows.length === 0 && !chartLoading && (
           <EmptyState compact title="No upcoming bills" description="Add bills in Planning to see the calendar." />
         )}
@@ -140,6 +151,7 @@ export function ReportsPage() {
           dataSource={rows}
           rowKey="billId"
           loading={chartLoading}
+          scroll={{ y: viewportH }}
         />
       </DataPageLayout>
     )
@@ -405,12 +417,12 @@ export function ReportsPage() {
                 unit: 'CNY',
                 align: 'right',
                 sortType: 'number',
-                render: (_, r) => {
-                  const income = Number(r.incomeMoney || 0)
-                  const expense = Number(r.balanceMoney || 0)
-                  const v = income > 0 ? income : Math.abs(expense)
-                  return formatMoney(v)
-                },
+                render: (_, r) => (
+                  <MoneyText
+                    value={rowAmount(r as { incomeMoney?: number; balanceMoney?: number })}
+                    type={moneyTypeFromRow(rowTxnKind(r as { incomeMoney?: number; balanceMoney?: number }), (r as { balanceMoney?: number }).balanceMoney)}
+                  />
+                ),
               },
             ]}
             dataSource={(drillRows?.rows || []) as unknown as Record<string, unknown>[]}

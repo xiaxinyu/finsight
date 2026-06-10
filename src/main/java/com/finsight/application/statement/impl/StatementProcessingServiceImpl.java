@@ -1,6 +1,7 @@
 package com.finsight.application.statement.impl;
 
 import com.finsight.application.card.BankCardService;
+import com.finsight.application.transaction.TransactionAmountNormalizer;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.importer.StatementImporterFactory;
 import com.finsight.application.statement.StatementProcessingService;
@@ -39,6 +40,7 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
         String bankCardId = bankCard == null ? null : bankCard.getId();
         String bankCardName = bankCard == null ? null : bankCard.getCardName();
         for (Transaction t : transactions) {
+            TransactionAmountNormalizer.normalize(t);
             if (StringUtils.isNotBlank(bankCardId)) {
                 t.setBankCardId(bankCardId);
                 t.setBankCardName(bankCardName);

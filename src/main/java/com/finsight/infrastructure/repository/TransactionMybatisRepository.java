@@ -118,5 +118,10 @@ public class TransactionMybatisRepository implements TransactionRepository {
     public Integer countRefundsByYear(Integer year) {
         return transactionMapper.countRefundsByYear(year);
     }
+
+    @Override
+    public List<String> listIdsNeedingAmountNormalization() {
+        return transactionMapper.listIdsNeedingAmountNormalization();
+    }
 }
 

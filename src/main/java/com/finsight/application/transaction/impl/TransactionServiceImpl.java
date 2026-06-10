@@ -10,6 +10,7 @@ import com.finsight.application.card.CardService;
 import com.finsight.common.exception.AppException;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.application.transaction.ITransactionService;
+import com.finsight.application.transaction.TransactionAmountNormalizer;
 import com.finsight.domain.port.TransactionRepository;
 import com.finsight.application.query.TransactionQuery;
 import com.alibaba.fastjson.JSONArray;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
@@ -61,6 +63,7 @@ public class TransactionServiceImpl implements ITransactionService {
             }
             transaction.setUpdateUser(userName);
             transactionRepository.updateTransaction(transaction);
+            invalidateHomeSummaryCache();
         } catch (AppServiceException e) {
             throw e;
         } catch (Exception e) {
@@ -137,6 +140,7 @@ public class TransactionServiceImpl implements ITransactionService {
     public void deleteTransaction(String id) throws AppServiceException {
         try {
             transactionRepository.deleteTransaction(id);
+            invalidateHomeSummaryCache();
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -222,11 +226,7 @@ public class TransactionServiceImpl implements ITransactionService {
         int success = 0;
         for (Transaction transaction : transactions) {
             try {
-                if (transaction.getId() == null || transaction.getId().trim().isEmpty() || transactionRepository.selectById(transaction.getId()) != null) {
-                    transaction.setId(com.finsight.common.util.StringTool.generateID());
-                }
-                transaction.setCreateUser(userName);
-                transaction.setUpdateUser(userName);
+                prepareForInsert(transaction, userName);
                 transactionRepository.insert(transaction);
                 success++;
             } catch (Exception e) {
@@ -234,6 +234,41 @@ public class TransactionServiceImpl implements ITransactionService {
             }
         }
         return success;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int importTransactionsStrict(List<Transaction> transactions, String userName) throws AppServiceException {
+        if (transactions == null || transactions.isEmpty()) {
+            throw new AppServiceException("No transactions to import");
+        }
+        try {
+            int success = 0;
+            for (Transaction transaction : transactions) {
+                prepareForInsert(transaction, userName);
+                transactionRepository.insert(transaction);
+                success++;
+            }
+            invalidateHomeSummaryCache();
+            return success;
+        } catch (Exception e) {
+            throw new AppServiceException(e);
+        }
+    }
+
+    @Override
+    public void invalidateHomeSummaryCache() {
+        homeSummaryCache.clear();
+    }
+
+    private void prepareForInsert(Transaction transaction, String userName) {
+        TransactionAmountNormalizer.normalize(transaction);
+        if (transaction.getId() == null || transaction.getId().trim().isEmpty()
+                || transactionRepository.selectById(transaction.getId()) != null) {
+            transaction.setId(StringTool.generateID());
+        }
+        transaction.setCreateUser(userName);
+        transaction.setUpdateUser(userName);
     }
 
     private void fetchTransactionParam(Transaction transaction) {

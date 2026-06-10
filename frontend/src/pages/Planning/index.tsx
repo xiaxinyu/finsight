@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Col, Form, Input, InputNumber, Row, Table, Tag } from 'antd'
+import { Alert, Button, Col, Form, Input, InputNumber, Row, Table, Tag, message } from 'antd'
 import { CalendarOutlined, FundOutlined } from '@ant-design/icons'
 import { billCalendar, budgetVsActual, cashflowMetrics, listBills, saveBill, saveBudgetLine } from '../../api/finance'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -27,7 +28,14 @@ export function PlanningPage() {
   const { data: bills } = useQuery({ queryKey: ['bills'], queryFn: listBills })
   const { data: calendar } = useQuery({ queryKey: ['bill-calendar'], queryFn: billCalendar })
 
+  const tableHeight = useViewportTableHeight(320)
   const bvaMeta = bva?.[0]
+
+  useEffect(() => {
+    const limit = Number(bvaMeta?.limitTotal || 0)
+    if (limit > 0) setBudgetLimit(limit)
+  }, [bvaMeta?.limitTotal])
+
   const safe = Number(cashflow?.safeToSpend || 0)
   const runway = Number(cashflow?.runwayMonths || 0)
   const loadError = cfErr ? cfError : bvaErr ? bvaError : null
@@ -42,8 +50,13 @@ export function PlanningPage() {
   }
 
   const onSaveBudget = async () => {
-    await saveBudgetLine({ bucketKey: 'all', limitAmount: budgetLimit })
-    invalidateFinance(qc)
+    try {
+      await saveBudgetLine({ bucketKey: 'all', limitAmount: budgetLimit })
+      invalidateFinance(qc)
+      message.success('Budget limit saved')
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Failed to save budget')
+    }
   }
 
   return (
@@ -101,6 +114,7 @@ export function PlanningPage() {
               size="small"
               rowKey="id"
               pagination={false}
+              scroll={{ y: tableHeight }}
               locale={{ emptyText: <EmptyState compact title="No bills" description="Add recurring bills above." /> }}
               dataSource={bills || []}
               columns={[
@@ -118,6 +132,7 @@ export function PlanningPage() {
               size="small"
               rowKey={(_, i) => String(i)}
               pagination={false}
+              scroll={{ y: tableHeight }}
               locale={{ emptyText: <EmptyState compact title="No upcoming bills" description="Bills with due days in the next 30 days appear here." /> }}
               dataSource={calendar || []}
               columns={[

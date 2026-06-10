@@ -6,6 +6,21 @@
         and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
     </sql>
 
+    <sql id="rowIncomeAmountT">
+        case when coalesce(t.income_money,0) &gt; 0 then t.income_money
+             when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
+             else 0 end
+    </sql>
+    <sql id="rowExpenseAmountT">
+        case when coalesce(t.balance_money,0) &gt; 0 then t.balance_money else 0 end
+    </sql>
+    <sql id="filterTxnTypeExpenseT">
+        and (
+            cat.txn_types like '%expense%'
+            or (cat.code is null and coalesce(t.balance_money,0) &gt; 0)
+        )
+    </sql>
+
     <update id="markTransactionsTransfer">
         update transaction
         set txn_kind = 'transfer',
@@ -82,11 +97,11 @@
     </select>
 
     <select id="sumExpenseSince" resultType="double">
-        select coalesce(sum(coalesce(t.balance_money, 0)), 0)
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
-        and (cat.txn_types like '%expense%' or (cat.code is null and coalesce(t.balance_money,0) &gt; 0))
+        <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
     </select>
 
@@ -104,7 +119,7 @@
     </select>
 
     <select id="sumFixedBucketYear" resultType="double">
-        select coalesce(sum(coalesce(t.balance_money, 0)), 0)
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=INTEGER}
@@ -155,11 +170,11 @@
     </select>
 
     <select id="sumExpenseByBucketSince" resultType="double">
-        select coalesce(sum(abs(coalesce(t.balance_money, 0))), 0)
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
-        and (cat.txn_types like '%expense%' or (cat.code is null and coalesce(t.balance_money,0) &gt; 0))
+        <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
         <choose>
             <when test="bucketKey == 'fixed'">
@@ -184,7 +199,7 @@
     </select>
 
     <select id="sumExpenseByCategorySince" resultType="double">
-        select coalesce(sum(abs(coalesce(t.balance_money, 0))), 0)
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
         from transaction t
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
         and t.consume_code = #{categoryCode,jdbcType=VARCHAR}

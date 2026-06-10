@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Table } from 'antd'
+import { Alert, Table, Tag } from 'antd'
 import { TagsOutlined } from '@ant-design/icons'
 import { listRules } from '../../../api/admin'
 import { DataPageLayout } from '../../../components/DataPageLayout'
@@ -8,15 +8,19 @@ import { PageSkeleton } from '../../../components/PageSkeleton'
 import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 
 export function RulesAdminPage() {
-  const { data, isLoading } = useQuery({ queryKey: ['rules'], queryFn: listRules })
+  const { data, isLoading, isError, error } = useQuery({ queryKey: ['rules'], queryFn: listRules })
   const tableHeight = useViewportTableHeight(180)
 
   return (
     <DataPageLayout
       title="Category Rules"
-      subtitle="Auto-classification keyword rules"
+      subtitle="Read-only view of auto-classification keyword rules (managed in database seeds)"
       icon={<TagsOutlined />}
     >
+      {isError && (
+        <Alert type="error" showIcon style={{ marginBottom: 8 }}
+          message="Failed to load rules" description={error instanceof Error ? error.message : 'Request failed'} />
+      )}
       {isLoading ? (
         <PageSkeleton variant="table" />
       ) : (
@@ -32,7 +36,12 @@ export function RulesAdminPage() {
               { title: 'Keyword', dataIndex: 'keyword' },
               { title: 'Category', dataIndex: 'consumeName' },
               { title: 'Priority', dataIndex: 'priority', width: 80 },
-              { title: 'Enabled', dataIndex: 'enabled', width: 80 },
+              {
+                title: 'Enabled',
+                dataIndex: 'enabled',
+                width: 80,
+                render: (v) => (v ? <Tag color="success">On</Tag> : <Tag>Off</Tag>),
+              },
             ]}
           />
         </div>

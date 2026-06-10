@@ -76,15 +76,8 @@ public class CcbDebitTransactionStatementImporter implements StatementImporter {
                 continue;
             }
 
-            // Calculate Amount
             Double expense = parseDouble(c3);
             Double income = parseDouble(c4);
-            Double amount = 0.0;
-            if (income != null && income > 0) {
-                amount = income;
-            } else if (expense != null && expense > 0) {
-                amount = -expense;
-            }
 
             String card = StringUtils.isNotBlank(cardNo) ? StringTool.cleanStr(cardNo) : "";
 
@@ -118,11 +111,17 @@ public class CcbDebitTransactionStatementImporter implements StatementImporter {
             transaction.setTransactionDesc(StringUtils.join(descParts, "@@"));
 
             transaction.setBalanceCurrency(c6);
-            transaction.setBalanceMoney(amount);
             transaction.setAccountBalance(parseDouble(c5));
-            
-            // New Fields (Keep separate fields for structured access if needed)
-            transaction.setIncomeMoney(income);
+            if (income != null && income > 0) {
+                transaction.setIncomeMoney(income);
+                transaction.setBalanceMoney(0.0);
+            } else if (expense != null && expense > 0) {
+                transaction.setBalanceMoney(expense);
+                transaction.setIncomeMoney(0.0);
+            } else {
+                transaction.setIncomeMoney(0.0);
+                transaction.setBalanceMoney(0.0);
+            }
             transaction.setOpponentAccount(c8);
             transaction.setOpponentName(c9);
             transaction.setTransactionTime(c2); // Actual Transaction Time

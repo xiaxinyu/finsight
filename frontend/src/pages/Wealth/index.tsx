@@ -8,6 +8,7 @@ import { ContentCard } from '../../components/ContentCard'
 import { EmptyState } from '../../components/EmptyState'
 import { finsightColors } from '../../styles/finsight-tokens'
 import { formatMoney } from '../../utils/format'
+import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { Link } from 'react-router-dom'
 
 const HEALTH_FORMULAS: Record<string, string> = {
@@ -19,6 +20,7 @@ const HEALTH_FORMULAS: Record<string, string> = {
 }
 
 export function WealthPage() {
+  const tableHeight = useViewportTableHeight(280)
   const { data, isLoading, isError, error } = useQuery({ queryKey: ['wealth'], queryFn: wealthSnapshot })
 
   const netWorth = Number(data?.netWorth || 0)
@@ -59,6 +61,7 @@ export function WealthPage() {
               size="small"
               loading={isLoading}
               pagination={false}
+              scroll={{ y: tableHeight }}
               rowKey="key"
               locale={{ emptyText: <EmptyState compact title="No accounts" description="Sync from bank cards after import." /> }}
               dataSource={accounts}

@@ -2,6 +2,55 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.finsight.infrastructure.mapper.TransactionMapper">
 
+    <!-- Canonical row amounts (alias t) -->
+    <sql id="rowIncomeAmountT">
+        case when coalesce(t.income_money,0) &gt; 0 then t.income_money
+             when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
+             else 0 end
+    </sql>
+    <sql id="rowExpenseAmountT">
+        case when coalesce(t.balance_money,0) &gt; 0 then t.balance_money else 0 end
+    </sql>
+    <!-- Canonical row amounts (alias c) -->
+    <sql id="rowIncomeAmountC">
+        case when coalesce(c.income_money,0) &gt; 0 then c.income_money
+             when coalesce(c.balance_money,0) &lt; 0 then abs(c.balance_money)
+             else 0 end
+    </sql>
+    <sql id="rowExpenseAmountC">
+        case when coalesce(c.balance_money,0) &gt; 0 then c.balance_money else 0 end
+    </sql>
+    <sql id="excludeTransferT">
+        and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
+    </sql>
+    <sql id="excludeTransferC">
+        and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
+    </sql>
+    <sql id="filterTxnTypeIncomeT">
+        and (
+            cat.txn_types like '%income%'
+            or (cat.code is null and (coalesce(t.income_money,0) &gt; 0 or coalesce(t.balance_money,0) &lt; 0))
+        )
+    </sql>
+    <sql id="filterTxnTypeExpenseT">
+        and (
+            cat.txn_types like '%expense%'
+            or (cat.code is null and coalesce(t.balance_money,0) &gt; 0)
+        )
+    </sql>
+    <sql id="filterTxnTypeIncomeC">
+        and (
+            cat.txn_types like '%income%'
+            or (cat.code is null and (coalesce(c.income_money,0) &gt; 0 or coalesce(c.balance_money,0) &lt; 0))
+        )
+    </sql>
+    <sql id="filterTxnTypeExpenseC">
+        and (
+            cat.txn_types like '%expense%'
+            or (cat.code is null and coalesce(c.balance_money,0) &gt; 0)
+        )
+    </sql>
+
     <insert id="addTransactionList">
         insert into transaction
         (createuser,
@@ -208,8 +257,15 @@
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="excludeTransferT"/>
         <if test="q != null">
-            <if test="q.txnTypes != null and q.txnTypes != ''">
+            <if test="q.txnTypes != null and q.txnTypes == 'income'">
+                <include refid="filterTxnTypeIncomeT"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
+                <include refid="filterTxnTypeExpenseT"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
             <if test="q.transactionDateStart != null">
@@ -269,8 +325,15 @@
         select count(t.id) from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="excludeTransferT"/>
         <if test="q != null">
-            <if test="q.txnTypes != null and q.txnTypes != ''">
+            <if test="q.txnTypes != null and q.txnTypes == 'income'">
+                <include refid="filterTxnTypeIncomeT"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
+                <include refid="filterTxnTypeExpenseT"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
             <if test="q.transactionDateStart != null">
@@ -323,16 +386,16 @@
     </select>
 
     <select id="consumeReport" resultType="com.finsight.domain.model.KeyValue">
-        select round(abs(sum(
+        select round(sum(
         <choose>
             <when test="q != null and q.txnTypes == 'income'">
-                coalesce(c.income_money, case when coalesce(c.balance_money,0) &lt; 0 then abs(c.balance_money) else 0 end, 0)
+                <include refid="rowIncomeAmountC"/>
             </when>
             <otherwise>
-                coalesce(c.balance_money, 0)
+                <include refid="rowExpenseAmountC"/>
             </otherwise>
         </choose>
-        ))) as `value`,
+        )) as `value`,
         case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end as `key`
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
@@ -388,18 +451,24 @@
     </select>
 
     <select id="weekConsumeReport" resultType="com.finsight.domain.model.KeyValue">
-        select round(abs(sum(balance_money))) as `value`, wday as `key` from (
-        select weekday(c.bookkeeping_date) wday, c.balance_money
+        select round(sum(expense_amt)) as `value`, wday as `key` from (
+        select weekday(c.bookkeeping_date) wday, (<include refid="rowExpenseAmountC"/>) as expense_amt
         from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
-        and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
+        <include refid="excludeTransferC"/>
         <if test="q != null">
-            <if test="q.txnTypes != null and q.txnTypes != ''">
+            <if test="q.txnTypes != null and q.txnTypes == 'income'">
+                <include refid="filterTxnTypeIncomeC"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
+                <include refid="filterTxnTypeExpenseC"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
             <if test="q.txnTypes == null or q.txnTypes == ''">
-                and cat.txn_types like '%expense%'
+                <include refid="filterTxnTypeExpenseC"/>
             </if>
             <if test="q.transactionDateStart != null">
                 and c.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
@@ -440,17 +509,23 @@
         when cmonth = 10 then 'October'
         when cmonth = 11 then 'November'
         when cmonth = 12 then 'December' else cmonth end 'key'
-        from (select sum(balance_money) balance_money,cmonth
-        from (select c.balance_money, month(c.transaction_date) cmonth from transaction c
+        from (select sum(expense_amt) balance_money,cmonth
+        from (select (<include refid="rowExpenseAmountC"/>) as expense_amt, month(c.transaction_date) cmonth from transaction c
         left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
-        and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
+        <include refid="excludeTransferC"/>
         <if test="q != null">
-            <if test="q.txnTypes != null and q.txnTypes != ''">
+            <if test="q.txnTypes != null and q.txnTypes == 'income'">
+                <include refid="filterTxnTypeIncomeC"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
+                <include refid="filterTxnTypeExpenseC"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
             <if test="q.txnTypes == null or q.txnTypes == ''">
-                and cat.txn_types like '%expense%'
+                <include refid="filterTxnTypeExpenseC"/>
             </if>
             <if test="q.year != null">
                 and year(c.transaction_date) = #{q.year,jdbcType=VARCHAR}
@@ -640,19 +715,18 @@
         group by bucket
     </select>
 
-    <!-- Home summary: total income by year -->
+    <!-- Home summary: total income by year (aligned with monthIncomeReport) -->
     <select id="sumIncomeByYear" resultType="java.lang.Double">
-        select round(sum(
-            coalesce(
-                case when (coalesce(t.income_money,0) &lt;&gt; 0) then t.income_money
-                     when (cat.parentId = 'INC' or cat.code like 'INC%') then t.balance_money
-                     else 0 end
-            ,0)
-        ))
+        select round(coalesce(sum(<include refid="rowIncomeAmountT"/>), 0))
         from transaction t
         left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
-        and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
+        <include refid="excludeTransferT"/>
+        and (
+            coalesce(t.income_money,0) &gt; 0
+            or coalesce(t.balance_money,0) &lt; 0
+            or (cat.txn_types is not null and cat.txn_types like '%income%')
+        )
     </select>
 
     <!-- Home summary: debt-related payments (repayments/loans) by year -->
@@ -676,5 +750,11 @@
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
           and (t.transaction_desc like '%退款%' or t.demoarea like '%退款%')
+    </select>
+
+    <select id="listIdsNeedingAmountNormalization" resultType="java.lang.String">
+        select t.id from transaction t
+        where coalesce(t.balance_money, 0) &lt; 0
+           or (coalesce(t.income_money, 0) &gt; 0 and coalesce(t.balance_money, 0) &gt; 0)
     </select>
 </mapper>

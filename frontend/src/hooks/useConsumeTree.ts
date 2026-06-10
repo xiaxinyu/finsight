@@ -29,9 +29,9 @@ export function useConsumeTreeSelect(txnType?: string) {
 }
 
 export function useConsumeAntTree(txnType?: string) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['consume-tree', txnType],
     queryFn: () => consumeTree(txnType),
   })
-  return { treeData: toAntTree(data || []), isLoading }
+  return { treeData: toAntTree(data || []), isLoading, isError, error }
 }

@@ -2,8 +2,9 @@ package com.finsight.application.importer.impl;
 
 import com.finsight.common.util.DateTool;
 import com.finsight.common.util.StringTool;
-import com.finsight.domain.model.Transaction;
 import com.finsight.application.importer.StatementImporter;
+import com.finsight.application.transaction.TransactionAmountNormalizer;
+import com.finsight.domain.model.Transaction;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -76,6 +77,7 @@ public class CcbTransactionStatementImporter implements StatementImporter {
             transaction.setTransactionDesc(c6);
             transaction.setBalanceCurrency(c4);
             transaction.setBalanceMoney(amount);
+            TransactionAmountNormalizer.normalize(transaction);
             transaction.setCardTypeId(1);
             transaction.setCardTypeName("信用卡");
             list.add(transaction);

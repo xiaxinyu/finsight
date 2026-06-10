@@ -25,6 +25,9 @@ public interface ITransactionService {
 
     int addTransactions(List<Transaction> transactions, String userName);
 
+    /** Inserts all rows in one transaction; rolls back on any failure. */
+    int importTransactionsStrict(List<Transaction> transactions, String userName) throws AppServiceException;
+
     String consumeReport(Transaction transaction) throws AppServiceException;
 
     String weekConsumeReport(Transaction transaction) throws AppServiceException;
@@ -36,4 +39,6 @@ public interface ITransactionService {
     String monthExpenseReport(Transaction transaction) throws AppServiceException;
 
     String homeSummary(Integer year) throws AppServiceException;
+
+    void invalidateHomeSummaryCache();
 }
