@@ -53,8 +53,8 @@
 
     <insert id="addTransactionList">
         insert into transaction
-        (createuser,
-        updateuser,
+        (created_by,
+        updated_by,
         id,
         card_id,
         bank_card_id,
@@ -70,8 +70,8 @@
         consume_id,
         consume_code,
         consume_name,
-        demoarea,
-        recordid,
+        memo,
+        statement_id,
         income_money,
         opponent_account,
         opponent_name,
@@ -79,8 +79,8 @@
         account_balance)
         <foreach collection="transactions" item="transaction" index="index" separator="union">
             select
-            #{transaction.createuser,jdbcType=VARCHAR},
-            #{transaction.updateuser,jdbcType=VARCHAR},
+            #{transaction.createdBy,jdbcType=VARCHAR},
+            #{transaction.updatedBy,jdbcType=VARCHAR},
             #{transaction.id,jdbcType=VARCHAR},
             #{transaction.cardId,jdbcType=VARCHAR},
             #{transaction.bankCardId,jdbcType=VARCHAR},
@@ -111,7 +111,7 @@
         update transaction
         set version = version+1,
         <if test="updateUser != null">
-            updateuser = #{updateUser,jdbcType=VARCHAR},
+            updated_by = #{updateUser,jdbcType=VARCHAR},
         </if>
         <if test="consumptionType != null">
             consumption_type = #{consumptionType,jdbcType=NUMERIC},
@@ -126,7 +126,7 @@
             consume_name = #{consumeName,jdbcType=VARCHAR},
         </if>
         <if test="demoArea != null">
-            demoarea = #{demoArea,jdbcType=VARCHAR},
+            memo = #{demoArea,jdbcType=VARCHAR},
         </if>
         <if test="transactionDesc != null">
             transaction_desc = #{transactionDesc,jdbcType=VARCHAR},
@@ -146,7 +146,7 @@
         <if test="txnKind != null">
             txn_kind = #{txnKind,jdbcType=VARCHAR},
         </if>
-        updatetime = current_timestamp
+        updated_at = current_timestamp
         where id = #{id,jdbcType=VARCHAR}
     </update>
 
@@ -154,7 +154,7 @@
         update transaction
         set version = version+1,
         <if test="updateUser != null">
-            updateuser = #{updateUser,jdbcType=VARCHAR},
+            updated_by = #{updateUser,jdbcType=VARCHAR},
         </if>
         balance_money =
         (
@@ -172,7 +172,7 @@
         end
         ),
         income_money = 0,
-        updatetime = current_timestamp
+        updated_at = current_timestamp
         where id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id,jdbcType=VARCHAR}
@@ -187,11 +187,11 @@
         update transaction
         set version = version+1,
         <if test="updateUser != null">
-            updateuser = #{updateUser,jdbcType=VARCHAR},
+            updated_by = #{updateUser,jdbcType=VARCHAR},
         </if>
         income_money = balance_money,
         balance_money = 0,
-        updatetime = current_timestamp
+        updated_at = current_timestamp
         where id in
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id,jdbcType=VARCHAR}
@@ -221,7 +221,7 @@
         <result column="consume_id" property="consumeID" jdbcType="VARCHAR"/>
         <result column="consume_code" property="consumeCode" jdbcType="VARCHAR"/>
         <result column="consume_name" property="consumeName" jdbcType="VARCHAR"/>
-        <result column="demoarea" property="demoArea" jdbcType="VARCHAR"/>
+        <result column="memo" property="demoArea" jdbcType="VARCHAR"/>
         <result column="income_money" property="incomeMoney" jdbcType="NUMERIC"/>
         <result column="opponent_account" property="opponentAccount" jdbcType="VARCHAR"/>
         <result column="opponent_name" property="opponentName" jdbcType="VARCHAR"/>
@@ -247,15 +247,15 @@
         t.consume_id,
         t.consume_code,
         t.consume_name,
-        t.demoarea,
-        t.recordid,
+        t.memo,
+        t.statement_id,
         t.income_money,
         t.opponent_account,
         t.opponent_name,
         t.transaction_time,
         t.account_balance
         from transaction t
-        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="excludeTransferT"/>
         <if test="q != null">
@@ -303,7 +303,7 @@
             </if>
             <if test="q.demoArea != null">
                 and (
-                    t.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    t.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                     or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 )
             </if>
@@ -323,7 +323,7 @@
 
     <select id="countTransaction" resultType="java.lang.Integer">
         select count(t.id) from transaction t
-        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="excludeTransferT"/>
         <if test="q != null">
@@ -370,7 +370,7 @@
                 and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
             </if>
             <if test="q.demoArea != null">
-                and (t.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                and (t.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
             <if test="q.weekName != null">
@@ -398,7 +398,7 @@
         )) as `value`,
         case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end as `key`
         from transaction c
-        left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
         and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
         <if test="q != null">
@@ -442,7 +442,7 @@
                 </foreach>
             </if>
             <if test="q.demoArea != null">
-                and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
@@ -454,7 +454,7 @@
         select round(sum(expense_amt)) as `value`, wday as `key` from (
         select weekday(c.bookkeeping_date) wday, (<include refid="rowExpenseAmountC"/>) as expense_amt
         from transaction c
-        left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="excludeTransferC"/>
         <if test="q != null">
@@ -486,7 +486,7 @@
                 </foreach>
             </if>
             <if test="q.demoArea != null">
-                and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
@@ -511,7 +511,7 @@
         when cmonth = 12 then 'December' else cmonth end 'key'
         from (select sum(expense_amt) balance_money,cmonth
         from (select (<include refid="rowExpenseAmountC"/>) as expense_amt, month(c.transaction_date) cmonth from transaction c
-        left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="excludeTransferC"/>
         <if test="q != null">
@@ -540,7 +540,7 @@
                 </foreach>
             </if>
             <if test="q.demoArea != null">
-                and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
@@ -571,7 +571,7 @@
                     else 0
                 end as amount
             from transaction c
-            left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+            left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
@@ -594,7 +594,7 @@
                     </foreach>
                 </if>
                 <if test="q.demoArea != null and q.demoArea != ''">
-                    and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                     or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
                 </if>
                 <!-- Income semantics: include explicit income_money OR negative balance OR income-tagged categories -->
@@ -632,7 +632,7 @@
                     else 0
                 end as amount
             from transaction c
-            left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+            left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
@@ -655,7 +655,7 @@
                     </foreach>
                 </if>
                 <if test="q.demoArea != null and q.demoArea != ''">
-                    and (c.demoarea like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                     or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
                 </if>
                 and (coalesce(c.balance_money,0) &gt; 0 or (cat.txn_types is not null and cat.txn_types like '%expense%'))
@@ -671,17 +671,17 @@
         from (
              select c.balance_money,
              case
-                 when (cat.txn_types like '%invest%' or cat.parentId = 'INVEST' or cat.code like 'INVEST%') then 'investment'
-                 when (cat.parentId = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
-                 when (cat.parentId = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
-                 when (cat.parentId = 'ENT' or cat.code like 'ENT%') then 'entertainment'
-                 when (cat.parentId = 'EDU' or cat.code like 'EDU%') then 'edu'
-                 when (cat.parentId = 'OTHER' or cat.code like 'OTHER%') then 'other'
-                 when (cat.parentId = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 when (cat.txn_types like '%invest%' or cat.parent_id = 'INVEST' or cat.code like 'INVEST%') then 'investment'
+                 when (cat.parent_id = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
+                 when (cat.parent_id = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
+                 when (cat.parent_id = 'ENT' or cat.code like 'ENT%') then 'entertainment'
+                 when (cat.parent_id = 'EDU' or cat.code like 'EDU%') then 'edu'
+                 when (cat.parent_id = 'OTHER' or cat.code like 'OTHER%') then 'other'
+                 when (cat.parent_id = 'LIVING' or cat.code like 'LIVING%') then 'life'
                  else 'life'
              end as bucket
              from transaction c
-             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
              where 1 = 1
              and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
@@ -696,17 +696,17 @@
         from (
              select c.balance_money,
              case
-                 when (cat.txn_types like '%invest%' or cat.parentId = 'INVEST' or cat.code like 'INVEST%') then 'investment'
-                 when (cat.parentId = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
-                 when (cat.parentId = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
-                 when (cat.parentId = 'ENT' or cat.code like 'ENT%') then 'entertainment'
-                 when (cat.parentId = 'EDU' or cat.code like 'EDU%') then 'edu'
-                 when (cat.parentId = 'OTHER' or cat.code like 'OTHER%') then 'other'
-                 when (cat.parentId = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 when (cat.txn_types like '%invest%' or cat.parent_id = 'INVEST' or cat.code like 'INVEST%') then 'investment'
+                 when (cat.parent_id = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
+                 when (cat.parent_id = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
+                 when (cat.parent_id = 'ENT' or cat.code like 'ENT%') then 'entertainment'
+                 when (cat.parent_id = 'EDU' or cat.code like 'EDU%') then 'edu'
+                 when (cat.parent_id = 'OTHER' or cat.code like 'OTHER%') then 'other'
+                 when (cat.parent_id = 'LIVING' or cat.code like 'LIVING%') then 'life'
                  else 'life'
              end as bucket
              from transaction c
-             left join consume_category cat on cat.code = c.consume_code and cat.deleted != 1
+             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
              where 1 = 1
              and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
@@ -719,7 +719,7 @@
     <select id="sumIncomeByYear" resultType="java.lang.Double">
         select round(coalesce(sum(<include refid="rowIncomeAmountT"/>), 0))
         from transaction t
-        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
         <include refid="excludeTransferT"/>
         and (
@@ -733,11 +733,11 @@
     <select id="sumDebtPaymentsByYear" resultType="java.lang.Double">
         select round(sum(abs(t.balance_money)))
         from transaction t
-        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
           and (
-              cat.parentId = 'LIABILITY'
+              cat.parent_id = 'LIABILITY'
               or cat.code like 'LIABILITY-%'
               or cat.code in ('FIN-14','FIN-15')
               or t.transaction_desc like '%还款%' or t.transaction_desc like '%贷款%'
@@ -749,7 +749,7 @@
         select count(1) from transaction t
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
-          and (t.transaction_desc like '%退款%' or t.demoarea like '%退款%')
+          and (t.transaction_desc like '%退款%' or t.memo like '%退款%')
     </select>
 
     <select id="listIdsNeedingAmountNormalization" resultType="java.lang.String">

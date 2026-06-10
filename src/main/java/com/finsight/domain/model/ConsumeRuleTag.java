@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
-@TableName("consume_rule_tag")
+@TableName("cls_rule_tag")
 @Getter
 @Setter
 public class ConsumeRuleTag {

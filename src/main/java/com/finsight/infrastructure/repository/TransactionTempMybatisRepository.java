@@ -23,7 +23,7 @@ public class TransactionTempMybatisRepository implements TransactionTempReposito
             return Collections.emptyList();
         }
         QueryWrapper<TransactionTemp> qw = new QueryWrapper<>();
-        qw.eq("recordID", statementId);
+        qw.eq("statement_id", statementId);
         return transactionTempMapper.selectList(qw);
     }
 
@@ -33,7 +33,7 @@ public class TransactionTempMybatisRepository implements TransactionTempReposito
             return;
         }
         QueryWrapper<TransactionTemp> qw = new QueryWrapper<>();
-        qw.eq("recordID", statementId);
+        qw.eq("statement_id", statementId);
         TransactionTemp update = new TransactionTemp();
         update.setDeleted(1);
         transactionTempMapper.update(update, qw);

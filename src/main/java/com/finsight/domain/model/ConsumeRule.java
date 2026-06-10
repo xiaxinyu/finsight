@@ -8,36 +8,28 @@ import lombok.Setter;
 import java.util.List;
 import java.util.Date;
 
-@TableName("consume_rule")
+@TableName("cls_rule")
 @Getter
 @Setter
 @lombok.ToString
 public class ConsumeRule extends BaseEntity {
     @TableId
     private String id;
-    @TableField(value = "categoryId")
     private String categoryId;
     private String pattern;
-    @TableField(value = "patternType")
     private String patternType;
     private Integer priority;
     private Integer active;
-    @TableField(value = "bankCode")
     private String bankCode;
-    @TableField(value = "cardTypeCode")
     private String cardTypeCode;
     private String remark;
     
     @TableField(exist = false)
     private List<String> tags;
     
-    @TableField(value = "minAmount")
     private Double minAmount;
-    @TableField(value = "maxAmount")
     private Double maxAmount;
-    @TableField(value = "startDate")
     private Date startDate;
-    @TableField(value = "endDate")
     private Date endDate;
 
     public String getId() { return id; }

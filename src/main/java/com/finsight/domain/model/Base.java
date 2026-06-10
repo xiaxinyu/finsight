@@ -1,24 +1,18 @@
 package com.finsight.domain.model;
 
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableField;
 
 import java.util.Date;
+
 /**
- * Created by Summer.Xia on 08/31/2015.
+ * Legacy auditable superclass for benefit/statement entities.
  */
-public class Base implements java.io.Serializable {
+public class Base extends AuditableEntity implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
-    @TableField(exist = false)
-    private Date nowDate = new Date();
-    private Integer version = 0;
-    private String createuser;
-    private Date createtime = nowDate;
-    private String updateuser;
-    private Date updatetime = nowDate;
+
     @TableId
     private String id;
-    
+
     public String getId() {
         return id;
     }
@@ -27,51 +21,51 @@ public class Base implements java.io.Serializable {
         this.id = id;
     }
 
-    public Date getNowDate() {
-        return nowDate;
-    }
-
-    public void setNowDate(Date nowDate) {
-        this.nowDate = nowDate;
-    }
-
-    public Integer getVersion() {
-        return version;
-    }
-
-    public void setVersion(Integer version) {
-        this.version = version;
-    }
-
+    /** @deprecated use {@link #getCreatedBy()} */
+    @Deprecated
     public String getCreateuser() {
-        return createuser;
+        return getCreatedBy();
     }
 
+    /** @deprecated use {@link #setCreatedBy(String)} */
+    @Deprecated
     public void setCreateuser(String createuser) {
-        this.createuser = createuser;
+        setCreatedBy(createuser);
     }
 
+    /** @deprecated use {@link #getCreatedAt()} */
+    @Deprecated
     public Date getCreatetime() {
-        return createtime;
+        return getCreatedAt();
     }
 
+    /** @deprecated use {@link #setCreatedAt(Date)} */
+    @Deprecated
     public void setCreatetime(Date createtime) {
-        this.createtime = createtime;
+        setCreatedAt(createtime);
     }
 
+    /** @deprecated use {@link #getUpdatedBy()} */
+    @Deprecated
     public String getUpdateuser() {
-        return updateuser;
+        return getUpdatedBy();
     }
 
+    /** @deprecated use {@link #setUpdatedBy(String)} */
+    @Deprecated
     public void setUpdateuser(String updateuser) {
-        this.updateuser = updateuser;
+        setUpdatedBy(updateuser);
     }
 
+    /** @deprecated use {@link #getUpdatedAt()} */
+    @Deprecated
     public Date getUpdatetime() {
-        return updatetime;
+        return getUpdatedAt();
     }
 
+    /** @deprecated use {@link #setUpdatedAt(Date)} */
+    @Deprecated
     public void setUpdatetime(Date updatetime) {
-        this.updatetime = updatetime;
+        setUpdatedAt(updatetime);
     }
 }

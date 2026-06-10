@@ -3,7 +3,7 @@ package com.finsight.application.transaction;
 import com.finsight.domain.model.Transaction;
 
 /**
- * Truncates string fields to match {@code transaction} / {@code transaction_temp} column limits.
+ * Truncates string fields to match {@code transaction} / {@code imp_staging_entry} column limits.
  */
 public final class TransactionFieldSanitizer {
 

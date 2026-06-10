@@ -1,32 +1,23 @@
 package com.finsight.domain.model;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
- * Statement Entity (formerly TransactionRecord)
- * Represents an uploaded bank statement or bill file.
+ * Uploaded bank statement (import batch).
  */
 @TableName("statement")
 public class Statement extends Base {
     private static final long serialVersionUID = 1L;
 
-    @TableField("bill_file_name")
     private String fileName;
-
-    @TableField("bill_data")
     private String content;
 
-    @TableField(value = "bill_items_count", exist = false)
+    @TableField("row_count")
     private Integer itemCount;
 
-    @TableField(exist = false)
-    private String status; // UPLOADED, PROCESSED, ERROR
-
-    @TableField(exist = false)
-    private String source; // e.g. "CCB", "CMB"
-
-    @TableField(exist = false)
+    private String status;
+    private String sourceBankCode;
     private Integer deleted;
 
     public String getFileName() {
@@ -61,12 +52,21 @@ public class Statement extends Base {
         this.status = status;
     }
 
+    /** Legacy alias for import source bank code. */
     public String getSource() {
-        return source;
+        return sourceBankCode;
     }
 
     public void setSource(String source) {
-        this.source = source;
+        this.sourceBankCode = source;
+    }
+
+    public String getSourceBankCode() {
+        return sourceBankCode;
+    }
+
+    public void setSourceBankCode(String sourceBankCode) {
+        this.sourceBankCode = sourceBankCode;
     }
 
     public Integer getDeleted() {

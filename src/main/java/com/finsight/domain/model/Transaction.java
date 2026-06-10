@@ -46,10 +46,10 @@ public class Transaction extends BaseEntity {
     @TableField(value = "consume_name")
     private String consumeName;
 
-    @TableField(value = "demoArea")
+    @TableField(value = "memo")
     private String demoArea;
 
-    @TableField(value = "recordID")
+    @TableField(value = "statement_id")
     private String recordID;
 
     @TableField(value = "income_money")

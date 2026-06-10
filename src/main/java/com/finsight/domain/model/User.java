@@ -2,7 +2,7 @@ package com.finsight.domain.model;
 
 import java.time.LocalDateTime;
 
-public class User extends BaseEntity {
+public class User {
     private Long id;
     private String username;
     private String password;

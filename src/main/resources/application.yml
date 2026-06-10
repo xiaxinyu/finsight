@@ -3,9 +3,8 @@ mybatis-plus:
   mapper-locations: classpath:mapper/*.xml  #注意：一定要对应mapper映射xml文件的所在路径
   # 实体扫描，多个package用逗号或者分号分隔
   type-aliases-package: com.finsight.domain.model.*
-  # configuration:
-    # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
-    # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  configuration:
+    map-underscore-to-camel-case: true
   global-config:
     db-config:
       idType: AUTO
@@ -13,6 +12,12 @@ mybatis-plus:
       logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
 
 spring:
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: true
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/finsight?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}

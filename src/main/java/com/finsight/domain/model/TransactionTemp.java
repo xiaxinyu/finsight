@@ -15,7 +15,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 /**
  * Temporary transaction table for preview.
  */
-@TableName("transaction_temp")
+@TableName("imp_staging_entry")
 @Getter
 @Setter
 @ToString
@@ -47,10 +47,10 @@ public class TransactionTemp extends BaseEntity {
     @TableField(value = "consume_name")
     private String consumeName;
 
-    @TableField(value = "demoArea")
+    @TableField(value = "memo")
     private String demoArea;
 
-    @TableField(value = "recordID")
+    @TableField(value = "statement_id")
     private String recordID;
 
     @TableField(value = "income_money")

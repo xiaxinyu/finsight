@@ -1,126 +1,119 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.finsight.infrastructure.mapper.UnEmploymentMapper">
-	  
+
     <insert id="addUnEmployment" parameterType="com.finsight.domain.model.UnEmployment">
-        insert into unemployment
-  		(version,createuser,updateuser,id,unit_no,unit_name,time,pay_base,personal_pay,unit_pay,total_pay,personal_reserved,demoarea)
-		values
-  		(#{version,jdbcType=NUMERIC},
-  		 #{createuser,jdbcType=VARCHAR}, 
-	  	 #{updateuser,jdbcType=VARCHAR}, 
-	  	 #{id,jdbcType=VARCHAR}, 
-  		 #{unitNo,jdbcType=VARCHAR}, 
-  		 #{unitName,jdbcType=VARCHAR}, 
-  		 #{time,jdbcType=VARCHAR}, 
-  		 #{payBase,jdbcType=NUMERIC}, 
-  		 #{personalPay,jdbcType=NUMERIC}, 
-  		 #{unitPay,jdbcType=NUMERIC},  
-  		 #{totalPay,jdbcType=NUMERIC},  
-  		 #{personalReserved,jdbcType=NUMERIC},  
-  		 #{demoArea,jdbcType=VARCHAR})		
-	</insert>
-	 
+        insert into ben_contribution
+        (version, created_by, updated_by, id, benefit_type, unit_no, unit_name, period_label,
+         pay_base, personal_pay, unit_pay, total_pay, personal_reserved, memo)
+        values
+        (#{version,jdbcType=NUMERIC},
+         #{createuser,jdbcType=VARCHAR},
+         #{updateuser,jdbcType=VARCHAR},
+         #{id,jdbcType=VARCHAR},
+         'UNEMPLOYMENT',
+         #{unitNo,jdbcType=VARCHAR},
+         #{unitName,jdbcType=VARCHAR},
+         #{time,jdbcType=VARCHAR},
+         #{payBase,jdbcType=NUMERIC},
+         #{personalPay,jdbcType=NUMERIC},
+         #{unitPay,jdbcType=NUMERIC},
+         #{totalPay,jdbcType=NUMERIC},
+         #{personalReserved,jdbcType=NUMERIC},
+         #{demoArea,jdbcType=VARCHAR})
+    </insert>
+
     <update id="updateUnEmployment" parameterType="com.finsight.domain.model.UnEmployment">
-        update unemployment
-		set version = version+1,
-		<if test="updateuser != null">
-			updateuser = #{updateuser,jdbcType=VARCHAR},
-		</if>
-		<if test="unitNo != null">
-			unit_no = #{unitNo,jdbcType=VARCHAR},
-		</if>
-		<if test="unitName != null">
-			unit_name = #{unitName,jdbcType=VARCHAR},
-		</if>
-		<if test="time != null">
-			time = #{time,jdbcType=VARCHAR},
-		</if>
-		<if test="payBase != null">
-			pay_base = #{payBase,jdbcType=NUMERIC},
-		</if>
-		 <if test="personalPay != null">
-			personal_pay = #{personalPay,jdbcType=NUMERIC},
-		</if>
-		 <if test="unitPay != null">
-			unit_pay = #{unitPay,jdbcType=NUMERIC},
-		</if>
-		 <if test="totalPay != null">
-			total_pay = #{totalPay,jdbcType=NUMERIC},
-		</if>
-		<if test="personalReserved != null">
-			personal_reserved = #{personalReserved,jdbcType=NUMERIC},
-		</if>
-		<if test="demoArea != null">
-			demoarea = #{demoArea,jdbcType=VARCHAR},
-		</if>
-		updatetime = NOW()
-		where id = #{id,jdbcType=VARCHAR}
+        update ben_contribution
+        set version = version + 1,
+        <if test="updateuser != null">
+            updated_by = #{updateuser,jdbcType=VARCHAR},
+        </if>
+        <if test="unitNo != null">
+            unit_no = #{unitNo,jdbcType=VARCHAR},
+        </if>
+        <if test="unitName != null">
+            unit_name = #{unitName,jdbcType=VARCHAR},
+        </if>
+        <if test="time != null">
+            period_label = #{time,jdbcType=VARCHAR},
+        </if>
+        <if test="payBase != null">
+            pay_base = #{payBase,jdbcType=NUMERIC},
+        </if>
+        <if test="personalPay != null">
+            personal_pay = #{personalPay,jdbcType=NUMERIC},
+        </if>
+        <if test="unitPay != null">
+            unit_pay = #{unitPay,jdbcType=NUMERIC},
+        </if>
+        <if test="totalPay != null">
+            total_pay = #{totalPay,jdbcType=NUMERIC},
+        </if>
+        <if test="personalReserved != null">
+            personal_reserved = #{personalReserved,jdbcType=NUMERIC},
+        </if>
+        <if test="demoArea != null">
+            memo = #{demoArea,jdbcType=VARCHAR},
+        </if>
+        updated_at = NOW()
+        where id = #{id,jdbcType=VARCHAR} and benefit_type = 'UNEMPLOYMENT'
     </update>
-    
+
     <delete id="deleteUnEmployment" parameterType="java.lang.String">
-    	delete from unemployment where id = #{id,jdbcType=VARCHAR} 
+        delete from ben_contribution where id = #{id,jdbcType=VARCHAR} and benefit_type = 'UNEMPLOYMENT'
     </delete>
-    
+
     <resultMap type="com.finsight.domain.model.UnEmployment" id="baseUnEmploymentsResultMap">
         <id column="id" property="id" jdbcType="VARCHAR"/>
-	    <result column="unit_no" property="unitNo" jdbcType="VARCHAR"/>
-	    <result column="unit_name" property="unitName" jdbcType="VARCHAR"/>
-	    <result column="time" property="time" jdbcType="VARCHAR"/>
-	    <result column="pay_base" property="payBase" jdbcType="NUMERIC" />
-	    <result column="personal_pay" property="personalPay" jdbcType="NUMERIC"/>
-	    <result column="unit_pay" property="unitPay" jdbcType="NUMERIC"/>
-	    <result column="total_pay" property="totalPay" jdbcType="NUMERIC"/>
-	    <result column="personal_reserved" property="personalReserved" jdbcType="NUMERIC"/>
-	    <result column="demoarea" property="demoArea" jdbcType="VARCHAR"/>
+        <result column="unit_no" property="unitNo" jdbcType="VARCHAR"/>
+        <result column="unit_name" property="unitName" jdbcType="VARCHAR"/>
+        <result column="period_label" property="time" jdbcType="VARCHAR"/>
+        <result column="pay_base" property="payBase" jdbcType="NUMERIC"/>
+        <result column="personal_pay" property="personalPay" jdbcType="NUMERIC"/>
+        <result column="unit_pay" property="unitPay" jdbcType="NUMERIC"/>
+        <result column="total_pay" property="totalPay" jdbcType="NUMERIC"/>
+        <result column="personal_reserved" property="personalReserved" jdbcType="NUMERIC"/>
+        <result column="memo" property="demoArea" jdbcType="VARCHAR"/>
     </resultMap>
-    
+
     <select id="getUnEmployments" resultMap="baseUnEmploymentsResultMap">
-    	select id,
-               unit_no,
-               unit_name,
-               time,
-               pay_base,
-               personal_pay,
-               unit_pay,
-               total_pay,
-               personal_reserved,
-               demoarea
-          from unemployment
-          where 1 = 1
-          <if test="unEmployment != null">
-              <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
-                  and time &gt;= #{unEmployment.timeFrom}
-              </if>
-              <if test="unEmployment.timeTo != null and unEmployment.timeTo != ''">
-                  and time &lt;= #{unEmployment.timeTo}
-              </if>
-              <if test="unEmployment.unitNo != null and unEmployment.unitNo != ''">
-                  and unit_no = #{unEmployment.unitNo}
-              </if>
-              <if test="unEmployment.demoArea != null and unEmployment.demoArea != ''">
-                  and demoarea like concat('%', #{unEmployment.demoArea}, '%')
-              </if>
-          </if>
-         order by time desc
-         limit #{page.recordBegin}, #{page.pageSize}
-    </select>
-    
-    <select id="countUnEmployments" resultType="java.lang.Integer">
-    	select count(id) from unemployment
-        where 1 = 1
+        select id, unit_no, unit_name, period_label, pay_base, personal_pay, unit_pay, total_pay, personal_reserved, memo
+        from ben_contribution
+        where benefit_type = 'UNEMPLOYMENT'
         <if test="unEmployment != null">
             <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
-                and time &gt;= #{unEmployment.timeFrom}
+                and period_label &gt;= #{unEmployment.timeFrom}
             </if>
             <if test="unEmployment.timeTo != null and unEmployment.timeTo != ''">
-                and time &lt;= #{unEmployment.timeTo}
+                and period_label &lt;= #{unEmployment.timeTo}
             </if>
             <if test="unEmployment.unitNo != null and unEmployment.unitNo != ''">
                 and unit_no = #{unEmployment.unitNo}
             </if>
             <if test="unEmployment.demoArea != null and unEmployment.demoArea != ''">
-                and demoarea like concat('%', #{unEmployment.demoArea}, '%')
+                and memo like concat('%', #{unEmployment.demoArea}, '%')
+            </if>
+        </if>
+        order by period_label desc
+        limit #{page.recordBegin}, #{page.pageSize}
+    </select>
+
+    <select id="countUnEmployments" resultType="java.lang.Integer">
+        select count(id) from ben_contribution
+        where benefit_type = 'UNEMPLOYMENT'
+        <if test="unEmployment != null">
+            <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
+                and period_label &gt;= #{unEmployment.timeFrom}
+            </if>
+            <if test="unEmployment.timeTo != null and unEmployment.timeTo != ''">
+                and period_label &lt;= #{unEmployment.timeTo}
+            </if>
+            <if test="unEmployment.unitNo != null and unEmployment.unitNo != ''">
+                and unit_no = #{unEmployment.unitNo}
+            </if>
+            <if test="unEmployment.demoArea != null and unEmployment.demoArea != ''">
+                and memo like concat('%', #{unEmployment.demoArea}, '%')
             </if>
         </if>
     </select>

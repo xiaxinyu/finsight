@@ -604,6 +604,31 @@
   justify-content: flex-end;
 }
 
+.fs-data-table--with-summary .ant-pro-table-list-toolbar {
+  padding: 8px 12px;
+  min-height: 0;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.fs-data-table--with-summary .ant-pro-table-list-toolbar-title {
+  display: block !important;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.fs-data-table--with-summary .ant-pro-table-list-toolbar-container {
+  align-items: center;
+}
+
+.fs-data-table--with-summary .fs-tx-summary-bar {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  overflow: visible;
+}
+
 .fs-data-table .ant-pro-table-list-toolbar-container {
   flex-wrap: nowrap !important;
   align-items: center;

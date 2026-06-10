@@ -57,7 +57,7 @@ export function TransactionsPage() {
   const [editableKeys, setEditableKeys] = useState<React.Key[]>([])
   const [tableLoading, setTableLoading] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
-  const tableHeight = useViewportTableHeight(178)
+  const tableHeight = useViewportTableHeight(190)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
 
@@ -320,19 +320,6 @@ export function TransactionsPage() {
           dirty={isDirty}
           selectedCount={selectedRowKeys.length}
           actions={batchActions}
-          summary={(
-            <TransactionSummaryBar
-              density="toolbar"
-              total={stats?.total}
-              income={stats?.income}
-              expense={stats?.expense}
-              net={stats?.net}
-              unclassified={stats?.unclassified}
-              transfers={stats?.transfers}
-              truncated={stats?.truncated}
-              loading={statsBusy}
-            />
-          )}
         >
           <PeriodRangePicker
             size="small"
@@ -394,13 +381,27 @@ export function TransactionsPage() {
       )}
       <div className="fs-table-panel fs-table-panel--editable">
         <ProTable<TransactionRow>
-          className="fs-data-table fs-data-table--no-title"
+          className="fs-data-table fs-data-table--with-summary"
           actionRef={actionRef}
           rowKey="id"
           size="small"
           scroll={{ x: 'max-content', y: tableHeight }}
           search={false}
           loading={tableLoading}
+          toolbar={{
+            title: (
+              <TransactionSummaryBar
+                total={stats?.total}
+                income={stats?.income}
+                expense={stats?.expense}
+                net={stats?.net}
+                unclassified={stats?.unclassified}
+                transfers={stats?.transfers}
+                truncated={stats?.truncated}
+                loading={statsBusy}
+              />
+            ),
+          }}
           options={{ density: true, reload: true, setting: true }}
           rowSelection={{
             selectedRowKeys,

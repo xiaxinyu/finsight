@@ -65,7 +65,7 @@ public class TransactionMybatisRepository implements TransactionRepository {
         }
         com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Transaction> wrapper =
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-        wrapper.eq("recordID", statementId);
+        wrapper.eq("statement_id", statementId);
         return transactionMapper.delete(wrapper);
     }
 

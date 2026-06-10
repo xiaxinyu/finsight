@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@TableName("bank_card")
+@TableName("fin_bank_account")
 public class BankCard extends BaseEntity {
     @TableId
     private String id;
