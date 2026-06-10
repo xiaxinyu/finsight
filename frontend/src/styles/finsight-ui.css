@@ -21,6 +21,12 @@
   min-height: 0;
 }
 
+.fs-app-content:has(.fs-data-page--fill) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .fs-app-header {
   height: 48px !important;
   line-height: 48px !important;
@@ -81,6 +87,56 @@
   flex-direction: column;
   min-height: calc(100vh - 72px);
   gap: 0;
+}
+
+.fs-data-page.fs-data-page--fill {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.fs-data-page--fill .fs-toolbar-bar {
+  flex-shrink: 0;
+}
+
+.fs-data-page--fill .fs-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fs-data-page--fill .fs-edit-banner {
+  flex-shrink: 0;
+}
+
+.fs-data-page--fill .fs-table-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-data-page--fill .fs-table-panel > .ant-pro-table,
+.fs-data-page--fill .fs-table-panel > .fs-data-table {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-data-page--fill .fs-table-panel .ant-pro-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-data-page--fill .fs-table-panel .ant-pro-card .ant-pro-card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
 }
 
 .fs-page-topbar {

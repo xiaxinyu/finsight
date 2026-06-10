@@ -15,7 +15,7 @@ import {
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useFilterApply } from '../../hooks/useFilterApply'
-import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
+import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { TransactionSummaryBar } from '../../components/TransactionSummaryBar'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -50,6 +50,7 @@ function findTreeTitle(nodes: { title: string; value: string; children?: typeof 
 
 export function TransactionsPage() {
   const actionRef = useRef<ActionType>(null)
+  const tablePanelRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
   const [searchParams] = useSearchParams()
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
@@ -57,7 +58,7 @@ export function TransactionsPage() {
   const [editableKeys, setEditableKeys] = useState<React.Key[]>([])
   const [tableLoading, setTableLoading] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
-  const tableHeight = useViewportTableHeight(190)
+  const tableHeight = useFillTableHeight(tablePanelRef)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
 
@@ -312,7 +313,7 @@ export function TransactionsPage() {
     <DataPageLayout
       title="Transactions"
       icon={<UnorderedListOutlined />}
-      className="fs-data-page--dense"
+      className="fs-data-page--dense fs-data-page--fill"
       toolbar={(
         <FilterToolbar
           loading={tableLoading || applying}
@@ -379,7 +380,7 @@ export function TransactionsPage() {
           </Space>
         </div>
       )}
-      <div className="fs-table-panel fs-table-panel--editable">
+      <div ref={tablePanelRef} className="fs-table-panel fs-table-panel--editable">
         <ProTable<TransactionRow>
           className="fs-data-table fs-data-table--with-summary"
           actionRef={actionRef}
