@@ -178,11 +178,6 @@
   flex-shrink: 0;
 }
 
-.fs-toolbar-bar--stacked {
-  padding: 6px 10px 8px;
-  margin-bottom: 6px;
-}
-
 .fs-toolbar-form {
   display: flex;
   align-items: flex-start;
@@ -191,25 +186,24 @@
   flex-wrap: wrap;
 }
 
-.fs-toolbar-form--stacked {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
+.fs-toolbar-form--with-summary {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
 }
 
-.fs-toolbar-row--main {
+.fs-toolbar-form--with-summary .fs-toolbar-filters {
+  flex: 0 1 auto;
+}
+
+.fs-toolbar-summary {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.fs-toolbar-row--stats {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid #e8edf3;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
+  padding: 0 4px;
 }
 
 .fs-toolbar-filters {
@@ -224,6 +218,10 @@
   margin-left: auto;
   flex-shrink: 0;
   align-items: center;
+}
+
+.fs-toolbar-form--with-summary .fs-toolbar-actions {
+  margin-left: 0;
 }
 
 /* ── Cards (KPI / charts only) ── */
@@ -266,9 +264,11 @@
 }
 
 .fs-tx-summary-bar--toolbar {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: auto;
+  max-width: 100%;
   overflow-x: auto;
 }
 

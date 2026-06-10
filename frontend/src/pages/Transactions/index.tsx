@@ -57,7 +57,7 @@ export function TransactionsPage() {
   const [editableKeys, setEditableKeys] = useState<React.Key[]>([])
   const [tableLoading, setTableLoading] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
-  const tableHeight = useViewportTableHeight(210)
+  const tableHeight = useViewportTableHeight(178)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
 
