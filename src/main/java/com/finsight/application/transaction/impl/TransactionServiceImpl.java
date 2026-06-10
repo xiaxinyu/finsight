@@ -11,6 +11,7 @@ import com.finsight.common.exception.AppException;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.application.transaction.TransactionAmountNormalizer;
+import com.finsight.application.transaction.TransactionFieldSanitizer;
 import com.finsight.domain.port.TransactionRepository;
 import com.finsight.application.query.TransactionQuery;
 import com.alibaba.fastjson.JSONArray;
@@ -263,6 +264,7 @@ public class TransactionServiceImpl implements ITransactionService {
 
     private void prepareForInsert(Transaction transaction, String userName) {
         TransactionAmountNormalizer.normalize(transaction);
+        TransactionFieldSanitizer.sanitize(transaction);
         if (transaction.getId() == null || transaction.getId().trim().isEmpty()
                 || transactionRepository.selectById(transaction.getId()) != null) {
             transaction.setId(StringTool.generateID());
