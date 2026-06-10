@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.web.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

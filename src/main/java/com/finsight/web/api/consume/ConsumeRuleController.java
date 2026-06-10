@@ -1,4 +1,4 @@
-package com.finsight.web.restful.consume;
+package com.finsight.web.api.consume;
 
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.application.consume.ClassificationService;
@@ -59,7 +59,7 @@ public class ConsumeRuleController {
     public ConsumeRule add(@RequestBody ConsumeRule rule){
         log.info("Try to add rule: {}", rule);
         try {
-            rule.setId(com.finsight.core.StringTool.generateID());
+            rule.setId(com.finsight.common.util.StringTool.generateID());
             ruleService.save(rule);
             log.info("Rule added successfully: {}", rule.getId());
             classificationService.reload();

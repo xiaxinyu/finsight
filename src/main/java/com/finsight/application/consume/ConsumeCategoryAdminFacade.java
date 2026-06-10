@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.domain.model.Transaction;
 import com.finsight.infrastructure.mapper.TransactionMapper;
-import com.finsight.web.restful.model.CollectionResult;
+import com.finsight.web.api.dto.CollectionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

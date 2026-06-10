@@ -1,8 +1,8 @@
-package com.finsight.web.restful.consume;
+package com.finsight.web.api.consume;
 
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.application.consume.ConsumeCategoryAdminFacade;
-import com.finsight.web.restful.model.CollectionResult;
+import com.finsight.web.api.dto.CollectionResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

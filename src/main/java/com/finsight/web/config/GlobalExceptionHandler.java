@@ -1,6 +1,8 @@
-package com.finsight.core;
+package com.finsight.web.config;
 
-import com.finsight.web.restful.model.ResponseEntity;
+import com.finsight.common.exception.AppException;
+import com.finsight.common.exception.AppServiceException;
+import com.finsight.web.api.dto.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
@@ -31,18 +33,18 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(AppServiceException.class)
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<?> handleAppServiceException(AppServiceException ex) {
+    public ApiResponse<?> handleAppServiceException(AppServiceException ex) {
         log.error(ex.getMessage(), ex);
         String message = ex.getMessage();
         if (message == null || message.isBlank()) {
             message = messageSource.getMessage("error.system.error", null, "Operation failed", Locale.getDefault());
         }
-        return ResponseEntity.error(message);
+        return ApiResponse.error(message);
     }
 
     @ExceptionHandler(value = Exception.class)
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<?> catchExceptionHandler(Exception exception) {
+    public ApiResponse<?> catchExceptionHandler(Exception exception) {
         log.error(exception.getMessage(), exception);
 
         String message;
@@ -70,7 +72,7 @@ public class GlobalExceptionHandler {
                 message = fallback;
             }
             String resolvedMessage = (message == null || message.isBlank()) ? fallback : message;
-            return ResponseEntity.error(resolvedMessage);
+            return ApiResponse.error(resolvedMessage);
         }
 
         if (tempEx instanceof MethodArgumentNotValidException) {
@@ -81,7 +83,7 @@ public class GlobalExceptionHandler {
                     FieldError fieldError = bindingResult.getFieldError();
                     if (Objects.nonNull(fieldError)) {
                         message = fieldError.getDefaultMessage();
-                        return ResponseEntity.error(message);
+                        return ApiResponse.error(message);
                     }
                 }
             }
@@ -100,7 +102,7 @@ public class GlobalExceptionHandler {
             } else {
                 message = String.format("参数格式错误: 参数 [%s] 类型应为 %s", propertyName, typeName);
             }
-            return ResponseEntity.error(message);
+            return ApiResponse.error(message);
         }
 
         if (exception instanceof DataIntegrityViolationException){
@@ -113,19 +115,19 @@ public class GlobalExceptionHandler {
                 || lower.contains("failed to obtain jdbc connection")
                 || (lower.contains("jdbc") && lower.contains("connect"))) {
             message = "数据库连接失败，请确认数据库服务已启动，并检查网络与配置。";
-            return ResponseEntity.error(message);
+            return ApiResponse.error(message);
         }
         if (lower.contains("access denied for user") || lower.contains("authentication")){
             message = "数据库认证失败，请检查数据库用户名和密码是否正确。";
-            return ResponseEntity.error(message);
+            return ApiResponse.error(message);
         }
         if (lower.contains("unknown database")){
             message = "数据库不存在，请检查数据库名称配置。";
-            return ResponseEntity.error(message);
+            return ApiResponse.error(message);
         }
 
         message = messageSource.getMessage("error.system.error", null, "System error", Locale.getDefault());
-        return ResponseEntity.error(message);
+        return ApiResponse.error(message);
     }
 
     private Throwable getCause(Throwable ex) {

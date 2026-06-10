@@ -38,20 +38,47 @@
         ) d
     </select>
 
-    <select id="latestAccountBalances" resultType="com.finsight.domain.model.KeyValue">
-        select fa.name as `key`, round(coalesce(s.balance, 0), 2) as `value`
-        from financial_account fa
+    <select id="countTransferGroups" resultType="int">
+        select count(distinct t.transfer_group_id)
+        from transaction t
+        where t.txn_kind = 'transfer'
+          and t.transfer_group_id is not null
+          and length(trim(t.transfer_group_id)) &gt; 0
+    </select>
+
+    <select id="listTransferGroups" resultType="map">
+        select t.transfer_group_id as transferGroupId,
+               min(t.transaction_date) as transferDate,
+               count(*) as transactionCount
+        from transaction t
+        where t.txn_kind = 'transfer'
+          and t.transfer_group_id is not null
+          and length(trim(t.transfer_group_id)) &gt; 0
+        group by t.transfer_group_id
+        order by transferDate desc
+    </select>
+
+    <select id="latestBalancesFromBankCards" resultType="com.finsight.domain.model.KeyValue">
+        select coalesce(nullif(trim(bc.card_name), ''),
+               concat(coalesce(bc.bank_code, ''), ' ', coalesce(bc.card_type_code, ''))) as `key`,
+               round(coalesce(bal.balance, 0), 2) as `value`
+        from bank_card bc
         left join (
-            select account_id, balance
-            from account_balance_snapshot abs1
-            inner join (
-                select account_id aid, max(snapshot_date) maxd
-                from account_balance_snapshot
-                group by account_id
-            ) abs2 on abs1.account_id = abs2.aid and abs1.snapshot_date = abs2.maxd
-        ) s on s.account_id = fa.id
-        where coalesce(fa.deleted, 0) = 0
-        order by fa.display_order, fa.name
+            select t.bank_card_id, round(coalesce(t.account_balance, 0), 2) as balance
+            from transaction t
+            where t.account_balance is not null
+              and t.bank_card_id is not null
+              and length(trim(t.bank_card_id)) &gt; 0
+              and t.id = (
+                select t2.id from transaction t2
+                where t2.bank_card_id = t.bank_card_id
+                  and t2.account_balance is not null
+                order by t2.transaction_date desc, t2.id desc
+                limit 1
+              )
+        ) bal on bal.bank_card_id = bc.id
+        where coalesce(bc.deleted, 0) != 1
+        order by bc.card_name, bc.bank_code
     </select>
 
     <select id="sumExpenseSince" resultType="double">
@@ -110,6 +137,58 @@
             ))
             from transaction x
         )
+    </select>
+
+    <select id="latestInferredBalancePerCard" resultType="com.finsight.domain.model.KeyValue">
+        select t.bank_card_id as `key`, round(coalesce(t.account_balance, 0), 2) as `value`
+        from transaction t
+        where t.account_balance is not null
+          and t.bank_card_id is not null
+          and length(trim(t.bank_card_id)) &gt; 0
+          and t.id = (
+            select t2.id from transaction t2
+            where t2.bank_card_id = t.bank_card_id
+              and t2.account_balance is not null
+            order by t2.transaction_date desc, t2.id desc
+            limit 1
+          )
+    </select>
+
+    <select id="sumExpenseByBucketSince" resultType="double">
+        select coalesce(sum(abs(coalesce(t.balance_money, 0))), 0)
+        from transaction t
+        left join consume_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where t.transaction_date &gt;= #{since,jdbcType=DATE}
+        and (cat.txn_types like '%expense%' or (cat.code is null and coalesce(t.balance_money,0) &gt; 0))
+        <include refid="excludeTransfer"/>
+        <choose>
+            <when test="bucketKey == 'fixed'">
+                and (cat.parentId = 'FIXED' or cat.code like 'FIXED%' or t.transaction_desc like '%房租%' or t.transaction_desc like '%房贷%')
+            </when>
+            <when test="bucketKey == 'shopping'">
+                and (cat.parentId = 'SHOPPING' or cat.code like 'SHOPPING%')
+            </when>
+            <when test="bucketKey == 'investment'">
+                and (cat.txn_types like '%invest%' or cat.parentId = 'INVEST' or cat.code like 'INVEST%')
+            </when>
+            <when test="bucketKey == 'life'">
+                and (cat.parentId = 'LIVING' or cat.code like 'LIVING%' or cat.parentId is null)
+            </when>
+            <when test="bucketKey == 'all'">
+                and 1 = 1
+            </when>
+            <otherwise>
+                and (cat.code = #{bucketKey,jdbcType=VARCHAR} or cat.parentId = #{bucketKey,jdbcType=VARCHAR})
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="sumExpenseByCategorySince" resultType="double">
+        select coalesce(sum(abs(coalesce(t.balance_money, 0))), 0)
+        from transaction t
+        where t.transaction_date &gt;= #{since,jdbcType=DATE}
+        and t.consume_code = #{categoryCode,jdbcType=VARCHAR}
+        <include refid="excludeTransfer"/>
     </select>
 
     <select id="findDuplicatePreviewTempIds" resultType="string">

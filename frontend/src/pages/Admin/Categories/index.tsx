@@ -1,8 +1,8 @@
 import { Tree } from 'antd'
 import { ClusterOutlined } from '@ant-design/icons'
-import { useConsumeAntTree } from '../../hooks/useConsumeTree'
-import { DataPageLayout } from '../../components/DataPageLayout'
-import { PageSkeleton } from '../../components/PageSkeleton'
+import { useConsumeAntTree } from '../../../hooks/useConsumeTree'
+import { DataPageLayout } from '../../../components/DataPageLayout'
+import { PageSkeleton } from '../../../components/PageSkeleton'
 
 export function CategoriesAdminPage() {
   const { treeData, isLoading } = useConsumeAntTree()

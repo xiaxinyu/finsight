@@ -1,52 +1,32 @@
 package com.finsight.application.finance;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.domain.model.FinancialGoal;
-import com.finsight.infrastructure.mapper.FinancialGoalMapper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class FinancialGoalService {
 
-    private final FinancialGoalMapper goalMapper;
-    private final AuthenticationFacade authenticationFacade;
+    private final PlanningPreferencesStore preferencesStore;
 
-    public FinancialGoalService(FinancialGoalMapper goalMapper, AuthenticationFacade authenticationFacade) {
-        this.goalMapper = goalMapper;
-        this.authenticationFacade = authenticationFacade;
+    public FinancialGoalService(PlanningPreferencesStore preferencesStore) {
+        this.preferencesStore = preferencesStore;
     }
 
     public List<FinancialGoal> list() {
-        return goalMapper.selectList(Wrappers.<FinancialGoal>lambdaQuery()
-                .eq(FinancialGoal::getDeleted, 0)
-                .orderByAsc(FinancialGoal::getTargetDate));
+        return preferencesStore.goals();
     }
 
     public FinancialGoal save(FinancialGoal goal) {
-        if (goal.getId() == null || goal.getId().isBlank()) {
-            goal.setId(UUID.randomUUID().toString());
-            goal.setDeleted(0);
-            goal.setCreateUser(authenticationFacade.getUserName());
-            goal.setCreateTime(new Date());
-            if (goal.getCurrentAmount() == null) {
-                goal.setCurrentAmount(BigDecimal.ZERO);
-            }
-            goalMapper.insert(goal);
-        } else {
-            goal.setUpdateUser(authenticationFacade.getUserName());
-            goal.setUpdateTime(new Date());
-            goalMapper.updateById(goal);
+        if (goal.getCurrentAmount() == null) {
+            goal.setCurrentAmount(BigDecimal.ZERO);
         }
-        return goal;
+        return preferencesStore.saveGoal(goal);
     }
 
     public Map<String, Object> progress(FinancialGoal goal) {

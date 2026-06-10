@@ -3,7 +3,7 @@ package com.finsight.application.transaction.impl;
 import com.alibaba.fastjson.JSON;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.transaction.ITransactionClassificationService;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.Transaction;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;

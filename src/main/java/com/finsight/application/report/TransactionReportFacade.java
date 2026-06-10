@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSONArray;
 import com.finsight.application.query.TransactionQuery;
 import com.finsight.application.query.TransactionQueryAssembler;
 import com.finsight.application.transaction.ITransactionService;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.port.TransactionRepository;
-import com.finsight.web.restful.model.TransactionParam;
+import com.finsight.web.api.dto.TransactionParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

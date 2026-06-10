@@ -25,7 +25,9 @@
 
 | Boundary | What belongs here | What must not be here |
 |----------|-------------------|------------------------|
-| `com.finsight.web` | Web controllers (Thymeleaf pages + JSON endpoints) | Direct SQL / persistence details (should go through application/domain/infra abstractions) |
+| `com.finsight.web` | Web layer: `web.api` (REST), `web.config` (security/MVC), `web.security`, `web.controller` (SPA/MVC) | Direct SQL / persistence details (should go through application/domain/infra abstractions) |
+| `com.finsight.common` | Shared exceptions (`common.exception`) and utilities (`common.util`) | Business use cases, HTTP handlers |
+| `com.finsight.config` | Boot configuration beans (MyBatis, properties, startup listeners) | Domain logic, controllers |
 | `com.finsight.application` | Use cases/services/facades/importers/reporting | HTTP concerns (request/response objects), template rendering |
 | `com.finsight.domain` | Domain models and ports (`...domain.port.*`) | Spring MVC annotations; MyBatis mapper interfaces |
 | `com.finsight.infrastructure` | MyBatis mapper interfaces + persistence adapters | UI/controller logic |

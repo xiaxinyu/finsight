@@ -1,10 +1,10 @@
-package com.finsight.web.restful.salary;
+package com.finsight.web.api.salary;
 
 import com.finsight.application.ledger.ISalaryListingService;
 import com.finsight.domain.model.Transaction;
-import com.finsight.web.restful.common.ControllerHelper;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.TransactionParam;
+import com.finsight.web.api.support.ControllerHelper;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.TransactionParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/salary")
-public class SalaryResource extends ControllerHelper {
+public class SalaryController extends ControllerHelper {
 
-    private static final Logger logger = LoggerFactory.getLogger(SalaryResource.class);
+    private static final Logger logger = LoggerFactory.getLogger(SalaryController.class);
 
     @Autowired
     private ISalaryListingService salaryListingService;

@@ -1,14 +1,9 @@
 package com.finsight.application.finance;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.domain.model.Budget;
 import com.finsight.domain.model.BudgetLine;
-import com.finsight.infrastructure.mapper.BudgetLineMapper;
-import com.finsight.infrastructure.mapper.BudgetMapper;
 import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -18,64 +13,41 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class BudgetService {
 
-    private final BudgetMapper budgetMapper;
-    private final BudgetLineMapper budgetLineMapper;
+    private final PlanningPreferencesStore preferencesStore;
     private final FinancialMapper financialMapper;
-    private final AuthenticationFacade authenticationFacade;
 
-    public BudgetService(BudgetMapper budgetMapper,
-                         BudgetLineMapper budgetLineMapper,
-                         FinancialMapper financialMapper,
-                         AuthenticationFacade authenticationFacade) {
-        this.budgetMapper = budgetMapper;
-        this.budgetLineMapper = budgetLineMapper;
+    public BudgetService(PlanningPreferencesStore preferencesStore, FinancialMapper financialMapper) {
+        this.preferencesStore = preferencesStore;
         this.financialMapper = financialMapper;
-        this.authenticationFacade = authenticationFacade;
     }
 
     public Budget currentMonthlyBudget() {
         Calendar cal = Calendar.getInstance();
         int year = cal.get(Calendar.YEAR);
         int month = cal.get(Calendar.MONTH) + 1;
-        Budget b = budgetMapper.selectOne(Wrappers.<Budget>lambdaQuery()
-                .eq(Budget::getPeriodType, "monthly")
-                .eq(Budget::getYear, year)
-                .eq(Budget::getMonth, month)
-                .eq(Budget::getDeleted, 0));
-        if (b != null) {
-            return b;
-        }
-        Budget created = new Budget();
-        created.setId(UUID.randomUUID().toString());
-        created.setName(year + "-" + month + " Budget");
-        created.setPeriodType("monthly");
-        created.setYear(year);
-        created.setMonth(month);
-        created.setDeleted(0);
-        created.setCreateUser(authenticationFacade.getUserName());
-        created.setCreateTime(new Date());
-        budgetMapper.insert(created);
-        return created;
+        Budget b = new Budget();
+        b.setId("monthly-" + year + "-" + month);
+        b.setName(year + "-" + month + " Budget");
+        b.setPeriodType("monthly");
+        b.setYear(year);
+        b.setMonth(month);
+        b.setDeleted(0);
+        return b;
     }
 
     public List<BudgetLine> linesForBudget(String budgetId) {
-        return budgetLineMapper.selectList(Wrappers.<BudgetLine>lambdaQuery().eq(BudgetLine::getBudgetId, budgetId));
+        return preferencesStore.budgetLinesForCurrentMonth();
     }
 
-    @Transactional
     public BudgetLine saveLine(BudgetLine line) {
-        if (line.getId() == null || line.getId().isBlank()) {
-            line.setId(UUID.randomUUID().toString());
-            budgetLineMapper.insert(line);
-        } else {
-            budgetLineMapper.updateById(line);
+        if (line.getBudgetId() == null || line.getBudgetId().isBlank()) {
+            line.setBudgetId(currentMonthlyBudget().getId());
         }
-        return line;
+        return preferencesStore.upsertBudgetLine(line);
     }
 
     public List<Map<String, Object>> budgetVsActual() {
@@ -93,7 +65,11 @@ public class BudgetService {
             row.put("bucketKey", line.getBucketKey());
             row.put("categoryCode", line.getCategoryCode());
             row.put("limit", line.getLimitAmount());
-            limitTotal += line.getLimitAmount() == null ? 0 : line.getLimitAmount().doubleValue();
+            double actual = resolveActual(monthStart, line);
+            row.put("actual", actual);
+            double limit = line.getLimitAmount() == null ? 0 : line.getLimitAmount().doubleValue();
+            row.put("remaining", limit - actual);
+            limitTotal += limit;
             rows.add(row);
         }
         if (rows.isEmpty()) {
@@ -103,12 +79,6 @@ public class BudgetService {
             row.put("actual", actualTotal);
             row.put("remaining", -actualTotal);
             rows.add(row);
-        } else {
-            for (Map<String, Object> row : rows) {
-                row.put("actual", actualTotal / rows.size());
-                double limit = ((BigDecimal) row.get("limit")).doubleValue();
-                row.put("remaining", limit - ((Number) row.get("actual")).doubleValue());
-            }
         }
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("budgetId", budget.getId());
@@ -116,6 +86,14 @@ public class BudgetService {
         meta.put("actualTotal", actualTotal);
         meta.put("lines", rows);
         return List.of(meta);
+    }
+
+    private double resolveActual(Date monthStart, BudgetLine line) {
+        if (line.getCategoryCode() != null && !line.getCategoryCode().isBlank()) {
+            return safe(financialMapper.sumExpenseByCategorySince(monthStart, line.getCategoryCode()));
+        }
+        String bucket = line.getBucketKey() == null || line.getBucketKey().isBlank() ? "all" : line.getBucketKey();
+        return safe(financialMapper.sumExpenseByBucketSince(monthStart, bucket));
     }
 
     private static double safe(Double v) {

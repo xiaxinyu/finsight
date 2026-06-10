@@ -1,12 +1,12 @@
-package com.finsight.web.restful.insurance;
+package com.finsight.web.api.benefit;
 
 import com.finsight.application.benefit.IAccumulationListingService;
 import com.finsight.application.benefit.IAccumulationService;
 import com.finsight.domain.model.Accumulation;
-import com.finsight.web.restful.common.ControllerHelper;
-import com.finsight.web.restful.model.AccumulationParam;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.CommonResult;
+import com.finsight.web.api.support.ControllerHelper;
+import com.finsight.web.api.dto.AccumulationParam;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.CommonResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/accumulation")
-public class AccumulationResource extends ControllerHelper {
-	private static final Logger logger = LoggerFactory.getLogger(AccumulationResource.class);
+public class AccumulationController extends ControllerHelper {
+	private static final Logger logger = LoggerFactory.getLogger(AccumulationController.class);
 	
 	@Autowired
 	private IAccumulationService accumulationService;

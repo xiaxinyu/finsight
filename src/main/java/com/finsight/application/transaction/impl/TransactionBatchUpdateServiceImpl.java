@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.application.consume.ConsumeCategoryService;
 import com.finsight.application.transaction.ITransactionBatchUpdateService;
 import com.finsight.application.transaction.ITransactionService;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.domain.model.Transaction;
 import org.apache.commons.lang3.StringUtils;

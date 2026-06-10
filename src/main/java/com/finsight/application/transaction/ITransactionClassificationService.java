@@ -1,6 +1,6 @@
 package com.finsight.application.transaction;
 
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.Transaction;
 
 import java.util.Optional;

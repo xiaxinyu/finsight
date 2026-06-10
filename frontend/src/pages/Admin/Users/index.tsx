@@ -2,10 +2,10 @@ import { useRef } from 'react'
 import { Button, message, Popconfirm } from 'antd'
 import { PlusOutlined, TeamOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType } from '@ant-design/pro-components'
-import { createUser, deleteUser, listUsers, updateUser } from '../../api/admin'
-import { DataPageLayout } from '../../components/DataPageLayout'
-import { EmptyState } from '../../components/EmptyState'
-import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
+import { createUser, deleteUser, listUsers, updateUser } from '../../../api/admin'
+import { DataPageLayout } from '../../../components/DataPageLayout'
+import { EmptyState } from '../../../components/EmptyState'
+import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 
 export function UsersAdminPage() {
   const actionRef = useRef<ActionType>(null)

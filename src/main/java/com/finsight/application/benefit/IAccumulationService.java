@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.finsight.domain.model.Accumulation;
 import com.finsight.domain.model.Page;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 
 public interface IAccumulationService {
     void addAccumulation(Accumulation accumulation) throws AppServiceException;

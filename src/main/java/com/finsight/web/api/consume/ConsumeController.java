@@ -1,7 +1,7 @@
-package com.finsight.web.restful.consume;
+package com.finsight.web.api.consume;
 
 import com.finsight.application.consume.ConsumeCategoryService;
-import com.finsight.web.restful.model.TreeNode;
+import com.finsight.web.api.dto.TreeNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -23,7 +23,7 @@ Browser (Thymeleaf page + JS) -> Spring MVC controller (@Controller/@RestControl
 
 Concrete example (transactions):
 - UI calls `/transaction/getTransactions` and other endpoints from `src/main/resources/static/scripts/transaction.js`.
-- Controller delegates to listing/service interfaces in `src/main/java/com/finsight/web/restful/transaction/TransactionController.java`.
+- Controller delegates to listing/service interfaces in `src/main/java/com/finsight/web/api/transaction/TransactionController.java`.
 - Application service uses domain port `com.finsight.domain.port.TransactionRepository` (injected) as shown in `TransactionServiceImpl`.
 - Infrastructure persistence uses MyBatis mapper interfaces and XML, e.g. `TransactionMapper.java` + `src/main/resources/mapper/TransactionMapper.xml`.
 
@@ -31,7 +31,7 @@ Concrete example (transactions):
 
 | Layer or module | Owns | Must not own | Evidence |
 |-----------------|------|--------------|----------|
-| Web (`com.finsight.web.*`) | Routing, request binding, response shaping | SQL, persistence mapping | `src/main/java/com/finsight/web/restful/transaction/TransactionController.java` |
+| Web (`com.finsight.web.*`) | Routing, request binding, response shaping | SQL, persistence mapping | `src/main/java/com/finsight/web/api/transaction/TransactionController.java` |
 | Application (`com.finsight.application.*`) | Use cases (import/classify/report), orchestration, domain-to-DTO mapping where needed | HTTP specifics and template structure | `src/main/java/com/finsight/application/transaction/impl/TransactionServiceImpl.java` |
 | Domain (`com.finsight.domain.*`) | Domain models + ports (e.g., `TransactionRepository`) | Framework glue code | `src/main/java/com/finsight/domain/port/TransactionRepository.java` `[TODO]` (file exists per scan; not expanded here) |
 | Infrastructure (`com.finsight.infrastructure.*`) | DB mappers/adapters | UI concerns | `src/main/java/com/finsight/infrastructure/mapper/TransactionMapper.java` |
@@ -44,7 +44,7 @@ Concrete example (transactions):
 | Facade (security principal access) | `src/main/java/com/finsight/application/authentication/AuthenticationFacade.java` | Avoids direct `SecurityContextHolder` access across app logic |
 | Repository/Port abstraction | `com.finsight.domain.port.*` (e.g., `TransactionRepository`) | Separates application logic from persistence details |
 | Mapper (MyBatis) | `src/main/java/com/finsight/infrastructure/mapper/*Mapper.java` + `src/main/resources/mapper/*.xml` | SQL mapping and query composition |
-| Controller helper wrapper | `com.finsight.web.restful.common.ControllerHelper` (used by controllers) | Standardize error handling / response envelopes `[TODO]` confirm behavior by reading file |
+| Controller helper wrapper | `com.finsight.web.api.support.ControllerHelper` (used by controllers) | Standardize error handling / response envelopes `[TODO]` confirm behavior by reading file |
 
 ### 5) Known Architectural Risks
 
@@ -57,7 +57,7 @@ Concrete example (transactions):
 - `src/main/java/com/finsight/FinsightApplication.java`
 - `docs/tech/architecture/technical.md`
 - `README.md`
-- `src/main/java/com/finsight/web/restful/transaction/TransactionController.java`
+- `src/main/java/com/finsight/web/api/transaction/TransactionController.java`
 - `src/main/java/com/finsight/application/transaction/impl/TransactionServiceImpl.java`
 - `src/main/java/com/finsight/infrastructure/mapper/TransactionMapper.java`
 - `src/main/resources/mapper/TransactionMapper.xml`

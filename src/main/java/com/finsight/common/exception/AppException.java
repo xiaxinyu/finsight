@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.common.exception;
 
 import com.finsight.domain.common.Constants;
 

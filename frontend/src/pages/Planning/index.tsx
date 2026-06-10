@@ -1,26 +1,36 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Col, Form, Input, InputNumber, Row, Table, Tag } from 'antd'
+import { Alert, Button, Col, Form, Input, InputNumber, Row, Table, Tag } from 'antd'
 import { CalendarOutlined, FundOutlined } from '@ant-design/icons'
 import { billCalendar, budgetVsActual, cashflowMetrics, listBills, saveBill, saveBudgetLine } from '../../api/finance'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { KpiGrid } from '../../components/KpiGrid'
+import { EmptyState } from '../../components/EmptyState'
 import { formatMoney } from '../../utils/format'
 import { formatTableDate } from '../../utils/cell'
+
+function invalidateFinance(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ['cashflow'] })
+  qc.invalidateQueries({ queryKey: ['budget-vs-actual'] })
+  qc.invalidateQueries({ queryKey: ['financial-pulse'] })
+  qc.invalidateQueries({ queryKey: ['decision-cards'] })
+  qc.invalidateQueries({ queryKey: ['wealth'] })
+}
 
 export function PlanningPage() {
   const qc = useQueryClient()
   const [billForm] = Form.useForm()
   const [budgetLimit, setBudgetLimit] = useState<number>(5000)
 
-  const { data: cashflow } = useQuery({ queryKey: ['cashflow'], queryFn: cashflowMetrics })
-  const { data: bva } = useQuery({ queryKey: ['budget-vs-actual'], queryFn: budgetVsActual })
+  const { data: cashflow, isError: cfErr, error: cfError } = useQuery({ queryKey: ['cashflow'], queryFn: cashflowMetrics })
+  const { data: bva, isError: bvaErr, error: bvaError } = useQuery({ queryKey: ['budget-vs-actual'], queryFn: budgetVsActual })
   const { data: bills } = useQuery({ queryKey: ['bills'], queryFn: listBills })
   const { data: calendar } = useQuery({ queryKey: ['bill-calendar'], queryFn: billCalendar })
 
   const bvaMeta = bva?.[0]
   const safe = Number(cashflow?.safeToSpend || 0)
   const runway = Number(cashflow?.runwayMonths || 0)
+  const loadError = cfErr ? cfError : bvaErr ? bvaError : null
 
   const onSaveBill = async () => {
     const v = await billForm.validateFields()
@@ -28,12 +38,12 @@ export function PlanningPage() {
     billForm.resetFields()
     qc.invalidateQueries({ queryKey: ['bills'] })
     qc.invalidateQueries({ queryKey: ['bill-calendar'] })
-    qc.invalidateQueries({ queryKey: ['cashflow'] })
+    invalidateFinance(qc)
   }
 
   const onSaveBudget = async () => {
     await saveBudgetLine({ bucketKey: 'all', limitAmount: budgetLimit })
-    qc.invalidateQueries({ queryKey: ['budget-vs-actual'] })
+    invalidateFinance(qc)
   }
 
   return (
@@ -42,6 +52,11 @@ export function PlanningPage() {
       subtitle="Budget, bills, and safe-to-spend"
       icon={<FundOutlined />}
     >
+      {loadError && (
+        <Alert type="error" showIcon style={{ marginBottom: 8 }}
+          message="Failed to load planning data"
+          description={loadError instanceof Error ? loadError.message : 'Please sign in again.'} />
+      )}
       <KpiGrid items={[
         { key: 'safe', label: 'Safe to spend', value: formatMoney(safe), icon: <FundOutlined /> },
         { key: 'runway', label: 'Runway (months)', value: runway.toFixed(1), icon: <CalendarOutlined /> },
@@ -86,6 +101,7 @@ export function PlanningPage() {
               size="small"
               rowKey="id"
               pagination={false}
+              locale={{ emptyText: <EmptyState compact title="No bills" description="Add recurring bills above." /> }}
               dataSource={bills || []}
               columns={[
                 { title: 'Bill', dataIndex: 'name' },
@@ -102,6 +118,7 @@ export function PlanningPage() {
               size="small"
               rowKey={(_, i) => String(i)}
               pagination={false}
+              locale={{ emptyText: <EmptyState compact title="No upcoming bills" description="Bills with due days in the next 30 days appear here." /> }}
               dataSource={calendar || []}
               columns={[
                 { title: 'Date', dataIndex: 'date', render: (v) => formatTableDate(v) },

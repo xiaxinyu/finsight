@@ -2,10 +2,10 @@ import { useRef } from 'react'
 import { message } from 'antd'
 import { CreditCardOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType } from '@ant-design/pro-components'
-import { createCard, deleteCard, listCardsAdmin, updateCard } from '../../api/admin'
-import { DataPageLayout } from '../../components/DataPageLayout'
-import { EmptyState } from '../../components/EmptyState'
-import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
+import { createCard, deleteCard, listCardsAdmin, updateCard } from '../../../api/admin'
+import { DataPageLayout } from '../../../components/DataPageLayout'
+import { EmptyState } from '../../../components/EmptyState'
+import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 
 export function CardsAdminPage() {
   const actionRef = useRef<ActionType>(null)

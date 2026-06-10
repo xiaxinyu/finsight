@@ -1,6 +1,6 @@
-package com.finsight.web.restful.common;
+package com.finsight.web.api.support;
 
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 
 /**
  * Callback used by {@link ControllerHelper} run helpers (checked exception).

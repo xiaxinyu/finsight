@@ -1,9 +1,9 @@
 package com.finsight.application.benefit;
 
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.Endowment;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.EndowmentParam;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.EndowmentParam;
 
 public interface IEndowmentListingService {
 

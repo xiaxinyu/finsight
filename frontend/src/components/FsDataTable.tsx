@@ -25,6 +25,8 @@ type Props<T> = {
   summaryLabel?: string
   size?: TableProps<T>['size']
   scroll?: TableProps<T>['scroll']
+  onRow?: TableProps<T>['onRow']
+  locale?: TableProps<T>['locale']
 }
 
 function TwoLineTitle({ name, unit }: { name: string; unit?: string }) {
@@ -56,6 +58,8 @@ export function FsDataTable<T extends Record<string, unknown>>({
   summaryLabel = 'Total',
   size = 'small',
   scroll,
+  onRow,
+  locale,
 }: Props<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -136,7 +140,8 @@ export function FsDataTable<T extends Record<string, unknown>>({
         pagination={false}
         scroll={scroll ?? { y: 360 }}
         rowClassName={() => 'fs-table-row'}
-        locale={{
+        onRow={onRow}
+        locale={locale ?? {
           emptyText: <EmptyState compact title="No rows" description="Adjust filters or date range." />,
         }}
         summary={() => summary ? (

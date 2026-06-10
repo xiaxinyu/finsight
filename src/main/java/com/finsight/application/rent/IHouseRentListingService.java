@@ -1,9 +1,9 @@
 package com.finsight.application.rent;
 
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.HouseRent;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.HouseRentParam;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.HouseRentParam;
 
 /**
  * House rent expense listing for datagrid endpoints.

@@ -1,8 +1,8 @@
-package com.finsight.web.restful.statement;
+package com.finsight.web.api.statement;
 
 import com.finsight.application.statement.StatementFacade;
 import com.finsight.domain.model.Statement;
-import com.finsight.web.restful.model.CommonResult;
+import com.finsight.web.api.dto.CommonResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +23,7 @@ public class StatementController {
 
     @GetMapping("/api/list")
     @ResponseBody
-    public com.finsight.web.restful.model.CollectionResult<Statement> list(@RequestParam(value = "page", defaultValue = "1") int page,
+    public com.finsight.web.api.dto.CollectionResult<Statement> list(@RequestParam(value = "page", defaultValue = "1") int page,
                                                                        @RequestParam(value = "rows", defaultValue = "20") int rows) {
         return statementFacade.list(page, rows);
     }

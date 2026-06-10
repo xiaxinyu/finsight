@@ -7,8 +7,8 @@
 | Item | Rule | Example | Evidence |
 |------|------|---------|----------|
 | Files | Java uses `PascalCase.java` | `TransactionServiceImpl.java` | `src/main/java/com/finsight/application/transaction/impl/TransactionServiceImpl.java` |
-| Functions/methods | lowerCamelCase for methods | `getTransactions(...)`, `updateTransaction(...)` | `src/main/java/com/finsight/web/restful/transaction/TransactionController.java` |
-| Types/interfaces | `PascalCase`, interfaces prefixed with `I` in application layer | `ITransactionService`, `ITransactionListingService` | `src/main/java/com/finsight/web/restful/transaction/TransactionController.java` |
+| Functions/methods | lowerCamelCase for methods | `getTransactions(...)`, `updateTransaction(...)` | `src/main/java/com/finsight/web/api/transaction/TransactionController.java` |
+| Types/interfaces | `PascalCase`, interfaces prefixed with `I` in application layer | `ITransactionService`, `ITransactionListingService` | `src/main/java/com/finsight/web/api/transaction/TransactionController.java` |
 | Constants/env vars | Env vars are `SCREAMING_SNAKE_CASE` | `SPRING_DATASOURCE_URL`, `ACCOUNT_DES_SIGN_KEY` | `src/main/resources/application.yml`, `docs/tech/architecture/technical.md` |
 
 ### 2) Formatting and Linting
@@ -40,7 +40,7 @@ Evidence:
 
 Evidence:
 - `src/main/java/com/finsight/application/transaction/impl/TransactionServiceImpl.java`
-- `src/main/java/com/finsight/core/SecurityConfig.java`
+- `src/main/java/com/finsight/web/config/SecurityConfig.java`
 
 ### 5) Testing Conventions
 
@@ -57,7 +57,7 @@ Evidence:
 
 - `checkstyle.xml`
 - `pom.xml`
-- `src/main/java/com/finsight/web/restful/transaction/TransactionController.java`
+- `src/main/java/com/finsight/web/api/transaction/TransactionController.java`
 - `src/main/java/com/finsight/application/transaction/impl/TransactionServiceImpl.java`
 - `src/main/resources/application.yml`
 - `docs/tech/architecture/milestones.md`

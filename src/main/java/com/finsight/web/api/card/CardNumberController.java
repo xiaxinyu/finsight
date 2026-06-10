@@ -1,8 +1,8 @@
-package com.finsight.web.restful.card;
+package com.finsight.web.api.card;
 
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.KeyValue;
-import com.finsight.web.restful.model.TreeNode;
+import com.finsight.web.api.dto.TreeNode;
 import com.finsight.application.card.CardFacade;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

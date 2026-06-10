@@ -1,4 +1,4 @@
-package com.finsight.web.restful.finance;
+package com.finsight.web.api.finance;
 
 import com.finsight.application.finance.BillService;
 import com.finsight.application.finance.BudgetService;
@@ -11,16 +11,14 @@ import com.finsight.application.finance.InsightService;
 import com.finsight.application.finance.ScenarioService;
 import com.finsight.application.finance.TransferService;
 import com.finsight.application.finance.WealthService;
-import com.finsight.domain.model.AccountBalanceSnapshot;
 import com.finsight.domain.model.Bill;
 import com.finsight.domain.model.BudgetLine;
 import com.finsight.domain.model.FinancialGoal;
-import com.finsight.web.restful.model.CommonResult;
+import com.finsight.web.api.dto.CommonResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -79,8 +77,7 @@ public class FinanceApiController {
         BigDecimal balance = new BigDecimal(String.valueOf(body.get("balance")));
         Date date = body.get("date") != null ? new Date(Long.parseLong(String.valueOf(body.get("date")))) : new Date();
         String source = body.get("source") != null ? String.valueOf(body.get("source")) : "manual";
-        AccountBalanceSnapshot snap = accountService.recordSnapshot(id, date, balance, source);
-        return CommonResult.success(snap);
+        return CommonResult.success(accountService.recordSnapshot(id, date, balance, source));
     }
 
     @GetMapping("/transfers")

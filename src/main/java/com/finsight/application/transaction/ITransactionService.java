@@ -2,7 +2,7 @@ package com.finsight.application.transaction;
 
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.Page;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 
 import java.util.List;
 

@@ -1,41 +1,37 @@
 package com.finsight.application.finance;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.domain.model.Transaction;
-import com.finsight.domain.model.TransferPair;
 import com.finsight.infrastructure.mapper.FinancialMapper;
 import com.finsight.infrastructure.mapper.TransactionMapper;
-import com.finsight.infrastructure.mapper.TransferPairMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class TransferService {
 
     private final TransactionMapper transactionMapper;
-    private final TransferPairMapper transferPairMapper;
     private final FinancialMapper financialMapper;
     private final AuthenticationFacade authenticationFacade;
 
     public TransferService(TransactionMapper transactionMapper,
-                           TransferPairMapper transferPairMapper,
                            FinancialMapper financialMapper,
                            AuthenticationFacade authenticationFacade) {
         this.transactionMapper = transactionMapper;
-        this.transferPairMapper = transferPairMapper;
         this.financialMapper = financialMapper;
         this.authenticationFacade = authenticationFacade;
     }
 
     @Transactional
-    public TransferPair createTransfer(String fromTransactionId, String toTransactionId, String memo) {
+    public Map<String, Object> createTransfer(String fromTransactionId, String toTransactionId, String memo) {
         Transaction from = transactionMapper.selectById(fromTransactionId);
         Transaction to = transactionMapper.selectById(toTransactionId);
         if (from == null || to == null) {
@@ -48,25 +44,21 @@ public class TransferService {
         double toAmt = amountOf(to);
         BigDecimal amount = BigDecimal.valueOf(Math.max(fromAmt, toAmt));
 
-        TransferPair pair = new TransferPair();
-        pair.setId(UUID.randomUUID().toString());
-        pair.setFromTransactionId(fromTransactionId);
-        pair.setToTransactionId(toTransactionId);
-        pair.setAmount(amount);
-        pair.setTransferDate(from.getTransactionDate() != null ? from.getTransactionDate() : new Date());
-        pair.setTransferGroupId(groupId);
-        pair.setMemo(memo);
-        pair.setDeleted(0);
-        pair.setCreateUser(authenticationFacade.getUserName());
-        pair.setCreateTime(new Date());
-        transferPairMapper.insert(pair);
+        Map<String, Object> pair = new LinkedHashMap<>();
+        pair.put("id", groupId);
+        pair.put("fromTransactionId", fromTransactionId);
+        pair.put("toTransactionId", toTransactionId);
+        pair.put("amount", amount);
+        pair.put("transferDate", from.getTransactionDate() != null ? from.getTransactionDate() : new Date());
+        pair.put("transferGroupId", groupId);
+        pair.put("memo", memo);
+        pair.put("createUser", authenticationFacade.getUserName());
+        pair.put("createTime", new Date());
         return pair;
     }
 
-    public List<TransferPair> listTransfers() {
-        return transferPairMapper.selectList(Wrappers.<TransferPair>lambdaQuery()
-                .eq(TransferPair::getDeleted, 0)
-                .orderByDesc(TransferPair::getTransferDate));
+    public List<Map<String, Object>> listTransfers() {
+        return financialMapper.listTransferGroups();
     }
 
     private static double amountOf(Transaction t) {

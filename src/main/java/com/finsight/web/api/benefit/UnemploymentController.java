@@ -1,12 +1,12 @@
-package com.finsight.web.restful.insurance;
+package com.finsight.web.api.benefit;
 
 import com.finsight.application.benefit.IUnEmploymentListingService;
 import com.finsight.application.benefit.IUnEmploymentService;
 import com.finsight.domain.model.UnEmployment;
-import com.finsight.web.restful.common.ControllerHelper;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.CommonResult;
-import com.finsight.web.restful.model.UnEmploymentParam;
+import com.finsight.web.api.support.ControllerHelper;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.CommonResult;
+import com.finsight.web.api.dto.UnEmploymentParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/unemployment")
-public class UnEmploymentResource extends ControllerHelper {
-    private static final Logger logger = LoggerFactory.getLogger(UnEmploymentResource.class);
+public class UnemploymentController extends ControllerHelper {
+    private static final Logger logger = LoggerFactory.getLogger(UnemploymentController.class);
 
     @Autowired
     private IUnEmploymentService unEmploymentService;

@@ -7,7 +7,7 @@
 | Severity | Concern | Evidence | Impact | Suggested action |
 |----------|---------|----------|--------|------------------|
 | high | Tests effectively absent (no test files detected) | `docs/codebase/.codebase-scan.txt`, `pom.xml` | Refactors are risky; regressions likely | Add a thin test harness first (service-level unit tests for core logic, then controller slice tests) |
-| high | Default credentials in config and security posture gaps (CSRF disabled; broad `permitAll`) | `src/main/resources/application.yml`, `src/main/java/com/finsight/core/SecurityConfig.java` | Production misconfig risk; increases attack surface | Remove dangerous defaults for prod via profiles; review CSRF and public endpoints; restrict `/encrypt/**` |
+| high | Default credentials in config and security posture gaps (CSRF disabled; broad `permitAll`) | `src/main/resources/application.yml`, `src/main/java/com/finsight/web/config/SecurityConfig.java` | Production misconfig risk; increases attack surface | Remove dangerous defaults for prod via profiles; review CSRF and public endpoints; restrict `/encrypt/**` |
 | med | Large vendored front-end plugins & assets in repo | `docs/codebase/.codebase-scan.txt`, `src/main/resources/static/plugins/` | Slows tooling, complicates modernization, makes security patching harder | Track third-party assets with versions; consider moving to package-managed frontend build over time |
 | med | No CI/CD pipelines detected | `docs/codebase/.codebase-scan.txt` | Broken builds can land unnoticed | Add minimal GitHub Actions for build + tests + checkstyle |
 | med | Intent vs reality: roadmap suggests SQLite/H2 for dev, but current config defaults to MySQL | `docs/tech/architecture/milestones.md`, `src/main/resources/application.yml` | Local dev friction; harder to run tests/CI without MySQL | Add dev profile with H2 (or Testcontainers for MySQL) and document it |
@@ -28,8 +28,8 @@
 |------|--------------------------------|----------|--------------------|-----|
 | Default DB password in config (`123456`) | A02 (Cryptographic Failures) / A05 (Security Misconfiguration) | `src/main/resources/application.yml` | Env overrides supported | Default is unsafe if deployed as-is |
 | `ACCOUNT_DES_SIGN_KEY` default placeholder | A02 / A05 | `src/main/resources/application.yml` | Env override supported | Need production enforcement (fail-fast if default) |
-| CSRF disabled | A01 (Broken Access Control) / A05 | `src/main/java/com/finsight/core/SecurityConfig.java` | Authentication required for most routes | Risk for form-based endpoints; needs review vs UI pattern |
-| Broad public matchers incl. `/encrypt/**` and `/actuator/**` | A01 / A05 | `src/main/java/com/finsight/core/SecurityConfig.java` | Auth required for others | Potentially exposes sensitive functionality/ops endpoints |
+| CSRF disabled | A01 (Broken Access Control) / A05 | `src/main/java/com/finsight/web/config/SecurityConfig.java` | Authentication required for most routes | Risk for form-based endpoints; needs review vs UI pattern |
+| Broad public matchers incl. `/encrypt/**` and `/actuator/**` | A01 / A05 | `src/main/java/com/finsight/web/config/SecurityConfig.java` | Auth required for others | Potentially exposes sensitive functionality/ops endpoints |
 
 ### 4) Performance and Scaling Concerns
 
@@ -58,7 +58,7 @@
 - `docs/codebase/.codebase-scan.txt` (code metrics, high-churn, CI/CD detection)
 - `pom.xml`
 - `src/main/resources/application.yml`
-- `src/main/java/com/finsight/core/SecurityConfig.java`
+- `src/main/java/com/finsight/web/config/SecurityConfig.java`
 - `src/main/java/com/finsight/application/transaction/impl/TransactionServiceImpl.java`
 - `src/main/resources/mapper/TransactionMapper.xml`
 - `src/main/resources/static/plugins/`

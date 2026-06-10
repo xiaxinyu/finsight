@@ -5,12 +5,12 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.finsight.core.DataStructureTool;
-import com.finsight.core.StringTool;
+import com.finsight.common.util.DataStructureTool;
+import com.finsight.common.util.StringTool;
 import com.finsight.infrastructure.mapper.EndowmentMapper;
 import com.finsight.domain.model.Endowment;
 import com.finsight.domain.model.Page;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.application.benefit.IEndowmentService;
 
 /**

@@ -1,4 +1,4 @@
-package com.finsight.web.restful.encrypt;
+package com.finsight.web.api.encrypt;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;

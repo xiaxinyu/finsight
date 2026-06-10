@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ledgerIds } from './ledgers'
 import { reportIds } from './reports'
-import { menuItems, type FsMenuItem } from '../routes/menuConfig'
+import { menuItems, type FsMenuItem } from './menuConfig'
 
 function collectPaths(items: FsMenuItem[]): string[] {
   return items.flatMap((item) => {

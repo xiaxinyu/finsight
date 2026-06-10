@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { Table } from 'antd'
 import { TagsOutlined } from '@ant-design/icons'
-import { listRules } from '../../api/admin'
-import { DataPageLayout } from '../../components/DataPageLayout'
-import { EmptyState } from '../../components/EmptyState'
-import { PageSkeleton } from '../../components/PageSkeleton'
-import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
+import { listRules } from '../../../api/admin'
+import { DataPageLayout } from '../../../components/DataPageLayout'
+import { EmptyState } from '../../../components/EmptyState'
+import { PageSkeleton } from '../../../components/PageSkeleton'
+import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 
 export function RulesAdminPage() {
   const { data, isLoading } = useQuery({ queryKey: ['rules'], queryFn: listRules })

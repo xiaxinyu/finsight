@@ -34,6 +34,10 @@ public class FinancialPulseService {
         double incomeMtd = safe(financialMapper.sumIncomeSince(monthStart));
         double expenseMtd = safe(financialMapper.sumExpenseSince(monthStart));
         double fixedYear = safe(financialMapper.sumFixedBucketYear(year));
+        Calendar ytd = Calendar.getInstance();
+        ytd.set(Calendar.MONTH, 0);
+        ytd.set(Calendar.DAY_OF_MONTH, 1);
+        double incomeYtd = safe(financialMapper.sumIncomeSince(ytd.getTime()));
 
         List<KeyValue> accounts = accountService.latestBalances();
         double liquidAssets = accounts.stream()
@@ -46,7 +50,8 @@ public class FinancialPulseService {
         out.put("expenseMtd", expenseMtd);
         out.put("netFlowMtd", incomeMtd - expenseMtd);
         out.put("fixedExpenseYear", fixedYear);
-        out.put("fixedExpenseRatio", incomeMtd > 0 ? fixedYear / (incomeMtd * 12) : 0);
+        out.put("fixedExpenseRatio", incomeYtd > 0 ? fixedYear / incomeYtd : 0);
+        out.put("incomeYtd", incomeYtd);
         out.put("liquidAssets", liquidAssets);
         out.put("dataQuality", dataQualityService.summary());
         return out;

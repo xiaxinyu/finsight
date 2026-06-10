@@ -17,7 +17,7 @@
 |------------|---------|----------------|----------|
 | `spring-boot-starter-web` | (via Spring Boot BOM 3.5.7) | Web MVC endpoints (controllers) | `pom.xml` |
 | `spring-boot-starter-thymeleaf` | (via Spring Boot BOM 3.5.7) | Server-rendered UI templates | `pom.xml`, `src/main/resources/templates/` |
-| `spring-boot-starter-security` | (via Spring Boot BOM 3.5.7) | Login + request authentication | `pom.xml`, `src/main/java/com/finsight/core/SecurityConfig.java` |
+| `spring-boot-starter-security` | (via Spring Boot BOM 3.5.7) | Login + request authentication | `pom.xml`, `src/main/java/com/finsight/web/config/SecurityConfig.java` |
 | `spring-boot-starter-actuator` | (via Spring Boot BOM 3.5.7) | Health/metrics endpoints | `pom.xml` |
 | MyBatis-Plus Spring Boot starter | 3.5.7 | ORM-ish mapper integration | `pom.xml`, `src/main/resources/application.yml` |
 | MySQL Connector/J | 8.0.33 | MySQL JDBC driver | `pom.xml` |

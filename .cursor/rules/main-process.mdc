@@ -6,6 +6,6 @@ alwaysApply: true
 # Main process (application runtime)
 
 - **Entry**: `com.finsight.FinsightApplication` is the single Boot entry; `scanBasePackages` is `com.finsight` — new top-level packages need explicit inclusion or relocation under `com.finsight`.
-- **Security**: `SecurityConfig` defines form login, `permitAll` paths, and CSRF settings — any new public routes or auth changes must be reviewed there and in `DbUserDetailsService`.
+- **Security**: `com.finsight.web.config.SecurityConfig` defines form login, `permitAll` paths, and CSRF settings — any new public routes or auth changes must be reviewed there and in `com.finsight.web.security.DbUserDetailsService`.
 - **Web**: Prefer `@Controller` + `@ResponseBody` or existing REST patterns under `com.finsight.web`; align with `AuthenticationFacade` for current user when mutating data.
 - **Startup**: Heavy or one-off initialization belongs in documented listeners/config beans, not static blocks in unrelated classes.

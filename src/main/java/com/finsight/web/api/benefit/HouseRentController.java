@@ -1,10 +1,10 @@
-package com.finsight.web.restful.insurance;
+package com.finsight.web.api.benefit;
 
 import com.finsight.application.rent.IHouseRentListingService;
 import com.finsight.domain.model.HouseRent;
-import com.finsight.web.restful.common.ControllerHelper;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.HouseRentParam;
+import com.finsight.web.api.support.ControllerHelper;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.HouseRentParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 @RequestMapping("/house-rent")
-public class HouseRentResource extends ControllerHelper {
+public class HouseRentController extends ControllerHelper {
 
-    private static final Logger logger = LoggerFactory.getLogger(HouseRentResource.class);
+    private static final Logger logger = LoggerFactory.getLogger(HouseRentController.class);
 
     @Autowired
     private IHouseRentListingService houseRentListingService;

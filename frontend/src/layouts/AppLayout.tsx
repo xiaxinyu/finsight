@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { verifySession } from '../api/client'
 import { Layout, Menu, Typography, Button, Breadcrumb, Popconfirm, theme, type MenuProps } from 'antd'
 import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
-import { menuItems, type FsMenuItem } from '../routes/menuConfig'
+import { menuItems, type FsMenuItem } from '../config/menuConfig'
 import { BrandLogo } from '../components/BrandLogo'
 import { resolveRouteMeta } from '../config/routes'
 

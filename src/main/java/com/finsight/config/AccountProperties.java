@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.config;
 
 import lombok.ToString;
 import org.springframework.boot.context.properties.ConfigurationProperties;

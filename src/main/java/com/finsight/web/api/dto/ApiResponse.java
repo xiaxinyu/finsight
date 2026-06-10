@@ -1,4 +1,4 @@
-package com.finsight.web.restful.model;
+package com.finsight.web.api.dto;
 
 import lombok.ToString;
 
@@ -9,7 +9,7 @@ import lombok.ToString;
  * @date 2019.12.26
  */
 @ToString
-public class ResponseEntity<T> {
+public class ApiResponse<T> {
     /**
      * 响应成功业务编码
      */
@@ -34,12 +34,12 @@ public class ResponseEntity<T> {
 
     private String message;
 
-    public static ResponseEntity<Void> ok() {
-        return new ResponseEntity<>();
+    public static ApiResponse<Void> ok() {
+        return new ApiResponse<>();
     }
 
-    public static ResponseEntity<Void> error(String message) {
-        return new ResponseEntity<>(ERROR_CODE, message);
+    public static ApiResponse<Void> error(String message) {
+        return new ApiResponse<>(ERROR_CODE, message);
     }
 
     public boolean isOk() {
@@ -54,15 +54,15 @@ public class ResponseEntity<T> {
         return code.intValue() == ERROR_CODE.intValue();
     }
 
-    public ResponseEntity(T data) {
+    public ApiResponse(T data) {
         this.data = data;
     }
 
-    public ResponseEntity() {
+    public ApiResponse() {
 
     }
 
-    public ResponseEntity(Integer code, String message) {
+    public ApiResponse(Integer code, String message) {
         this.code = code;
         this.message = message;
     }

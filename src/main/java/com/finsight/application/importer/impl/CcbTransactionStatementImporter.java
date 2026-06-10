@@ -1,7 +1,7 @@
 package com.finsight.application.importer.impl;
 
-import com.finsight.core.DateTool;
-import com.finsight.core.StringTool;
+import com.finsight.common.util.DateTool;
+import com.finsight.common.util.StringTool;
 import com.finsight.domain.model.Transaction;
 import com.finsight.application.importer.StatementImporter;
 import org.apache.commons.lang3.StringUtils;

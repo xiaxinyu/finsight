@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.web.security;
 
 import com.finsight.domain.model.Role;
 import com.finsight.domain.model.User;

@@ -1,6 +1,6 @@
 import { Navigate, useParams } from 'react-router-dom'
 import { legacyReportRedirects } from '../config/reports'
-import { ReportPageView } from '../pages/Reports/ReportPageView'
+import { ReportsPage } from '../pages/Reports'
 
 export function ReportRoute() {
   const { reportId = '' } = useParams()
@@ -8,5 +8,5 @@ export function ReportRoute() {
   if (target) {
     return <Navigate to={`/reports/${target}`} replace />
   }
-  return <ReportPageView />
+  return <ReportsPage />
 }

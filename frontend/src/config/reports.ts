@@ -1,7 +1,7 @@
 export type ReportConfig = {
   title: string
   subtitle?: string
-  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets'
+  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual'
   endpoint?: string
   txnType?: 'income' | 'expense'
   chartKind?: 'bar' | 'donut'
@@ -23,12 +23,9 @@ export const reportConfigs: Record<string, ReportConfig> = {
   'budget-vs-actual': {
     title: 'Budget vs Actual',
     subtitle: 'Which categories are over or under plan',
-    type: 'categoryBar',
-    endpoint: '/transaction-report/consume',
-    txnType: 'expense',
-    dateRange: true,
-    chartKind: 'donut',
-    chartProfile: 'donut',
+    type: 'budgetVsActual',
+    chartKind: 'bar',
+    chartProfile: 'compareBars',
     legacyIds: ['category-breakdown', 'transaction-trend'],
   },
   'fixed-vs-variable': {

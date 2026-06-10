@@ -93,6 +93,21 @@
   flex-shrink: 0;
 }
 
+.fs-data-page--dense .fs-page-topbar {
+  padding: 0 0 6px;
+  margin-bottom: 6px;
+}
+
+.fs-data-page--dense .fs-page-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+
+.fs-data-page--dense .fs-page-title {
+  font-size: 15px !important;
+}
+
 .fs-page-heading {
   display: flex;
   align-items: center;
@@ -163,6 +178,11 @@
   flex-shrink: 0;
 }
 
+.fs-toolbar-bar--stacked {
+  padding: 6px 10px 8px;
+  margin-bottom: 6px;
+}
+
 .fs-toolbar-form {
   display: flex;
   align-items: flex-start;
@@ -171,11 +191,39 @@
   flex-wrap: wrap;
 }
 
+.fs-toolbar-form--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.fs-toolbar-row--main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fs-toolbar-row--stats {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e8edf3;
+  overflow: hidden;
+}
+
+.fs-toolbar-filters {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .fs-toolbar-actions {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   margin-left: auto;
+  flex-shrink: 0;
+  align-items: center;
 }
 
 /* ── Cards (KPI / charts only) ── */
@@ -203,6 +251,84 @@
 
 .fs-kpi-grid {
   margin-bottom: 12px;
+}
+
+.fs-tx-summary-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.fs-tx-summary-bar--toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  overflow-x: auto;
+}
+
+.fs-tx-summary-bar--toolbar .fs-tx-stat-group {
+  justify-content: center;
+  min-width: max-content;
+}
+
+.fs-tx-summary-bar--toolbar .fs-tx-stat-sep {
+  display: none;
+}
+
+.fs-tx-summary-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.fs-tx-stat-group {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.fs-tx-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  padding: 0 8px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.fs-tx-summary-bar--toolbar .fs-tx-stat {
+  padding: 0 10px;
+}
+
+.fs-tx-stat-group:first-child .fs-tx-stat {
+  padding-left: 0;
+}
+
+.fs-tx-stat-group:last-child .fs-tx-stat {
+  padding-right: 0;
+}
+
+.fs-tx-stat-label {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.fs-tx-stat-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.fs-tx-stat-sep {
+  width: 1px;
+  height: 12px;
+  background: #e2e8f0;
+  flex-shrink: 0;
 }
 
 .fs-kpi-card .ant-statistic-title {
@@ -274,13 +400,229 @@
 }
 
 .fs-data-table .ant-table-thead > tr > th {
-  background: #f8fafc !important;
+  background: #f1f5f9 !important;
   border-bottom: 1px solid #e2e8f0 !important;
-  padding: 6px 8px !important;
+  padding: 8px 10px !important;
+  font-size: 12px;
 }
 
 .fs-data-table .ant-table-tbody > tr > td {
-  padding: 6px 8px !important;
+  padding: 8px 10px !important;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9 !important;
+  transition: background 120ms ease;
+}
+
+.fs-data-table .ant-table-tbody > tr.fs-table-row:nth-child(even) > td {
+  background: #fafbfc;
+}
+
+.fs-table-panel--editable .ant-table-tbody > tr:not(.fs-row-editing) {
+  cursor: pointer;
+}
+
+.fs-edit-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--fs-radius);
+  font-size: 12px;
+  color: #1e40af;
+}
+
+.fs-row-editing > td {
+  background: #fff !important;
+  border-top: 1px solid #dbeafe !important;
+  border-bottom: 1px solid #dbeafe !important;
+  vertical-align: middle;
+}
+
+.fs-row-editing > td:first-child {
+  box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+.fs-row-warning > td {
+  background: #fffbeb !important;
+}
+
+.fs-row-editing .ant-input,
+.fs-row-editing .ant-input-number,
+.fs-row-editing .ant-input-number-input,
+.fs-row-editing .ant-select-selector,
+.fs-row-editing .ant-picker {
+  border-radius: 6px !important;
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
+  font-size: 12px !important;
+  min-height: 28px !important;
+}
+
+.fs-row-editing .ant-input:focus,
+.fs-row-editing .ant-input-number-focused,
+.fs-row-editing .ant-select-focused .ant-select-selector,
+.fs-row-editing .ant-picker-focused {
+  border-color: #3b82f6 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12) !important;
+}
+
+.fs-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.fs-inline-actions--edit .ant-btn,
+.fs-inline-actions--edit > a {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.fs-inline-actions--edit > a {
+  border: 1px solid #d0d7e2;
+  color: #64748b;
+  background: #fff;
+}
+
+.fs-inline-actions--edit > a:hover {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.fs-editable-save > a {
+  color: #fff !important;
+  background: #1677ff !important;
+  border-color: #1677ff !important;
+}
+
+.fs-editable-save > a:hover {
+  color: #fff !important;
+  background: #4096ff !important;
+  border-color: #4096ff !important;
+}
+
+.fs-inline-actions--edit .anticon-loading {
+  margin-inline-end: 0 !important;
+  font-size: 12px;
+}
+
+.fs-inline-actions--edit .fs-btn-save {
+  box-shadow: none;
+}
+
+.fs-row-action {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  color: #64748b !important;
+}
+
+.fs-row-action:hover {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+}
+
+.fs-row-action.ant-btn-dangerous:hover {
+  color: #dc2626 !important;
+  background: #fef2f2 !important;
+}
+
+.fs-col-actions {
+  padding-left: 4px !important;
+  padding-right: 8px !important;
+}
+
+.fs-data-table .ant-table-cell .ant-btn-link {
+  padding: 0 4px;
+}
+
+.fs-table-panel--editable td.fs-col-actions .ant-space {
+  gap: 4px !important;
+}
+
+.fs-cell-text {
+  color: var(--fs-text);
+}
+
+.fs-cell-muted {
+  color: var(--fs-text-secondary);
+  font-size: 12px;
+}
+
+.fs-tag {
+  border-radius: 4px;
+  font-size: 11px;
+  margin: 0;
+}
+
+.fs-id-short {
+  color: var(--fs-text-secondary);
+  font-size: 11px;
+}
+
+.fs-file-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fs-file-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.fs-data-table .ant-pro-table-list-toolbar {
+  padding: 6px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fs-data-table--no-title .ant-pro-table-list-toolbar {
+  padding: 4px 10px;
+  min-height: 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fs-data-table--no-title .ant-pro-table-list-toolbar-title {
+  display: none !important;
+}
+
+.fs-data-table--no-title .ant-pro-table-list-toolbar-container {
+  justify-content: flex-end;
+}
+
+.fs-data-table .ant-pro-table-list-toolbar-container {
+  flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.fs-data-table .ant-pro-table-list-toolbar-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.fs-data-table .ant-pro-table-list-toolbar-right {
+  flex-shrink: 0;
+}
+
+.fs-data-table .ant-pagination {
+  padding: 8px 12px !important;
+  margin: 0 !important;
 }
 
 .fs-col-header-name {
@@ -522,4 +864,342 @@
   flex-direction: column;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+/* ── Import flow ── */
+.fs-import-steps {
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+}
+
+.fs-import-panel {
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  overflow: hidden;
+}
+
+.fs-import-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
+  overflow-x: auto;
+}
+
+.fs-import-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.fs-import-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fs-import-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.fs-import-preview-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
+  overflow-x: auto;
+}
+
+.fs-import-preview-head .fs-tx-summary-bar {
+  flex: 1;
+  min-width: 0;
+}
+
+.fs-import-preview-actions {
+  flex-shrink: 0;
+}
+
+.fs-upload-dragger {
+  border: none !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  padding: 40px 24px !important;
+  transition: background 150ms ease;
+}
+
+.fs-upload-dragger:hover {
+  background: #f8fafc !important;
+}
+
+.fs-upload-dragger .ant-upload-drag-icon {
+  color: var(--fs-primary) !important;
+  font-size: 40px !important;
+  margin-bottom: 8px !important;
+}
+
+.fs-upload-dragger .ant-upload-text {
+  font-size: 15px !important;
+  font-weight: 500;
+  color: var(--fs-text) !important;
+}
+
+.fs-upload-dragger .ant-upload-hint {
+  font-size: 12px !important;
+  color: var(--fs-text-secondary) !important;
+}
+
+.fs-table-panel--nested {
+  border: none;
+  border-radius: 0;
+}
+
+/* ── Period range picker ── */
+.fs-period-popover {
+  max-width: calc(100vw - 16px);
+}
+
+.fs-period-popover .ant-popover-inner {
+  padding: 0 !important;
+  border-radius: 10px !important;
+  overflow: visible !important;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14) !important;
+}
+
+.fs-period-panel {
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.fs-period-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f7;
+  background: #fafbfc;
+}
+
+.fs-period-header .ant-segmented {
+  width: 100%;
+}
+
+.fs-period-header .ant-segmented-item {
+  flex: 1;
+  text-align: center;
+}
+
+.fs-period-nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.fs-period-nav-btn {
+  font-size: 12px !important;
+  color: #475569 !important;
+  padding: 0 6px !important;
+}
+
+.fs-period-nav-btn:hover {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+}
+
+.fs-period-section {
+  padding: 6px 0;
+}
+
+.fs-period-section + .fs-period-section {
+  border-top: 1px solid #f1f5f9;
+}
+
+.fs-period-section-title {
+  padding: 6px 14px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fs-period-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.fs-period-option:hover {
+  background: #f8fafc;
+}
+
+.fs-period-option.active {
+  background: #eff6ff;
+}
+
+.fs-period-option-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.fs-period-option.active .fs-period-option-label {
+  color: #1d4ed8;
+}
+
+.fs-period-option-preview {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-period-option.active .fs-period-option-preview {
+  color: #3b82f6;
+}
+
+.fs-period-custom-panel {
+  padding: 12px 14px 14px;
+}
+
+.fs-period-custom-summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.fs-period-custom-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 420px) {
+  .fs-period-custom-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fs-period-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fs-period-field-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fs-period-date-input {
+  width: 100% !important;
+}
+
+.fs-period-date-popup.ant-picker-dropdown {
+  z-index: 1200;
+}
+
+.fs-period-custom-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  padding-top: 4px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fs-period-trigger {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0 !important;
+  height: auto !important;
+  min-height: 32px !important;
+  padding: 4px 10px 4px 8px !important;
+  border: 1px solid #d1d9e6 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  max-width: min(300px, calc(100vw - 32px));
+}
+
+.fs-period-trigger:hover,
+.fs-period-trigger:focus {
+  border-color: #93c5fd !important;
+  background: #fafbff !important;
+}
+
+.fs-period-trigger-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+}
+
+.fs-period-trigger-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.fs-period-trigger-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.fs-period-trigger-preview {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-period-trigger-caret {
+  margin-left: 8px;
+  font-size: 10px;
+  color: #94a3b8;
 }

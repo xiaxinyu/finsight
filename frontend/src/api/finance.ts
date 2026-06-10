@@ -16,6 +16,18 @@ export type PulseData = {
   dataQuality: { unclassifiedCount: number; duplicateCount: number; transferPairCount: number }
 }
 
+export type DecisionCard = {
+  type: string
+  severity?: string
+  title: string
+  detail: string
+  text: string
+  actionPath: string
+  actionLabel: string
+  metric?: number
+  threshold?: number
+}
+
 export async function financialPulse() {
   return unwrap<PulseData>(await getJson('/api/v1/financial-pulse'))
 }
@@ -26,6 +38,22 @@ export async function cashflowMetrics() {
 
 export async function wealthSnapshot() {
   return unwrap<Record<string, unknown>>(await getJson('/api/v1/wealth'))
+}
+
+export async function listAccounts() {
+  return unwrap<Record<string, unknown>[]>(await getJson('/api/v1/accounts'))
+}
+
+export async function accountBalances() {
+  return unwrap<{ key: string; value: number }[]>(await getJson('/api/v1/accounts/balances'))
+}
+
+export async function recordSnapshot(accountId: string, balance: number, date?: number) {
+  return unwrap<Record<string, unknown>>(await postJson(`/api/v1/accounts/${accountId}/snapshots`, {
+    balance,
+    date: date ?? Date.now(),
+    source: 'manual',
+  }))
 }
 
 export async function listBills() {
@@ -56,12 +84,20 @@ export async function saveGoal(goal: Record<string, unknown>) {
   return unwrap<Record<string, unknown>>(await postJson('/api/v1/goals', goal))
 }
 
+export async function goalProgress(id: string) {
+  return unwrap<Record<string, unknown>>(await getJson(`/api/v1/goals/${id}/progress`))
+}
+
 export async function simulateScenario(params: { lumpSumExpense?: number; incomeChangePct?: number; newMonthlyBill?: number }) {
-  return unwrap<Record<string, unknown>>(await postJson('/api/v1/scenarios/simulate', params))
+  return unwrap<{
+    baseline: Record<string, number>
+    scenario: Record<string, number>
+    delta: Record<string, number>
+  }>(await postJson('/api/v1/scenarios/simulate', params))
 }
 
 export async function decisionCards() {
-  return unwrap<{ type: string; text: string; actionPath: string }[]>(await getJson('/api/v1/insights/decision-cards'))
+  return unwrap<DecisionCard[]>(await getJson('/api/v1/insights/decision-cards'))
 }
 
 export async function createTransfer(fromTransactionId: string, toTransactionId: string, memo?: string) {

@@ -1,4 +1,4 @@
-package com.finsight.web.restful.model;
+package com.finsight.web.api.dto;
 
 /**
  * Created by Summer.Xia on 2015/9/17.

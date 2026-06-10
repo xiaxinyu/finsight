@@ -1,4 +1,4 @@
-package com.finsight.web.restful.system;
+package com.finsight.web.api.system;
 
 import com.finsight.infrastructure.mapper.UserMapper;
 import com.finsight.infrastructure.mapper.RoleMapper;

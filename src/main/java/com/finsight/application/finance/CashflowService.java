@@ -1,12 +1,9 @@
 package com.finsight.application.finance;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.domain.model.Bill;
-import com.finsight.infrastructure.mapper.BillMapper;
 import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -18,14 +15,14 @@ public class CashflowService {
 
     private final FinancialMapper financialMapper;
     private final FinancialAccountService accountService;
-    private final BillMapper billMapper;
+    private final BillService billService;
 
     public CashflowService(FinancialMapper financialMapper,
                            FinancialAccountService accountService,
-                           BillMapper billMapper) {
+                           BillService billService) {
         this.financialMapper = financialMapper;
         this.accountService = accountService;
-        this.billMapper = billMapper;
+        this.billService = billService;
     }
 
     public Map<String, Object> metrics() {
@@ -40,7 +37,7 @@ public class CashflowService {
                 .mapToDouble(kv -> parseAmount(kv.getValue()))
                 .sum();
 
-        double billsReserved = sumEnabledBills();
+        double billsReserved = sumBillsNext30Days();
         double safeToSpend = liquid - billsReserved;
         double runwayMonths = burnRate > 0 ? liquid / (burnRate * 30) : 0;
 
@@ -53,14 +50,23 @@ public class CashflowService {
         return m;
     }
 
-    private double sumEnabledBills() {
-        List<Bill> bills = billMapper.selectList(Wrappers.<Bill>lambdaQuery()
-                .eq(Bill::getEnabled, 1).eq(Bill::getDeleted, 0));
-        return bills.stream()
-                .map(Bill::getAmount)
-                .map(a -> a == null ? BigDecimal.ZERO : a)
-                .mapToDouble(BigDecimal::doubleValue)
-                .sum();
+    private double sumBillsNext30Days() {
+        List<Bill> bills = billService.listEnabled();
+        if (bills.isEmpty()) {
+            return 0;
+        }
+        Calendar cal = Calendar.getInstance();
+        double total = 0;
+        for (int i = 0; i < 30; i++) {
+            int dayOfMonth = cal.get(Calendar.DAY_OF_MONTH);
+            for (Bill b : bills) {
+                if (b.getDueDay() != null && b.getDueDay() == dayOfMonth && b.getAmount() != null) {
+                    total += b.getAmount().doubleValue();
+                }
+            }
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return total;
     }
 
     private static double safe(Double v) {

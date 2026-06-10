@@ -2,7 +2,7 @@
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml  #注意：一定要对应mapper映射xml文件的所在路径
   # 实体扫描，多个package用逗号或者分号分隔
-  type-aliases-package: com.finsight.persist.model.*
+  type-aliases-package: com.finsight.domain.model.*
   # configuration:
     # 这个配置会将执行的sql打印出来，在开发或测试的时候可以用
     # log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

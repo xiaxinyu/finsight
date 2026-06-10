@@ -1,16 +1,16 @@
-package com.finsight.web.restful.common;
+package com.finsight.web.api.support;
 
 import jakarta.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.finsight.core.AppServiceException;
-import com.finsight.core.StringTool;
+import com.finsight.common.exception.AppServiceException;
+import com.finsight.common.util.StringTool;
 import com.finsight.domain.model.Base;
 import com.finsight.domain.model.User;
-import com.finsight.web.restful.model.CollectionResult;
-import com.finsight.web.restful.model.CollectionResults;
-import com.finsight.web.restful.model.CommonResult;
+import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.web.api.dto.CollectionResults;
+import com.finsight.web.api.dto.CommonResult;
 import org.slf4j.Logger;
 
 import java.util.concurrent.Callable;

@@ -4,9 +4,9 @@ import { LoginPage } from '../pages/Login'
 import { DashboardPage } from '../pages/Dashboard'
 import { TransactionsPage } from '../pages/Transactions'
 import { StatementUploadPage } from '../pages/Statements/Upload'
-import { StatementListPage } from '../pages/Statements/List'
+import { StatementListPage } from '../pages/Statements'
 import { ReportRoute } from './ReportRoute'
-import { LedgerPage } from '../pages/Ledgers/LedgerPage'
+import { LedgersPage } from '../pages/Ledgers'
 import { PlanningPage } from '../pages/Planning'
 import { WealthPage } from '../pages/Wealth'
 import { GoalsPage } from '../pages/Goals'
@@ -29,7 +29,7 @@ export function AppRoutes() {
         <Route path="/statements/upload" element={<StatementUploadPage />} />
         <Route path="/statements" element={<StatementListPage />} />
         <Route path="/reports/:reportId" element={<ReportRoute />} />
-        <Route path="/ledgers/:ledgerId" element={<LedgerPage />} />
+        <Route path="/ledgers/:ledgerId" element={<LedgersPage />} />
         <Route path="/admin/users" element={<UsersAdminPage />} />
         <Route path="/admin/cards" element={<CardsAdminPage />} />
         <Route path="/admin/rules" element={<RulesAdminPage />} />

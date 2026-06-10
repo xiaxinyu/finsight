@@ -1,9 +1,9 @@
-package com.finsight.web.restful.report;
+package com.finsight.web.api.report;
 
 import com.finsight.application.report.TransactionReportFacade;
-import com.finsight.web.restful.common.ControllerHelper;
-import com.finsight.web.restful.model.CommonResult;
-import com.finsight.web.restful.model.TransactionParam;
+import com.finsight.web.api.support.ControllerHelper;
+import com.finsight.web.api.dto.CommonResult;
+import com.finsight.web.api.dto.TransactionParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

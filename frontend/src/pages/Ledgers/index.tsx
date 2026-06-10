@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { DatePicker, TreeSelect } from 'antd'
+import { TreeSelect } from 'antd'
 import { BookOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
-import dayjs from 'dayjs'
 import { ledgerConfigs } from '../../config/ledgers'
 import { listLedger } from '../../api/ledger'
 import { type TransactionRow } from '../../api/transaction'
@@ -15,15 +14,13 @@ import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
 import { TableHeader } from '../../components/TableHeader'
-import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
-import { dateRangePresets } from '../../utils/datePresets'
-
-const { RangePicker } = DatePicker
+import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
+import { defaultPeriodRange } from '../../utils/periodPresets'
 
 type LedgerFilters = { start: string; end: string; consume: string }
 
-export function LedgerPage() {
+export function LedgersPage() {
   const { ledgerId = '' } = useParams()
   const cfg = ledgerConfigs[ledgerId]
   const actionRef = useRef<ActionType>(null)
@@ -31,8 +28,7 @@ export function LedgerPage() {
   const tableHeight = useViewportTableHeight(200)
 
   const initial: LedgerFilters = {
-    start: formatDateMmDdYyyy(dayjs().startOf('year')),
-    end: formatDateMmDdYyyy(dayjs()),
+    ...periodToStrings(defaultPeriodRange()),
     consume: '',
   }
 
@@ -100,12 +96,11 @@ export function LedgerPage() {
       icon={<BookOutlined />}
       toolbar={(
         <FilterToolbar loading={tableLoading || applying} onApply={reload} dirty={isDirty}>
-          <RangePicker
+          <PeriodRangePicker
             size="small"
             disabled={disabled}
-            value={[dayjs(draft.start, 'MM/DD/YYYY'), dayjs(draft.end, 'MM/DD/YYYY')]}
-            presets={dateRangePresets}
-            onChange={(v) => v && setDraft((r) => ({ ...r, start: formatDateMmDdYyyy(v[0]!), end: formatDateMmDdYyyy(v[1]!) }))}
+            value={periodFromStrings(draft.start, draft.end)}
+            onChange={(range) => setDraft((r) => ({ ...r, ...periodToStrings(range) }))}
           />
           {cfg.txnType && (
             <TreeSelect size="small" allowClear placeholder="Category" disabled={disabled} style={{ width: 160 }} treeData={treeData}

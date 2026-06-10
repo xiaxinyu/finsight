@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.finsight.domain.model.HouseRent;
 import com.finsight.domain.model.Page;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 
 public interface IHouseRentService {
     int countHouseRent(HouseRent houseRent) throws AppServiceException;

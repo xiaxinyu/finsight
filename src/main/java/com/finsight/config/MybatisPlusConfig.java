@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.config;
 
 import com.baomidou.mybatisplus.core.injector.DefaultSqlInjector;
 import com.baomidou.mybatisplus.core.injector.ISqlInjector;

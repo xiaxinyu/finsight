@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.finsight.domain.model.Page;
 import com.finsight.domain.model.UnEmployment;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 
 public interface IUnEmploymentService {
     void addUnEmployment(UnEmployment unEmployment) throws AppServiceException;

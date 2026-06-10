@@ -1,5 +1,6 @@
 package com.finsight.web.controller;
 
+import com.finsight.web.config.SpaWebConfig;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 

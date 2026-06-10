@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.common.util;
 
 import java.util.Collection;
 import java.util.Iterator;

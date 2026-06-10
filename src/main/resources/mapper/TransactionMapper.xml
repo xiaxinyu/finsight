@@ -79,6 +79,24 @@
         <if test="demoArea != null">
             demoarea = #{demoArea,jdbcType=VARCHAR},
         </if>
+        <if test="transactionDesc != null">
+            transaction_desc = #{transactionDesc,jdbcType=VARCHAR},
+        </if>
+        <if test="transactionDate != null">
+            transaction_date = #{transactionDate,jdbcType=DATE},
+        </if>
+        <if test="bookKeepingDate != null">
+            bookkeeping_date = #{bookKeepingDate,jdbcType=DATE},
+        </if>
+        <if test="balanceMoney != null">
+            balance_money = #{balanceMoney,jdbcType=NUMERIC},
+        </if>
+        <if test="incomeMoney != null">
+            income_money = #{incomeMoney,jdbcType=NUMERIC},
+        </if>
+        <if test="txnKind != null">
+            txn_kind = #{txnKind,jdbcType=VARCHAR},
+        </if>
         updatetime = current_timestamp
         where id = #{id,jdbcType=VARCHAR}
     </update>

@@ -1,4 +1,4 @@
-package com.finsight.web.restful.common;
+package com.finsight.web.api.support;
 
 import org.springframework.stereotype.Controller;
 

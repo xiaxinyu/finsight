@@ -1,4 +1,4 @@
-package com.finsight.core;
+package com.finsight.common.exception;
 
 public class AppServiceException extends Exception {
     private static final long serialVersionUID = -3979208212549921738L;

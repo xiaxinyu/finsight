@@ -7,8 +7,8 @@
 | System | Type (API/DB/Queue/etc) | Purpose | Auth model | Criticality | Evidence |
 |--------|---------------------------|---------|------------|-------------|----------|
 | MySQL | DB | Primary persistence for transactions, users, categories, etc. | DB user/password via env vars | High | `pom.xml`, `src/main/resources/application.yml`, `src/main/resources/mapper/TransactionMapper.xml` |
-| Spring Security (form login) | Auth framework | Authenticate users and protect routes | DB-backed `UserDetailsService` + BCrypt | High | `src/main/java/com/finsight/core/SecurityConfig.java`, `src/main/java/com/finsight/core/DbUserDetailsService.java` |
-| Actuator endpoints | Observability endpoints | Operational endpoints (health/etc.) | `permitAll` in security config | Medium | `pom.xml`, `src/main/java/com/finsight/core/SecurityConfig.java` |
+| Spring Security (form login) | Auth framework | Authenticate users and protect routes | DB-backed `UserDetailsService` + BCrypt | High | `src/main/java/com/finsight/web/config/SecurityConfig.java`, `src/main/java/com/finsight/web/security/DbUserDetailsService.java` |
+| Actuator endpoints | Observability endpoints | Operational endpoints (health/etc.) | `permitAll` in security config | Medium | `pom.xml`, `src/main/java/com/finsight/web/config/SecurityConfig.java` |
 | PDF parsing (PDFBox) | Library | Parse PDF statements for import | N/A | Medium | `pom.xml` |
 | Excel parsing (EasyExcel) | Library | Parse/export tabular statement data | N/A | Medium | `pom.xml` |
 | Local indexing/search (Lucene) | Library | Index/query text locally | N/A | Low/Med | `pom.xml` |
@@ -57,8 +57,8 @@ Evidence:
 
 - `pom.xml`
 - `src/main/resources/application.yml`
-- `src/main/java/com/finsight/core/SecurityConfig.java`
-- `src/main/java/com/finsight/core/DbUserDetailsService.java`
+- `src/main/java/com/finsight/web/config/SecurityConfig.java`
+- `src/main/java/com/finsight/web/security/DbUserDetailsService.java`
 - `src/main/resources/mapper/TransactionMapper.xml`
 - `docs/codebase/.codebase-scan.txt`
 

@@ -1,9 +1,6 @@
 package com.finsight.application.finance;
 
 import com.finsight.infrastructure.mapper.FinancialMapper;
-import com.finsight.infrastructure.mapper.TransferPairMapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.finsight.domain.model.TransferPair;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -15,19 +12,16 @@ import java.util.Map;
 public class DataQualityService {
 
     private final FinancialMapper financialMapper;
-    private final TransferPairMapper transferPairMapper;
 
-    public DataQualityService(FinancialMapper financialMapper, TransferPairMapper transferPairMapper) {
+    public DataQualityService(FinancialMapper financialMapper) {
         this.financialMapper = financialMapper;
-        this.transferPairMapper = transferPairMapper;
     }
 
     public Map<String, Object> summary() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("unclassifiedCount", financialMapper.countUnclassified());
         m.put("duplicateCount", financialMapper.countDuplicateFingerprints());
-        Long transfers = transferPairMapper.selectCount(Wrappers.<TransferPair>lambdaQuery().eq(TransferPair::getDeleted, 0));
-        m.put("transferPairCount", transfers == null ? 0 : transfers);
+        m.put("transferPairCount", financialMapper.countTransferGroups());
         return m;
     }
 

@@ -38,6 +38,20 @@ export function normalizeResult<T = unknown>(obj: unknown): NormalizedResult<T> 
   return { ok: true, data: obj as T, message: '' }
 }
 
+export function parseJsonObject<T extends Record<string, unknown> = Record<string, unknown>>(raw: unknown): T | null {
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as T
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as T) : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 export function parseJsonArray(raw: unknown): unknown[] {
   if (raw == null || raw === '') return []
   if (Array.isArray(raw)) return raw

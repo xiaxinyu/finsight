@@ -1,14 +1,14 @@
 package com.finsight.application.transaction.impl;
 
-import com.finsight.core.DateTool;
-import com.finsight.core.StringTool;
+import com.finsight.common.util.DateTool;
+import com.finsight.common.util.StringTool;
 import com.finsight.domain.model.Card;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.KeyValue;
 import com.finsight.domain.model.Page;
 import com.finsight.application.card.CardService;
-import com.finsight.core.AppException;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.domain.port.TransactionRepository;
 import com.finsight.application.query.TransactionQuery;
@@ -38,10 +38,74 @@ public class TransactionServiceImpl implements ITransactionService {
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
         try {
+            if (transaction == null || StringUtils.isBlank(transaction.getId())) {
+                throw new AppServiceException("Transaction id is required");
+            }
+            Transaction existing = transactionRepository.selectById(transaction.getId());
+            if (existing == null) {
+                throw new AppServiceException("Transaction not found");
+            }
+            if ("transfer".equalsIgnoreCase(existing.getTxnKind())) {
+                throw new AppServiceException("Transfer transactions cannot be edited inline. Undo the transfer first.");
+            }
+            if (transaction.getTransactionDate() != null) {
+                transaction.setBookKeepingDate(transaction.getTransactionDate());
+            }
+            String kind = StringUtils.isNotBlank(transaction.getTxnKind())
+                    ? transaction.getTxnKind()
+                    : inferTxnKind(existing);
+            if (transaction.getTxnKind() != null
+                    || transaction.getBalanceMoney() != null
+                    || transaction.getIncomeMoney() != null) {
+                normalizeAmounts(transaction, kind);
+            }
             transaction.setUpdateUser(userName);
             transactionRepository.updateTransaction(transaction);
+        } catch (AppServiceException e) {
+            throw e;
         } catch (Exception e) {
             throw new AppServiceException(e);
+        }
+    }
+
+    private static String inferTxnKind(Transaction t) {
+        if (StringUtils.isNotBlank(t.getTxnKind())) {
+            return t.getTxnKind();
+        }
+        if (t.getIncomeMoney() != null && t.getIncomeMoney() > 0) {
+            return "income";
+        }
+        if (t.getBalanceMoney() != null && t.getBalanceMoney() < 0) {
+            return "income";
+        }
+        return "expense";
+    }
+
+    private static void normalizeAmounts(Transaction t, String kind) {
+        if ("income".equalsIgnoreCase(kind)) {
+            double amt = 0;
+            if (t.getIncomeMoney() != null && t.getIncomeMoney() != 0) {
+                amt = Math.abs(t.getIncomeMoney());
+            } else if (t.getBalanceMoney() != null && t.getBalanceMoney() != 0) {
+                amt = Math.abs(t.getBalanceMoney());
+            }
+            if (amt > 0) {
+                t.setIncomeMoney(amt);
+                t.setBalanceMoney(0.0);
+            }
+            t.setTxnKind("income");
+        } else if ("expense".equalsIgnoreCase(kind)) {
+            double amt = 0;
+            if (t.getBalanceMoney() != null && t.getBalanceMoney() != 0) {
+                amt = Math.abs(t.getBalanceMoney());
+            } else if (t.getIncomeMoney() != null && t.getIncomeMoney() != 0) {
+                amt = Math.abs(t.getIncomeMoney());
+            }
+            if (amt > 0) {
+                t.setBalanceMoney(amt);
+                t.setIncomeMoney(0.0);
+            }
+            t.setTxnKind("expense");
         }
     }
 
@@ -159,7 +223,7 @@ public class TransactionServiceImpl implements ITransactionService {
         for (Transaction transaction : transactions) {
             try {
                 if (transaction.getId() == null || transaction.getId().trim().isEmpty() || transactionRepository.selectById(transaction.getId()) != null) {
-                    transaction.setId(com.finsight.core.StringTool.generateID());
+                    transaction.setId(com.finsight.common.util.StringTool.generateID());
                 }
                 transaction.setCreateUser(userName);
                 transaction.setUpdateUser(userName);

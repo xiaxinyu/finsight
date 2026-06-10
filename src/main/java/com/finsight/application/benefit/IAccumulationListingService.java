@@ -1,9 +1,9 @@
 package com.finsight.application.benefit;
 
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.Accumulation;
-import com.finsight.web.restful.model.AccumulationParam;
-import com.finsight.web.restful.model.CollectionResult;
+import com.finsight.web.api.dto.AccumulationParam;
+import com.finsight.web.api.dto.CollectionResult;
 
 public interface IAccumulationListingService {
 

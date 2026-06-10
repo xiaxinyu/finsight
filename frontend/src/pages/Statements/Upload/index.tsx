@@ -1,30 +1,98 @@
-import { useState } from 'react'
-import { Button, Card, message, Result, Select, Space, Steps, Table, Tag, Upload } from 'antd'
-import { CheckCircleOutlined, EyeOutlined, UploadOutlined } from '@ant-design/icons'
-import { commitStatement, previewStatement, uploadStatement } from '../../api/statement'
-import { DataPageLayout } from '../../components/DataPageLayout'
-import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
-import { cellText, formatTableDate } from '../../utils/cell'
+import { useMemo, useState } from 'react'
+import { Button, message, Result, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
+import { CheckCircleOutlined, CloudUploadOutlined, EyeOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
+import { commitStatement, previewStatement, uploadStatement, type StatementPreviewRow } from '../../../api/statement'
+import { DataPageLayout } from '../../../components/DataPageLayout'
+import { MoneyText, moneyTypeFromRow } from '../../../components/MoneyText'
+import { TransactionSummaryBar } from '../../../components/TransactionSummaryBar'
+import { cellText, formatTableDate } from '../../../utils/cell'
+
+const { Dragger } = Upload
+
+const BANK_OPTIONS = [
+  { value: 'CMB', label: 'CMB — China Merchants Bank' },
+  { value: 'CCB', label: 'CCB — China Construction Bank' },
+  { value: 'CGB', label: 'CGB — China Guangfa Bank' },
+  { value: 'CRBANK', label: 'CRBANK — China Resources Bank' },
+  { value: 'ALIPAY', label: 'Alipay' },
+  { value: 'WECHAT', label: 'WeChat Pay' },
+]
+
+const CARD_OPTIONS = [
+  { value: 'debit', label: 'Debit card' },
+  { value: 'credit', label: 'Credit card' },
+  { value: 'ewallet', label: 'E-wallet' },
+]
+
+function previewAmount(row: StatementPreviewRow): number {
+  const income = Math.abs(Number(row.incomeMoney || 0))
+  const expense = Math.abs(Number(row.balanceMoney || 0))
+  return income > 0 ? income : expense
+}
+
+function previewTxnType(row: StatementPreviewRow): 'income' | 'expense' {
+  return Number(row.incomeMoney) > 0 ? 'income' : 'expense'
+}
+
+function guessBankFromFilename(filename: string): string | null {
+  const name = filename.toLowerCase()
+  if (name.includes('招商') || name.includes('cmb') || name.includes('merchants')) return 'CMB'
+  if (name.includes('建设') || name.includes('ccb') || name.includes('construction')) return 'CCB'
+  if (name.includes('广发') || name.includes('cgb') || name.includes('guangfa')) return 'CGB'
+  if (name.includes('华润') || name.includes('crbank')) return 'CRBANK'
+  if (name.includes('支付宝') || name.includes('alipay')) return 'ALIPAY'
+  if (name.includes('微信') || name.includes('wechat')) return 'WECHAT'
+  return null
+}
+
+function summarizePreview(rows: StatementPreviewRow[]) {
+  let income = 0
+  let expense = 0
+  for (const row of rows) {
+    const inc = Math.abs(Number(row.incomeMoney || 0))
+    const exp = Math.abs(Number(row.balanceMoney || 0))
+    if (inc > 0) income += inc
+    else expense += exp
+  }
+  return { income, expense, net: income - expense }
+}
 
 export function StatementUploadPage() {
   const [step, setStep] = useState(0)
   const [statementId, setStatementId] = useState('')
-  const [preview, setPreview] = useState<Record<string, unknown>[]>([])
+  const [preview, setPreview] = useState<StatementPreviewRow[]>([])
+  const [uploadMeta, setUploadMeta] = useState<{ rows: number; parsed: number; skipped: number } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [bankCode, setBankCode] = useState('CCB')
+  const [bankCode, setBankCode] = useState('CMB')
   const [cardTypeCode, setCardTypeCode] = useState('debit')
+
   const duplicateCount = preview.filter((r) => Boolean(r.possibleDuplicate)).length
+  const stats = useMemo(() => summarizePreview(preview), [preview])
 
   const onUpload = async (file: File) => {
     setLoading(true)
     try {
-      const result = await uploadStatement(file, bankCode, cardTypeCode) as { statementId?: string; id?: string }
-      const sid = result?.statementId || result?.id || String(result)
-      setStatementId(sid)
-      const rows = await previewStatement(sid)
-      setPreview(rows as Record<string, unknown>[])
+      const guessed = guessBankFromFilename(file.name)
+      const effectiveBank = guessed || bankCode
+      if (guessed && guessed !== bankCode) {
+        setBankCode(guessed)
+        message.info(`Detected ${BANK_OPTIONS.find((b) => b.value === guessed)?.label || guessed} from filename`)
+      }
+      const result = await uploadStatement(file, effectiveBank, cardTypeCode)
+      setStatementId(result.statementId)
+      setUploadMeta({ rows: result.rows, parsed: result.parsed, skipped: result.skipped })
+      const rows = await previewStatement(result.statementId)
+      setPreview(rows)
       setStep(1)
-      message.success('File parsed — review preview')
+      if (rows.length === 0) {
+        message.warning(
+          result.parsed === 0
+            ? `No transactions parsed (${result.rows} raw rows). Check bank/account type matches the file.`
+            : 'Preview is empty — try uploading again.',
+        )
+      } else {
+        message.success(`Parsed ${result.parsed} transactions from ${result.rows} rows`)
+      }
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Upload failed')
     } finally {
@@ -34,10 +102,14 @@ export function StatementUploadPage() {
   }
 
   const onCommit = async () => {
+    if (!statementId) {
+      message.warning('No statement to commit')
+      return
+    }
     setLoading(true)
     try {
-      await commitStatement(statementId)
-      message.success('Committed to ledger')
+      const result = await commitStatement(statementId)
+      message.success(`Imported ${result.imported} of ${result.total} transactions`)
       setStep(2)
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Commit failed')
@@ -46,86 +118,166 @@ export function StatementUploadPage() {
     }
   }
 
+  const reset = () => {
+    setStep(0)
+    setPreview([])
+    setStatementId('')
+    setUploadMeta(null)
+  }
+
   return (
     <DataPageLayout
       title="Import Statement"
       subtitle="Upload, preview, and commit bank statement data"
       icon={<UploadOutlined />}
     >
-      <Steps
-        current={step}
-        style={{ marginBottom: 16 }}
-        items={[
-          { title: 'Upload', icon: <UploadOutlined /> },
-          { title: 'Preview', icon: <EyeOutlined /> },
-          { title: 'Commit', icon: <CheckCircleOutlined /> },
-        ]}
-      />
+      <div className="fs-import-steps">
+        <Steps
+          current={step}
+          size="small"
+          items={[
+            { title: 'Upload', icon: <UploadOutlined /> },
+            { title: 'Preview', icon: <EyeOutlined /> },
+            { title: 'Commit', icon: <CheckCircleOutlined /> },
+          ]}
+        />
+      </div>
+
       {step === 0 && (
-        <Card className="fs-content-card">
-          <Space wrap style={{ marginBottom: 12 }}>
-            <Select size="small" value={bankCode} onChange={setBankCode} style={{ width: 140 }} options={[
-              { value: 'CCB', label: 'CCB' },
-              { value: 'CMB', label: 'CMB' },
-              { value: 'CGB', label: 'CGB' },
-              { value: 'ALIPAY', label: 'Alipay' },
-              { value: 'WECHAT', label: 'WeChat Pay' },
-            ]} />
-            <Select size="small" value={cardTypeCode} onChange={setCardTypeCode} style={{ width: 120 }} options={[
-              { value: 'debit', label: 'Debit' },
-              { value: 'credit', label: 'Credit' },
-              { value: 'ewallet', label: 'E-wallet' },
-            ]} />
-          </Space>
-          <Upload beforeUpload={onUpload} showUploadList={false} accept=".csv,.xlsx,.xls,.pdf">
-            <Button type="primary" icon={<UploadOutlined />} loading={loading}>Select statement file</Button>
-          </Upload>
-        </Card>
+        <div className="fs-import-panel">
+          <div className="fs-import-toolbar">
+            <div className="fs-import-field">
+              <span className="fs-import-label">Bank</span>
+              <Select size="small" value={bankCode} onChange={setBankCode} style={{ minWidth: 220 }} options={BANK_OPTIONS} />
+            </div>
+            <div className="fs-import-field">
+              <span className="fs-import-label">Account</span>
+              <Select size="small" value={cardTypeCode} onChange={setCardTypeCode} style={{ minWidth: 140 }} options={CARD_OPTIONS} />
+            </div>
+            <span className="fs-import-hint">Match the bank that issued this statement — CMB PDFs need CMB selected.</span>
+          </div>
+          <Dragger
+            className="fs-upload-dragger"
+            beforeUpload={onUpload}
+            showUploadList={false}
+            accept=".csv,.xlsx,.xls,.pdf"
+            disabled={loading}
+          >
+            <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+            <p className="ant-upload-text">Drop your statement here, or click to browse</p>
+            <p className="ant-upload-hint">CSV, Excel, or PDF exports (CMB, CCB, CGB, Alipay, WeChat)</p>
+            <Button type="primary" icon={<CloudUploadOutlined />} loading={loading}>
+              Select statement file
+            </Button>
+          </Dragger>
+        </div>
       )}
+
       {step === 1 && (
-        <Card
-          className="fs-content-card"
-          title="Preview"
-          extra={(
-            <Space>
-              <Tag color="blue">{preview.length} rows</Tag>
-              {duplicateCount > 0 && (
-                <Tag color="orange">{duplicateCount} possible duplicate{duplicateCount === 1 ? '' : 's'}</Tag>
+        <div className="fs-import-panel">
+          <div className="fs-import-preview-head">
+            <TransactionSummaryBar
+              total={preview.length}
+              income={stats.income}
+              expense={stats.expense}
+              net={stats.net}
+              unclassified={preview.filter((r) => !r.consumeName).length}
+              loading={loading}
+            />
+            <Space size="small" wrap className="fs-import-preview-actions">
+              {uploadMeta && (
+                <Tooltip title="Raw lines include PDF headers/page footers; skipped = non-transaction lines">
+                  <Tag className="fs-tag">
+                    Lines {uploadMeta.rows} · Parsed {uploadMeta.parsed}
+                    {uploadMeta.skipped > 0 ? ` · Skipped ${uploadMeta.skipped}` : ''}
+                  </Tag>
+                </Tooltip>
               )}
-              <Button type="primary" loading={loading} onClick={onCommit}>Commit to ledger</Button>
+              {duplicateCount > 0 && (
+                <Tag className="fs-tag" color="orange">{duplicateCount} possible duplicate{duplicateCount === 1 ? '' : 's'}</Tag>
+              )}
+              <Button size="small" onClick={reset}>Upload another</Button>
+              <Button type="primary" size="small" loading={loading} disabled={preview.length === 0} onClick={onCommit}>
+                Commit to ledger
+              </Button>
             </Space>
-          )}
-        >
-          <div className="fs-table-panel" style={{ border: 'none' }}>
+          </div>
+          <div className="fs-table-panel fs-table-panel--nested">
             <Table
               size="small"
               className="fs-data-table"
               rowKey="id"
               dataSource={preview}
-              pagination={{ pageSize: 20 }}
-              rowClassName={(r) => (r.possibleDuplicate ? 'fs-row-warning' : '')}
+              pagination={{ pageSize: 20, size: 'small', showTotal: (t) => `${t} rows` }}
+              rowClassName={(r) => (r.possibleDuplicate ? 'fs-row-warning' : 'fs-table-row')}
+              locale={{ emptyText: 'No transactions in preview — verify bank/account type and re-upload.' }}
+              scroll={{ x: 1100 }}
               columns={[
-              { title: 'Date', dataIndex: 'transactionDate', width: 100, render: (v) => formatTableDate(v) },
-              { title: 'Description', dataIndex: 'transactionDesc', ellipsis: true, render: (v, r) => (
-                <Space size={4}>
-                  {cellText(v)}
-                  {r.possibleDuplicate ? <Tag color="orange">Duplicate</Tag> : null}
-                </Space>
-              ) },
-              { title: 'Amount', dataIndex: 'balanceMoney', align: 'right', render: (_, r) => <MoneyText value={Number(r.balanceMoney)} type={moneyTypeFromRow(r.txnType as string, r.balanceMoney as number)} unit /> },
-              { title: 'Category', dataIndex: 'consumeName', render: (v) => cellText(v) },
-            ]}
+                { title: 'Date', dataIndex: 'transactionDate', width: 96, fixed: 'left', render: (v) => <span className="fs-mono">{formatTableDate(v)}</span> },
+                {
+                  title: 'Type',
+                  width: 72,
+                  render: (_, r) => {
+                    const type = previewTxnType(r)
+                    return <Tag className="fs-tag" color={type === 'income' ? 'green' : 'default'}>{type}</Tag>
+                  },
+                },
+                { title: 'Description', dataIndex: 'transactionDesc', width: 180, ellipsis: true, render: (v, r) => (
+                  <Space size={4}>
+                    <span className="fs-cell-text" title={cellText(v)}>{cellText(v)}</span>
+                    {r.possibleDuplicate ? <Tag className="fs-tag" color="orange">Dup</Tag> : null}
+                  </Space>
+                ) },
+                {
+                  title: 'Amount',
+                  width: 108,
+                  align: 'right',
+                  render: (_, r) => (
+                    <MoneyText
+                      value={previewAmount(r)}
+                      type={moneyTypeFromRow(previewTxnType(r), r.balanceMoney)}
+                      unit
+                    />
+                  ),
+                },
+                {
+                  title: 'Balance',
+                  dataIndex: 'accountBalance',
+                  width: 108,
+                  align: 'right',
+                  render: (v) => (v != null && Number(v) !== 0
+                    ? <span className="fs-mono fs-cell-muted">{Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</span>
+                    : <span className="fs-cell-muted">—</span>),
+                },
+                {
+                  title: 'Counterparty',
+                  width: 140,
+                  ellipsis: true,
+                  render: (_, r) => {
+                    const name = cellText(r.opponentName)
+                    const acct = cellText(r.opponentAccount)
+                    const text = name || acct
+                    return <span className="fs-cell-muted" title={text}>{text || '—'}</span>
+                  },
+                },
+                { title: 'Category', dataIndex: 'consumeName', width: 130, ellipsis: true, render: (v) => <span className="fs-cell-text">{cellText(v) || '—'}</span> },
+                { title: 'Card', dataIndex: 'cardTypeName', width: 72, render: (v) => <span className="fs-cell-muted">{cellText(v) || '—'}</span> },
+                { title: 'Memo', dataIndex: 'demoArea', width: 120, ellipsis: true, render: (v) => <span className="fs-cell-muted" title={cellText(v)}>{cellText(v) || '—'}</span> },
+              ]}
             />
           </div>
-        </Card>
+        </div>
       )}
+
       {step === 2 && (
-        <Result
-          status="success"
-          title="Statement committed"
-          subTitle={`${preview.length} transactions imported to the ledger.`}
-          extra={<Button type="primary" onClick={() => { setStep(0); setPreview([]); setStatementId('') }}>Import another</Button>}
-        />
+        <div className="fs-import-panel">
+          <Result
+            status="success"
+            title="Statement committed"
+            subTitle={`${preview.length} transactions imported to the ledger.`}
+            extra={<Button type="primary" onClick={reset}>Import another</Button>}
+          />
+        </div>
       )}
     </DataPageLayout>
   )

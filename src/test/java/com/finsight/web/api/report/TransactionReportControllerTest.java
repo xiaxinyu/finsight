@@ -1,7 +1,7 @@
-package com.finsight.web.restful.report;
+package com.finsight.web.api.report;
 
 import com.finsight.application.report.TransactionReportFacade;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

@@ -1,52 +1,29 @@
 package com.finsight.application.finance;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.domain.model.Bill;
-import com.finsight.infrastructure.mapper.BillMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class BillService {
 
-    private final BillMapper billMapper;
-    private final AuthenticationFacade authenticationFacade;
+    private final PlanningPreferencesStore preferencesStore;
 
-    public BillService(BillMapper billMapper, AuthenticationFacade authenticationFacade) {
-        this.billMapper = billMapper;
-        this.authenticationFacade = authenticationFacade;
+    public BillService(PlanningPreferencesStore preferencesStore) {
+        this.preferencesStore = preferencesStore;
     }
 
     public List<Bill> listEnabled() {
-        return billMapper.selectList(Wrappers.<Bill>lambdaQuery()
-                .eq(Bill::getEnabled, 1).eq(Bill::getDeleted, 0)
-                .orderByAsc(Bill::getDueDay));
+        return preferencesStore.enabledBills();
     }
 
     public Bill save(Bill bill) {
-        if (bill.getId() == null || bill.getId().isBlank()) {
-            bill.setId(UUID.randomUUID().toString());
-            bill.setDeleted(0);
-            bill.setCreateUser(authenticationFacade.getUserName());
-            bill.setCreateTime(new Date());
-            if (bill.getEnabled() == null) {
-                bill.setEnabled(1);
-            }
-            billMapper.insert(bill);
-        } else {
-            bill.setUpdateUser(authenticationFacade.getUserName());
-            bill.setUpdateTime(new Date());
-            billMapper.updateById(bill);
-        }
-        return bill;
+        return preferencesStore.saveBill(bill);
     }
 
     public List<Map<String, Object>> calendarNext30Days() {

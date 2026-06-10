@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.finsight.domain.model.Medical;
 import com.finsight.domain.model.Page;
-import com.finsight.core.AppServiceException;
+import com.finsight.common.exception.AppServiceException;
 
 public interface IMedicalService {
     void addMedical(Medical medical) throws AppServiceException;

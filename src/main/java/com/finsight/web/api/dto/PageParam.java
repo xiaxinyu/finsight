@@ -1,4 +1,4 @@
-package com.finsight.web.restful.model;
+package com.finsight.web.api.dto;
 
 public class PageParam {
 	private int page;
