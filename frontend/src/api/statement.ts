@@ -16,6 +16,12 @@ export interface StatementCommitResult {
   skippedDuplicates?: number
 }
 
+export interface SkippedImportRow {
+  lineNumber: number
+  rawText: string
+  reason: string
+}
+
 export interface StatementPreviewRow {
   id: string
   transactionDate?: string
@@ -66,4 +72,10 @@ export async function commitStatement(statementId: string) {
 export async function previewStatement(statementId: string) {
   const raw = await getJson(`/statement/preview?statementId=${encodeURIComponent(statementId)}`)
   return Array.isArray(raw) ? (raw as StatementPreviewRow[]) : []
+}
+
+export async function skippedStatementLines(statementId: string, cardTypeCode?: string) {
+  const card = cardTypeCode ? `&cardTypeCode=${encodeURIComponent(cardTypeCode)}` : ''
+  const raw = await getJson(`/statement/skipped-lines?statementId=${encodeURIComponent(statementId)}${card}`)
+  return Array.isArray(raw) ? (raw as SkippedImportRow[]) : []
 }

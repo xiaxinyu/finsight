@@ -49,6 +49,9 @@ public class StatementFacade {
     @Autowired
     private DataQualityService dataQualityService;
 
+    @Autowired
+    private StatementSkippedLinesService statementSkippedLinesService;
+
     public CollectionResult<Statement> list(int page, int rows) {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<Statement> p =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, rows);
@@ -205,6 +208,25 @@ public class StatementFacade {
         } catch (Exception e) {
             log.error("Upload parsed failed", e);
             return CommonResult.fail(friendlyError(e));
+        }
+    }
+
+    public List<SkippedImportRow> skippedLines(String statementId, String cardTypeCode) {
+        if (StringUtils.isBlank(statementId)) {
+            return new ArrayList<>();
+        }
+        try {
+            Statement statement = statementService.getById(statementId);
+            if (statement == null) {
+                return new ArrayList<>();
+            }
+            List<SkippedImportRow> skipped = statementSkippedLinesService.analyze(
+                    statement, StringUtils.defaultIfBlank(cardTypeCode, "debit"));
+            log.info("statement/skipped-lines: statementId={}, size={}", statementId, skipped.size());
+            return skipped;
+        } catch (Exception e) {
+            log.error("Skipped lines fetch failed", e);
+            return new ArrayList<>();
         }
     }
 

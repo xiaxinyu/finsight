@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 import { EmptyState } from '../../../components/EmptyState'
-import { Button, message, Result, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
+import { Button, message, Result, Segmented, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
 import { CheckCircleOutlined, CloudUploadOutlined, EyeOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
-import { commitStatement, previewStatement, uploadStatement, type StatementCommitResult, type StatementPreviewRow } from '../../../api/statement'
+import {
+  commitStatement, previewStatement, skippedStatementLines, uploadStatement,
+  type StatementCommitResult, type StatementPreviewRow,
+} from '../../../api/statement'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { MoneyText, moneyTypeFromRow } from '../../../components/MoneyText'
 import { TransactionSummaryBar } from '../../../components/TransactionSummaryBar'
@@ -72,6 +75,14 @@ export function StatementUploadPage() {
   const [bankCode, setBankCode] = useState('CMB')
   const [cardTypeCode, setCardTypeCode] = useState('debit')
   const [commitResult, setCommitResult] = useState<StatementCommitResult | null>(null)
+  const [previewView, setPreviewView] = useState<'parsed' | 'skipped'>('parsed')
+
+  const { data: skippedRows = [], isFetching: skippedLoading } = useQuery({
+    queryKey: ['statement-skipped', statementId, cardTypeCode],
+    queryFn: () => skippedStatementLines(statementId, cardTypeCode),
+    enabled: step === 1 && Boolean(statementId),
+    staleTime: 60_000,
+  })
 
   const duplicateCount = preview.filter((r) => Boolean(r.possibleDuplicate)).length
   const stats = useMemo(() => summarizePreview(preview), [preview])
@@ -90,6 +101,7 @@ export function StatementUploadPage() {
       setUploadMeta({ rows: result.rows, parsed: result.parsed, skipped: result.skipped })
       const rows = await previewStatement(result.statementId)
       setPreview(rows)
+      setPreviewView('parsed')
       setStep(1)
       if (rows.length === 0) {
         message.warning(
@@ -137,6 +149,7 @@ export function StatementUploadPage() {
     setStatementId('')
     setUploadMeta(null)
     setCommitResult(null)
+    setPreviewView('parsed')
   }
 
   return (
@@ -200,10 +213,15 @@ export function StatementUploadPage() {
             />
             <Space size="small" wrap className="fs-import-preview-actions">
               {uploadMeta && (
-                <Tooltip title="Raw lines include PDF headers/page footers; skipped = non-transaction lines">
-                  <Tag className="fs-tag">
+                <Tooltip title={uploadMeta.skipped > 0 ? 'Click to review lines that were not imported' : 'Raw lines in the uploaded file'}>
+                  <Tag
+                    className="fs-tag"
+                    color={uploadMeta.skipped > 0 && previewView === 'skipped' ? 'blue' : undefined}
+                    style={uploadMeta.skipped > 0 ? { cursor: 'pointer' } : undefined}
+                    onClick={() => uploadMeta.skipped > 0 && setPreviewView('skipped')}
+                  >
                     Lines {uploadMeta.rows} · Parsed {uploadMeta.parsed}
-                    {uploadMeta.skipped > 0 ? ` · Skipped ${uploadMeta.skipped}` : ''}
+                    {uploadMeta.skipped > 0 ? ` · Skipped ${skippedRows.length || uploadMeta.skipped}` : ''}
                   </Tag>
                 </Tooltip>
               )}
@@ -216,7 +234,48 @@ export function StatementUploadPage() {
               </Button>
             </Space>
           </div>
+          {(uploadMeta?.skipped ?? 0) > 0 && (
+            <div className="fs-import-preview-tabs">
+              <Segmented
+                size="small"
+                value={previewView}
+                onChange={(v) => setPreviewView(v as 'parsed' | 'skipped')}
+                options={[
+                  { label: `Parsed (${preview.length})`, value: 'parsed' },
+                  { label: `Skipped (${skippedRows.length || uploadMeta?.skipped || 0})`, value: 'skipped' },
+                ]}
+              />
+            </div>
+          )}
           <div className="fs-table-panel fs-table-panel--nested">
+            {previewView === 'skipped' ? (
+            <Table
+              size="small"
+              className="fs-data-table"
+              rowKey="lineNumber"
+              dataSource={skippedRows}
+              loading={skippedLoading}
+              pagination={{ pageSize: 20, size: 'small', showTotal: (t) => `${t} lines` }}
+              locale={{ emptyText: <EmptyState compact title="No skipped lines" description="All raw rows were imported as transactions." /> }}
+              scroll={{ x: 900, y: previewTableHeight }}
+              columns={[
+                { title: 'Line', dataIndex: 'lineNumber', width: 72, fixed: 'left', render: (v) => <span className="fs-mono">{v}</span> },
+                {
+                  title: 'Reason',
+                  dataIndex: 'reason',
+                  width: 320,
+                  ellipsis: true,
+                  render: (v) => <span className="fs-cell-text" title={cellText(v)}>{cellText(v)}</span>,
+                },
+                {
+                  title: 'Raw content',
+                  dataIndex: 'rawText',
+                  ellipsis: true,
+                  render: (v) => <span className="fs-cell-muted" title={cellText(v)}>{cellText(v)}</span>,
+                },
+              ]}
+            />
+            ) : (
             <Table
               size="small"
               className="fs-data-table"
@@ -278,6 +337,7 @@ export function StatementUploadPage() {
                 { title: 'Memo', dataIndex: 'demoArea', width: 120, ellipsis: true, render: (v) => <span className="fs-cell-muted" title={cellText(v)}>{cellText(v) || '—'}</span> },
               ]}
             />
+            )}
           </div>
         </div>
       )}

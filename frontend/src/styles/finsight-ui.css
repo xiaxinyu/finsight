@@ -961,6 +961,10 @@
   flex-shrink: 0;
 }
 
+.fs-import-preview-tabs {
+  margin-bottom: 8px;
+}
+
 .fs-upload-dragger {
   border: none !important;
   border-radius: 0 !important;

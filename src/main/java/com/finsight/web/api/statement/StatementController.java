@@ -70,6 +70,14 @@ public class StatementController {
         return statementFacade.preview(statementId);
     }
 
+    @GetMapping("/skipped-lines")
+    @ResponseBody
+    public List<com.finsight.application.statement.SkippedImportRow> skippedLines(
+            @RequestParam("statementId") String statementId,
+            @RequestParam(value = "cardTypeCode", defaultValue = "debit") String cardTypeCode) {
+        return statementFacade.skippedLines(statementId, cardTypeCode);
+    }
+
     @PostMapping("/commit")
     @ResponseBody
     public CommonResult commit(@RequestParam("statementId") String statementId) {
