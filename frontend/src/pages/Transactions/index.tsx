@@ -32,7 +32,7 @@ import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
-import { formatPeriodPreview } from '../../utils/periodPresets'
+import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPresets'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 
 type TxFilters = {
@@ -82,8 +82,7 @@ export function TransactionsPage() {
   const cardFromUrl = searchParams.get('cardId') || ''
 
   const initial: TxFilters = {
-    start: '',
-    end: '',
+    ...defaultPeriodStrings(),
     card: cardFromUrl,
     consume: '',
     keyword: '',

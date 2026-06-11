@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { describe, expect, it } from 'vitest'
 import { periodToStrings } from '../components/PeriodRangePicker'
-import { defaultPeriodRange, detectPresetId, formatPeriodPreview, presetRange } from './periodPresets'
+import { defaultPeriodRange, defaultPeriodStrings, detectPresetId, formatPeriodPreview, presetRange } from './periodPresets'
 
 describe('periodPresets', () => {
   it('formats single month preview', () => {
@@ -10,10 +10,13 @@ describe('periodPresets', () => {
     expect(formatPeriodPreview(start, end)).toBe('May 2026')
   })
 
-  it('defaults to all time with no API date bounds', () => {
+  it('defaults to this year', () => {
     const range = defaultPeriodRange()
-    expect(detectPresetId(range)).toBe('allTime')
-    expect(periodToStrings(range)).toEqual({ start: '', end: '' })
+    expect(detectPresetId(range)).toBe('thisYear')
+    const strings = defaultPeriodStrings()
+    expect(strings.start).toBeTruthy()
+    expect(strings.end).toBeTruthy()
+    expect(periodToStrings(range)).toEqual(strings)
   })
 
   it('detects this year preset', () => {

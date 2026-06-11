@@ -60,7 +60,7 @@ export const PERIOD_SECTION_LABELS: Record<PeriodSection, string> = {
 type BuiltinPresetId = Exclude<PeriodPresetId, 'custom'>
 
 export const SECTION_PRESET_IDS: Record<PeriodSection, BuiltinPresetId[]> = {
-  recommended: ['allTime', 'last7', 'thisMonth', 'last12Months'],
+  recommended: ['thisYear', 'allTime', 'last7', 'thisMonth', 'last12Months'],
   relative: ['last30'],
   calendar: [
     'thisQuarter', 'thisYear', 'lastYear', 'lastMonth', 'lastQuarter',
@@ -175,7 +175,16 @@ export function formatPeriodPreview(start: Dayjs, end: Dayjs): string {
 }
 
 export function defaultPeriodRange(): PeriodRange {
-  return PRESETS.allTime.range()
+  return PRESETS.thisYear.range()
+}
+
+/** MM/DD/YYYY bounds for API filters — same as {@link defaultPeriodRange}. */
+export function defaultPeriodStrings(): { start: string; end: string } {
+  const [start, end] = defaultPeriodRange()
+  return {
+    start: start.format('MM/DD/YYYY'),
+    end: end.format('MM/DD/YYYY'),
+  }
 }
 
 export function defaultComparePeriodRange(): PeriodRange {
@@ -184,7 +193,7 @@ export function defaultComparePeriodRange(): PeriodRange {
 }
 
 export function presetRange(id: PeriodPresetId): PeriodRange {
-  if (id === 'custom') return ALL_TIME_PERIOD
+  if (id === 'custom') return defaultPeriodRange()
   return PRESETS[id].range()
 }
 

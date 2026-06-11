@@ -46,6 +46,10 @@ export function PeriodRangePicker({
   const childPickerOpen = startPickerOpen || endPickerOpen
 
   useEffect(() => {
+    setPresetId(detectPresetId(value))
+  }, [value])
+
+  useEffect(() => {
     if (open) {
       setDraftStart(value[0])
       setDraftEnd(value[1])

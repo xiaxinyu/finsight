@@ -81,7 +81,7 @@ public class ClassificationRuleController {
     public ClassificationRule add(@RequestBody ClassificationRule rule) {
         ruleValidator.validate(rule);
         rule.setId(com.finsight.common.util.StringTool.generateID());
-        ruleService.save((ConsumeRule) rule);
+        ruleService.save(ConsumeRule.from(rule));
         classificationService.reload();
         return rule;
     }
@@ -90,7 +90,7 @@ public class ClassificationRuleController {
     public ClassificationRule update(@PathVariable String id, @RequestBody ClassificationRule rule) {
         rule.setId(id);
         ruleValidator.validate(rule);
-        ruleService.updateById((ConsumeRule) rule);
+        ruleService.updateById(ConsumeRule.from(rule));
         classificationService.reload();
         return rule;
     }

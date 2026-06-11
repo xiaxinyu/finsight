@@ -17,7 +17,7 @@ import { TableHeader } from '../../components/TableHeader'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
-import { defaultPeriodRange } from '../../utils/periodPresets'
+import { defaultPeriodStrings } from '../../utils/periodPresets'
 
 type LedgerFilters = { start: string; end: string; consume: string }
 
@@ -30,7 +30,7 @@ export function LedgersPage() {
   const tableHeight = useViewportTableHeight(200)
 
   const initial: LedgerFilters = {
-    ...periodToStrings(defaultPeriodRange()),
+    ...defaultPeriodStrings(),
     consume: '',
   }
 
