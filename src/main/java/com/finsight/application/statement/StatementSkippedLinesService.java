@@ -46,6 +46,100 @@ public class StatementSkippedLinesService {
         return summarize(statement, cardTypeCode, -1).skippedRows();
     }
 
+    public StatementSourceView sourceView(Statement statement, String cardTypeCode) {
+        StatementSourceView view = new StatementSourceView();
+        if (statement == null) {
+            return view;
+        }
+        view.setStatementId(statement.getId());
+        view.setFileName(statement.getFileName());
+        view.setBankCode(StringUtils.trimToEmpty(statement.getSource()));
+
+        if (StringUtils.isBlank(statement.getContent())) {
+            return view;
+        }
+
+        List<SourceRow> sourceRows = loadSourceRows(statement);
+        if (sourceRows.isEmpty()) {
+            return view;
+        }
+
+        String bankCode = StringUtils.trimToEmpty(statement.getSource());
+        String cardType = StringUtils.defaultIfBlank(cardTypeCode, "debit");
+        List<String[]> rowArrays = sourceRows.stream().map(r -> r.cells).collect(Collectors.toList());
+        List<Transaction> parsed = StatementImporterFactory.get(bankCode, cardType)
+                .parse(rowArrays, bankCode, cardType, null);
+        int txnCount = parsed == null ? 0 : parsed.size();
+        Set<Integer> consumed = matchRowsToTransactions(rowArrays, parsed == null ? List.of() : parsed);
+        markMergedContinuationRows(rowArrays, consumed);
+
+        ImportLineStats stats = summarize(statement, cardTypeCode, txnCount);
+        Map<Integer, SkippedImportRow> skippedByLine = new HashMap<>();
+        for (SkippedImportRow skipped : stats.skippedRows()) {
+            skippedByLine.put(skipped.getLineNumber(), skipped);
+        }
+
+        List<String> columnHeaders = null;
+        List<StatementSourceLine> lines = new ArrayList<>();
+        int maxCols = 0;
+
+        for (int i = 0; i < sourceRows.size(); i++) {
+            SourceRow source = sourceRows.get(i);
+            String raw = formatRaw(source.cells);
+            StatementSourceLine line = new StatementSourceLine();
+            line.setLineNumber(i + 1);
+            line.setFileLineNumber(source.fileLineNumber);
+            line.setOriginalLine(source.originalLine);
+            line.setColumns(toColumnList(source.cells));
+            maxCols = Math.max(maxCols, line.getColumns().size());
+
+            if (StringUtils.isBlank(raw) || isNoiseLine(raw)) {
+                line.setKind("noise");
+            } else if (isHeaderRow(raw)) {
+                line.setKind("header");
+                if (columnHeaders == null) {
+                    columnHeaders = new ArrayList<>(line.getColumns());
+                }
+            } else if (consumed.contains(i)) {
+                line.setKind("linked");
+            } else if (looksLikeContinuationLine(raw, source.cells)) {
+                line.setKind("ignored");
+                line.setReason("Merged continuation line");
+            } else {
+                SkippedImportRow skipped = skippedByLine.get(i + 1);
+                if (skipped != null) {
+                    line.setKind("skipped");
+                    line.setReason(skipped.getReason());
+                    line.setHint(skipped.getHint());
+                } else {
+                    line.setKind("ignored");
+                    line.setReason("Not linked to a parsed transaction");
+                }
+            }
+            lines.add(line);
+        }
+
+        if (columnHeaders == null || columnHeaders.isEmpty()) {
+            columnHeaders = defaultColumnHeaders(maxCols);
+        }
+        view.setColumnHeaders(columnHeaders);
+        view.setRows(lines);
+        view.setLines(stats.lines());
+        view.setTransactions(stats.transactions());
+        view.setLinked(stats.linked());
+        view.setSkipped(stats.skipped());
+        view.setIgnored(stats.ignored());
+        return view;
+    }
+
+    private List<String> defaultColumnHeaders(int count) {
+        List<String> headers = new ArrayList<>();
+        for (int i = 0; i < Math.max(1, count); i++) {
+            headers.add("Col " + (i + 1));
+        }
+        return headers;
+    }
+
     public ImportLineStats summarize(Statement statement, String cardTypeCode, int transactionCount) {
         if (statement == null || StringUtils.isBlank(statement.getContent())) {
             return new ImportLineStats(0, Math.max(0, transactionCount), 0, 0, 0, List.of());

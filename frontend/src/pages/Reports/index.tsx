@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Col, Drawer, Row, Select, Spin, TreeSelect } from 'antd'
+import { Col, Drawer, Row, Spin } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { reportConfigs } from '../../config/reports'
 import { fetchReport } from '../../api/report'
-import { listCards, listTransactions } from '../../api/transaction'
-import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
+import { listTransactions } from '../../api/transaction'
+import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
+import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
 import { useFilterApply } from '../../hooks/useFilterApply'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { FsChart } from '../../components/FsChart'
@@ -38,7 +39,7 @@ type ReportFilters = {
 
 function buildParams(cfg: NonNullable<(typeof reportConfigs)[string]>, f: ReportFilters) {
   const p: Record<string, unknown> = { txnTypes: cfg.txnType || 'expense' }
-  if (f.card) p.cardTypeName = f.card
+  if (f.card) p.cardId = f.card
   if (f.consume) p.consumeID = f.consume
   const { start, end } = periodToStrings(f.period)
   p.transactionDateStartStr = start
@@ -60,8 +61,6 @@ export function ReportsPage() {
   const [drillOpen, setDrillOpen] = useState(false)
   const [drillParams, setDrillParams] = useState<Record<string, string>>({})
 
-  const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
-  const { treeData } = useConsumeTreeSelect(cfg?.txnType)
 
   const baseParams = useMemo(() => (cfg ? buildParams(cfg, applied) : {}), [cfg, applied])
 
@@ -86,7 +85,7 @@ export function ReportsPage() {
       }
       if (cfg.type === 'incomeVsExpense') {
         const r = periodToStrings(applied.period)
-        const base = { transactionDateStartStr: r.start, transactionDateEndStr: r.end, cardTypeName: applied.card, consumeID: applied.consume }
+        const base = { transactionDateStartStr: r.start, transactionDateEndStr: r.end, cardId: applied.card, consumeID: applied.consume }
         const [inc, exp] = await Promise.all([
           fetchReport('/transaction-report/month-income', { ...base, txnTypes: 'income' }),
           fetchReport('/transaction-report/month-expense', { ...base, txnTypes: 'expense' }),
@@ -323,7 +322,7 @@ export function ReportsPage() {
       txnTypes: cfg.txnType || 'expense',
     }
     if (categoryName) next.consumeName = categoryName
-    if (applied.card) next.cardTypeName = applied.card
+    if (applied.card) next.cardId = applied.card
     setDrillParams(next)
     setDrillOpen(true)
   }
@@ -357,11 +356,17 @@ export function ReportsPage() {
               onChange={(range) => setDraft((d) => ({ ...d, comparePeriod: range }))}
             />
           )}
-          <Select size="small" allowClear placeholder="Card" disabled={disabled} style={{ width: 120 }}
-            options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
-            value={draft.card || undefined} onChange={(v) => setDraft((d) => ({ ...d, card: v || '' }))} />
-          <TreeSelect size="small" allowClear placeholder="Category" disabled={disabled} style={{ width: 150 }} treeData={treeData}
-            value={draft.consume || undefined} onChange={(v) => setDraft((d) => ({ ...d, consume: v || '' }))} />
+          <CardFilterSelect
+            disabled={disabled}
+            value={draft.card}
+            onChange={(v) => setDraft((d) => ({ ...d, card: v }))}
+          />
+          <CategoryFilterSelect
+            disabled={disabled}
+            txnType={cfg?.txnType}
+            value={draft.consume}
+            onChange={(v) => setDraft((d) => ({ ...d, consume: v }))}
+          />
         </FilterToolbar>
       )}
     >

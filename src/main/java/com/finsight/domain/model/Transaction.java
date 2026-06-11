@@ -104,6 +104,13 @@ public class Transaction extends BaseEntity {
     @TableField(exist = false)
     private String transactionDateTime;
 
+    /** Resolved from fin_bank_account or import statement source. */
+    @TableField(exist = false)
+    private String bankCode;
+
+    @TableField(exist = false)
+    private String cardTypeCode;
+
     public Double getBalanceMoney() { return balanceMoney; }
     public String getConsumeID() { return consumeID != null ? consumeID : categoryId; }
     public void setConsumeID(String consumeID) {

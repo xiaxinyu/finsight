@@ -34,8 +34,9 @@ public class StatementController {
                                @RequestParam(value = "bankCode", required = false) String bankCode,
                                @RequestParam(value = "cardTypeCode", required = false) String cardTypeCode,
                                @RequestParam(value = "cardNo", required = false) String cardNo,
+                               @RequestParam(value = "bankCardId", required = false) String bankCardId,
                                HttpServletRequest request) {
-        return statementFacade.upload(file, bankCode, cardTypeCode, cardNo);
+        return statementFacade.upload(file, bankCode, cardTypeCode, cardNo, bankCardId);
     }
 
     @PostMapping("/import-pdf-local")
@@ -68,6 +69,14 @@ public class StatementController {
     @ResponseBody
     public List<com.finsight.domain.model.TransactionTemp> preview(@RequestParam("statementId") String statementId) {
         return statementFacade.preview(statementId);
+    }
+
+    @GetMapping("/source-lines")
+    @ResponseBody
+    public com.finsight.application.statement.StatementSourceView sourceLines(
+            @RequestParam("statementId") String statementId,
+            @RequestParam(value = "cardTypeCode", defaultValue = "debit") String cardTypeCode) {
+        return statementFacade.sourceLines(statementId, cardTypeCode);
     }
 
     @GetMapping("/skipped-lines")

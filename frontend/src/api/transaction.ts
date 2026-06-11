@@ -9,6 +9,10 @@ export interface TransactionRow {
   balanceMoney?: number
   incomeMoney?: number
   cardTypeName?: string
+  bankCode?: string
+  cardTypeCode?: string
+  bankCardId?: string
+  bankCardName?: string
   consumeCode?: string
   consumeName?: string
   consumeID?: string
@@ -23,6 +27,7 @@ export interface TransactionQuery {
   rows?: number
   transactionDateStartStr?: string
   transactionDateEndStr?: string
+  cardId?: string
   cardTypeName?: string
   consumeID?: string
   consumeName?: string
@@ -127,6 +132,24 @@ export async function listCards(): Promise<KeyValue[]> {
   if (Array.isArray(raw)) return raw
   const n = normalizeResult<KeyValue[]>(raw)
   return parseJsonArray(n.data) as KeyValue[]
+}
+
+export async function cardTree(): Promise<TreeNode[]> {
+  return getJson<TreeNode[]>('/api/v1/cards/tree')
+}
+
+export interface BankCardRow {
+  id: string
+  bankCode?: string
+  cardTypeCode?: string
+  cardNo?: string
+  cardName?: string
+}
+
+export async function listBankCards(cardTypeCode?: string): Promise<BankCardRow[]> {
+  const q = cardTypeCode ? `?cardTypeCode=${encodeURIComponent(cardTypeCode)}` : ''
+  const raw = await getJson<BankCardRow[]>(`/api/v1/cards${q}`)
+  return Array.isArray(raw) ? raw : []
 }
 
 export interface TreeNode { id: string; text: string; children?: TreeNode[] }

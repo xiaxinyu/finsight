@@ -33,19 +33,25 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
     private TransactionTempRepository transactionTempRepository;
 
     @Override
-    public List<Transaction> parseAndEnrichTransactions(List<String[]> dataRows, String bankCode, String cardTypeCode, String cardNo, String statementId) {
+    public List<Transaction> parseAndEnrichTransactions(
+            List<String[]> dataRows,
+            String bankCode,
+            String cardTypeCode,
+            String cardNo,
+            String bankCardId,
+            String statementId) {
         List<Transaction> transactions = StatementImporterFactory
                 .get(StringUtils.trimToEmpty(bankCode), StringUtils.trimToEmpty(cardTypeCode))
                 .parse(dataRows, bankCode, cardTypeCode, cardNo);
-        BankCard bankCard = resolveBankCard(bankCode, cardTypeCode, cardNo);
-        String bankCardId = bankCard == null ? null : bankCard.getId();
-        String bankCardName = bankCard == null ? null : bankCard.getCardName();
+        BankCard bankCard = resolveBankCard(bankCode, cardTypeCode, cardNo, bankCardId);
+        String resolvedCardId = bankCard == null ? null : bankCard.getId();
+        String resolvedCardName = bankCard == null ? null : bankCard.getCardName();
         for (Transaction t : transactions) {
             TransactionAmountNormalizer.normalize(t);
             TransactionFieldSanitizer.sanitize(t);
-            if (StringUtils.isNotBlank(bankCardId)) {
-                t.setBankCardId(bankCardId);
-                t.setBankCardName(bankCardName);
+            if (StringUtils.isNotBlank(resolvedCardId)) {
+                t.setBankCardId(resolvedCardId);
+                t.setBankCardName(resolvedCardName);
             }
             classifyTransaction(t, bankCode, cardTypeCode);
             if (StringUtils.isNotBlank(statementId)) {
@@ -77,12 +83,32 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
         transactionTempRepository.saveBatch(temps);
     }
 
-    private BankCard resolveBankCard(String bankCode, String cardTypeCode, String cardNo) {
-        BankCard bankCard = bankCardService.getByBankTypeNo(StringUtils.trimToEmpty(bankCode), StringUtils.trimToEmpty(cardTypeCode), StringUtils.trimToEmpty(cardNo));
-        if (bankCard == null && StringUtils.isNotBlank(cardNo)) {
-            bankCard = bankCardService.getByCardNo(StringUtils.trimToEmpty(cardNo));
+    private BankCard resolveBankCard(String bankCode, String cardTypeCode, String cardNo, String bankCardId) {
+        if (StringUtils.isNotBlank(bankCardId)) {
+            BankCard byId = bankCardService.getById(StringUtils.trim(bankCardId));
+            if (byId != null && (byId.getDeleted() == null || byId.getDeleted() == 0)) {
+                return byId;
+            }
         }
-        return bankCard;
+        String b = StringUtils.trimToEmpty(bankCode).toUpperCase();
+        String t = StringUtils.trimToEmpty(cardTypeCode).toLowerCase();
+        String n = StringUtils.trimToEmpty(cardNo);
+        if (StringUtils.isNotBlank(n)) {
+            BankCard bankCard = bankCardService.getByBankTypeNo(b, t, n);
+            if (bankCard == null) {
+                bankCard = bankCardService.getByCardNo(n);
+            }
+            if (bankCard != null) {
+                return bankCard;
+            }
+        }
+        if (StringUtils.isNotBlank(b) && StringUtils.isNotBlank(t)) {
+            List<BankCard> matches = bankCardService.listByBankAndType(b, t);
+            if (matches != null && matches.size() == 1) {
+                return matches.get(0);
+            }
+        }
+        return null;
     }
 
     /**

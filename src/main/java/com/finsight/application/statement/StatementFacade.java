@@ -66,14 +66,19 @@ public class StatementFacade {
         return result;
     }
 
-    public CommonResult upload(MultipartFile file, String bankCode, String cardTypeCode, String cardNo) {
+    public CommonResult upload(
+            MultipartFile file,
+            String bankCode,
+            String cardTypeCode,
+            String cardNo,
+            String bankCardId) {
         String userName = authenticationFacade.getUserName();
         try {
             if (file == null || file.isEmpty()) {
                 return CommonResult.fail("File is empty or unreadable");
             }
-            log.info("statement/upload request: user={}, bankCode={}, cardTypeCode={}, cardNo={}, fileName={}",
-                    userName, bankCode, cardTypeCode, cardNo, file.getOriginalFilename());
+            log.info("statement/upload request: user={}, bankCode={}, cardTypeCode={}, cardNo={}, bankCardId={}, fileName={}",
+                    userName, bankCode, cardTypeCode, cardNo, bankCardId, file.getOriginalFilename());
 
             String filename = file.getOriginalFilename();
             String suffix = filename == null ? "" : filename.trim().toLowerCase();
@@ -105,12 +110,16 @@ public class StatementFacade {
             statementService.createStatement(statement, userName);
 
             List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(
-                    dataRows, bankCode, cardTypeCode, cardNo, statement.getId());
+                    dataRows, bankCode, cardTypeCode, cardNo, bankCardId, statement.getId());
             statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
 
             int parsedCount = transactions == null ? 0 : transactions.size();
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("statementId", statement.getId());
+            if (transactions != null && !transactions.isEmpty() && StringUtils.isNotBlank(transactions.get(0).getBankCardId())) {
+                resp.put("bankCardId", transactions.get(0).getBankCardId());
+                resp.put("bankCardName", transactions.get(0).getBankCardName());
+            }
             putImportLineStats(resp, statement, cardTypeCode, parsedCount);
             log.info("statement/upload stored preview: statementId={}, stats={}", statement.getId(), resp);
             return CommonResult.success(JSON.toJSONString(resp));
@@ -138,7 +147,7 @@ public class StatementFacade {
             }
             List<String[]> dataRows = parsePlainTable(content);
             List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(
-                    dataRows, bankCode, cardTypeCode, cardNo, null);
+                    dataRows, bankCode, cardTypeCode, cardNo, null, null);
             int imported = transactionService.addTransactions(transactions, userName);
             int rawPdf = dataRows.size();
             int parsedPdf = transactions == null ? 0 : transactions.size();
@@ -189,7 +198,7 @@ public class StatementFacade {
             statementService.createStatement(statement, userName);
 
             List<Transaction> transactions = statementProcessingService.parseAndEnrichTransactions(
-                    dataRows, bankCode, cardTypeCode, cardNo, statement.getId());
+                    dataRows, bankCode, cardTypeCode, cardNo, null, statement.getId());
             log.info("statement/upload-parsed parsed transactions: {}", transactions == null ? 0 : transactions.size());
             statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
 
@@ -201,6 +210,27 @@ public class StatementFacade {
         } catch (Exception e) {
             log.error("Upload parsed failed", e);
             return CommonResult.fail(friendlyError(e));
+        }
+    }
+
+    public StatementSourceView sourceLines(String statementId, String cardTypeCode) {
+        StatementSourceView empty = new StatementSourceView();
+        if (StringUtils.isBlank(statementId)) {
+            return empty;
+        }
+        try {
+            Statement statement = statementService.getById(statementId);
+            if (statement == null) {
+                return empty;
+            }
+            StatementSourceView view = statementSkippedLinesService.sourceView(
+                    statement, StringUtils.defaultIfBlank(cardTypeCode, "debit"));
+            log.info("statement/source-lines: statementId={}, rows={}", statementId,
+                    view.getRows() == null ? 0 : view.getRows().size());
+            return view;
+        } catch (Exception e) {
+            log.error("Source lines fetch failed", e);
+            return empty;
         }
     }
 

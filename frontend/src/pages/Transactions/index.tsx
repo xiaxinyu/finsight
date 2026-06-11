@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { Button, Input, Modal, Popconfirm, Select, Space, Tag, Tooltip, TreeSelect, message } from 'antd'
+import { Button, Input, Modal, Popconfirm, Space, Tag, Tooltip, message } from 'antd'
 import {
   CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
@@ -11,9 +11,11 @@ import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-comp
 import dayjs from 'dayjs'
 import {
   classifyTransactions, deleteTransaction, expenseToIncome,
-  fetchTransactionStats, incomeToExpense, listCards, listTransactions, updateTransaction, type TransactionRow,
+  fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
+import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
+import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
 import { useFilterApply } from '../../hooks/useFilterApply'
 import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
@@ -21,6 +23,7 @@ import { TransactionSummaryBar } from '../../components/TransactionSummaryBar'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
+import { TransactionCardCell } from '../../components/TransactionCardCell'
 import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
@@ -61,11 +64,12 @@ export function TransactionsPage() {
   const tableHeight = useFillTableHeight(tablePanelRef)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
+  const cardFromUrl = searchParams.get('cardId') || ''
 
   const initial: TxFilters = {
     start: periodToStrings(defaultPeriodRange()).start,
     end: periodToStrings(defaultPeriodRange()).end,
-    card: '',
+    card: cardFromUrl,
     consume: '',
     keyword: '',
     unclassified: unclassifiedFromUrl,
@@ -79,13 +83,12 @@ export function TransactionsPage() {
     }
   }, [unclassifiedFromUrl, setDraft])
 
-  const { data: cards } = useQuery({ queryKey: ['cards'], queryFn: listCards })
   const { treeData } = useConsumeTreeSelect()
 
   const statsParams = useMemo(() => ({
     transactionDateStartStr: applied.start,
     transactionDateEndStr: applied.end,
-    cardTypeName: applied.card || undefined,
+    cardId: applied.card || undefined,
     consumeID: applied.consume || undefined,
     demoArea: applied.keyword || undefined,
     emptyConsume: applied.unclassified ? '1' : undefined,
@@ -192,11 +195,11 @@ export function TransactionsPage() {
     },
     {
       title: <TableHeader name="Card" />,
-      dataIndex: 'cardTypeName',
-      width: 100,
+      dataIndex: 'bankCode',
+      width: 128,
       ellipsis: true,
       editable: false,
-      render: (_, r) => <span className="fs-cell-muted" title={cellText(r.cardTypeName)}>{cellText(r.cardTypeName)}</span>,
+      render: (_, r) => <TransactionCardCell row={r} />,
     },
     {
       title: <TableHeader name="Category" />,
@@ -331,14 +334,22 @@ export function TransactionsPage() {
               setDraft((f) => ({ ...f, start, end }))
             }}
           />
-          <Select size="small" allowClear placeholder="Card" disabled={disabled} style={{ width: 120 }}
-            options={(cards || []).map((c) => ({ value: c.key, label: c.value }))}
-            value={draft.card || undefined}
-            onChange={(v) => setDraft((f) => ({ ...f, card: v || '' }))} />
-          <TreeSelect size="small" allowClear placeholder="Category" disabled={disabled} style={{ width: 160 }} treeData={treeData} treeDefaultExpandAll
-            value={draft.consume || undefined}
-            onChange={(v) => setDraft((f) => ({ ...f, consume: v || '' }))} />
-          <Input.Search size="small" placeholder="Keyword" allowClear disabled={disabled} style={{ width: 140 }}
+          <CardFilterSelect
+            disabled={disabled}
+            value={draft.card}
+            onChange={(v) => setDraft((f) => ({ ...f, card: v }))}
+          />
+          <CategoryFilterSelect
+            disabled={disabled}
+            value={draft.consume}
+            onChange={(v) => setDraft((f) => ({ ...f, consume: v }))}
+          />
+          <Input.Search
+            className="fs-filter-control fs-filter-control--keyword"
+            size="small"
+            placeholder="Keyword"
+            allowClear
+            disabled={disabled}
             value={draft.keyword}
             onChange={(e) => setDraft((f) => ({ ...f, keyword: e.target.value }))}
             onSearch={(v) => { setDraft((f) => ({ ...f, keyword: v })); reload() }} />
@@ -429,7 +440,7 @@ export function TransactionsPage() {
                 rows: params.pageSize || 20,
                 transactionDateStartStr: applied.start,
                 transactionDateEndStr: applied.end,
-                cardTypeName: applied.card,
+                cardId: applied.card || undefined,
                 consumeID: applied.consume,
                 demoArea: applied.keyword,
                 emptyConsume: applied.unclassified ? '1' : undefined,

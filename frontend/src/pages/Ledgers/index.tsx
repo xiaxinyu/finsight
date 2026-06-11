@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react'
-import { Alert, TreeSelect } from 'antd'
+import { Alert } from 'antd'
 import { useParams } from 'react-router-dom'
 import { BookOutlined } from '@ant-design/icons'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import { ledgerConfigs } from '../../config/ledgers'
 import { listLedger } from '../../api/ledger'
 import { type TransactionRow } from '../../api/transaction'
-import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
+import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
 import { useFilterApply } from '../../hooks/useFilterApply'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
@@ -35,7 +35,6 @@ export function LedgersPage() {
   }
 
   const { draft, setDraft, applied, applying, isDirty, applySync } = useFilterApply(initial)
-  const { treeData } = useConsumeTreeSelect(cfg?.txnType)
 
   if (!cfg) return <DataPageLayout title="Ledger not found"><EmptyState title="Ledger not found" description="This ledger type does not exist." /></DataPageLayout>
 
@@ -105,9 +104,12 @@ export function LedgersPage() {
             onChange={(range) => setDraft((r) => ({ ...r, ...periodToStrings(range) }))}
           />
           {cfg.txnType && (
-            <TreeSelect size="small" allowClear placeholder="Category" disabled={disabled} style={{ width: 160 }} treeData={treeData}
-              value={draft.consume || undefined}
-              onChange={(v) => setDraft((r) => ({ ...r, consume: v || '' }))} />
+            <CategoryFilterSelect
+              disabled={disabled}
+              txnType={cfg.txnType}
+              value={draft.consume}
+              onChange={(v) => setDraft((r) => ({ ...r, consume: v }))}
+            />
           )}
         </FilterToolbar>
       )}

@@ -239,6 +239,8 @@
         <result column="opponent_name" property="opponentName" jdbcType="VARCHAR"/>
         <result column="transaction_time" property="transactionTime" jdbcType="VARCHAR"/>
         <result column="account_balance" property="accountBalance" jdbcType="NUMERIC"/>
+        <result column="bank_code" property="bankCode" jdbcType="VARCHAR"/>
+        <result column="card_type_code" property="cardTypeCode" jdbcType="VARCHAR"/>
     </resultMap>
 
     <select id="getTransactions" resultMap="baseTransactionResultMap">
@@ -265,8 +267,12 @@
         t.opponent_account,
         t.opponent_name,
         t.transaction_time,
-        t.account_balance
+        t.account_balance,
+        coalesce(nullif(trim(bc.bank_code), ''), nullif(trim(st.source_bank_code), '')) as bank_code,
+        bc.card_type_code
         from transaction t
+        left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
+        left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="excludeTransferT"/>

@@ -17,6 +17,8 @@ public class Statement extends Base {
     private Integer itemCount;
 
     private String status;
+
+    @TableField("source_bank_code")
     private String sourceBankCode;
     private Integer deleted;
 

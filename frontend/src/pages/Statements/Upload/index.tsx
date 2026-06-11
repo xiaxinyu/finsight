@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 import { EmptyState } from '../../../components/EmptyState'
-import { Button, message, Result, Segmented, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
+import { Alert, Button, message, Result, Segmented, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
 import { CheckCircleOutlined, CloudUploadOutlined, EyeOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   commitStatement, previewStatement, skippedStatementLines, uploadStatement,
   type SkippedImportRow, type StatementCommitResult, type StatementPreviewRow,
 } from '../../../api/statement'
+import { listBankCards, type BankCardRow } from '../../../api/transaction'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { MoneyText, moneyTypeFromRow } from '../../../components/MoneyText'
 import { TransactionSummaryBar } from '../../../components/TransactionSummaryBar'
@@ -117,6 +119,8 @@ function summarizePreview(rows: StatementPreviewRow[]) {
 
 export function StatementUploadPage() {
   const qc = useQueryClient()
+  const [searchParams] = useSearchParams()
+  const resumeId = searchParams.get('resume') || searchParams.get('statementId') || ''
   const previewTableHeight = useViewportTableHeight(280)
   const [step, setStep] = useState(0)
   const [statementId, setStatementId] = useState('')
@@ -131,7 +135,67 @@ export function StatementUploadPage() {
   const [loading, setLoading] = useState(false)
   const [bankCode, setBankCode] = useState('CMB')
   const [cardTypeCode, setCardTypeCode] = useState('debit')
+  const [bankCardId, setBankCardId] = useState('')
+  const [boundCardName, setBoundCardName] = useState('')
   const [commitResult, setCommitResult] = useState<StatementCommitResult | null>(null)
+  const [committedCardId, setCommittedCardId] = useState('')
+
+  const { data: bankCards = [] } = useQuery({
+    queryKey: ['bank-cards', cardTypeCode],
+    queryFn: () => listBankCards(cardTypeCode),
+    staleTime: 60_000,
+  })
+
+  const matchingCards = useMemo(
+    () => bankCards.filter((c) => (c.bankCode || '').toUpperCase() === bankCode.toUpperCase()),
+    [bankCards, bankCode],
+  )
+
+  useEffect(() => {
+    if (matchingCards.length === 1) {
+      setBankCardId(matchingCards[0].id)
+    } else if (bankCardId && !matchingCards.some((c) => c.id === bankCardId)) {
+      setBankCardId('')
+    }
+  }, [matchingCards, bankCardId])
+
+  const resumeHandled = useRef('')
+
+  useEffect(() => {
+    if (!resumeId || step !== 0 || resumeHandled.current === resumeId) return
+    resumeHandled.current = resumeId
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      try {
+        const rows = await previewStatement(resumeId)
+        if (cancelled) return
+        if (rows.length === 0) {
+          message.warning('No preview rows for this import — it may already be committed or expired.')
+          return
+        }
+        setStatementId(resumeId)
+        setPreview(rows)
+        setBoundCardName(rows.find((r) => r.bankCardName)?.bankCardName || '')
+        setUploadMeta({
+          rows: rows.length,
+          parsed: rows.length,
+          skipped: 0,
+        })
+        setPreviewView('parsed')
+        setStep(1)
+        message.info(`Resumed preview (${rows.length} rows) — commit when ready.`)
+      } catch (e) {
+        if (!cancelled) {
+          message.error(e instanceof Error ? e.message : 'Failed to resume import')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [resumeId, step])
+
   const [previewView, setPreviewView] = useState<'parsed' | 'skipped'>('parsed')
 
   const { data: skippedRows = [], isFetching: skippedLoading } = useQuery({
@@ -153,8 +217,9 @@ export function StatementUploadPage() {
         setBankCode(guessed)
         message.info(`Detected ${BANK_OPTIONS.find((b) => b.value === guessed)?.label || guessed} from filename`)
       }
-      const result = await uploadStatement(file, effectiveBank, cardTypeCode)
+      const result = await uploadStatement(file, effectiveBank, cardTypeCode, undefined, bankCardId || undefined)
       setStatementId(result.statementId)
+      setBoundCardName(result.bankCardName || '')
       setUploadMeta({
         rows: result.rows,
         parsed: result.parsed,
@@ -198,6 +263,8 @@ export function StatementUploadPage() {
       qc.invalidateQueries({ queryKey: ['financial-pulse'] })
       qc.invalidateQueries({ queryKey: ['budget-vs-actual'] })
       qc.invalidateQueries({ queryKey: ['dash-totals'] })
+      qc.invalidateQueries({ queryKey: ['tx-stats'] })
+      setCommittedCardId(bankCardId)
       setStep(2)
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Commit failed')
@@ -213,6 +280,14 @@ export function StatementUploadPage() {
     setUploadMeta(null)
     setCommitResult(null)
     setPreviewView('parsed')
+    setBoundCardName('')
+    setCommittedCardId('')
+  }
+
+  function cardLabel(c: BankCardRow): string {
+    if (c.cardName?.trim()) return c.cardName.trim()
+    const tail = c.cardNo && c.cardNo.length > 4 ? `****${c.cardNo.slice(-4)}` : c.cardNo || ''
+    return [c.bankCode, c.cardTypeCode, tail].filter(Boolean).join(' ')
   }
 
   return (
@@ -241,10 +316,25 @@ export function StatementUploadPage() {
               <Select size="small" value={bankCode} onChange={setBankCode} style={{ minWidth: 220 }} options={BANK_OPTIONS} />
             </div>
             <div className="fs-import-field">
-              <span className="fs-import-label">Account</span>
+              <span className="fs-import-label">Account type</span>
               <Select size="small" value={cardTypeCode} onChange={setCardTypeCode} style={{ minWidth: 140 }} options={CARD_OPTIONS} />
             </div>
-            <span className="fs-import-hint">Match the bank that issued this statement — CMB PDFs need CMB selected.</span>
+            <div className="fs-import-field">
+              <span className="fs-import-label">Card account</span>
+              <Select
+                size="small"
+                allowClear
+                placeholder={matchingCards.length ? 'Select card (recommended)' : 'No card for this bank'}
+                value={bankCardId || undefined}
+                onChange={(v) => setBankCardId(v || '')}
+                style={{ minWidth: 240 }}
+                options={matchingCards.map((c) => ({ value: c.id, label: cardLabel(c) }))}
+              />
+            </div>
+            <span className="fs-import-hint">
+              Pick the card account so imported rows appear under Transactions → Card filter.
+              {matchingCards.length === 1 ? ' Auto-selected the only matching card.' : ''}
+            </span>
           </div>
           <Dragger
             className="fs-upload-dragger"
@@ -265,6 +355,17 @@ export function StatementUploadPage() {
 
       {step === 1 && (
         <div className="fs-import-panel">
+          <Alert
+            type="info"
+            showIcon
+            className="fs-import-commit-banner"
+            message="Preview only — not in Transactions yet"
+            description={
+              boundCardName
+                ? `These ${preview.length} rows are staged for「${boundCardName}」. Click「Commit to ledger」to save them to the ledger.`
+                : `These ${preview.length} rows are staged. Select a card account before upload, then click「Commit to ledger」— otherwise they will not show under a Card filter in Transactions.`
+            }
+          />
           <div className="fs-import-preview-head">
             <TransactionSummaryBar
               total={preview.length}
@@ -422,7 +523,15 @@ export function StatementUploadPage() {
                   },
                 },
                 { title: 'Category', dataIndex: 'consumeName', width: 130, ellipsis: true, render: (v) => <span className="fs-cell-text">{cellText(v) || '—'}</span> },
-                { title: 'Card', dataIndex: 'cardTypeName', width: 72, render: (v) => <span className="fs-cell-muted">{cellText(v) || '—'}</span> },
+                {
+                  title: 'Card',
+                  width: 120,
+                  ellipsis: true,
+                  render: (_, r) => {
+                    const name = cellText(r.bankCardName) || cellText(r.cardTypeName)
+                    return <span className="fs-cell-muted" title={name}>{name || '—'}</span>
+                  },
+                },
                 { title: 'Memo', dataIndex: 'demoArea', width: 120, ellipsis: true, render: (v) => <span className="fs-cell-muted" title={cellText(v)}>{cellText(v) || '—'}</span> },
               ]}
             />
@@ -442,7 +551,15 @@ export function StatementUploadPage() {
                   + (commitResult.skippedDuplicates ? ` · ${commitResult.skippedDuplicates} duplicate(s) skipped` : '')
                 : 'Import complete.'
             }
-            extra={<Button type="primary" onClick={reset}>Import another</Button>}
+            extra={[
+              <Link
+                key="view-tx"
+                to={committedCardId ? `/transactions?cardId=${encodeURIComponent(committedCardId)}` : '/transactions'}
+              >
+                <Button type="primary">View in Transactions</Button>
+              </Link>,
+              <Button key="again" onClick={reset}>Import another</Button>,
+            ]}
           />
         </div>
       )}
