@@ -27,7 +27,18 @@ public class ConsumeCategoryAdminFacade {
     private TransactionMapper transactionMapper;
 
     public CollectionResult<ConsumeCategory> list() {
-        List<ConsumeCategory> list = categoryService.listAll();
+        return list(false);
+    }
+
+    public CollectionResult<ConsumeCategory> list(boolean includeDeleted) {
+        List<ConsumeCategory> list;
+        if (includeDeleted) {
+            LambdaQueryWrapper<ConsumeCategory> qw = Wrappers.lambdaQuery();
+            qw.orderByAsc(ConsumeCategory::getLevel).orderByAsc(ConsumeCategory::getSortNo);
+            list = categoryService.list(qw);
+        } else {
+            list = categoryService.listAll();
+        }
         CollectionResult<ConsumeCategory> r = new CollectionResult<>();
         r.setRows(list);
         r.setTotal(list.size());

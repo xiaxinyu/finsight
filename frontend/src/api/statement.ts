@@ -18,8 +18,14 @@ export interface StatementCommitResult {
 
 export interface SkippedImportRow {
   lineNumber: number
+  fileLineNumber?: number
   rawText: string
+  originalLine?: string
+  columns?: string[]
   reason: string
+  hint?: string
+  contextBefore?: string
+  contextAfter?: string
 }
 
 export interface StatementPreviewRow {

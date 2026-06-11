@@ -57,7 +57,7 @@ public class StatementFacade {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, rows);
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Statement> query =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
-        query.orderByDesc(Statement::getCreatetime);
+        query.orderByDesc(Statement::getCreatedAt);
         statementService.page(p, query);
 
         CollectionResult<Statement> result = new CollectionResult<>();

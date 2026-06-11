@@ -6,7 +6,7 @@ import { Button, message, Result, Segmented, Select, Space, Steps, Table, Tag, T
 import { CheckCircleOutlined, CloudUploadOutlined, EyeOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   commitStatement, previewStatement, skippedStatementLines, uploadStatement,
-  type StatementCommitResult, type StatementPreviewRow,
+  type SkippedImportRow, type StatementCommitResult, type StatementPreviewRow,
 } from '../../../api/statement'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { MoneyText, moneyTypeFromRow } from '../../../components/MoneyText'
@@ -50,6 +50,57 @@ function guessBankFromFilename(filename: string): string | null {
   if (name.includes('支付宝') || name.includes('alipay')) return 'ALIPAY'
   if (name.includes('微信') || name.includes('wechat')) return 'WECHAT'
   return null
+}
+
+function SkippedRowDetail({ row }: { row: SkippedImportRow }) {
+  const original = row.originalLine?.trim() || row.rawText
+  const columns = row.columns?.filter((c) => c.length > 0) ?? []
+  return (
+    <div className="fs-skipped-detail">
+      <div className="fs-skipped-detail-grid">
+        <div className="fs-skipped-detail-block">
+          <div className="fs-skipped-detail-label">Original line (file L{row.fileLineNumber ?? row.lineNumber})</div>
+          <pre className="fs-skipped-detail-pre">{original}</pre>
+        </div>
+        {row.hint && (
+          <div className="fs-skipped-detail-block">
+            <div className="fs-skipped-detail-label">Diagnostics</div>
+            <pre className="fs-skipped-detail-pre fs-skipped-detail-pre--hint">{row.hint}</pre>
+          </div>
+        )}
+      </div>
+      {columns.length > 0 && (
+        <div className="fs-skipped-detail-block">
+          <div className="fs-skipped-detail-label">Split columns ({columns.length})</div>
+          <div className="fs-skipped-cols">
+            {columns.map((col, i) => (
+              <div key={i} className="fs-skipped-col">
+                <span className="fs-skipped-col-idx">{i}</span>
+                <span className="fs-skipped-col-val">{col || '—'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {(row.contextBefore || row.contextAfter) && (
+        <div className="fs-skipped-detail-block">
+          <div className="fs-skipped-detail-label">Nearby lines</div>
+          {row.contextBefore && (
+            <div className="fs-skipped-context-line">
+              <span className="fs-skipped-context-tag">prev</span>
+              <code>{row.contextBefore}</code>
+            </div>
+          )}
+          {row.contextAfter && (
+            <div className="fs-skipped-context-line">
+              <span className="fs-skipped-context-tag">next</span>
+              <code>{row.contextAfter}</code>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function summarizePreview(rows: StatementPreviewRow[]) {
@@ -251,27 +302,46 @@ export function StatementUploadPage() {
             {previewView === 'skipped' ? (
             <Table
               size="small"
-              className="fs-data-table"
-              rowKey="lineNumber"
+              className="fs-data-table fs-skipped-table"
+              rowKey={(r) => `${r.fileLineNumber ?? r.lineNumber}-${r.lineNumber}`}
               dataSource={skippedRows}
               loading={skippedLoading}
               pagination={{ pageSize: 20, size: 'small', showTotal: (t) => `${t} lines` }}
               locale={{ emptyText: <EmptyState compact title="No skipped lines" description="All raw rows were imported as transactions." /> }}
-              scroll={{ x: 900, y: previewTableHeight }}
+              scroll={{ x: 1100, y: previewTableHeight }}
+              expandable={{
+                expandedRowRender: (row) => <SkippedRowDetail row={row} />,
+                rowExpandable: () => true,
+              }}
               columns={[
-                { title: 'Line', dataIndex: 'lineNumber', width: 72, fixed: 'left', render: (v) => <span className="fs-mono">{v}</span> },
+                {
+                  title: 'Line',
+                  width: 88,
+                  fixed: 'left',
+                  render: (_, r) => (
+                    <span className="fs-mono" title={`Data row #${r.lineNumber}`}>
+                      {r.fileLineNumber ?? r.lineNumber}
+                    </span>
+                  ),
+                },
                 {
                   title: 'Reason',
                   dataIndex: 'reason',
-                  width: 320,
-                  ellipsis: true,
-                  render: (v) => <span className="fs-cell-text" title={cellText(v)}>{cellText(v)}</span>,
+                  width: 360,
+                  render: (v) => <span className="fs-skipped-reason">{cellText(v)}</span>,
                 },
                 {
-                  title: 'Raw content',
+                  title: 'Preview',
                   dataIndex: 'rawText',
+                  width: 280,
                   ellipsis: true,
                   render: (v) => <span className="fs-cell-muted" title={cellText(v)}>{cellText(v)}</span>,
+                },
+                {
+                  title: 'Cols',
+                  width: 52,
+                  align: 'center',
+                  render: (_, r) => <span className="fs-mono fs-cell-muted">{r.columns?.length ?? '—'}</span>,
                 },
               ]}
             />

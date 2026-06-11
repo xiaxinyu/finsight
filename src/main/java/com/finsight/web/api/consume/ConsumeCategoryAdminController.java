@@ -13,8 +13,9 @@ public class ConsumeCategoryAdminController {
     private ConsumeCategoryAdminFacade adminFacade;
 
     @GetMapping
-    public CollectionResult<ConsumeCategory> list(){
-        return adminFacade.list();
+    public CollectionResult<ConsumeCategory> list(
+            @RequestParam(value = "includeDeleted", required = false, defaultValue = "false") boolean includeDeleted) {
+        return adminFacade.list(includeDeleted);
     }
 
     @PostMapping

@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { listStatements } from '../../api/statement'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
-import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
+import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { formatTableDate } from '../../utils/cell'
 
 function statusTag(status: unknown) {
@@ -35,7 +35,8 @@ function shortId(id: unknown) {
 
 export function StatementListPage() {
   const actionRef = useRef<ActionType>(null)
-  const tableHeight = useViewportTableHeight(180)
+  const tablePanelRef = useRef<HTMLDivElement>(null)
+  const tableHeight = useFillTableHeight(tablePanelRef)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   return (
@@ -43,11 +44,12 @@ export function StatementListPage() {
       title="Import History"
       subtitle="Past statement uploads and commit status"
       icon={<HistoryOutlined />}
+      className="fs-data-page--dense fs-data-page--fill"
     >
       {loadError && (
         <Alert type="error" showIcon style={{ marginBottom: 8 }} message="Failed to load imports" description={loadError} />
       )}
-      <div className="fs-table-panel">
+      <div ref={tablePanelRef} className="fs-table-panel">
         <ProTable
           className="fs-data-table"
           actionRef={actionRef}
@@ -95,9 +97,11 @@ export function StatementListPage() {
             },
             {
               title: 'Imported',
-              dataIndex: 'createTime',
+              dataIndex: 'createdAt',
               width: 120,
-              render: (_, r) => <span className="fs-mono">{formatTableDate(r.createTime)}</span>,
+              render: (_, r) => (
+                <span className="fs-mono">{formatTableDate(r.createdAt ?? r.createTime)}</span>
+              ),
             },
           ]}
           pagination={{ defaultPageSize: 20, showSizeChanger: true, size: 'small', showTotal: (t) => `${t} imports` }}

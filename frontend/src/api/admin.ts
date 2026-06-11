@@ -1,4 +1,31 @@
 import { deleteReq, getJson, postJson, putJson } from './client'
+import { isCollectionResult } from './normalize'
+
+export type ConsumeRuleRow = {
+  id?: string
+  categoryId?: string
+  pattern?: string
+  patternType?: string
+  priority?: number
+  active?: number
+  bankCode?: string
+  cardTypeCode?: string
+  remark?: string
+  tags?: string[]
+  minAmount?: number
+  maxAmount?: number
+}
+
+export type ConsumeCategoryRow = {
+  id?: string
+  parentId?: string
+  code?: string
+  name?: string
+  level?: number
+  sortNo?: number
+  deleted?: number
+  txnTypes?: string
+}
 
 export async function listUsers() {
   return getJson('/api/v1/users')
@@ -32,6 +59,42 @@ export async function deleteCard(id: string) {
   return deleteReq(`/api/v1/cards/${id}`)
 }
 
-export async function listRules() {
-  return getJson('/api/v1/consume/rules')
+export async function listRules(includeInactive = true, includeInvalid = false) {
+  const params = new URLSearchParams()
+  if (includeInactive) params.set('includeInactive', 'true')
+  if (includeInvalid) params.set('includeInvalid', 'true')
+  const q = params.toString()
+  return getJson(`/api/v1/consume/rules${q ? `?${q}` : ''}`)
+}
+
+export async function listCategoriesAdmin(includeDeleted = false) {
+  const q = includeDeleted ? '?includeDeleted=true' : ''
+  const raw = await getJson(`/api/v1/consume/categories${q}`)
+  if (isCollectionResult<ConsumeCategoryRow>(raw)) return raw.rows
+  return Array.isArray(raw) ? raw as ConsumeCategoryRow[] : []
+}
+
+export async function createRule(rule: ConsumeRuleRow) {
+  return postJson('/api/v1/consume/rules', rule)
+}
+
+export async function updateRule(id: string, rule: ConsumeRuleRow) {
+  return putJson(`/api/v1/consume/rules/${encodeURIComponent(id)}`, rule)
+}
+
+export async function deleteRule(id: string) {
+  return deleteReq(`/api/v1/consume/rules/${encodeURIComponent(id)}`)
+}
+
+export async function createCategory(cat: ConsumeCategoryRow) {
+  return postJson('/api/v1/consume/categories', cat)
+}
+
+export async function updateCategory(id: string, cat: ConsumeCategoryRow, cascade = false) {
+  const q = cascade ? '?cascade=true' : ''
+  return putJson(`/api/v1/consume/categories/${encodeURIComponent(id)}${q}`, cat)
+}
+
+export async function deleteCategory(id: string) {
+  return deleteReq(`/api/v1/consume/categories/${encodeURIComponent(id)}`)
 }

@@ -17,8 +17,8 @@ import {
   RiseOutlined,
   SettingOutlined,
   SwapOutlined,
-  TagsOutlined,
   TeamOutlined,
+  ThunderboltOutlined,
   UploadOutlined,
   WalletOutlined,
 } from '@ant-design/icons'
@@ -94,7 +94,7 @@ export const menuItems: FsMenuItem[] = [
     children: [
       { key: '/admin/users', icon: <TeamOutlined />, label: 'Users', path: '/admin/users' },
       { key: '/admin/cards', icon: <CreditCardOutlined />, label: 'Cards', path: '/admin/cards' },
-      { key: '/admin/rules', icon: <TagsOutlined />, label: 'Category Rules', path: '/admin/rules' },
+      { key: '/admin/rules', icon: <ThunderboltOutlined />, label: 'Rule Engine', path: '/admin/rules' },
       { key: '/admin/categories', icon: <ClusterOutlined />, label: 'Categories', path: '/admin/categories' },
     ],
   },

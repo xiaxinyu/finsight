@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class StatementSkippedLinesService {
@@ -22,53 +23,104 @@ public class StatementSkippedLinesService {
     private static final Pattern AMOUNT_TOKEN = Pattern.compile("[-+]?\\d{1,3}(?:,\\d{3})*(?:\\.\\d{1,2})?|[-+]?\\d+(?:\\.\\d{1,2})?");
     private static final Pattern STRICT_DATE = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$");
 
+    private static final class SourceRow {
+        final int fileLineNumber;
+        final String originalLine;
+        final String[] cells;
+
+        SourceRow(int fileLineNumber, String originalLine, String[] cells) {
+            this.fileLineNumber = fileLineNumber;
+            this.originalLine = originalLine;
+            this.cells = cells;
+        }
+    }
+
     public List<SkippedImportRow> analyze(Statement statement, String cardTypeCode) {
         if (statement == null || StringUtils.isBlank(statement.getContent())) {
             return List.of();
         }
-        List<String[]> rows = loadDataRows(statement);
-        if (rows.isEmpty()) {
+        List<SourceRow> sourceRows = loadSourceRows(statement);
+        if (sourceRows.isEmpty()) {
             return List.of();
         }
 
         String bankCode = StringUtils.trimToEmpty(statement.getSource());
         String cardType = StringUtils.defaultIfBlank(cardTypeCode, "debit");
+        List<String[]> rowArrays = sourceRows.stream().map(r -> r.cells).collect(Collectors.toList());
         List<Transaction> parsed = StatementImporterFactory.get(bankCode, cardType)
-                .parse(rows, bankCode, cardType, null);
-        Set<Integer> consumed = matchRowsToTransactions(rows, parsed == null ? List.of() : parsed);
+                .parse(rowArrays, bankCode, cardType, null);
+        Set<Integer> consumed = matchRowsToTransactions(rowArrays, parsed == null ? List.of() : parsed);
 
         List<SkippedImportRow> skipped = new ArrayList<>();
-        for (int i = 0; i < rows.size(); i++) {
+        for (int i = 0; i < sourceRows.size(); i++) {
             if (consumed.contains(i)) {
                 continue;
             }
-            String raw = formatRaw(rows.get(i));
+            SourceRow source = sourceRows.get(i);
+            String raw = formatRaw(source.cells);
             if (StringUtils.isBlank(raw)) {
                 continue;
             }
-            skipped.add(new SkippedImportRow(i + 1, raw, classifySkipReason(rows.get(i), raw, bankCode)));
+            skipped.add(buildSkippedRow(source, i + 1, raw, bankCode, cardType, sourceRows, i));
         }
         return skipped;
     }
 
-    private List<String[]> loadDataRows(Statement statement) {
+    private SkippedImportRow buildSkippedRow(
+            SourceRow source,
+            int rowIndex,
+            String raw,
+            String bankCode,
+            String cardType,
+            List<SourceRow> allRows,
+            int index) {
+        SkippedImportRow row = new SkippedImportRow();
+        row.setLineNumber(rowIndex);
+        row.setFileLineNumber(source.fileLineNumber);
+        row.setOriginalLine(source.originalLine);
+        row.setRawText(raw);
+        row.setColumns(toColumnList(source.cells));
+        row.setReason(classifySkipReason(source.cells, raw, bankCode, cardType));
+        row.setHint(buildHint(source.cells, raw, bankCode, cardType));
+        if (index > 0) {
+            row.setContextBefore(StringUtils.trimToEmpty(allRows.get(index - 1).originalLine));
+        }
+        if (index + 1 < allRows.size()) {
+            row.setContextAfter(StringUtils.trimToEmpty(allRows.get(index + 1).originalLine));
+        }
+        return row;
+    }
+
+    private List<String> toColumnList(String[] cells) {
+        List<String> cols = new ArrayList<>();
+        if (cells == null) {
+            return cols;
+        }
+        for (String cell : cells) {
+            cols.add(StringUtils.trimToEmpty(cell));
+        }
+        return cols;
+    }
+
+    private List<SourceRow> loadSourceRows(Statement statement) {
         String content = statement.getContent();
         String fileName = StringUtils.lowerCase(StringUtils.trimToEmpty(statement.getFileName()));
         if (fileName.endsWith(".pdf")) {
-            return parsePlainTable(content);
+            return parsePlainTableRows(content);
         }
-        return parseCsv(content);
+        return parseCsvRows(content);
     }
 
-    private List<String[]> parseCsv(String content) {
-        String[] lines = content.split("\n");
-        List<String[]> rows = new ArrayList<>();
+    private List<SourceRow> parseCsvRows(String content) {
+        String[] lines = content.split("\n", -1);
+        List<SourceRow> rows = new ArrayList<>();
         String delimiter = content.contains(",") ? "," : "\\t";
         if (content.contains(";")) {
             delimiter = ";";
         }
-        for (String line : lines) {
-            line = StringUtils.trim(line);
+        for (int i = 0; i < lines.length; i++) {
+            String original = lines[i];
+            String line = StringUtils.trim(original);
             if (StringUtils.isBlank(line)) {
                 continue;
             }
@@ -78,20 +130,21 @@ public class StatementSkippedLinesService {
             } else {
                 cols = line.split(delimiter);
             }
-            rows.add(cols);
+            rows.add(new SourceRow(i + 1, original, cols));
         }
         return rows;
     }
 
-    private List<String[]> parsePlainTable(String content) {
-        String[] lines = content.split("\n");
-        List<String[]> rows = new ArrayList<>();
-        for (String line : lines) {
-            String ln = StringUtils.trimToEmpty(line);
+    private List<SourceRow> parsePlainTableRows(String content) {
+        String[] lines = content.split("\n", -1);
+        List<SourceRow> rows = new ArrayList<>();
+        for (int i = 0; i < lines.length; i++) {
+            String original = lines[i];
+            String ln = StringUtils.trimToEmpty(original);
             if (StringUtils.isBlank(ln)) {
                 continue;
             }
-            rows.add(ln.split("\\s+"));
+            rows.add(new SourceRow(i + 1, original, ln.split("\\s+")));
         }
         return rows;
     }
@@ -159,7 +212,7 @@ public class StatementSkippedLinesService {
         return false;
     }
 
-    private String classifySkipReason(String[] row, String raw, String bankCode) {
+    private String classifySkipReason(String[] row, String raw, String bankCode, String cardType) {
         if (row == null || row.length == 0 || StringUtils.isBlank(raw)) {
             return "Empty line";
         }
@@ -178,6 +231,9 @@ public class StatementSkippedLinesService {
         boolean hasAmount = hasAmountToken(raw);
 
         if (!hasDate) {
+            if (looksLikeContinuationLine(raw, row)) {
+                return "Continuation line — merchant/counterparty text split across rows (no date on this line)";
+            }
             if (raw.length() < 12) {
                 return "Too short — no transaction date found";
             }
@@ -189,7 +245,69 @@ public class StatementSkippedLinesService {
         if (!hasAmount) {
             return "Has date but no amount — not imported as a transaction";
         }
-        return "Parser could not build a transaction from this row (check bank/account type or row shape)";
+        if (raw.contains(",")) {
+            return "Parser rejected row — likely comma in balance/amount breaks token split "
+                    + "(bank=" + bankCode + ", card=" + cardType + ")";
+        }
+        return "Parser could not build a transaction from this row "
+                + "(bank=" + bankCode + ", card=" + cardType + ", columns=" + row.length + ")";
+    }
+
+    private boolean looksLikeContinuationLine(String raw, String[] row) {
+        if (row != null && row.length == 1) {
+            return true;
+        }
+        if (raw.length() > 80 && !hasAmountToken(raw)) {
+            return true;
+        }
+        return raw.matches(".*[\\u4e00-\\u9fa5A-Za-z].*") && !DATE_TOKEN.matcher(raw).find();
+    }
+
+    private String buildHint(String[] row, String raw, String bankCode, String cardType) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("bank=").append(bankCode).append(", card=").append(cardType);
+        sb.append(", columns=").append(row == null ? 0 : row.length);
+        if (row != null && row.length > 0) {
+            sb.append(" → ");
+            for (int i = 0; i < row.length; i++) {
+                if (i > 0) {
+                    sb.append(" | ");
+                }
+                sb.append('[').append(i).append(']').append(StringUtils.abbreviate(StringUtils.trimToEmpty(row[i]), 64));
+            }
+        }
+        String date = firstDateToken(raw);
+        if (StringUtils.isNotBlank(date)) {
+            sb.append("; date=").append(date);
+        }
+        List<String> amounts = extractAmountTokens(raw);
+        if (!amounts.isEmpty()) {
+            sb.append("; amounts=").append(String.join(", ", amounts));
+        }
+        if (raw.contains(",")) {
+            sb.append("; comma_in_line=yes (CMB PDF often fails when balance has thousands separator)");
+        }
+        return sb.toString();
+    }
+
+    private List<String> extractAmountTokens(String raw) {
+        List<String> found = new ArrayList<>();
+        java.util.regex.Matcher m = AMOUNT_TOKEN.matcher(raw);
+        while (m.find()) {
+            String token = m.group();
+            if (token == null) {
+                continue;
+            }
+            try {
+                double v = Math.abs(Double.parseDouble(token.replace(",", "")));
+                if (v >= 0.01 && v < 1_000_000_000) {
+                    found.add(token);
+                }
+            } catch (NumberFormatException ignore) {
+                // continue
+            }
+        }
+        return found;
     }
 
     private boolean isHeaderRow(String raw) {
@@ -236,22 +354,7 @@ public class StatementSkippedLinesService {
     }
 
     private boolean hasAmountToken(String raw) {
-        java.util.regex.Matcher m = AMOUNT_TOKEN.matcher(raw.replace(",", ""));
-        while (m.find()) {
-            String token = m.group();
-            if (token == null) {
-                continue;
-            }
-            try {
-                double v = Math.abs(Double.parseDouble(token));
-                if (v >= 0.01 && v < 1_000_000_000) {
-                    return true;
-                }
-            } catch (NumberFormatException ignore) {
-                // continue
-            }
-        }
-        return false;
+        return !extractAmountTokens(raw).isEmpty();
     }
 
     private String firstDateToken(String raw) {

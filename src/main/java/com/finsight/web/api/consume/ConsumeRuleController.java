@@ -11,10 +11,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/consume/rules")
@@ -30,27 +32,34 @@ public class ConsumeRuleController {
     @GetMapping
     public List<ConsumeRule> list(@RequestParam(value = "categoryId", required = false) String categoryId,
                                   @RequestParam(value = "tag", required = false) String tag,
-                                  @RequestParam(value = "active", required = false) Integer active){
+                                  @RequestParam(value = "active", required = false) Integer active,
+                                  @RequestParam(value = "includeInactive", required = false, defaultValue = "false") boolean includeInactive,
+                                  @RequestParam(value = "includeInvalid", required = false, defaultValue = "false") boolean includeInvalid){
         LambdaQueryWrapper<ConsumeRule> qw = Wrappers.lambdaQuery();
         if (categoryId != null && !categoryId.trim().isEmpty()){
             qw.eq(ConsumeRule::getCategoryId, categoryId);
         }
         if (active != null){
             qw.eq(ConsumeRule::getActive, active);
-        } else {
+        } else if (!includeInactive) {
             qw.eq(ConsumeRule::getActive, 1);
         }
         qw.orderByAsc(ConsumeRule::getPriority);
         
-        // Filter by tag if provided
         List<ConsumeRule> list = ruleService.list(qw);
         ruleService.loadTags(list);
-        
+
+        if (!includeInvalid) {
+            list = list.stream()
+                    .filter(r -> r != null && StringUtils.isNotBlank(r.getPattern()))
+                    .collect(Collectors.toList());
+        }
+
         if (tag != null && !tag.trim().isEmpty()){
             String filterTag = tag.trim();
             return list.stream()
                 .filter(r -> r.getTags() != null && r.getTags().contains(filterTag))
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
         }
         return list;
     }
