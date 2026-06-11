@@ -1,18 +1,15 @@
 package com.finsight.domain.model;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.Date;
 
+/** In-memory planning POJO ({@link com.finsight.application.finance.PlanningPreferencesStore}). */
 @Getter
 @Setter
-@TableName("financial_goal")
 public class FinancialGoal extends BaseEntity {
-    @TableId
     private String id;
     private String name;
     private String goalType;

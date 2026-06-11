@@ -70,9 +70,13 @@
         consume_id,
         consume_code,
         consume_name,
+        category_id,
+        category_code,
+        category_name,
         memo,
         statement_id,
         income_money,
+        expense_amount,
         opponent_account,
         opponent_name,
         transaction_time,
@@ -96,9 +100,13 @@
             #{transaction.consumeID,jdbcType=VARCHAR},
             #{transaction.consumeCode,jdbcType=VARCHAR},
             #{transaction.consumeName,jdbcType=VARCHAR},
+            #{transaction.categoryId,jdbcType=VARCHAR},
+            #{transaction.categoryCode,jdbcType=VARCHAR},
+            #{transaction.categoryName,jdbcType=VARCHAR},
             #{transaction.demoArea,jdbcType=VARCHAR},
             #{transaction.recordID,jdbcType=VARCHAR},
             #{transaction.incomeMoney,jdbcType=NUMERIC},
+            #{transaction.expenseAmount,jdbcType=NUMERIC},
             #{transaction.opponentAccount,jdbcType=VARCHAR},
             #{transaction.opponentName,jdbcType=VARCHAR},
             #{transaction.transactionTime,jdbcType=VARCHAR},
@@ -118,12 +126,15 @@
         </if>
         <if test="consumeID != null">
             consume_id = #{consumeID,jdbcType=VARCHAR},
+            category_id = #{consumeID,jdbcType=VARCHAR},
         </if>
         <if test="consumeCode != null">
             consume_code = #{consumeCode,jdbcType=VARCHAR},
+            category_code = #{consumeCode,jdbcType=VARCHAR},
         </if>
         <if test="consumeName != null">
             consume_name = #{consumeName,jdbcType=VARCHAR},
+            category_name = #{consumeName,jdbcType=VARCHAR},
         </if>
         <if test="demoArea != null">
             memo = #{demoArea,jdbcType=VARCHAR},
@@ -139,6 +150,7 @@
         </if>
         <if test="balanceMoney != null">
             balance_money = #{balanceMoney,jdbcType=NUMERIC},
+            expense_amount = #{expenseAmount,jdbcType=NUMERIC},
         </if>
         <if test="incomeMoney != null">
             income_money = #{incomeMoney,jdbcType=NUMERIC},

@@ -1,5 +1,6 @@
 package com.finsight.application.consume.impl;
 
+import com.finsight.application.classification.ClassificationRuleValidator;
 import com.finsight.infrastructure.mapper.ConsumeRuleMapper;
 import com.finsight.infrastructure.mapper.ConsumeRuleTagMapper;
 import com.finsight.domain.model.ConsumeRule;
@@ -20,6 +21,9 @@ public class ConsumeRuleServiceImpl extends ServiceImpl<ConsumeRuleMapper, Consu
     @Autowired
     private ConsumeRuleTagMapper consumeRuleTagMapper;
 
+    @Autowired
+    private ClassificationRuleValidator ruleValidator;
+
     @Override
     public List<ConsumeRule> listActive() {
         LambdaQueryWrapper<ConsumeRule> qw = Wrappers.lambdaQuery();
@@ -32,6 +36,7 @@ public class ConsumeRuleServiceImpl extends ServiceImpl<ConsumeRuleMapper, Consu
     @Override
     @Transactional
     public boolean save(ConsumeRule entity) {
+        ruleValidator.validate(entity);
         boolean success = super.save(entity);
         if (success) {
             saveTags(entity);
@@ -42,6 +47,7 @@ public class ConsumeRuleServiceImpl extends ServiceImpl<ConsumeRuleMapper, Consu
     @Override
     @Transactional
     public boolean updateById(ConsumeRule entity) {
+        ruleValidator.validate(entity);
         boolean success = super.updateById(entity);
         if (success) {
             // delete old tags

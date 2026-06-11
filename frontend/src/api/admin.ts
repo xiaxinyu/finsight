@@ -64,37 +64,37 @@ export async function listRules(includeInactive = true, includeInvalid = false) 
   if (includeInactive) params.set('includeInactive', 'true')
   if (includeInvalid) params.set('includeInvalid', 'true')
   const q = params.toString()
-  return getJson(`/api/v1/consume/rules${q ? `?${q}` : ''}`)
+  return getJson(`/api/v1/classification/rules${q ? `?${q}` : ''}`)
 }
 
 export async function listCategoriesAdmin(includeDeleted = false) {
   const q = includeDeleted ? '?includeDeleted=true' : ''
-  const raw = await getJson(`/api/v1/consume/categories${q}`)
+  const raw = await getJson(`/api/v1/classification/categories${q}`)
   if (isCollectionResult<ConsumeCategoryRow>(raw)) return raw.rows
   return Array.isArray(raw) ? raw as ConsumeCategoryRow[] : []
 }
 
 export async function createRule(rule: ConsumeRuleRow) {
-  return postJson('/api/v1/consume/rules', rule)
+  return postJson('/api/v1/classification/rules', rule)
 }
 
 export async function updateRule(id: string, rule: ConsumeRuleRow) {
-  return putJson(`/api/v1/consume/rules/${encodeURIComponent(id)}`, rule)
+  return putJson(`/api/v1/classification/rules/${encodeURIComponent(id)}`, rule)
 }
 
 export async function deleteRule(id: string) {
-  return deleteReq(`/api/v1/consume/rules/${encodeURIComponent(id)}`)
+  return deleteReq(`/api/v1/classification/rules/${encodeURIComponent(id)}`)
 }
 
 export async function createCategory(cat: ConsumeCategoryRow) {
-  return postJson('/api/v1/consume/categories', cat)
+  return postJson('/api/v1/classification/categories', cat)
 }
 
 export async function updateCategory(id: string, cat: ConsumeCategoryRow, cascade = false) {
   const q = cascade ? '?cascade=true' : ''
-  return putJson(`/api/v1/consume/categories/${encodeURIComponent(id)}${q}`, cat)
+  return putJson(`/api/v1/classification/categories/${encodeURIComponent(id)}${q}`, cat)
 }
 
 export async function deleteCategory(id: string) {
-  return deleteReq(`/api/v1/consume/categories/${encodeURIComponent(id)}`)
+  return deleteReq(`/api/v1/classification/categories/${encodeURIComponent(id)}`)
 }

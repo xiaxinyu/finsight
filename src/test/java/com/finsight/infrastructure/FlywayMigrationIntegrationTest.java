@@ -28,6 +28,7 @@ class FlywayMigrationIntegrationTest {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
+        registry.add("spring.flyway.baseline-version", () -> "10");
     }
 
     @Autowired
@@ -36,8 +37,18 @@ class FlywayMigrationIntegrationTest {
     @Test
     void flywayCreatesCoreTables() {
         assertTrue(tableExists("transaction"));
-        assertTrue(tableExists("auth_user") || tableExists("app_user"));
-        assertTrue(tableExists("cls_category") || tableExists("consume_category"));
+        assertTrue(tableExists("cls_category"));
+        assertTrue(tableExists("cls_rule"));
+        assertTrue(tableExists("imp_staging_entry"));
+        assertTrue(tableExists("fin_bank_account"));
+        assertTrue(migrationAtLeast(11));
+    }
+
+    private boolean migrationAtLeast(int version) {
+        Integer max = jdbcTemplate.queryForObject(
+                "select coalesce(max(cast(version as unsigned)),0) from flyway_schema_history where success=1",
+                Integer.class);
+        return max != null && max >= version;
     }
 
     private boolean tableExists(String name) {

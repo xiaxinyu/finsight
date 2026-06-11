@@ -1,11 +1,16 @@
 package com.finsight.web.api.consume;
 
+import com.finsight.domain.model.Category;
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.application.consume.ConsumeCategoryAdminFacade;
 import com.finsight.web.api.dto.CollectionResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * @deprecated use {@link com.finsight.web.api.classification.ClassificationCategoryAdminController}.
+ */
+@Deprecated
 @RestController
 @RequestMapping("/api/v1/consume/categories")
 public class ConsumeCategoryAdminController {
@@ -19,14 +24,14 @@ public class ConsumeCategoryAdminController {
     }
 
     @PostMapping
-    public ConsumeCategory add(@RequestBody ConsumeCategory cat){
+    public Category add(@RequestBody ConsumeCategory cat) {
         return adminFacade.add(cat);
     }
 
     @PutMapping("/{id}")
-    public ConsumeCategory update(@PathVariable("id") String id,
-                                  @RequestBody ConsumeCategory cat,
-                                  @RequestParam(value = "cascade", required = false) Boolean cascade){
+    public Category update(@PathVariable("id") String id,
+                           @RequestBody ConsumeCategory cat,
+                           @RequestParam(value = "cascade", required = false) Boolean cascade) {
         return adminFacade.update(id, cat, cascade);
     }
 

@@ -2,11 +2,11 @@ package com.finsight.application.transaction.impl;
 
 import com.finsight.common.util.DateTool;
 import com.finsight.common.util.StringTool;
-import com.finsight.domain.model.Card;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.KeyValue;
 import com.finsight.domain.model.Page;
-import com.finsight.application.card.CardService;
+import com.finsight.application.card.BankCardService;
+import com.finsight.domain.model.BankCard;
 import com.finsight.common.exception.AppException;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.application.transaction.ITransactionService;
@@ -33,7 +33,7 @@ public class TransactionServiceImpl implements ITransactionService {
     private static final long HOME_SUMMARY_CACHE_TTL_MS = 120_000L;
     private final Map<Integer, CacheEntry> homeSummaryCache = new ConcurrentHashMap<>();
     @Autowired
-    CardService cardService;
+    BankCardService bankCardService;
 
     @Autowired
     TransactionRepository transactionRepository;
@@ -181,7 +181,12 @@ public class TransactionServiceImpl implements ITransactionService {
             throw new AppException("No exist original transaction data, can't call add transactions!");
         }
 
-        Map<String, Card> cardMap = cardService.queryAllCards();
+        Map<String, BankCard> cardMap = new java.util.HashMap<>();
+        for (BankCard card : bankCardService.listAllEnabled()) {
+            if (card != null && card.getId() != null) {
+                cardMap.put(card.getId(), card);
+            }
+        }
 
         boolean skipTitle = true;
         for (String[] rowData : rowDatas) {
@@ -209,7 +214,7 @@ public class TransactionServiceImpl implements ITransactionService {
                 transaction.setBalanceMoney(StringUtils.isBlank(balanceMoney) ? 0 : Double.parseDouble(balanceMoney));
 
                 transaction.setCardTypeId(1);
-                Card card = cardMap.get(cardId);
+                BankCard card = cardMap.get(cardId);
                 transaction.setCardTypeName(card != null ? card.getCardName() : "Unknown Card");
                 transaction.setRecordID(recordID);
                 transactionRepository.insert(transaction);

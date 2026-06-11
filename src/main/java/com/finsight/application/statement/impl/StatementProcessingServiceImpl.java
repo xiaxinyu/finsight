@@ -99,6 +99,8 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
         }
         ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode, amount, txnDate);
         if (r != null) {
+            t.setCategoryCode(r.id);
+            t.setCategoryName(r.name);
             t.setConsumeCode(r.id);
             t.setConsumeName(r.name);
         }

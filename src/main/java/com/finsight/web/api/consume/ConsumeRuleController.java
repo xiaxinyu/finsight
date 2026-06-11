@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * @deprecated use {@link com.finsight.web.api.classification.ClassificationRuleController}.
+ */
+@Deprecated
 @RestController
 @RequestMapping("/api/v1/consume/rules")
 public class ConsumeRuleController {

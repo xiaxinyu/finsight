@@ -3,7 +3,9 @@ package com.finsight.application.consume;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.finsight.domain.model.Category;
 import com.finsight.domain.model.ConsumeCategory;
+import com.finsight.domain.model.ConsumeRule;
 import com.finsight.domain.model.Transaction;
 import com.finsight.infrastructure.mapper.TransactionMapper;
 import com.finsight.web.api.dto.CollectionResult;
@@ -26,6 +28,12 @@ public class ConsumeCategoryAdminFacade {
     @Autowired
     private TransactionMapper transactionMapper;
 
+    @Autowired
+    private ConsumeRuleService consumeRuleService;
+
+    @Autowired
+    private ClassificationService classificationService;
+
     public CollectionResult<ConsumeCategory> list() {
         return list(false);
     }
@@ -45,7 +53,8 @@ public class ConsumeCategoryAdminFacade {
         return r;
     }
 
-    public ConsumeCategory add(ConsumeCategory cat) {
+    public Category add(Category raw) {
+        ConsumeCategory cat = ensureConsumeCategory(raw);
         if (cat.getParentId() == null || cat.getParentId().trim().isEmpty()) {
             cat.setLevel(1);
         } else {
@@ -69,7 +78,8 @@ public class ConsumeCategoryAdminFacade {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ConsumeCategory update(String id, ConsumeCategory cat, Boolean cascade) {
+    public Category update(String id, Category raw, Boolean cascade) {
+        ConsumeCategory cat = ensureConsumeCategory(raw);
         ConsumeCategory old = categoryService.getById(id);
         if (cat.getParentId() == null || cat.getParentId().trim().isEmpty()) {
             cat.setLevel(1);
@@ -186,6 +196,34 @@ public class ConsumeCategoryAdminFacade {
         uwDel.eq(ConsumeCategory::getId, id)
                 .set(ConsumeCategory::getDeleted, 1);
         categoryService.update(null, uwDel);
+        deactivateRulesForCategory(cat);
+        classificationService.reload();
+    }
+
+    private void deactivateRulesForCategory(ConsumeCategory cat) {
+        if (cat == null) {
+            return;
+        }
+        String code = cat.getCode();
+        String cid = cat.getId();
+        if ((code == null || code.isBlank()) && (cid == null || cid.isBlank())) {
+            return;
+        }
+        LambdaUpdateWrapper<ConsumeRule> uw = Wrappers.lambdaUpdate();
+        uw.and(w -> {
+            if (code != null && !code.isBlank()) {
+                w.eq(ConsumeRule::getCategoryId, code);
+            }
+            if (cid != null && !cid.isBlank()) {
+                if (code != null && !code.isBlank()) {
+                    w.or().eq(ConsumeRule::getCategoryId, cid);
+                } else {
+                    w.eq(ConsumeRule::getCategoryId, cid);
+                }
+            }
+        });
+        uw.set(ConsumeRule::getActive, 0);
+        consumeRuleService.update(null, uw);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -404,6 +442,27 @@ public class ConsumeCategoryAdminFacade {
             String suffix = (next < 10) ? ("0" + next) : String.valueOf(next);
             cat.setCode(basePrefix + "-" + suffix);
         }
+    }
+
+    private static ConsumeCategory ensureConsumeCategory(Category raw) {
+        if (raw instanceof ConsumeCategory cc) {
+            return cc;
+        }
+        ConsumeCategory cc = new ConsumeCategory();
+        cc.setId(raw.getId());
+        cc.setParentId(raw.getParentId());
+        cc.setCode(raw.getCode());
+        cc.setName(raw.getName());
+        cc.setLevel(raw.getLevel());
+        cc.setSortNo(raw.getSortNo());
+        cc.setDeleted(raw.getDeleted());
+        cc.setTxnTypes(raw.getTxnTypes());
+        cc.setVersion(raw.getVersion());
+        cc.setCreatedAt(raw.getCreatedAt());
+        cc.setUpdatedAt(raw.getUpdatedAt());
+        cc.setCreatedBy(raw.getCreatedBy());
+        cc.setUpdatedBy(raw.getUpdatedBy());
+        return cc;
     }
 }
 

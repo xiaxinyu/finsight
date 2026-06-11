@@ -1,17 +1,14 @@
 package com.finsight.domain.model;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 
+/** In-memory planning POJO ({@link com.finsight.application.finance.PlanningPreferencesStore}). */
 @Getter
 @Setter
-@TableName("budget_line")
 public class BudgetLine extends BaseEntity {
-    @TableId
     private String id;
     private String budgetId;
     private String categoryCode;

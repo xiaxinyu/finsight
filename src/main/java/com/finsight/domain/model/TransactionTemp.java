@@ -46,9 +46,18 @@ public class TransactionTemp extends BaseEntity {
     private String consumeCode;
     @TableField(value = "consume_name")
     private String consumeName;
+    @TableField(value = "category_id")
+    private String categoryId;
+    @TableField(value = "category_code")
+    private String categoryCode;
+    @TableField(value = "category_name")
+    private String categoryName;
 
     @TableField(value = "memo")
     private String demoArea;
+
+    @TableField(value = "expense_amount")
+    private Double expenseAmount;
 
     @TableField(value = "statement_id")
     private String recordID;
@@ -120,7 +129,17 @@ public class TransactionTemp extends BaseEntity {
     public String getBalanceCurrency() { return balanceCurrency; }
     public void setBalanceCurrency(String balanceCurrency) { this.balanceCurrency = balanceCurrency; }
     public Double getBalanceMoney() { return balanceMoney; }
-    public void setBalanceMoney(Double balanceMoney) { this.balanceMoney = balanceMoney; }
+    public void setBalanceMoney(Double balanceMoney) {
+        this.balanceMoney = balanceMoney;
+        if (balanceMoney == null) {
+            return;
+        }
+        if (balanceMoney < 0) {
+            this.expenseAmount = Math.abs(balanceMoney);
+        } else if (balanceMoney > 0) {
+            this.expenseAmount = balanceMoney;
+        }
+    }
     public Integer getCardTypeId() { return cardTypeId; }
     public void setCardTypeId(Integer cardTypeId) { this.cardTypeId = cardTypeId; }
     public String getCardTypeName() { return cardTypeName; }
@@ -129,16 +148,46 @@ public class TransactionTemp extends BaseEntity {
     public void setDeleted(Integer deleted) { this.deleted = deleted; }
     public Integer getConsumptionType() { return consumptionType; }
     public void setConsumptionType(Integer consumptionType) { this.consumptionType = consumptionType; }
-    public String getConsumeID() { return consumeID; }
-    public void setConsumeID(String consumeID) { this.consumeID = consumeID; }
-    public String getConsumeCode() { return consumeCode; }
-    public void setConsumeCode(String consumeCode) { this.consumeCode = consumeCode; }
-    public String getConsumeName() { return consumeName; }
-    public void setConsumeName(String consumeName) { this.consumeName = consumeName; }
+    public String getConsumeID() { return consumeID != null ? consumeID : categoryId; }
+    public void setConsumeID(String consumeID) {
+        this.consumeID = consumeID;
+        this.categoryId = consumeID;
+    }
+    public String getConsumeCode() { return consumeCode != null ? consumeCode : categoryCode; }
+    public void setConsumeCode(String consumeCode) {
+        this.consumeCode = consumeCode;
+        this.categoryCode = consumeCode;
+    }
+    public String getConsumeName() { return consumeName != null ? consumeName : categoryName; }
+    public void setConsumeName(String consumeName) {
+        this.consumeName = consumeName;
+        this.categoryName = consumeName;
+    }
+    public String getCategoryId() { return categoryId != null ? categoryId : consumeID; }
+    public void setCategoryId(String categoryId) {
+        this.categoryId = categoryId;
+        this.consumeID = categoryId;
+    }
+    public String getCategoryCode() { return categoryCode != null ? categoryCode : consumeCode; }
+    public void setCategoryCode(String categoryCode) {
+        this.categoryCode = categoryCode;
+        this.consumeCode = categoryCode;
+    }
+    public String getCategoryName() { return categoryName != null ? categoryName : consumeName; }
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+        this.consumeName = categoryName;
+    }
     public String getDemoArea() { return demoArea; }
     public void setDemoArea(String demoArea) { this.demoArea = demoArea; }
+    public String getMemo() { return demoArea; }
+    public void setMemo(String memo) { this.demoArea = memo; }
     public String getRecordID() { return recordID; }
     public void setRecordID(String recordID) { this.recordID = recordID; }
+    public String getStatementId() { return recordID; }
+    public void setStatementId(String statementId) { this.recordID = statementId; }
+    public Double getExpenseAmount() { return expenseAmount; }
+    public void setExpenseAmount(Double expenseAmount) { this.expenseAmount = expenseAmount; }
     public String getTransactionDateStartStr() { return transactionDateStartStr; }
     public void setTransactionDateStartStr(String transactionDateStartStr) { this.transactionDateStartStr = transactionDateStartStr; }
     public Date getTransactionDateStart() { return transactionDateStart; }

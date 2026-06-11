@@ -3,7 +3,9 @@ package com.finsight.application.maintenance;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -17,23 +19,97 @@ public class SchemaMigrationVerificationService {
 
     public Map<String, Object> verify() {
         Map<String, Object> out = new LinkedHashMap<>();
+        List<String> missing = new ArrayList<>();
+
+        for (String table : List.of(
+                "transaction", "imp_staging_entry", "statement", "fin_bank_account",
+                "cls_category", "cls_rule", "cls_rule_tag", "fs_user", "ben_contribution")) {
+            if (!tableExists(table)) {
+                missing.add(table);
+            }
+        }
+        out.put("missingCoreTables", missing);
+
         out.put("transactionRows", count("transaction"));
         out.put("stagingRows", count("imp_staging_entry"));
         out.put("bankAccountRows", count("fin_bank_account"));
         out.put("benefitRows", count("ben_contribution"));
         out.put("fsUserRows", count("fs_user"));
         out.put("clsCategoryRows", count("cls_category"));
+        out.put("clsRuleRows", count("cls_rule"));
+        out.put("clsRuleActiveRows", countActiveRules());
+        out.put("orphanRuleRows", countOrphanRules());
+        out.put("blankPatternRuleRows", countBlankPatternRules());
+        out.put("archivedConsumeCategory", tableExists("_archive_consume_category"));
+        out.put("archivedConsumeRule", tableExists("_archive_consume_rule"));
 
         Double income = jdbcTemplate.queryForObject(
                 "select coalesce(sum(income_money),0) from transaction where coalesce(deleted,0)=0",
                 Double.class);
-        Double expense = jdbcTemplate.queryForObject(
-                "select coalesce(sum(balance_money),0) from transaction where coalesce(deleted,0)=0 and coalesce(balance_money,0)>0",
-                Double.class);
+        Double expense = queryExpenseTotal();
         out.put("incomeTotal", income);
         out.put("expenseTotal", expense);
-        out.put("ok", true);
+
+        boolean ok = missing.isEmpty();
+        out.put("ok", ok);
         return out;
+    }
+
+    private long countActiveRules() {
+        if (!tableExists("cls_rule")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from cls_rule where coalesce(active,1)=1 and pattern is not null and trim(pattern)<>''",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private long countOrphanRules() {
+        if (!tableExists("cls_rule") || !tableExists("cls_category")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from cls_rule r "
+                        + "left join cls_category c on (c.code = r.category_id or c.id = r.category_id) "
+                        + "and coalesce(c.deleted,0)=0 "
+                        + "where r.category_id is not null and trim(r.category_id)<>'' "
+                        + "and c.id is null",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private long countBlankPatternRules() {
+        if (!tableExists("cls_rule")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from cls_rule where pattern is null or trim(pattern)=''",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private Double queryExpenseTotal() {
+        if (columnExists("transaction", "expense_amount")) {
+            return jdbcTemplate.queryForObject(
+                    "select coalesce(sum(expense_amount),0) from transaction "
+                            + "where coalesce(deleted,0)=0 and coalesce(expense_amount,0)>0",
+                    Double.class);
+        }
+        return jdbcTemplate.queryForObject(
+                "select coalesce(sum(balance_money),0) from transaction "
+                        + "where coalesce(deleted,0)=0 and coalesce(balance_money,0)>0",
+                Double.class);
+    }
+
+    private boolean columnExists(String table, String column) {
+        Integer n = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.columns "
+                        + "where table_schema = database() and table_name = ? and column_name = ?",
+                Integer.class,
+                table,
+                column);
+        return n != null && n > 0;
     }
 
     private long count(String table) {
