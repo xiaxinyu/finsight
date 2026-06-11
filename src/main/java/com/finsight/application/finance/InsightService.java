@@ -32,12 +32,6 @@ public class InsightService {
         Map<String, Object> quality = dataQualityService.summary();
 
         int unclassified = ((Number) quality.getOrDefault("unclassifiedCount", 0)).intValue();
-        int duplicateExcess = ((Number) quality.getOrDefault("duplicateExcessCount", 0)).intValue();
-        if (duplicateExcess > 0) {
-            cards.add(card("warning", "Duplicate ledger rows",
-                    duplicateExcess + " excess rows match an existing transaction (same date, amount, and description). Clean duplicates before trusting income or savings metrics.",
-                    "/transactions", "Review ledger", duplicateExcess, 0));
-        }
         if (unclassified > 0) {
             cards.add(card("warning", "Unclassified transactions",
                     unclassified + " transactions need a category before reports are reliable.",
@@ -61,11 +55,11 @@ public class InsightService {
         }
 
         double savingsRate = ((Number) wealth.get("savingsRate")).doubleValue();
-        if (duplicateExcess == 0 && savingsRate >= 0.2) {
+        if (savingsRate >= 0.2) {
             cards.add(card("info", "Strong savings rate (YTD)",
                     "Year-to-date savings rate is " + Math.round(savingsRate * 100) + "% — keep the momentum.",
                     "/reports/cashflow", "View cashflow", savingsRate * 100, 20));
-        } else if (duplicateExcess == 0 && savingsRate < 0) {
+        } else if (savingsRate < 0) {
             cards.add(card("warning", "Negative savings (YTD)",
                     "Year-to-date spending exceeds income by " + Math.round(Math.abs(savingsRate) * 100) + "% of income.",
                     "/reports/cashflow", "View cashflow", savingsRate * 100, 0));

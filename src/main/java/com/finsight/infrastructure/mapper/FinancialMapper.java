@@ -12,10 +12,6 @@ public interface FinancialMapper {
 
     int countUnclassified();
 
-    int countDuplicateFingerprints();
-
-    int countDuplicateExcessRows();
-
     int countTransferGroups();
 
     List<Map<String, Object>> listTransferGroups();
@@ -27,8 +23,6 @@ public interface FinancialMapper {
     Double sumIncomeSince(@Param("since") Date since);
 
     Double sumFixedBucketYear(@Param("year") int year);
-
-    List<String> findDuplicatePreviewFingerprints(@Param("bankCardId") String bankCardId);
 
     List<String> findDuplicatePreviewTempIds(@Param("statementId") String statementId);
 

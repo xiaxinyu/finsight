@@ -30,10 +30,9 @@ function savingsRateLabel(income: number, net: number): string {
   return `${((net / income) * 100).toFixed(1)}%`
 }
 
-function dataTrustScore(unclassified: number, duplicateExcess: number): number {
-  const dupPenalty = duplicateExcess > 0 ? Math.min(55, Math.round(duplicateExcess / 8)) : 0
-  const unclsPenalty = unclassified > 0 ? Math.min(35, Math.round(unclassified / 5)) : 0
-  return Math.max(0, 100 - dupPenalty - unclsPenalty)
+function dataTrustScore(unclassified: number): number {
+  const unclsPenalty = unclassified > 0 ? Math.min(90, Math.round(unclassified / 5)) : 0
+  return Math.max(0, 100 - unclsPenalty)
 }
 
 export function DashboardPage() {
@@ -93,10 +92,8 @@ export function DashboardPage() {
   const healthScore = (summary?.health_score || summary?.healthScore) as Record<string, number> | undefined
 
   const dq = pulse?.dataQuality
-  const duplicateExcess = dq?.duplicateExcessCount ?? dq?.duplicateCount ?? 0
-  const duplicateGroups = dq?.duplicateGroupCount ?? 0
   const unclassified = dq?.unclassifiedCount ?? 0
-  const trustPct = dataTrustScore(unclassified, duplicateExcess)
+  const trustPct = dataTrustScore(unclassified)
 
   const pieData = useMemo(
     () => (periodReport?.topCats || []).map((r) => ({ name: r.key, value: r.value })),
@@ -177,8 +174,6 @@ export function DashboardPage() {
           {pulse?.dataQuality && (
             <DashboardQualityStrip
               unclassified={unclassified}
-              duplicateExcess={duplicateExcess}
-              duplicateGroups={duplicateGroups}
               transfers={dq?.transferPairCount ?? 0}
               dataTrustPct={trustPct}
             />

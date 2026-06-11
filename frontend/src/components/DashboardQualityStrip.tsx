@@ -2,8 +2,6 @@ import { Link } from 'react-router-dom'
 
 type Props = {
   unclassified: number
-  duplicateExcess: number
-  duplicateGroups: number
   transfers: number
   dataTrustPct: number
 }
@@ -35,8 +33,6 @@ function QualityPill({
 
 export function DashboardQualityStrip({
   unclassified,
-  duplicateExcess,
-  duplicateGroups,
   transfers,
   dataTrustPct,
 }: Props) {
@@ -46,20 +42,13 @@ export function DashboardQualityStrip({
         label="Data trust"
         value={`${dataTrustPct}%`}
         tone={dataTrustPct >= 85 ? 'ok' : dataTrustPct >= 60 ? 'default' : 'warn'}
-        hint="Based on classified rows and duplicate-free ledger"
+        hint="Based on category coverage"
       />
       <QualityPill
         label="Unclassified"
         value={unclassified}
         tone={unclassified > 0 ? 'warn' : 'ok'}
         to="/transactions?unclassified=1"
-      />
-      <QualityPill
-        label="Duplicate rows"
-        value={duplicateExcess}
-        tone={duplicateExcess > 0 ? 'warn' : 'ok'}
-        hint={duplicateGroups > 0 ? `${duplicateGroups} fingerprint groups` : undefined}
-        to="/transactions"
       />
       <QualityPill label="Transfer pairs" value={transfers} />
     </div>

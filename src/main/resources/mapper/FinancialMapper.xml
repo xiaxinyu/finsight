@@ -10,15 +10,6 @@
         and (t.deleted is null or t.deleted = 0)
     </sql>
 
-    <sql id="transactionFingerprint">
-        md5(concat(
-            coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
-            '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
-            '|', coalesce(t.transaction_desc,''),
-            '|', coalesce(t.bank_card_id,'')
-        ))
-    </sql>
-
     <sql id="rowIncomeAmountT">
         case when coalesce(t.income_money,0) &gt; 0 then t.income_money
              when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
@@ -50,29 +41,6 @@
         where (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
-    </select>
-
-    <select id="countDuplicateFingerprints" resultType="int">
-        select count(*) from (
-            select <include refid="transactionFingerprint"/> fp
-            from transaction t
-            where 1=1
-            <include refid="excludeTransfer"/>
-            <include refid="activeTransaction"/>
-            group by fp having count(*) &gt; 1
-        ) d
-    </select>
-
-    <select id="countDuplicateExcessRows" resultType="int">
-        select coalesce(sum(cnt - 1), 0) from (
-            select count(*) as cnt
-            from transaction t
-            where 1=1
-            <include refid="excludeTransfer"/>
-            <include refid="activeTransaction"/>
-            group by <include refid="transactionFingerprint"/>
-            having count(*) &gt; 1
-        ) d
     </select>
 
     <select id="countTransferGroups" resultType="int">
@@ -159,27 +127,6 @@
         <include refid="activeTransaction"/>
     </select>
 
-    <select id="findDuplicatePreviewFingerprints" resultType="string">
-        select <include refid="transactionFingerprint"/> as fp
-        from transaction t
-        where md5(concat(
-            coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
-            '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
-            '|', coalesce(t.transaction_desc,''),
-            '|', coalesce(#{bankCardId,jdbcType=VARCHAR},'')
-        )) in (
-            select md5(concat(
-                coalesce(date_format(x.transaction_date,'%Y-%m-%d'),''),
-                '|', coalesce(round(abs(coalesce(x.balance_money,0) + coalesce(x.income_money,0)),2),''),
-                '|', coalesce(x.transaction_desc,''),
-                '|', coalesce(x.bank_card_id,'')
-            ))
-            from transaction x
-            where (x.deleted is null or x.deleted = 0)
-        )
-        <include refid="activeTransaction"/>
-    </select>
-
     <select id="latestInferredBalancePerCard" resultType="com.finsight.domain.model.KeyValue">
         select t.bank_card_id as `key`, round(coalesce(t.account_balance, 0), 2) as `value`
         from transaction t
@@ -245,6 +192,17 @@
                 = round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)), 2)
             and coalesce(tt.transaction_desc,'') = coalesce(t.transaction_desc,'')
             and coalesce(tt.bank_card_id,'') = coalesce(t.bank_card_id,'')
+            and case
+                when coalesce(tt.txn_kind,'') in ('income','expense') then tt.txn_kind
+                when coalesce(tt.income_money,0) &gt; 0 or coalesce(tt.balance_money,0) &lt; 0 then 'income'
+                when coalesce(tt.balance_money,0) &gt; 0 then 'expense'
+                else ''
+            end = case
+                when coalesce(t.txn_kind,'') in ('income','expense') then t.txn_kind
+                when coalesce(t.income_money,0) &gt; 0 or coalesce(t.balance_money,0) &lt; 0 then 'income'
+                when coalesce(t.balance_money,0) &gt; 0 then 'expense'
+                else ''
+            end
         where tt.statement_id = #{statementId,jdbcType=VARCHAR}
           and coalesce(tt.deleted, 0) = 0
           and (t.deleted is null or t.deleted = 0)

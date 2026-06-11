@@ -15,9 +15,6 @@ export type PulseData = {
   liquidAssets: number
   dataQuality: {
     unclassifiedCount: number
-    duplicateCount: number
-    duplicateExcessCount?: number
-    duplicateGroupCount?: number
     transferPairCount: number
   }
 }

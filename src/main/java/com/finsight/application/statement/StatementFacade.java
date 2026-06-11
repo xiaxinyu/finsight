@@ -6,7 +6,6 @@ import com.finsight.application.transaction.ITransactionService;
 import com.finsight.domain.model.Statement;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.model.TransactionTemp;
-import com.finsight.application.finance.DataQualityService;
 import com.finsight.domain.port.TransactionTempRepository;
 import com.finsight.web.api.dto.CollectionResult;
 import com.finsight.web.api.dto.CommonResult;
@@ -47,7 +46,7 @@ public class StatementFacade {
     private StatementProcessingService statementProcessingService;
 
     @Autowired
-    private DataQualityService dataQualityService;
+    private StatementImportDedupService statementImportDedupService;
 
     @Autowired
     private StatementSkippedLinesService statementSkippedLinesService;
@@ -263,7 +262,7 @@ public class StatementFacade {
                 java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
                 Set<String> duplicateIds = new HashSet<>();
                 try {
-                    List<String> dupIds = dataQualityService.duplicatePreviewTempIds(statementId);
+                    List<String> dupIds = statementImportDedupService.findAlreadyImportedTempIds(statementId);
                     if (dupIds != null) {
                         duplicateIds.addAll(dupIds);
                     }
@@ -301,7 +300,7 @@ public class StatementFacade {
 
             Set<String> duplicateIds = new HashSet<>();
             try {
-                List<String> dupIds = dataQualityService.duplicatePreviewTempIds(statementId);
+                List<String> dupIds = statementImportDedupService.findAlreadyImportedTempIds(statementId);
                 if (dupIds != null) {
                     duplicateIds.addAll(dupIds);
                 }
@@ -324,7 +323,7 @@ public class StatementFacade {
                 transactions.add(t);
             }
             if (transactions.isEmpty()) {
-                return CommonResult.fail("No new transactions to commit (all rows flagged as possible duplicates)");
+                return CommonResult.fail("No new transactions to commit (all rows already exist in the ledger)");
             }
 
             String userName = authenticationFacade.getUserName();

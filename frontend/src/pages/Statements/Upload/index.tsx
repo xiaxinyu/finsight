@@ -205,7 +205,7 @@ export function StatementUploadPage() {
     staleTime: 60_000,
   })
 
-  const duplicateCount = preview.filter((r) => Boolean(r.possibleDuplicate)).length
+  const alreadyInLedgerCount = preview.filter((r) => Boolean(r.possibleDuplicate)).length
   const stats = useMemo(() => summarizePreview(preview), [preview])
 
   const onUpload = async (file: File) => {
@@ -257,7 +257,7 @@ export function StatementUploadPage() {
     try {
       const result = await commitStatement(statementId)
       setCommitResult(result)
-      const dupNote = result.skippedDuplicates ? ` · ${result.skippedDuplicates} duplicate(s) skipped` : ''
+      const dupNote = result.skippedDuplicates ? ` · ${result.skippedDuplicates} already in ledger (skipped)` : ''
       message.success(`Imported ${result.imported} of ${result.total} transactions${dupNote}`)
       qc.invalidateQueries({ queryKey: ['home-summary'] })
       qc.invalidateQueries({ queryKey: ['financial-pulse'] })
@@ -396,8 +396,8 @@ export function StatementUploadPage() {
                   </Tag>
                 </Tooltip>
               )}
-              {duplicateCount > 0 && (
-                <Tag className="fs-tag" color="orange">{duplicateCount} possible duplicate{duplicateCount === 1 ? '' : 's'}</Tag>
+              {alreadyInLedgerCount > 0 && (
+                <Tag className="fs-tag" color="orange">{alreadyInLedgerCount} already in ledger</Tag>
               )}
               <Button size="small" onClick={reset}>Upload another</Button>
               <Button type="primary" size="small" loading={loading} disabled={preview.length === 0} onClick={onCommit}>
@@ -488,7 +488,7 @@ export function StatementUploadPage() {
                 { title: 'Description', dataIndex: 'transactionDesc', width: 180, ellipsis: true, render: (v, r) => (
                   <Space size={4}>
                     <span className="fs-cell-text" title={cellText(v)}>{cellText(v)}</span>
-                    {r.possibleDuplicate ? <Tag className="fs-tag" color="orange">Dup</Tag> : null}
+                    {r.possibleDuplicate ? <Tag className="fs-tag" color="orange">Exists</Tag> : null}
                   </Space>
                 ) },
                 {
@@ -548,7 +548,7 @@ export function StatementUploadPage() {
             subTitle={
               commitResult
                 ? `${commitResult.imported} transaction${commitResult.imported === 1 ? '' : 's'} imported`
-                  + (commitResult.skippedDuplicates ? ` · ${commitResult.skippedDuplicates} duplicate(s) skipped` : '')
+                  + (commitResult.skippedDuplicates ? ` · ${commitResult.skippedDuplicates} already in ledger (skipped)` : '')
                 : 'Import complete.'
             }
             extra={[

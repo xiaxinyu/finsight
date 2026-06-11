@@ -22,7 +22,7 @@ import { FsDataTable } from '../../components/FsDataTable'
 import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRangePicker'
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
-import { billCalendar, budgetVsActual, dataQuality } from '../../api/finance'
+import { billCalendar, budgetVsActual } from '../../api/finance'
 import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
 
@@ -113,12 +113,6 @@ export function ReportsPage() {
     },
   })
 
-  const { data: quality } = useQuery({
-    queryKey: ['data-quality'],
-    queryFn: dataQuality,
-    staleTime: 60_000,
-  })
-
   const chartLoading = isLoading || isFetching || applying
   const viewportH = useViewportTableHeight(320)
   const chartHeight = Math.min(viewportH, 400)
@@ -190,7 +184,6 @@ export function ReportsPage() {
     )
   }
 
-  const duplicateExcess = Number(quality?.duplicateExcessCount ?? quality?.duplicateCount ?? 0)
   const disabled = chartLoading
 
   return (
@@ -238,15 +231,6 @@ export function ReportsPage() {
           description={error instanceof Error ? error.message : 'Check filters and try Apply again.'}
         />
       )}
-      {duplicateExcess > 0 && (
-        <Alert
-          type="warning"
-          showIcon
-          message="Ledger has duplicate rows"
-          description={`${duplicateExcess} excess duplicate transaction(s) may inflate totals. Clean duplicates before trusting this report.`}
-        />
-      )}
-
       {view && (
         <>
           <ReportKpiStrip items={view.kpis} />
