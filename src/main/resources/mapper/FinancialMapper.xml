@@ -6,6 +6,19 @@
         and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
     </sql>
 
+    <sql id="activeTransaction">
+        and (t.deleted is null or t.deleted = 0)
+    </sql>
+
+    <sql id="transactionFingerprint">
+        md5(concat(
+            coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
+            '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
+            '|', coalesce(t.transaction_desc,''),
+            '|', coalesce(t.bank_card_id,'')
+        ))
+    </sql>
+
     <sql id="rowIncomeAmountT">
         case when coalesce(t.income_money,0) &gt; 0 then t.income_money
              when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
@@ -36,20 +49,29 @@
         select count(*) from transaction t
         where (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
         <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="countDuplicateFingerprints" resultType="int">
         select count(*) from (
-            select md5(concat(
-                coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
-                '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
-                '|', coalesce(t.transaction_desc,''),
-                '|', coalesce(t.bank_card_id,'')
-            )) fp
+            select <include refid="transactionFingerprint"/> fp
             from transaction t
             where 1=1
             <include refid="excludeTransfer"/>
+            <include refid="activeTransaction"/>
             group by fp having count(*) &gt; 1
+        ) d
+    </select>
+
+    <select id="countDuplicateExcessRows" resultType="int">
+        select coalesce(sum(cnt - 1), 0) from (
+            select count(*) as cnt
+            from transaction t
+            where 1=1
+            <include refid="excludeTransfer"/>
+            <include refid="activeTransaction"/>
+            group by <include refid="transactionFingerprint"/>
+            having count(*) &gt; 1
         ) d
     </select>
 
@@ -59,6 +81,7 @@
         where t.txn_kind = 'transfer'
           and t.transfer_group_id is not null
           and length(trim(t.transfer_group_id)) &gt; 0
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="listTransferGroups" resultType="map">
@@ -69,6 +92,7 @@
         where t.txn_kind = 'transfer'
           and t.transfer_group_id is not null
           and length(trim(t.transfer_group_id)) &gt; 0
+        <include refid="activeTransaction"/>
         group by t.transfer_group_id
         order by transferDate desc
     </select>
@@ -84,10 +108,12 @@
             where t.account_balance is not null
               and t.bank_card_id is not null
               and length(trim(t.bank_card_id)) &gt; 0
+              <include refid="activeTransaction"/>
               and t.id = (
                 select t2.id from transaction t2
                 where t2.bank_card_id = t.bank_card_id
                   and t2.account_balance is not null
+                  and (t2.deleted is null or t2.deleted = 0)
                 order by t2.transaction_date desc, t2.id desc
                 limit 1
               )
@@ -103,6 +129,7 @@
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
         <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="sumIncomeSince" resultType="double">
@@ -116,6 +143,7 @@
         from transaction t
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
         <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="sumFixedBucketYear" resultType="double">
@@ -128,15 +156,11 @@
             or t.transaction_desc like '%房租%' or cat.code like '%fixed%'
         )
         <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="findDuplicatePreviewFingerprints" resultType="string">
-        select md5(concat(
-            coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
-            '|', coalesce(round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)),2),''),
-            '|', coalesce(t.transaction_desc,''),
-            '|', coalesce(t.bank_card_id,'')
-        )) as fp
+        select <include refid="transactionFingerprint"/> as fp
         from transaction t
         where md5(concat(
             coalesce(date_format(t.transaction_date,'%Y-%m-%d'),''),
@@ -151,7 +175,9 @@
                 '|', coalesce(x.bank_card_id,'')
             ))
             from transaction x
+            where (x.deleted is null or x.deleted = 0)
         )
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="latestInferredBalancePerCard" resultType="com.finsight.domain.model.KeyValue">
@@ -160,10 +186,12 @@
         where t.account_balance is not null
           and t.bank_card_id is not null
           and length(trim(t.bank_card_id)) &gt; 0
+          <include refid="activeTransaction"/>
           and t.id = (
             select t2.id from transaction t2
             where t2.bank_card_id = t.bank_card_id
               and t2.account_balance is not null
+              and (t2.deleted is null or t2.deleted = 0)
             order by t2.transaction_date desc, t2.id desc
             limit 1
           )
@@ -176,6 +204,7 @@
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
         <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
         <choose>
             <when test="bucketKey == 'fixed'">
                 and (cat.parent_id = 'FIXED' or cat.code like 'FIXED%' or t.transaction_desc like '%房租%' or t.transaction_desc like '%房贷%')
@@ -204,6 +233,7 @@
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
         and t.consume_code = #{categoryCode,jdbcType=VARCHAR}
         <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
     </select>
 
     <select id="findDuplicatePreviewTempIds" resultType="string">
@@ -217,6 +247,7 @@
             and coalesce(tt.bank_card_id,'') = coalesce(t.bank_card_id,'')
         where tt.statement_id = #{statementId,jdbcType=VARCHAR}
           and coalesce(tt.deleted, 0) = 0
+          and (t.deleted is null or t.deleted = 0)
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
     </select>
 

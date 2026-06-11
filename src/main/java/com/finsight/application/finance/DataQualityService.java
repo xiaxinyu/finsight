@@ -20,7 +20,9 @@ public class DataQualityService {
     public Map<String, Object> summary() {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("unclassifiedCount", financialMapper.countUnclassified());
-        m.put("duplicateCount", financialMapper.countDuplicateFingerprints());
+        m.put("duplicateGroupCount", financialMapper.countDuplicateFingerprints());
+        m.put("duplicateExcessCount", financialMapper.countDuplicateExcessRows());
+        m.put("duplicateCount", financialMapper.countDuplicateExcessRows());
         m.put("transferPairCount", financialMapper.countTransferGroups());
         return m;
     }

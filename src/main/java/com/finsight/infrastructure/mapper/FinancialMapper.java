@@ -14,6 +14,8 @@ public interface FinancialMapper {
 
     int countDuplicateFingerprints();
 
+    int countDuplicateExcessRows();
+
     int countTransferGroups();
 
     List<Map<String, Object>> listTransferGroups();

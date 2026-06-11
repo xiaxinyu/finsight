@@ -1867,6 +1867,359 @@
   flex-shrink: 0;
 }
 
+/* ── Dashboard ── */
+.fs-data-page--dashboard .fs-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fs-dash-quality-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.fs-dash-quality-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.fs-dash-quality-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  min-width: 0;
+}
+
+.fs-dash-quality-pill--warn {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.fs-dash-quality-pill--ok {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.fs-dash-quality-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.fs-dash-quality-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.fs-dash-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.fs-dash-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  min-width: 0;
+}
+
+.fs-dash-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fs-dash-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.fs-dash-kpi-value--income { color: #16a34a; }
+.fs-dash-kpi-value--expense { color: #ea580c; }
+
+.fs-dash-kpi-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fs-dash-insight-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fs-dash-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--fs-radius);
+  border: 1px solid var(--fs-border);
+  background: #fff;
+}
+
+.fs-dash-insight--warn {
+  border-color: #fed7aa;
+  background: #fffbeb;
+}
+
+.fs-dash-insight--info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.fs-dash-insight--ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.fs-dash-insight-icon {
+  font-size: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.fs-dash-insight--warn .fs-dash-insight-icon { color: #d97706; }
+.fs-dash-insight--info .fs-dash-insight-icon { color: #2563eb; }
+.fs-dash-insight--ok .fs-dash-insight-icon { color: #16a34a; }
+
+.fs-dash-insight-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.fs-dash-insight-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.fs-dash-insight-detail {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.fs-dash-insight-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fs-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fs-dash-analysis-note {
+  margin: 8px 4px 0 !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.fs-dash-accounts-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.fs-dash-accounts-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.fs-dash-accounts-total {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-dash-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.fs-dash-account-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fs-dash-account-name {
+  color: #334155;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-dash-account-balance {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.fs-dash-account-balance--neg { color: #dc2626; }
+
+.fs-dash-liquidity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.fs-dash-health-score {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.fs-dash-health-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fs-dash-health-max {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.fs-dash-health-dim {
+  margin-bottom: 8px;
+}
+
+.fs-dash-health-dim-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.fs-dash-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.fs-dash-shortcut {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.fs-dash-shortcut:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.fs-dash-shortcut span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.fs-dash-shortcut small {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.fs-dash-shortcut .anticon {
+  color: var(--fs-primary);
+  margin-bottom: 4px;
+}
+
+.fs-report-insights {
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  margin-bottom: 8px;
+}
+
+.fs-report-insights-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.fs-report-insights-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fs-report-insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.fs-report-insight--warn {
+  color: #9a3412;
+}
+
+.fs-report-insight-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: #2563eb;
+}
+
+.fs-report-insight--warn .fs-report-insight-icon {
+  color: #d97706;
+}
+
 .fs-skipped-table .fs-skipped-reason {
   display: block;
   font-size: 12px;

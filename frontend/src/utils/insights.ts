@@ -33,12 +33,13 @@ export function fromIncomeExpense(rows: { income: number; expense: number; surpl
     if (r.surplus < 0) deficitMonths++
   })
   const surplus = income - expense
-  const savings = income > 0 ? Math.max(0, (surplus / income) * 100) : 0
+  const savings = income > 0 ? (surplus / income) * 100 : 0
   const bullets: InsightBullet[] = [
-    { text: `${year || 'Period'} totals: Income ${formatMoney(income)}, Expense ${formatMoney(expense)}, Surplus ${formatMoney(surplus)} (${pct(savings)} savings rate).` },
+    { text: `${year || 'Period'} totals: Income ${formatMoney(income)}, Expense ${formatMoney(expense)}, Net ${formatMoney(surplus)} (${pct(savings)} savings rate).` },
   ]
   if (deficitMonths > 0) bullets.push({ text: `${deficitMonths} month(s) ended in deficit — review fixed costs and discretionary spend.`, warn: true })
-  else if (savings >= 20) bullets.push({ text: 'Healthy savings rate — surplus trend is positive across the year.' })
+  else if (savings >= 20) bullets.push({ text: 'Healthy savings rate — net cash flow is positive across the period.' })
+  else if (savings < 0) bullets.push({ text: 'Period ended in deficit — spending exceeded income.', warn: true })
   return bullets
 }
 

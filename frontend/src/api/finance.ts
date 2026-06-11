@@ -13,7 +13,13 @@ export type PulseData = {
   expenseMtd: number
   netFlowMtd: number
   liquidAssets: number
-  dataQuality: { unclassifiedCount: number; duplicateCount: number; transferPairCount: number }
+  dataQuality: {
+    unclassifiedCount: number
+    duplicateCount: number
+    duplicateExcessCount?: number
+    duplicateGroupCount?: number
+    transferPairCount: number
+  }
 }
 
 export type DecisionCard = {
