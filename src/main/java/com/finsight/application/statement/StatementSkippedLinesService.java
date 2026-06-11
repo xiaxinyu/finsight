@@ -165,30 +165,48 @@ public class StatementSkippedLinesService {
 
     private Set<Integer> matchRowsToTransactions(List<String[]> rows, List<Transaction> transactions) {
         Set<Integer> matched = new HashSet<>();
+        if (transactions == null || transactions.isEmpty()) {
+            return matched;
+        }
         boolean[] txnUsed = new boolean[transactions.size()];
+        boolean[] rowUsed = new boolean[rows.size()];
+
+        List<MatchCandidate> strong = new ArrayList<>();
+        List<MatchCandidate> weak = new ArrayList<>();
         for (int i = 0; i < rows.size(); i++) {
             String[] row = rows.get(i);
             if (row == null) {
                 continue;
             }
-            int bestTxn = -1;
-            int bestScore = 0;
             for (int t = 0; t < transactions.size(); t++) {
-                if (txnUsed[t]) {
-                    continue;
-                }
                 int score = rowMatchScore(row, transactions.get(t));
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestTxn = t;
+                if (score >= 110) {
+                    strong.add(new MatchCandidate(score, i, t));
+                } else if (score >= 10) {
+                    weak.add(new MatchCandidate(score, i, t));
                 }
             }
-            if (bestTxn >= 0 && bestScore >= 10) {
-                matched.add(i);
-                txnUsed[bestTxn] = true;
+        }
+        strong.sort(Comparator.comparingInt(MatchCandidate::score).reversed());
+        for (MatchCandidate c : strong) {
+            if (!rowUsed[c.rowIdx()] && !txnUsed[c.txnIdx()]) {
+                rowUsed[c.rowIdx()] = true;
+                txnUsed[c.txnIdx()] = true;
+                matched.add(c.rowIdx());
+            }
+        }
+        weak.sort(Comparator.comparingInt(MatchCandidate::score).reversed());
+        for (MatchCandidate c : weak) {
+            if (!rowUsed[c.rowIdx()] && !txnUsed[c.txnIdx()]) {
+                rowUsed[c.rowIdx()] = true;
+                txnUsed[c.txnIdx()] = true;
+                matched.add(c.rowIdx());
             }
         }
         return matched;
+    }
+
+    private record MatchCandidate(int score, int rowIdx, int txnIdx) {
     }
 
     private int rowMatchScore(String[] row, Transaction txn) {
@@ -211,10 +229,9 @@ public class StatementSkippedLinesService {
 
         double income = txn.getIncomeMoney() == null ? 0.0 : Math.max(0.0, txn.getIncomeMoney());
         double expense = txn.getBalanceMoney() == null ? 0.0 : Math.max(0.0, txn.getBalanceMoney());
-        double amount = Math.max(income, expense);
         boolean rowHasAmount = hasAmountToken(joined);
 
-        if (amount > 0 && amountPresentInText(joined, amount)) {
+        if (rowAmountMatchesTxn(joined, row, income, expense)) {
             return score + 100;
         }
         if (rowHasAmount) {
@@ -226,7 +243,46 @@ public class StatementSkippedLinesService {
         if (StringUtils.isNotBlank(txn.getOpponentName()) && joined.contains(txn.getOpponentName().trim())) {
             score += 3;
         }
+        String memo = txn.getDemoArea();
+        if (StringUtils.isNotBlank(memo)) {
+            for (String part : memo.split("\\s+")) {
+                if (part.length() >= 4 && joined.contains(part)) {
+                    score += 2;
+                    break;
+                }
+            }
+        }
         return score >= 10 ? score : 0;
+    }
+
+    private boolean rowAmountMatchesTxn(String joined, String[] row, double income, double expense) {
+        if (income > 0 && amountPresentInText(joined, income)) {
+            return true;
+        }
+        if (expense > 0 && amountPresentInText(joined, expense)) {
+            return true;
+        }
+        if (row == null) {
+            return false;
+        }
+        for (String cell : row) {
+            if (cellAmountMatches(cell, income) || cellAmountMatches(cell, expense)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean cellAmountMatches(String cell, double amount) {
+        if (amount <= 0 || StringUtils.isBlank(cell)) {
+            return false;
+        }
+        try {
+            double cellVal = Double.parseDouble(cell.replace(",", "").trim());
+            return Math.abs(Math.abs(cellVal) - amount) < 0.015;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     /** Continuation rows (no date) are merged by CMB importer into the previous line — not parse failures. */
