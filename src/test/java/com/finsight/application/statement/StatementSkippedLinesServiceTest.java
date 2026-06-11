@@ -46,7 +46,7 @@ class StatementSkippedLinesServiceTest {
     }
 
     @Test
-    void analyze_enrichesContinuationLineWithContext() {
+    void analyze_mergedContinuationLineNotListedAsSkipped() {
         Statement statement = new Statement();
         statement.setSource("CMB");
         statement.setFileName("cmb.pdf");
@@ -57,14 +57,120 @@ class StatementSkippedLinesServiceTest {
         ));
 
         List<SkippedImportRow> skipped = service.analyze(statement, "debit");
-        SkippedImportRow continuation = skipped.stream()
-                .filter(r -> r.getRawText().contains("屈臣氏"))
-                .findFirst()
-                .orElse(null);
-        assertTrue(continuation != null);
-        assertTrue(continuation.getReason().contains("Continuation"));
-        assertEquals(3, continuation.getFileLineNumber());
-        assertTrue(continuation.getContextBefore() != null && continuation.getContextBefore().contains("2025-05-26"));
-        assertTrue(continuation.getHint() != null && continuation.getHint().contains("columns="));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("屈臣氏")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("2025-05-26")));
+    }
+
+    @Test
+    void analyze_normalCmbRowWithPageFooter_notMarkedSkipped() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-08-07 CNY -1,000.00 798.98 银联无卡自助消费 夏昕雨",
+                "2025-08-08 CNY -3.00 795.98 快捷支付 扫二维码付款",
+                "2/6"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("2025-08-08")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("扫二维码付款")));
+        assertTrue(skipped.stream().noneMatch(r -> "2/6".equals(r.getRawText())));
+    }
+
+    @Test
+    void analyze_cmbCommaThousands_expenseNotMarkedSkipped() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-12-03 CNY -5,749.00 2,362.39 转账汇款 夏斯雨"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("2025-12-03")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("夏斯雨")));
+    }
+
+    @Test
+    void analyze_cmbCommaThousands_incomeNotMarkedSkipped() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2026-03-22 CNY 200,000.00 200,659.99 个贷放款 夏昕雨"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("2026-03-22")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("个贷放款")));
+    }
+
+    @Test
+    void summarize_lineCountsAddUp() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "招商银行交易流水",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "账户类型：ALL/全币种 开户行：深圳时代广场支行",
+                "2025-10-14 CNY 48,333.30 190,183.34 行内转账转入 欧涛",
+                "2025-07-03 GBP -200.00 0.00 柜台取现",
+                "2/6"
+        ));
+
+        ImportLineStats stats = service.summarize(statement, "debit", 2);
+        assertEquals(stats.lines(), stats.linked() + stats.skipped() + stats.ignored());
+        assertTrue(stats.ignored() > 0);
+    }
+
+    @Test
+    void analyze_gbpWithdrawal_notMarkedSkipped() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要",
+                "2025-07-03 GBP -200.00 0.00 柜台取现"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("柜台取现")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("GBP")));
+    }
+
+    @Test
+    void analyze_sameDaySameOpponentCommaAmounts_bothLinked() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-10-14 CNY 75,000.30 141,850.04 行内转账转入 欧涛",
+                "2025-10-14 CNY 48,333.30 190,183.34 行内转账转入 欧涛"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("48,333.30")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("75,000.30")));
+    }
+
+    @Test
+    void analyze_watsonsSplitAcrossRows_mergedIntoPreviousTransaction() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-07-30 CNY -26.40 1731.46 快捷支付 刘美妮",
+                "屈臣氏珠海横琴管理咨询有限公"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("屈臣氏")));
     }
 }

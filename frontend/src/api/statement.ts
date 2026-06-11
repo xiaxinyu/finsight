@@ -6,6 +6,10 @@ export interface StatementUploadResult {
   rows: number
   parsed: number
   skipped: number
+  /** Header/metadata/merged lines not shown in Skipped tab */
+  ignored?: number
+  /** Source lines linked to a parsed transaction (may exceed parsed when rows merge) */
+  linked?: number
 }
 
 export interface StatementCommitResult {

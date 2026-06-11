@@ -20,6 +20,7 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
     private static final Pattern DATE_TOKEN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
     private static final Pattern DATE_IN_LINE = Pattern.compile("\\d{4}[-./]\\d{2}[-./]\\d{2}");
     private static final Pattern AMOUNT_STRICT = Pattern.compile("^[-+]?\\d+(?:\\.\\d{1,2})?$");
+    private static final Pattern CURRENCY_TOKEN = Pattern.compile("^(?i)(CNY|RMB|人民币|GBP|USD|EUR|HKD|JPY|AUD|CAD|SGD|CHF)$");
 
     @Override
     public List<Transaction> parse(List<String[]> rows, String bankCode, String cardTypeCode, String cardNo) {
@@ -168,6 +169,9 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
         if (s.matches(".*第\\s*\\d+\\s*页.*共\\s*\\d+\\s*页.*") || s.toLowerCase(Locale.ROOT).contains("page ")) {
             return true;
         }
+        if (s.matches("\\d{1,3}/\\d{1,3}")) {
+            return true;
+        }
         if (s.contains("Date") && s.contains("Amount") && !s.contains("记账")) {
             return true;
         }
@@ -184,7 +188,7 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
         String out = line;
         out = out.replaceAll("(\\d{4})[./](\\d{2})[./](\\d{2})", "$1-$2-$3");
         out = out.replaceAll("(\\d{4}-\\d{2}-\\d{2})", " $1 ");
-        out = out.replaceAll("(?i)(CNY|人民币|RMB)", " CNY ");
+        out = out.replaceAll("(?i)(CNY|人民币|RMB|GBP|USD|EUR|HKD|JPY|AUD|CAD|SGD|CHF)", " $1 ");
         while (out.contains(",")) {
             String next = out.replaceAll("(\\d),(\\d{3})", "$1$2");
             if (next.equals(out)) {
@@ -207,8 +211,19 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
             return null;
         }
 
-        double income = parseDouble(row[incomeCol]);
-        double expense = parseDouble(row[expenseCol]);
+        double income = Math.max(0.0, parseDouble(row[incomeCol]));
+        double expense = Math.max(0.0, parseDouble(row[expenseCol]));
+        if (income <= 0 && expense <= 0) {
+            double signed = parseDouble(row[incomeCol]);
+            if (signed == 0.0 && expenseCol != incomeCol) {
+                signed = parseDouble(row[expenseCol]);
+            }
+            if (signed > 0) {
+                income = signed;
+            } else if (signed < 0) {
+                expense = Math.abs(signed);
+            }
+        }
         if (income <= 0 && expense <= 0) {
             return null;
         }
@@ -259,25 +274,12 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
             txnIdx = postingIdx;
         }
 
-        int amountIdx = -1;
+        int amountIdx = findPrimaryAmountIndex(tokens, txnIdx + 1);
         int balanceIdx = -1;
-        for (int i = txnIdx + 1; i < tokens.length; i++) {
-            if (isAmountToken(tokens[i])) {
-                amountIdx = i;
-                if (i + 1 < tokens.length && isAmountToken(tokens[i + 1])) {
-                    balanceIdx = i + 1;
-                }
-                break;
-            }
-        }
-
-        if (amountIdx == -1) {
-            for (int i = txnIdx + 1; i < tokens.length; i++) {
-                if (isAmountToken(tokens[i]) && !equalsIgnoreCase(tokens[i], "CNY")) {
-                    amountIdx = i;
-                    if (i + 1 < tokens.length && isAmountToken(tokens[i + 1])) {
-                        balanceIdx = i + 1;
-                    }
+        if (amountIdx >= 0) {
+            for (int i = amountIdx + 1; i < tokens.length; i++) {
+                if (isAmountToken(tokens[i])) {
+                    balanceIdx = i;
                     break;
                 }
             }
@@ -292,7 +294,7 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
         if (amountIdx != -1) {
             List<String> narTokens = new ArrayList<>();
             for (int k = txnIdx + 1; k < amountIdx; k++) {
-                if (!equalsIgnoreCase(tokens[k], "CNY") && !"人民币".equals(tokens[k])) {
+                if (!isCurrencyToken(tokens[k])) {
                     narTokens.add(tokens[k]);
                 }
             }
@@ -349,6 +351,10 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
         }
 
         Transaction t = baseTransaction(cardTypeCode, cardNo);
+        String currency = detectCurrency(tokens, txnIdx + 1, amountIdx);
+        if (StringUtils.isNotBlank(currency)) {
+            t.setBalanceCurrency(currency);
+        }
         t.setBookKeepingDate(postingDate);
         t.setTransactionDate(txnDate);
         t.setTransactionDesc(desc);
@@ -443,8 +449,39 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
         }
     }
 
+    private int findPrimaryAmountIndex(String[] tokens, int from) {
+        int firstZero = -1;
+        for (int i = from; i < tokens.length; i++) {
+            if (!isAmountToken(tokens[i])) {
+                continue;
+            }
+            if (Math.abs(parseDouble(tokens[i])) < 0.005) {
+                if (firstZero < 0) {
+                    firstZero = i;
+                }
+                continue;
+            }
+            return i;
+        }
+        return firstZero;
+    }
+
+    private String detectCurrency(String[] tokens, int from, int to) {
+        int end = to > from ? to : tokens.length;
+        for (int i = from; i < end && i < tokens.length; i++) {
+            if (isCurrencyToken(tokens[i])) {
+                return tokens[i].toUpperCase(Locale.ROOT);
+            }
+        }
+        return "";
+    }
+
+    private boolean isCurrencyToken(String token) {
+        return StringUtils.isNotBlank(token) && CURRENCY_TOKEN.matcher(token.trim()).matches();
+    }
+
     private boolean isAmountToken(String token) {
-        if (StringUtils.isBlank(token) || equalsIgnoreCase(token, "CNY") || "人民币".equals(token)) {
+        if (StringUtils.isBlank(token) || isCurrencyToken(token)) {
             return false;
         }
         return AMOUNT_STRICT.matcher(token.replace(",", "")).matches();

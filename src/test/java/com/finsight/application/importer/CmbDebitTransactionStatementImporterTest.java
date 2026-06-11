@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CmbDebitTransactionStatementImporterTest {
@@ -47,6 +48,31 @@ class CmbDebitTransactionStatementImporterTest {
         List<Transaction> out = importer.parse(rows, "CMB", "debit", "");
         assertEquals(1, out.size());
         assertTrue(out.get(0).getDemoArea().contains("支付科技有限公司"));
+    }
+
+    @Test
+    void parsesForeignCurrencyWithdrawal() {
+        List<String[]> rows = List.of(
+                new String[]{"记账日期", "货币", "交易金额", "联机余额", "交易摘要"},
+                new String[]{"2025-07-03", "GBP", "-200.00", "0.00", "柜台取现"}
+        );
+        List<Transaction> out = importer.parse(rows, "CMB", "debit", "");
+        assertEquals(1, out.size());
+        assertEquals(200.0, out.get(0).getBalanceMoney());
+        assertEquals("GBP", out.get(0).getBalanceCurrency());
+        assertEquals("柜台取现", out.get(0).getTransactionDesc());
+    }
+
+    @Test
+    void pageFractionFooterNotMergedIntoTransaction() {
+        List<String[]> rows = List.of(
+                new String[]{"2025-08-08", "CNY", "-3.00", "795.98", "快捷支付", "扫二维码付款"},
+                new String[]{"2/6"}
+        );
+        List<Transaction> out = importer.parse(rows, "CMB", "debit", "");
+        assertEquals(1, out.size());
+        assertTrue(out.get(0).getOpponentName().contains("扫二维码付款"));
+        assertFalse(out.get(0).getDemoArea().contains("2/6"));
     }
 
     @Test

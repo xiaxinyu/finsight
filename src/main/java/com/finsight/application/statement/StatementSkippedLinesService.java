@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -20,7 +21,8 @@ import java.util.stream.Collectors;
 public class StatementSkippedLinesService {
 
     private static final Pattern DATE_TOKEN = Pattern.compile("\\d{4}[-./]?\\d{2}[-./]?\\d{2}");
-    private static final Pattern AMOUNT_TOKEN = Pattern.compile("[-+]?\\d{1,3}(?:,\\d{3})*(?:\\.\\d{1,2})?|[-+]?\\d+(?:\\.\\d{1,2})?");
+    private static final Pattern AMOUNT_TOKEN = Pattern.compile(
+            "[-+]?\\d{1,3}(?:,\\d{3})+\\.\\d{1,2}|[-+]?\\d+\\.\\d{1,2}");
     private static final Pattern STRICT_DATE = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$");
 
     private static final class SourceRow {
@@ -36,12 +38,16 @@ public class StatementSkippedLinesService {
     }
 
     public List<SkippedImportRow> analyze(Statement statement, String cardTypeCode) {
+        return summarize(statement, cardTypeCode, -1).skippedRows();
+    }
+
+    public ImportLineStats summarize(Statement statement, String cardTypeCode, int transactionCount) {
         if (statement == null || StringUtils.isBlank(statement.getContent())) {
-            return List.of();
+            return new ImportLineStats(0, Math.max(0, transactionCount), 0, 0, 0, List.of());
         }
         List<SourceRow> sourceRows = loadSourceRows(statement);
         if (sourceRows.isEmpty()) {
-            return List.of();
+            return new ImportLineStats(0, Math.max(0, transactionCount), 0, 0, 0, List.of());
         }
 
         String bankCode = StringUtils.trimToEmpty(statement.getSource());
@@ -49,7 +55,11 @@ public class StatementSkippedLinesService {
         List<String[]> rowArrays = sourceRows.stream().map(r -> r.cells).collect(Collectors.toList());
         List<Transaction> parsed = StatementImporterFactory.get(bankCode, cardType)
                 .parse(rowArrays, bankCode, cardType, null);
+        int txnCount = transactionCount >= 0
+                ? transactionCount
+                : (parsed == null ? 0 : parsed.size());
         Set<Integer> consumed = matchRowsToTransactions(rowArrays, parsed == null ? List.of() : parsed);
+        markMergedContinuationRows(rowArrays, consumed);
 
         List<SkippedImportRow> skipped = new ArrayList<>();
         for (int i = 0; i < sourceRows.size(); i++) {
@@ -58,12 +68,16 @@ public class StatementSkippedLinesService {
             }
             SourceRow source = sourceRows.get(i);
             String raw = formatRaw(source.cells);
-            if (StringUtils.isBlank(raw)) {
+            if (StringUtils.isBlank(raw) || isNoiseLine(raw)) {
                 continue;
             }
             skipped.add(buildSkippedRow(source, i + 1, raw, bankCode, cardType, sourceRows, i));
         }
-        return skipped;
+        int lines = sourceRows.size();
+        int linked = consumed.size();
+        int skippedCount = skipped.size();
+        int ignored = Math.max(0, lines - linked - skippedCount);
+        return new ImportLineStats(lines, txnCount, linked, skippedCount, ignored, skipped);
     }
 
     private SkippedImportRow buildSkippedRow(
@@ -157,55 +171,96 @@ public class StatementSkippedLinesService {
             if (row == null) {
                 continue;
             }
+            int bestTxn = -1;
+            int bestScore = 0;
             for (int t = 0; t < transactions.size(); t++) {
                 if (txnUsed[t]) {
                     continue;
                 }
-                if (rowMatches(row, transactions.get(t))) {
-                    matched.add(i);
-                    txnUsed[t] = true;
-                    break;
+                int score = rowMatchScore(row, transactions.get(t));
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestTxn = t;
                 }
+            }
+            if (bestTxn >= 0 && bestScore >= 10) {
+                matched.add(i);
+                txnUsed[bestTxn] = true;
             }
         }
         return matched;
     }
 
-    private boolean rowMatches(String[] row, Transaction txn) {
+    private int rowMatchScore(String[] row, Transaction txn) {
         if (txn == null) {
-            return false;
+            return 0;
         }
         String joined = formatRaw(row);
         if (StringUtils.isBlank(joined)) {
-            return false;
+            return 0;
         }
-
+        int score = 0;
         if (txn.getTransactionDate() != null) {
             String ymd = new SimpleDateFormat("yyyy-MM-dd").format(txn.getTransactionDate());
             String compact = ymd.replace("-", "");
             if (!joined.contains(ymd) && !joined.contains(compact)) {
-                return false;
+                return 0;
             }
+            score += 10;
         }
 
         double income = txn.getIncomeMoney() == null ? 0.0 : Math.max(0.0, txn.getIncomeMoney());
         double expense = txn.getBalanceMoney() == null ? 0.0 : Math.max(0.0, txn.getBalanceMoney());
         double amount = Math.max(income, expense);
-        if (amount <= 0) {
-            return StringUtils.isNotBlank(txn.getTransactionDesc()) && joined.contains(txn.getTransactionDesc().trim());
+        boolean rowHasAmount = hasAmountToken(joined);
+
+        if (amount > 0 && amountPresentInText(joined, amount)) {
+            return score + 100;
         }
-        return amountPresentInText(joined, amount);
+        if (rowHasAmount) {
+            return 0;
+        }
+        if (StringUtils.isNotBlank(txn.getTransactionDesc()) && joined.contains(txn.getTransactionDesc().trim())) {
+            score += 5;
+        }
+        if (StringUtils.isNotBlank(txn.getOpponentName()) && joined.contains(txn.getOpponentName().trim())) {
+            score += 3;
+        }
+        return score >= 10 ? score : 0;
+    }
+
+    /** Continuation rows (no date) are merged by CMB importer into the previous line — not parse failures. */
+    private void markMergedContinuationRows(List<String[]> rows, Set<Integer> consumed) {
+        for (int i = 0; i < rows.size(); i++) {
+            if (consumed.contains(i) || i == 0) {
+                continue;
+            }
+            if (!consumed.contains(i - 1)) {
+                continue;
+            }
+            String raw = formatRaw(rows.get(i));
+            if (!isNoiseLine(raw) && looksLikeContinuationLine(raw, rows.get(i))) {
+                consumed.add(i);
+            }
+        }
     }
 
     private boolean amountPresentInText(String text, double amount) {
+        if (amount <= 0) {
+            return false;
+        }
         String normalized = text.replace(",", "");
+        double abs = Math.abs(amount);
         String[] candidates = {
+                String.format(Locale.ROOT, "%.2f", abs),
+                String.format(Locale.ROOT, "-%.2f", abs),
                 String.format(Locale.ROOT, "%.2f", amount),
                 String.format(Locale.ROOT, "%.2f", -amount),
-                new DecimalFormat("0.##").format(amount),
+                new DecimalFormat("0.##").format(abs),
+                "-" + new DecimalFormat("0.##").format(abs),
         };
         for (String c : candidates) {
-            if (normalized.contains(c)) {
+            if (StringUtils.isNotBlank(c) && normalized.contains(c)) {
                 return true;
             }
         }
@@ -245,11 +300,7 @@ public class StatementSkippedLinesService {
         if (!hasAmount) {
             return "Has date but no amount — not imported as a transaction";
         }
-        if (raw.contains(",")) {
-            return "Parser rejected row — likely comma in balance/amount breaks token split "
-                    + "(bank=" + bankCode + ", card=" + cardType + ")";
-        }
-        return "Parser could not build a transaction from this row "
+        return "Row not linked to a parsed transaction "
                 + "(bank=" + bankCode + ", card=" + cardType + ", columns=" + row.length + ")";
     }
 
@@ -285,7 +336,7 @@ public class StatementSkippedLinesService {
             sb.append("; amounts=").append(String.join(", ", amounts));
         }
         if (raw.contains(",")) {
-            sb.append("; comma_in_line=yes (CMB PDF often fails when balance has thousands separator)");
+            sb.append("; comma_in_line=yes (thousands separator — importer strips commas before parse)");
         }
         return sb.toString();
     }
@@ -335,6 +386,9 @@ public class StatementSkippedLinesService {
             return true;
         }
         if (s.matches(".*第\\s*\\d+\\s*页.*共\\s*\\d+\\s*页.*") || s.toLowerCase(Locale.ROOT).contains("page ")) {
+            return true;
+        }
+        if (s.matches("\\d{1,3}/\\d{1,3}")) {
             return true;
         }
         if (s.startsWith("合计") || s.startsWith("Total") || s.contains("温馨提示") || s.contains("声明")) {

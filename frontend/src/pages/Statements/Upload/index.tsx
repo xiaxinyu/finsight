@@ -121,7 +121,13 @@ export function StatementUploadPage() {
   const [step, setStep] = useState(0)
   const [statementId, setStatementId] = useState('')
   const [preview, setPreview] = useState<StatementPreviewRow[]>([])
-  const [uploadMeta, setUploadMeta] = useState<{ rows: number; parsed: number; skipped: number } | null>(null)
+  const [uploadMeta, setUploadMeta] = useState<{
+    rows: number
+    parsed: number
+    skipped: number
+    ignored?: number
+    linked?: number
+  } | null>(null)
   const [loading, setLoading] = useState(false)
   const [bankCode, setBankCode] = useState('CMB')
   const [cardTypeCode, setCardTypeCode] = useState('debit')
@@ -149,7 +155,13 @@ export function StatementUploadPage() {
       }
       const result = await uploadStatement(file, effectiveBank, cardTypeCode)
       setStatementId(result.statementId)
-      setUploadMeta({ rows: result.rows, parsed: result.parsed, skipped: result.skipped })
+      setUploadMeta({
+        rows: result.rows,
+        parsed: result.parsed,
+        skipped: result.skipped,
+        ignored: result.ignored,
+        linked: result.linked,
+      })
       const rows = await previewStatement(result.statementId)
       setPreview(rows)
       setPreviewView('parsed')
@@ -264,15 +276,22 @@ export function StatementUploadPage() {
             />
             <Space size="small" wrap className="fs-import-preview-actions">
               {uploadMeta && (
-                <Tooltip title={uploadMeta.skipped > 0 ? 'Click to review lines that were not imported' : 'Raw lines in the uploaded file'}>
+                <Tooltip
+                  title={
+                    uploadMeta.skipped > 0
+                      ? 'Lines = linked + skipped + ignored. Txns may be fewer than linked when rows merge. Click to review skipped lines.'
+                      : 'Lines = linked + ignored (headers/metadata). Txns = parsed transactions.'
+                  }
+                >
                   <Tag
                     className="fs-tag"
                     color={uploadMeta.skipped > 0 && previewView === 'skipped' ? 'blue' : undefined}
                     style={uploadMeta.skipped > 0 ? { cursor: 'pointer' } : undefined}
                     onClick={() => uploadMeta.skipped > 0 && setPreviewView('skipped')}
                   >
-                    Lines {uploadMeta.rows} · Parsed {uploadMeta.parsed}
-                    {uploadMeta.skipped > 0 ? ` · Skipped ${skippedRows.length || uploadMeta.skipped}` : ''}
+                    Lines {uploadMeta.rows} · Txns {uploadMeta.parsed}
+                    {uploadMeta.skipped > 0 ? ` · Skipped ${uploadMeta.skipped}` : ''}
+                    {(uploadMeta.ignored ?? 0) > 0 ? ` · Ignored ${uploadMeta.ignored}` : ''}
                   </Tag>
                 </Tooltip>
               )}
@@ -293,7 +312,7 @@ export function StatementUploadPage() {
                 onChange={(v) => setPreviewView(v as 'parsed' | 'skipped')}
                 options={[
                   { label: `Parsed (${preview.length})`, value: 'parsed' },
-                  { label: `Skipped (${skippedRows.length || uploadMeta?.skipped || 0})`, value: 'skipped' },
+                  { label: `Skipped (${uploadMeta?.skipped ?? skippedRows.length ?? 0})`, value: 'skipped' },
                 ]}
               />
             </div>

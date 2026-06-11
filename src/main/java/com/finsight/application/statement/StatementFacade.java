@@ -108,15 +108,11 @@ public class StatementFacade {
                     dataRows, bankCode, cardTypeCode, cardNo, statement.getId());
             statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
 
-            int rawRows = dataRows.size();
             int parsedCount = transactions == null ? 0 : transactions.size();
-            log.info("statement/upload stored preview: statementId={}, rows={}, parsed={}", statement.getId(), rawRows, parsedCount);
-
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("statementId", statement.getId());
-            resp.put("rows", rawRows);
-            resp.put("parsed", parsedCount);
-            resp.put("skipped", Math.max(0, rawRows - parsedCount));
+            putImportLineStats(resp, statement, cardTypeCode, parsedCount);
+            log.info("statement/upload stored preview: statementId={}, stats={}", statement.getId(), resp);
             return CommonResult.success(JSON.toJSONString(resp));
         } catch (Exception e) {
             log.error("Upload failed", e);
@@ -197,13 +193,10 @@ public class StatementFacade {
             log.info("statement/upload-parsed parsed transactions: {}", transactions == null ? 0 : transactions.size());
             statementProcessingService.savePreviewTemps(statement.getId(), transactions, userName);
 
-            int rawRowsUp = dataRows.size();
             int parsedUp = transactions == null ? 0 : transactions.size();
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("statementId", statement.getId());
-            resp.put("rows", rawRowsUp);
-            resp.put("parsed", parsedUp);
-            resp.put("skipped", Math.max(0, rawRowsUp - parsedUp));
+            putImportLineStats(resp, statement, cardTypeCode, parsedUp);
             return CommonResult.success(JSON.toJSONString(resp));
         } catch (Exception e) {
             log.error("Upload parsed failed", e);
@@ -375,6 +368,15 @@ public class StatementFacade {
             return "数据库不存在，请检查数据库名称配置。";
         }
         return "系统出现错误";
+    }
+
+    private void putImportLineStats(Map<String, Object> resp, Statement statement, String cardTypeCode, int parsedCount) {
+        ImportLineStats stats = statementSkippedLinesService.summarize(statement, cardTypeCode, parsedCount);
+        resp.put("rows", stats.lines());
+        resp.put("parsed", stats.transactions());
+        resp.put("skipped", stats.skipped());
+        resp.put("ignored", stats.ignored());
+        resp.put("linked", stats.linked());
     }
 
     private String readText(MultipartFile file) throws Exception {
