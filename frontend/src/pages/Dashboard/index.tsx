@@ -23,6 +23,7 @@ import { finsightColors } from '../../styles/finsight-tokens'
 import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRangePicker'
 import { formatMoney, MONTH_NAMES } from '../../utils/format'
 import { defaultPeriodRange, formatPeriodPreview, type PeriodRange } from '../../utils/periodPresets'
+import { rollupToLevel1 } from '../../utils/reportAnalytics'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 
 function savingsRateLabel(income: number, net: number): string {
@@ -41,8 +42,8 @@ export function DashboardPage() {
   const chartHeight = Math.min(useViewportTableHeight(280), 360)
 
   const { data: summary, isLoading, isError, error } = useQuery({
-    queryKey: ['home-summary', period[0].year()],
-    queryFn: () => homeSummary(period[0].year()),
+    queryKey: ['home-summary', periodKey.start, periodKey.end],
+    queryFn: () => homeSummary(period[0].year(), periodKey),
   })
 
   const { data: periodReport, isFetching: totalsLoading } = useQuery({
@@ -64,7 +65,8 @@ export function DashboardPage() {
         income: Number(inc[i]?.value || 0),
         expense: Number(exp[i]?.value || 0),
       }))
-      const topCats = [...cats].filter((r) => r.value > 0).sort((a, b) => b.value - a.value)
+      const rolled = rollupToLevel1(cats)
+      const topCats = rolled.filter((r) => r.value > 0).sort((a, b) => b.value - a.value)
       const expenseTotal = topCats.reduce((s, r) => s + r.value, 0)
       const top3 = topCats.slice(0, 3)
       const top3Share = expenseTotal > 0 ? (top3.reduce((s, r) => s + r.value, 0) / expenseTotal) * 100 : 0

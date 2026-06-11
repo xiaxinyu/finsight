@@ -485,7 +485,7 @@
         </if>
     </select>
 
-    <select id="consumeReport" resultType="com.finsight.domain.model.KeyValue">
+    <select id="consumeReport" resultType="com.finsight.domain.model.CategoryAggregate">
         select round(sum(
         <choose>
             <when test="q != null and q.txnTypes == 'income'">
@@ -496,10 +496,14 @@
             </otherwise>
         </choose>
         )) as `value`,
-        case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end as `key`
+        coalesce(nullif(trim(c.consume_code), ''), '__UNCLASSIFIED__') as code,
+        coalesce(nullif(trim(cat.name), ''), nullif(trim(c.consume_name), ''), '未分类') as name,
+        coalesce(nullif(trim(parent.code), ''), nullif(trim(cat.code), ''), '__UNCLASSIFIED__') as level1Code,
+        coalesce(nullif(trim(parent.name), ''), nullif(trim(cat.name), ''), '未分类') as level1Name
         from transaction c
         left join statement st on st.id = c.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
+        left join cls_category parent on parent.id = cat.parent_id and parent.deleted != 1
         where 1 = 1
         <include refid="activeTransactionC"/>
         and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
@@ -544,8 +548,12 @@
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
         </if>
-        group by case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end
-        order by `key`
+        group by
+            coalesce(nullif(trim(c.consume_code), ''), '__UNCLASSIFIED__'),
+            coalesce(nullif(trim(cat.name), ''), nullif(trim(c.consume_name), ''), '未分类'),
+            coalesce(nullif(trim(parent.code), ''), nullif(trim(cat.code), ''), '__UNCLASSIFIED__'),
+            coalesce(nullif(trim(parent.name), ''), nullif(trim(cat.name), ''), '未分类')
+        order by `value` desc
     </select>
 
     <select id="weekConsumeReport" resultType="com.finsight.domain.model.KeyValue">
@@ -803,6 +811,45 @@
              and year(c.transaction_date) = (#{year,jdbcType=NUMERIC} - 1)
         ) t
         group by bucket
+    </select>
+
+    <select id="homeSummaryExpenseBucketsForRange" resultType="com.finsight.domain.model.KeyValue">
+        select round(sum(abs(t.balance_money))) as `value`, bucket as `key`
+        from (
+             select c.balance_money,
+             case
+                 when (cat.txn_types like '%invest%' or cat.parent_id = 'INVEST' or cat.code like 'INVEST%') then 'investment'
+                 when (cat.parent_id = 'FIXED' or cat.code like 'FIXED%') then 'fixed'
+                 when (cat.parent_id = 'SHOPPING' or cat.code like 'SHOPPING%') then 'shopping'
+                 when (cat.parent_id = 'ENT' or cat.code like 'ENT%') then 'entertainment'
+                 when (cat.parent_id = 'EDU' or cat.code like 'EDU%') then 'edu'
+                 when (cat.parent_id = 'OTHER' or cat.code like 'OTHER%') then 'other'
+                 when (cat.parent_id = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 else 'life'
+             end as bucket
+             from transaction c
+             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
+             where (c.deleted is null or c.deleted = 0)
+             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
+             and cat.txn_types like '%expense%'
+             and c.transaction_date &gt;= #{start,jdbcType=DATE}
+             and c.transaction_date &lt;= #{end,jdbcType=DATE}
+        ) t
+        group by bucket
+    </select>
+
+    <select id="sumIncomeForRange" resultType="java.lang.Double">
+        select round(coalesce(sum(<include refid="rowIncomeAmountT"/>), 0))
+        from transaction t
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where t.transaction_date &gt;= #{start,jdbcType=DATE}
+          and t.transaction_date &lt;= #{end,jdbcType=DATE}
+        <include refid="excludeTransferT"/>
+        and (
+            coalesce(t.income_money,0) &gt; 0
+            or coalesce(t.balance_money,0) &lt; 0
+            or (cat.txn_types is not null and cat.txn_types like '%income%')
+        )
     </select>
 
     <!-- Home summary: total income by year (aligned with monthIncomeReport) -->

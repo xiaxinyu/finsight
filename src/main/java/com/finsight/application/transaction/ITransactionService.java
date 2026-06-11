@@ -40,5 +40,7 @@ public interface ITransactionService {
 
     String homeSummary(Integer year) throws AppServiceException;
 
+    String homeSummary(Integer year, java.util.Date rangeStart, java.util.Date rangeEnd) throws AppServiceException;
+
     void invalidateHomeSummaryCache();
 }

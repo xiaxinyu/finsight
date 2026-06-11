@@ -113,8 +113,30 @@ export async function deleteTransaction(id: string) {
   return postCommon('/transaction/delete', { id })
 }
 
-export async function classifyTransactions(ids: string) {
-  return postCommon('/transaction/classify', { ids })
+export type ReclassifyResult = {
+  requested: number
+  classified: number
+  skipped: number
+  noMatch: number
+  dryRun: boolean
+  preview?: { id: string; categoryCode: string; categoryName: string; action: string }[]
+}
+
+export async function classifyTransactions(ids: string, options?: { persist?: boolean; overrideExisting?: boolean }) {
+  const params = new URLSearchParams()
+  params.set('ids', ids)
+  params.set('persist', String(options?.persist ?? true))
+  if (options?.overrideExisting) {
+    params.set('overrideExisting', 'true')
+  }
+  return postCommon(`/transaction/classify?${params.toString()}`, {})
+}
+
+export function parseReclassifyResult(raw: unknown): ReclassifyResult | null {
+  if (!raw || typeof raw !== 'object') return null
+  const outer = raw as { data?: string; success?: boolean }
+  const payload = typeof outer.data === 'string' ? JSON.parse(outer.data) : outer
+  return payload as ReclassifyResult
 }
 
 export async function incomeToExpense(ids: string) {

@@ -128,8 +128,10 @@ public class FinanceApiController {
     }
 
     @GetMapping("/budgets/vs-actual")
-    public CommonResult budgetVsActual() {
-        return CommonResult.success(budgetService.budgetVsActual());
+    public CommonResult budgetVsActual(
+            @RequestParam(value = "transactionDateStartStr", required = false) String startStr,
+            @RequestParam(value = "transactionDateEndStr", required = false) String endStr) throws com.finsight.common.exception.AppServiceException {
+        return CommonResult.success(budgetService.budgetVsActual(startStr, endStr));
     }
 
     @GetMapping("/bills")
@@ -178,7 +180,7 @@ public class FinanceApiController {
     }
 
     @GetMapping("/insights/decision-cards")
-    public CommonResult decisionCards() {
+    public CommonResult decisionCards() throws com.finsight.common.exception.AppServiceException {
         return CommonResult.success(insightService.decisionCards());
     }
 

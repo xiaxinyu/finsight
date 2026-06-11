@@ -2,6 +2,7 @@ package com.finsight.web.api.classification;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.finsight.application.classification.ClassificationRuleHygieneService;
 import com.finsight.application.classification.ClassificationRuleValidator;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.consume.ConsumeRuleService;
@@ -31,13 +32,16 @@ public class ClassificationRuleController {
     private final ConsumeRuleService ruleService;
     private final ClassificationService classificationService;
     private final ClassificationRuleValidator ruleValidator;
+    private final ClassificationRuleHygieneService ruleHygieneService;
 
     public ClassificationRuleController(ConsumeRuleService ruleService,
                                         ClassificationService classificationService,
-                                        ClassificationRuleValidator ruleValidator) {
+                                        ClassificationRuleValidator ruleValidator,
+                                        ClassificationRuleHygieneService ruleHygieneService) {
         this.ruleService = ruleService;
         this.classificationService = classificationService;
         this.ruleValidator = ruleValidator;
+        this.ruleHygieneService = ruleHygieneService;
     }
 
     @GetMapping
@@ -101,6 +105,22 @@ public class ClassificationRuleController {
     public String reload() {
         classificationService.reload();
         return "ok";
+    }
+
+    @GetMapping("/hygiene")
+    public java.util.Map<String, Object> hygiene() {
+        return ruleHygieneService.hygieneSummary();
+    }
+
+    @GetMapping("/orphans")
+    public List<ClassificationRule> orphans() {
+        return new ArrayList<>(ruleHygieneService.listOrphanRules());
+    }
+
+    @GetMapping("/recommend-unclassified")
+    public List<String> recommendUnclassified(
+            @RequestParam(value = "limit", required = false, defaultValue = "20") int limit) {
+        return ruleHygieneService.recommendKeywordsFromUnclassified(limit);
     }
 
     @PostMapping("/test")

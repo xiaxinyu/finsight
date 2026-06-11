@@ -9,6 +9,7 @@ import {
   buildMonthlyCashflow,
   buildWeekdaySeries,
   enrichCategoryRows,
+  rollupToLevel1,
   insightsBudget,
   insightsCashflow,
   insightsCategoryRows,
@@ -117,7 +118,7 @@ export function buildReportView(
     return {
       insights: insightsBudget(lines, totalActual, totalLimit),
       kpis: [
-        { key: 'actual', label: 'Spent MTD', value: formatMoney(totalActual), tone: 'expense' },
+        { key: 'actual', label: 'Spent (period)', value: formatMoney(totalActual), tone: 'expense' },
         { key: 'limit', label: 'Budget', value: formatMoney(totalLimit) },
         { key: 'rem', label: 'Remaining', value: formatMoney(Math.max(0, totalLimit - totalActual)), tone: totalLimit - totalActual < totalLimit * 0.2 ? 'warn' : 'neutral' },
         { key: 'util', label: 'Utilization', value: `${util}%`, tone: Number(util) >= 80 ? 'warn' : 'neutral' },
@@ -222,9 +223,11 @@ export function buildReportView(
   }
 
   if ('rows' in data && data.rows) {
-    const catRows = enrichCategoryRows(data.rows as ReportPoint[])
+    const rawRows = data.rows as ReportPoint[]
+    const catRows = enrichCategoryRows(rawRows)
+    const chartRows = enrichCategoryRows(rollupToLevel1(rawRows))
     const total = catRows.reduce((s, r) => s + r.value, 0)
-    const top = catRows.slice(0, 12)
+    const top = chartRows.slice(0, 12)
 
     if (cfg.type === 'weekSummary' || cfg.type === 'homeBuckets') {
       const week = buildWeekdaySeries(data.rows as ReportPoint[])

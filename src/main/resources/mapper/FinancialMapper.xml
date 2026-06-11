@@ -183,6 +183,58 @@
         <include refid="activeTransaction"/>
     </select>
 
+    <select id="sumExpenseBetween" resultType="double">
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
+        from transaction t
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where t.transaction_date &gt;= #{start,jdbcType=DATE}
+        and t.transaction_date &lt;= #{end,jdbcType=DATE}
+        <include refid="filterTxnTypeExpenseT"/>
+        <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
+    </select>
+
+    <select id="sumExpenseByBucketBetween" resultType="double">
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
+        from transaction t
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where t.transaction_date &gt;= #{start,jdbcType=DATE}
+        and t.transaction_date &lt;= #{end,jdbcType=DATE}
+        <include refid="filterTxnTypeExpenseT"/>
+        <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
+        <choose>
+            <when test="bucketKey == 'fixed'">
+                and (cat.parent_id = 'FIXED' or cat.code like 'FIXED%' or t.transaction_desc like '%房租%' or t.transaction_desc like '%房贷%')
+            </when>
+            <when test="bucketKey == 'shopping'">
+                and (cat.parent_id = 'SHOPPING' or cat.code like 'SHOPPING%')
+            </when>
+            <when test="bucketKey == 'investment'">
+                and (cat.txn_types like '%invest%' or cat.parent_id = 'INVEST' or cat.code like 'INVEST%')
+            </when>
+            <when test="bucketKey == 'life'">
+                and (cat.parent_id = 'LIVING' or cat.code like 'LIVING%' or cat.parent_id is null)
+            </when>
+            <when test="bucketKey == 'all'">
+                and 1 = 1
+            </when>
+            <otherwise>
+                and (cat.code = #{bucketKey,jdbcType=VARCHAR} or cat.parent_id = #{bucketKey,jdbcType=VARCHAR})
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="sumExpenseByCategoryBetween" resultType="double">
+        select coalesce(sum(<include refid="rowExpenseAmountT"/>), 0)
+        from transaction t
+        where t.transaction_date &gt;= #{start,jdbcType=DATE}
+        and t.transaction_date &lt;= #{end,jdbcType=DATE}
+        and t.consume_code = #{categoryCode,jdbcType=VARCHAR}
+        <include refid="excludeTransfer"/>
+        <include refid="activeTransaction"/>
+    </select>
+
     <select id="findDuplicatePreviewTempIds" resultType="string">
         select distinct tt.id
         from imp_staging_entry tt

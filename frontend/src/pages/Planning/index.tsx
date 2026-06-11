@@ -24,7 +24,7 @@ export function PlanningPage() {
   const [budgetLimit, setBudgetLimit] = useState<number>(5000)
 
   const { data: cashflow, isError: cfErr, error: cfError } = useQuery({ queryKey: ['cashflow'], queryFn: cashflowMetrics })
-  const { data: bva, isError: bvaErr, error: bvaError } = useQuery({ queryKey: ['budget-vs-actual'], queryFn: budgetVsActual })
+  const { data: bva, isError: bvaErr, error: bvaError } = useQuery({ queryKey: ['budget-vs-actual'], queryFn: () => budgetVsActual() })
   const { data: bills } = useQuery({ queryKey: ['bills'], queryFn: listBills })
   const { data: calendar } = useQuery({ queryKey: ['bill-calendar'], queryFn: billCalendar })
 

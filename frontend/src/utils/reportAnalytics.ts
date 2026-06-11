@@ -85,13 +85,34 @@ export function buildMonthlyCashflow(
   })
 }
 
-export type CategoryRow = { key: string; value: number; share: number }
+export type CategoryRow = { key: string; value: number; share: number; code?: string; level1Code?: string; level1Name?: string }
 
 export function enrichCategoryRows(rows: ReportPoint[]): CategoryRow[] {
   const filtered = rows.filter((r) => r.key && Number.isFinite(r.value) && r.value > 0)
   const total = filtered.reduce((s, r) => s + r.value, 0)
   return filtered
-    .map((r) => ({ key: r.key, value: r.value, share: total > 0 ? (r.value / total) * 100 : 0 }))
+    .map((r) => ({
+      key: r.key,
+      value: r.value,
+      share: total > 0 ? (r.value / total) * 100 : 0,
+      code: r.code,
+      level1Code: r.level1Code,
+      level1Name: r.level1Name,
+    }))
+    .sort((a, b) => b.value - a.value)
+}
+
+/** Roll up leaf categories to level-1 parents for clearer charts. */
+export function rollupToLevel1(rows: ReportPoint[]): ReportPoint[] {
+  const map = new Map<string, number>()
+  for (const r of rows) {
+    if (!Number.isFinite(r.value) || r.value <= 0) continue
+    const label = r.level1Name || r.level1Code || r.key
+    if (!label) continue
+    map.set(label, (map.get(label) ?? 0) + r.value)
+  }
+  return [...map.entries()]
+    .map(([key, value]) => ({ key, value }))
     .sort((a, b) => b.value - a.value)
 }
 

@@ -17,4 +17,7 @@ public interface ITransactionClassificationService {
 
     /** JSON array string of keyword tokens (may be {@code []}). */
     String keywordsJson(Transaction transaction) throws AppServiceException;
+
+    /** Suggest-only top-N matches for a single transaction (never persists). */
+    Optional<String> suggestTopN(Transaction transaction, String bankCode, String cardTypeCode) throws AppServiceException;
 }

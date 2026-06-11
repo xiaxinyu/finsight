@@ -31,4 +31,12 @@ public interface FinancialMapper {
     Double sumExpenseByBucketSince(@Param("since") Date since, @Param("bucketKey") String bucketKey);
 
     Double sumExpenseByCategorySince(@Param("since") Date since, @Param("categoryCode") String categoryCode);
+
+    Double sumExpenseBetween(@Param("start") Date start, @Param("end") Date end);
+
+    Double sumExpenseByBucketBetween(@Param("start") Date start, @Param("end") Date end,
+                                     @Param("bucketKey") String bucketKey);
+
+    Double sumExpenseByCategoryBetween(@Param("start") Date start, @Param("end") Date end,
+                                       @Param("categoryCode") String categoryCode);
 }

@@ -70,7 +70,7 @@ public class TransactionMybatisRepository implements TransactionRepository {
     }
 
     @Override
-    public List<KeyValue> consumeReport(TransactionQuery query) {
+    public List<com.finsight.domain.model.CategoryAggregate> consumeReport(TransactionQuery query) {
         return transactionMapper.consumeReport(query);
     }
 
@@ -102,6 +102,16 @@ public class TransactionMybatisRepository implements TransactionRepository {
     @Override
     public List<KeyValue> homeSummaryExpenseBucketsPrev(Integer year) {
         return transactionMapper.homeSummaryExpenseBucketsPrev(year);
+    }
+
+    @Override
+    public List<KeyValue> homeSummaryExpenseBucketsForRange(java.util.Date start, java.util.Date end) {
+        return transactionMapper.homeSummaryExpenseBucketsForRange(start, end);
+    }
+
+    @Override
+    public Double sumIncomeForRange(java.util.Date start, java.util.Date end) {
+        return transactionMapper.sumIncomeForRange(start, end);
     }
 
     @Override

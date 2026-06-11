@@ -53,6 +53,7 @@ export const menuItems: FsMenuItem[] = [
     label: 'Reports',
     children: [
       { key: '/reports/cashflow', icon: <SwapOutlined />, label: 'Cashflow', path: '/reports/cashflow' },
+      { key: '/reports/fund-flow', icon: <SwapOutlined />, label: 'Fund Flow', path: '/reports/fund-flow' },
       { key: '/reports/budget-vs-actual', icon: <PieChartOutlined />, label: 'Budget vs Actual', path: '/reports/budget-vs-actual' },
       { key: '/reports/fixed-vs-variable', icon: <CalendarOutlined />, label: 'Fixed vs Variable', path: '/reports/fixed-vs-variable' },
       { key: '/reports/spending-drift', icon: <RiseOutlined />, label: 'Spending Drift', path: '/reports/spending-drift' },

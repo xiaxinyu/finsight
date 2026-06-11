@@ -3,6 +3,8 @@ package com.finsight.application.statement.impl;
 import com.finsight.application.card.BankCardService;
 import com.finsight.application.transaction.TransactionAmountNormalizer;
 import com.finsight.application.transaction.TransactionFieldSanitizer;
+import com.finsight.application.consume.ClassificationNarrationBuilder;
+import com.finsight.application.consume.ClassificationProperties;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.importer.StatementImporterFactory;
 import com.finsight.application.statement.StatementProcessingService;
@@ -28,6 +30,9 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
 
     @Autowired
     private ClassificationService classificationService;
+
+    @Autowired
+    private ClassificationProperties classificationProperties;
 
     @Autowired
     private TransactionTempRepository transactionTempRepository;
@@ -123,7 +128,12 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
         if (txnDate == null) {
             txnDate = t.getBookKeepingDate();
         }
-        ClassificationService.Result r = classificationService.classify(t.getTransactionDesc(), bankCode, cardTypeCode, amount, txnDate);
+        String narration = ClassificationNarrationBuilder.fromTransaction(t);
+        ClassificationService.Result r = classificationService.classify(
+                narration, bankCode, cardTypeCode, amount, txnDate);
+        if (r == null && classificationProperties.isImportOtherFallback()) {
+            r = classificationService.otherFallback();
+        }
         if (r != null) {
             t.setCategoryCode(r.id);
             t.setCategoryName(r.name);

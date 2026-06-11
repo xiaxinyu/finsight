@@ -1,7 +1,7 @@
 export type ReportConfig = {
   title: string
   subtitle?: string
-  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual'
+  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers'
   endpoint?: string
   txnType?: 'income' | 'expense'
   chartKind?: 'bar' | 'donut'
@@ -26,7 +26,14 @@ export const reportConfigs: Record<string, ReportConfig> = {
     type: 'budgetVsActual',
     chartKind: 'bar',
     chartProfile: 'compareBars',
+    dateRange: true,
     legacyIds: ['category-breakdown', 'transaction-trend'],
+  },
+  'fund-flow': {
+    title: 'Fund Flow',
+    subtitle: 'Internal transfers excluded from spending reports',
+    type: 'transfers',
+    dateRange: true,
   },
   'fixed-vs-variable': {
     title: 'Fixed vs Variable',

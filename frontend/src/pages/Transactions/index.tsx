@@ -10,7 +10,7 @@ import { createTransfer } from '../../api/finance'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
-  classifyTransactions, deleteTransaction, expenseToIncome,
+  classifyTransactions, parseReclassifyResult, deleteTransaction, expenseToIncome,
   fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
@@ -394,7 +394,21 @@ export function TransactionsPage() {
     <Space size="small" wrap>
       <Button size="small" disabled={disabled || selectedRowKeys.length !== 2} icon={<SwapOutlined />} onClick={() => setTransferOpen(true)}>Mark transfer</Button>
       <Button size="small" danger disabled={disabled} icon={<DeleteOutlined />} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
-      <Button size="small" disabled={disabled} icon={<ThunderboltOutlined />} onClick={() => runBatch(() => classifyTransactions(selectedRowKeys.join(',')), 'Classified')}>Auto-classify</Button>
+      <Button size="small" disabled={disabled} icon={<ThunderboltOutlined />} onClick={async () => {
+        if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
+        try {
+          const raw = await classifyTransactions(selectedRowKeys.join(','), { persist: true })
+          const r = parseReclassifyResult(raw)
+          const detail = r
+            ? `Applied ${r.classified}, skipped ${r.skipped}${r.noMatch ? `, no match ${r.noMatch}` : ''}`
+            : 'Classified'
+          message.success(detail)
+          setSelectedRowKeys([])
+          await reload()
+        } catch (e) {
+          message.error(e instanceof Error ? e.message : 'Failed')
+        }
+      }}>Auto-classify</Button>
       <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
       <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => expenseToIncome(selectedRowKeys.join(',')), 'Moved to income')}>→ Income</Button>
     </Space>

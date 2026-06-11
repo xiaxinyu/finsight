@@ -55,8 +55,11 @@ public class TransactionReportController extends ControllerHelper {
 
 	@RequestMapping("/transaction-report/home-summary")
 	@ResponseBody
-	public CommonResult homeSummary(String year){
+	public CommonResult homeSummary(String year, TransactionParam param){
 		return runCommon(logger, "home summary", () ->
-				CommonResult.success(transactionReportFacade.homeSummary(year)));
+				CommonResult.success(transactionReportFacade.homeSummary(
+						year,
+						param == null ? null : param.getTransactionDateStartStr(),
+						param == null ? null : param.getTransactionDateEndStr())));
 	}
 }

@@ -22,7 +22,7 @@ import { FsDataTable } from '../../components/FsDataTable'
 import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRangePicker'
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
-import { billCalendar, budgetVsActual } from '../../api/finance'
+import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
 import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
 
@@ -70,13 +70,29 @@ export function ReportsPage() {
         return { calendar: await billCalendar() }
       }
       if (cfg.type === 'budgetVsActual') {
-        const bva = await budgetVsActual()
+        const r = periodToStrings(applied.period)
+        const bva = await budgetVsActual({
+          transactionDateStartStr: r.start,
+          transactionDateEndStr: r.end,
+        })
         const meta = bva?.[0] || {}
         const lines = (meta.lines as Record<string, unknown>[]) || []
         return { bva: lines, meta }
       }
+      if (cfg.type === 'transfers') {
+        const rows = await listTransfers()
+        const r = periodToStrings(applied.period)
+        const startMs = dayjs(r.start).startOf('day').valueOf()
+        const endMs = dayjs(r.end).endOf('day').valueOf()
+        const filtered = rows.filter((row) => {
+          const d = dayjs(String(row.transferDate || ''))
+          return d.isValid() && d.valueOf() >= startMs && d.valueOf() <= endMs
+        })
+        return { transfers: filtered }
+      }
       if (cfg.type === 'homeBuckets') {
-        const summary = await homeSummary(applied.period[0].year())
+        const r = periodToStrings(applied.period)
+        const summary = await homeSummary(applied.period[0].year(), r)
         const week = await fetchReport('/transaction-report/week-consume', baseParams)
         return { summary, week }
       }
@@ -149,6 +165,46 @@ export function ReportsPage() {
     return (
       <DataPageLayout title="Report not found" icon={<BarChartOutlined />}>
         <EmptyState title="Report not found" description="Choose a report from the sidebar." />
+      </DataPageLayout>
+    )
+  }
+
+  if (cfg.type === 'transfers') {
+    const rows = (data && 'transfers' in data ? data.transfers : []) as Record<string, unknown>[]
+    return (
+      <DataPageLayout
+        title={cfg.title}
+        subtitle={`${cfg.subtitle ?? 'Transfers'} · ${periodLabel}`}
+        icon={<BarChartOutlined />}
+        className="fs-data-page--dense fs-data-page--reports"
+        toolbar={(
+          <FilterToolbar loading={chartLoading} onApply={handleApply} dirty={isDirty}>
+            <PeriodRangePicker
+              size="small"
+              disabled={chartLoading}
+              value={draft.period}
+              onChange={(range) => setDraft((d) => ({ ...d, period: range }))}
+            />
+          </FilterToolbar>
+        )}
+      >
+        <ReportKpiStrip items={[
+          { key: 'pairs', label: 'Transfer pairs', value: String(rows.length) },
+          { key: 'hint', label: 'Scope', value: 'Excluded from spend' },
+        ]} />
+        <FsDataTable
+          title="Internal transfers"
+          columns={[
+            { title: 'Date', dataIndex: 'transferDate', sortType: 'date', width: 120 },
+            { title: 'Group ID', dataIndex: 'transferGroupId', ellipsis: true },
+            { title: 'Transactions', dataIndex: 'transactionCount', align: 'right', sortType: 'number', width: 120 },
+          ]}
+          dataSource={rows}
+          rowKey="transferGroupId"
+          loading={chartLoading}
+          scroll={{ y: viewportH }}
+          locale={{ emptyText: <EmptyState compact title="No transfers in period" description="Mark transfer pairs on the Transactions page." /> }}
+        />
       </DataPageLayout>
     )
   }

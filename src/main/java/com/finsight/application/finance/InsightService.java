@@ -1,5 +1,6 @@
 package com.finsight.application.finance;
 
+import com.finsight.common.exception.AppServiceException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public class InsightService {
         this.dataQualityService = dataQualityService;
     }
 
-    public List<Map<String, Object>> decisionCards() {
+    public List<Map<String, Object>> decisionCards() throws AppServiceException {
         List<Map<String, Object>> cards = new ArrayList<>();
         Map<String, Object> wealth = wealthService.snapshot();
         Map<String, Object> cashflow = cashflowService.metrics();

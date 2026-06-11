@@ -5,11 +5,12 @@ import {
 } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import {
-  DeleteOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined,
+  BulbOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined,
 } from '@ant-design/icons'
 import type { ConsumeCategoryRow } from '../../../api/admin'
 import {
-  createRule, deleteRule, listCategoriesAdmin, listRules, updateRule, type ConsumeRuleRow,
+  createRule, deleteRule, fetchUnclassifiedRuleKeywords, listCategoriesAdmin, listRules, updateRule,
+  type ConsumeRuleRow,
 } from '../../../api/admin'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
@@ -186,6 +187,9 @@ export function RulesAdminPage() {
   const [treeSearch, setTreeSearch] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<ConsumeRuleRow | null>(null)
+  const [suggestOpen, setSuggestOpen] = useState(false)
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([])
 
   const { data: allCategories = [], isLoading: catsLoading } = useQuery({
     queryKey: ['admin-categories', 'withDeleted'],
@@ -261,11 +265,11 @@ export function RulesAdminPage() {
   const panelHint = panelHintForKey(selectedKey)
   const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === NO_CAT_KEY
 
-  const openCreate = () => {
+  const openCreate = (presetPattern = '') => {
     const presetCategory = ![ALL_KEY, ORPHAN_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
     setEditing(null)
     form.setFieldsValue({
-      pattern: '',
+      pattern: presetPattern,
       patternType: 'contains',
       categoryId: presetCategory,
       priority: 50,
@@ -275,6 +279,25 @@ export function RulesAdminPage() {
       tags: [],
     })
     setEditorOpen(true)
+  }
+
+  const openSuggestKeywords = async () => {
+    setSuggestOpen(true)
+    setSuggestLoading(true)
+    try {
+      const keywords = await fetchUnclassifiedRuleKeywords(25)
+      setSuggestedKeywords(keywords)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Failed to load suggestions')
+      setSuggestedKeywords([])
+    } finally {
+      setSuggestLoading(false)
+    }
+  }
+
+  const useSuggestedKeyword = (keyword: string) => {
+    setSuggestOpen(false)
+    openCreate(keyword)
   }
 
   const openEdit = (rule: ConsumeRuleRow) => {
@@ -371,7 +394,10 @@ export function RulesAdminPage() {
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
               />
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              <Button icon={<BulbOutlined />} onClick={openSuggestKeywords}>
+                Suggest keywords
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>
                 Add rule
               </Button>
             </Space>
@@ -501,6 +527,29 @@ export function RulesAdminPage() {
           />
         </section>
       </div>
+
+      <Modal
+        title="Keywords from unclassified transactions"
+        open={suggestOpen}
+        onCancel={() => setSuggestOpen(false)}
+        footer={null}
+        width={480}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          Frequent tokens from unclassified ledger rows. Pick one to start a new rule — review category before saving.
+        </Typography.Paragraph>
+        {suggestLoading ? (
+          <PageSkeleton variant="table" />
+        ) : suggestedKeywords.length ? (
+          <Space size={[8, 8]} wrap>
+            {suggestedKeywords.map((kw) => (
+              <Button key={kw} size="small" onClick={() => useSuggestedKeyword(kw)}>{kw}</Button>
+            ))}
+          </Space>
+        ) : (
+          <EmptyState compact title="No suggestions" description="Unclassified transactions may not have useful tokens yet." />
+        )}
+      </Modal>
 
       <Modal
         title={editing ? 'Edit rule' : 'New rule'}

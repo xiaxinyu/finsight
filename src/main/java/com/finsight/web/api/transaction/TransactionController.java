@@ -15,11 +15,16 @@ import com.finsight.application.transaction.ITransactionBatchUpdateService;
 import com.finsight.application.transaction.ITransactionClassificationService;
 import com.finsight.application.transaction.ITransactionListingService;
 import com.finsight.application.transaction.ITransactionService;
+import com.finsight.application.transaction.TransactionReclassificationResult;
+import com.finsight.application.transaction.TransactionReclassificationService;
+import com.alibaba.fastjson.JSON;
 import com.finsight.application.support.TransactionIdList;
 import com.finsight.web.api.support.ControllerHelper;
 import com.finsight.web.api.dto.CollectionResult;
 import com.finsight.web.api.dto.CommonResult;
 import com.finsight.web.api.dto.TransactionParam;
+
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +47,9 @@ public class TransactionController extends ControllerHelper {
 
     @Autowired
     AuthenticationFacade authenticationFacade;
+
+    @Autowired
+    private TransactionReclassificationService transactionReclassificationService;
 
     @RequestMapping("/transaction/getTransactions")
     @ResponseBody
@@ -108,10 +116,19 @@ public class TransactionController extends ControllerHelper {
     @ResponseBody
     public CommonResult classifyTransaction(
             Transaction transaction,
+            @RequestParam(value = "ids", required = false) String ids,
+            @RequestParam(value = "persist", required = false, defaultValue = "false") boolean persist,
+            @RequestParam(value = "overrideExisting", required = false, defaultValue = "false") boolean overrideExisting,
+            @RequestParam(value = "useOtherFallback", required = false, defaultValue = "false") boolean useOtherFallback,
             @RequestParam(value = "bankCode", required = false) String bankCode,
             @RequestParam(value = "cardTypeCode", required = false) String cardTypeCode) {
         return runCommon(logger, "classify transaction", () -> {
-            Optional<String> json = transactionClassificationService.classifyForApi(transaction, bankCode, cardTypeCode);
+            if (StringUtils.isNotBlank(ids)) {
+                TransactionReclassificationResult result = transactionReclassificationService.reclassify(
+                        ids, persist, overrideExisting, useOtherFallback, authenticationFacade.getUserName());
+                return CommonResult.success(JSON.toJSONString(result));
+            }
+            Optional<String> json = transactionClassificationService.suggestTopN(transaction, bankCode, cardTypeCode);
             return json.map(CommonResult::success).orElse(CommonResult.fail("no_match"));
         });
     }

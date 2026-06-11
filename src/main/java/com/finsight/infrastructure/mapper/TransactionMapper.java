@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.finsight.application.query.TransactionQuery;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 public interface TransactionMapper extends BaseMapper<Transaction> {
@@ -17,7 +18,7 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     int expenseToIncome(@Param("ids") List<String> ids, @Param("updateUser") String updateUser);
     int countTransaction(@Param("q") TransactionQuery query);
     List<Transaction> getTransactions(@Param("q") TransactionQuery query, @Param("page") Page page);
-    List<KeyValue> consumeReport(@Param("q") TransactionQuery query);
+    List<com.finsight.domain.model.CategoryAggregate> consumeReport(@Param("q") TransactionQuery query);
     List<KeyValue> weekConsumeReport(@Param("q") TransactionQuery query);
     List<KeyValue> monthConsumeReport(@Param("q") TransactionQuery query);
     List<KeyValue> monthIncomeReport(@Param("q") TransactionQuery query);
@@ -27,6 +28,10 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     Double sumDebtPaymentsByYear(@Param("year") Integer year);
     Integer countRefundsByYear(@Param("year") Integer year);
     List<KeyValue> homeSummaryExpenseBucketsPrev(@Param("year") Integer year);
+
+    List<KeyValue> homeSummaryExpenseBucketsForRange(@Param("start") Date start, @Param("end") Date end);
+
+    Double sumIncomeForRange(@Param("start") Date start, @Param("end") Date end);
 
     List<String> listIdsNeedingAmountNormalization();
 }

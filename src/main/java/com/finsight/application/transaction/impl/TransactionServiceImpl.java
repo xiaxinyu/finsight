@@ -307,7 +307,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionRepository.consumeReport(toQuery(transaction));
+            List<com.finsight.domain.model.CategoryAggregate> list = transactionRepository.consumeReport(toQuery(transaction));
             result = JSONArray.toJSONString(list);
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -369,20 +369,34 @@ public class TransactionServiceImpl implements ITransactionService {
 
     @Override
     public String homeSummary(Integer year) throws AppServiceException {
+        return homeSummary(year, null, null);
+    }
+
+    @Override
+    public String homeSummary(Integer year, java.util.Date rangeStart, java.util.Date rangeEnd)
+            throws AppServiceException {
         try {
             if (year == null) {
                 java.util.Calendar cal = java.util.Calendar.getInstance();
                 year = cal.get(java.util.Calendar.YEAR);
             }
-            CacheEntry cached = homeSummaryCache.get(year);
-            long now = System.currentTimeMillis();
-            if (cached != null && (now - cached.getCreatedAt()) <= HOME_SUMMARY_CACHE_TTL_MS) {
-                return cached.getPayload();
+            boolean ranged = rangeStart != null && rangeEnd != null;
+            if (!ranged) {
+                CacheEntry cached = homeSummaryCache.get(year);
+                long now = System.currentTimeMillis();
+                if (cached != null && (now - cached.getCreatedAt()) <= HOME_SUMMARY_CACHE_TTL_MS) {
+                    return cached.getPayload();
+                }
             }
 
-            List<KeyValue> buckets = transactionRepository.homeSummaryExpenseBuckets(year);
-            List<KeyValue> bucketsPrev = transactionRepository.homeSummaryExpenseBucketsPrev(year);
-            Double incomeResult = transactionRepository.sumIncomeByYear(year);
+            List<KeyValue> buckets = ranged
+                    ? transactionRepository.homeSummaryExpenseBucketsForRange(rangeStart, rangeEnd)
+                    : transactionRepository.homeSummaryExpenseBuckets(year);
+            List<KeyValue> bucketsPrev = ranged ? java.util.Collections.emptyList()
+                    : transactionRepository.homeSummaryExpenseBucketsPrev(year);
+            Double incomeResult = ranged
+                    ? transactionRepository.sumIncomeForRange(rangeStart, rangeEnd)
+                    : transactionRepository.sumIncomeByYear(year);
             Double debtResult = transactionRepository.sumDebtPaymentsByYear(year);
             Integer refundsResult = transactionRepository.countRefundsByYear(year);
             double income = incomeResult == null ? 0.0 : incomeResult;
@@ -486,7 +500,10 @@ public class TransactionServiceImpl implements ITransactionService {
                     bucketsOut.get("other"));
             json.put("summary_text", summaryText);
             String payload = com.alibaba.fastjson.JSONObject.toJSONString(json);
-            homeSummaryCache.put(year, new CacheEntry(now, payload));
+            if (!ranged) {
+                long now = System.currentTimeMillis();
+                homeSummaryCache.put(year, new CacheEntry(now, payload));
+            }
             return payload;
         } catch (Exception e) {
             throw new AppServiceException(e);

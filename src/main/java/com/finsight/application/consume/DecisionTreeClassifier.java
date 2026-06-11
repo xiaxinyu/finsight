@@ -228,30 +228,43 @@ public class DecisionTreeClassifier {
         return k.toUpperCase();
     }
 
-    private int scoreFor(RuleEntry e){
-        int base = 0;
+    private int matchBaseScore(RuleEntry e) {
         String t = e.type == null ? "contains" : e.type.toLowerCase();
-        if ("equals".equals(t)) base = 100;
-        else if ("regex".equals(t)) base = 80;
-        else base = 40;
-        return base + e.priority;
+        if ("equals".equals(t)) {
+            return 100;
+        }
+        if ("regex".equals(t)) {
+            return 80;
+        }
+        return 40;
+    }
+
+    private int scoreFor(RuleEntry e){
+        return matchBaseScore(e);
     }
 
     private int scoreForContains(RuleEntry e){
-        return 40 + e.priority;
+        return 40;
     }
-    
+
+    /** Lower numeric priority wins (aligned with rules-guide.md). */
     private boolean betterThan(RuleEntry candidate, RuleEntry current){
-        int cs = scoreFor(candidate);
-        int os = scoreFor(current);
-        if (cs != os) return cs > os;
+        if (candidate.priority != current.priority) {
+            return candidate.priority < current.priority;
+        }
+        int cs = matchBaseScore(candidate);
+        int os = matchBaseScore(current);
+        if (cs != os) {
+            return cs > os;
+        }
         int cl = normalizedPatternLen(candidate);
         int ol = normalizedPatternLen(current);
-        if (cl != ol) return cl > ol;
+        if (cl != ol) {
+            return cl > ol;
+        }
         int cx = specificity(candidate);
         int ox = specificity(current);
-        if (cx != ox) return cx > ox;
-        return false;
+        return cx > ox;
     }
     
     private int normalizedPatternLen(RuleEntry e){
@@ -471,9 +484,9 @@ public class DecisionTreeClassifier {
                 if(!matchContext(e,b,c,amount,txnDate)) continue;
                 int sc = scoreFor(e);
                 int ps = aggScore.getOrDefault(e.categoryId, 0);
-                int pp = aggPriority.getOrDefault(e.categoryId, Integer.MIN_VALUE);
+                int pp = aggPriority.getOrDefault(e.categoryId, Integer.MAX_VALUE);
                 aggScore.put(e.categoryId, Math.max(ps, sc));
-                aggPriority.put(e.categoryId, Math.max(pp, e.priority));
+                aggPriority.put(e.categoryId, Math.min(pp, e.priority));
                 strongCats.add(e.categoryId);
             }
         }
@@ -484,9 +497,9 @@ public class DecisionTreeClassifier {
                 if(e.compiled.matcher(text).find()){
                     int sc = scoreFor(e);
                     int ps = aggScore.getOrDefault(e.categoryId, 0);
-                    int pp = aggPriority.getOrDefault(e.categoryId, Integer.MIN_VALUE);
+                    int pp = aggPriority.getOrDefault(e.categoryId, Integer.MAX_VALUE);
                     aggScore.put(e.categoryId, Math.max(ps, sc));
-                    aggPriority.put(e.categoryId, Math.max(pp, e.priority));
+                    aggPriority.put(e.categoryId, Math.min(pp, e.priority));
                     strongCats.add(e.categoryId);
                 }
             }catch(Exception ignore){}
@@ -499,9 +512,9 @@ public class DecisionTreeClassifier {
                 if(StringUtils.hasText(p) && text.contains(p)){
                     int sc = scoreFor(e);
                     int ps = aggScore.getOrDefault(e.categoryId, 0);
-                    int pp = aggPriority.getOrDefault(e.categoryId, Integer.MIN_VALUE);
+                    int pp = aggPriority.getOrDefault(e.categoryId, Integer.MAX_VALUE);
                     aggScore.put(e.categoryId, Math.max(ps, sc));
-                    aggPriority.put(e.categoryId, Math.max(pp, e.priority));
+                    aggPriority.put(e.categoryId, Math.min(pp, e.priority));
                     strongCats.add(e.categoryId);
                 }
             }catch(Exception ignore){}
@@ -518,8 +531,8 @@ public class DecisionTreeClassifier {
                     if(!matchContext(e,b,c,amount,txnDate)) continue;
                     int s = aggScore.getOrDefault(e.categoryId, 0);
                     aggScore.put(e.categoryId, s + scoreForContains(e));
-                    int pp = aggPriority.getOrDefault(e.categoryId, Integer.MIN_VALUE);
-                    aggPriority.put(e.categoryId, Math.max(pp, e.priority));
+                int pp = aggPriority.getOrDefault(e.categoryId, Integer.MAX_VALUE);
+                aggPriority.put(e.categoryId, Math.min(pp, e.priority));
                     hitCount.put(e.categoryId, hitCount.getOrDefault(e.categoryId, 0) + 1);
                     if(token.length() >= 2){ strongHitCount.put(e.categoryId, strongHitCount.getOrDefault(e.categoryId, 0) + 1); }
                 }
@@ -541,7 +554,7 @@ public class DecisionTreeClassifier {
         }
 
         results.sort((a,bRes) -> {
-            int cp = Integer.compare(bRes.priority, a.priority);
+            int cp = Integer.compare(a.priority, bRes.priority);
             if(cp != 0) return cp;
             int as = aggScore.getOrDefault(a.id, 0);
             int bs = aggScore.getOrDefault(bRes.id, 0);

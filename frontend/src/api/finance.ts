@@ -71,8 +71,16 @@ export async function billCalendar() {
   return unwrap<Record<string, unknown>[]>(await getJson('/api/v1/bills/calendar'))
 }
 
-export async function budgetVsActual() {
-  return unwrap<Record<string, unknown>[]>(await getJson('/api/v1/budgets/vs-actual'))
+export async function budgetVsActual(params?: { transactionDateStartStr?: string; transactionDateEndStr?: string }) {
+  const q = new URLSearchParams()
+  if (params?.transactionDateStartStr) q.set('transactionDateStartStr', params.transactionDateStartStr)
+  if (params?.transactionDateEndStr) q.set('transactionDateEndStr', params.transactionDateEndStr)
+  const suffix = q.toString() ? `?${q.toString()}` : ''
+  return unwrap<Record<string, unknown>[]>(await getJson(`/api/v1/budgets/vs-actual${suffix}`))
+}
+
+export async function listTransfers() {
+  return unwrap<Record<string, unknown>[]>(await getJson('/api/v1/transfers'))
 }
 
 export async function saveBudgetLine(line: Record<string, unknown>) {

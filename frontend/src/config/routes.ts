@@ -21,6 +21,7 @@ const staticRoutes: RouteMeta[] = [
 
 const reportTitles: Record<string, string> = {
   cashflow: 'Cashflow',
+  'fund-flow': 'Fund Flow',
   'budget-vs-actual': 'Budget vs Actual',
   'fixed-vs-variable': 'Fixed vs Variable',
   'spending-drift': 'Spending Drift',

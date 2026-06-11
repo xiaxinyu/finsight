@@ -26,7 +26,7 @@ public interface TransactionRepository {
 
     int deleteByStatementId(String statementId);
 
-    List<KeyValue> consumeReport(TransactionQuery query);
+    List<com.finsight.domain.model.CategoryAggregate> consumeReport(TransactionQuery query);
 
     List<KeyValue> weekConsumeReport(TransactionQuery query);
 
@@ -39,6 +39,10 @@ public interface TransactionRepository {
     List<KeyValue> homeSummaryExpenseBuckets(Integer year);
 
     List<KeyValue> homeSummaryExpenseBucketsPrev(Integer year);
+
+    List<KeyValue> homeSummaryExpenseBucketsForRange(java.util.Date start, java.util.Date end);
+
+    Double sumIncomeForRange(java.util.Date start, java.util.Date end);
 
     Double sumIncomeByYear(Integer year);
 

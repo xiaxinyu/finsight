@@ -78,6 +78,19 @@ export async function createRule(rule: ConsumeRuleRow) {
   return postJson('/api/v1/classification/rules', rule)
 }
 
+export type RuleHygieneSummary = {
+  orphanCount: number
+  recommendedKeywords: string[]
+}
+
+export async function fetchRuleHygiene(): Promise<RuleHygieneSummary> {
+  return getJson('/api/v1/classification/rules/hygiene') as Promise<RuleHygieneSummary>
+}
+
+export async function fetchUnclassifiedRuleKeywords(limit = 20): Promise<string[]> {
+  return getJson(`/api/v1/classification/rules/recommend-unclassified?limit=${limit}`) as Promise<string[]>
+}
+
 export async function updateRule(id: string, rule: ConsumeRuleRow) {
   return putJson(`/api/v1/classification/rules/${encodeURIComponent(id)}`, rule)
 }

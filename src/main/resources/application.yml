@@ -43,6 +43,8 @@ account:
 finsight:
   features:
     transfers: true
+  classification:
+    import-other-fallback: false
 
 server:
   servlet:

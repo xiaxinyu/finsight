@@ -46,6 +46,34 @@ public class ClassificationService {
         return res;
     }
 
+    /** Returns OTHER-01 (or equivalent) without running the matcher. */
+    public Result otherFallback() {
+        if (rules == null) reload();
+        ConsumeCategory fallback = categoryMap.get("OTHER-01");
+        if (fallback == null) {
+            fallback = categoryMap.get("OTHER");
+        }
+        if (fallback == null) {
+            for (ConsumeCategory c : categoryService.listAll()) {
+                if (c == null) continue;
+                String code = normCode(c.getCode());
+                String name = c.getName() == null ? "" : c.getName().trim();
+                if ("OTHER-01".equalsIgnoreCase(code) || "OTHER".equalsIgnoreCase(code)
+                        || "无法归类的支出".equals(name)) {
+                    fallback = c;
+                    break;
+                }
+            }
+        }
+        if (fallback == null) {
+            return null;
+        }
+        Result fr = new Result();
+        fr.id = fallback.getCode();
+        fr.name = fallback.getName();
+        return fr;
+    }
+
     public java.util.List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate, int topN){
         if (rules == null) reload();
         java.util.List<DecisionTreeClassifier.Result> list = decisionTreeClassifier.classifyTopN(narration, bankCode, cardTypeCode, amount, txnDate, topN);
