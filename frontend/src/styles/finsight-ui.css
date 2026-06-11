@@ -1644,6 +1644,229 @@
   white-space: nowrap;
 }
 
+/* ── Transactions page ── */
+.fs-data-page--transactions .fs-page-body {
+  gap: 8px;
+}
+
+.fs-tx-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fs-tx-kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  min-width: 0;
+  text-align: left;
+}
+
+.fs-tx-kpi-card--clickable {
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.fs-tx-kpi-card--clickable:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.fs-tx-kpi-card--active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.fs-tx-kpi-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.fs-tx-kpi-card--income .fs-tx-kpi-value {
+  color: #16a34a;
+}
+
+.fs-tx-kpi-card--expense .fs-tx-kpi-value {
+  color: #ea580c;
+}
+
+.fs-tx-kpi-card--warn .fs-tx-kpi-value {
+  color: #d97706;
+}
+
+.fs-tx-kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.01em;
+}
+
+.fs-tx-active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.fs-tx-active-filters-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fs-tx-filter-chip {
+  margin: 0 !important;
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.fs-tx-clear-filters {
+  border: none;
+  background: none;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fs-primary);
+  cursor: pointer;
+}
+
+.fs-tx-clear-filters:hover {
+  text-decoration: underline;
+}
+
+.fs-tx-date {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.fs-tx-ledger-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.fs-tx-ledger-title {
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  color: var(--fs-text) !important;
+}
+
+.fs-tx-ledger-meta {
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+}
+
+.fs-tx-ledger-meta--empty {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.fs-tx-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fs-tx-type--income {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.fs-tx-type--expense {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.fs-tx-type--transfer {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.fs-data-table--transactions .ant-pro-table-list-toolbar {
+  padding: 4px 0 6px;
+}
+
+.fs-data-table--transactions .ant-table-tbody > tr.fs-table-row:hover > td {
+  background: #f8fafc !important;
+}
+
+.fs-table-panel--transactions {
+  flex: 1;
+  min-height: 0;
+}
+
+.fs-tx-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--fs-radius);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
+  flex-shrink: 0;
+}
+
+.fs-tx-selection-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.fs-tx-selection-count {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2563eb;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-tx-selection-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.fs-tx-selection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fs-tx-selection-clear {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .fs-skipped-table .fs-skipped-reason {
   display: block;
   font-size: 12px;

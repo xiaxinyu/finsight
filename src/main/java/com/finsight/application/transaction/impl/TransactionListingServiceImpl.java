@@ -5,6 +5,7 @@ import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.port.TransactionRepository;
 import com.finsight.application.query.TransactionQuery;
 import com.finsight.application.query.TransactionQueryAssembler;
+import com.finsight.application.query.TransactionQuerySupport;
 import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Transaction;
 import com.finsight.web.api.dto.CollectionResult;
@@ -27,9 +28,13 @@ public class TransactionListingServiceImpl implements ITransactionListingService
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private TransactionQuerySupport transactionQuerySupport;
+
     @Override
     public CollectionResult<Transaction> listTransactions(TransactionParam param) throws AppServiceException {
         TransactionQuery query = TransactionQueryAssembler.from(param);
+        transactionQuerySupport.enrich(query);
         Page page = new Page(param.getPage(), param.getRows());
 
         CollectionResult<Transaction> result = new CollectionResult<>();

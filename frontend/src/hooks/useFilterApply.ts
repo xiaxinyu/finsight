@@ -38,5 +38,15 @@ export function useFilterApply<T>(initial: T) {
     setApplied(draft)
   }, [draft])
 
-  return { draft, setDraft, applied, applying, isDirty, apply, applySync }
+  const patchBoth = useCallback((patch: Partial<T>) => {
+    setDraft((f) => ({ ...f, ...patch }))
+    setApplied((f) => ({ ...f, ...patch }))
+  }, [])
+
+  const resetBoth = useCallback((value: T) => {
+    setDraft(value)
+    setApplied(value)
+  }, [])
+
+  return { draft, setDraft, applied, applying, isDirty, apply, applySync, patchBoth, resetBoth }
 }

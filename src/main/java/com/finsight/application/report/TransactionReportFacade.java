@@ -3,6 +3,7 @@ package com.finsight.application.report;
 import com.alibaba.fastjson.JSONArray;
 import com.finsight.application.query.TransactionQuery;
 import com.finsight.application.query.TransactionQueryAssembler;
+import com.finsight.application.query.TransactionQuerySupport;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.port.TransactionRepository;
@@ -21,29 +22,38 @@ public class TransactionReportFacade {
     @Autowired
     private ITransactionService transactionService;
 
+    @Autowired
+    private TransactionQuerySupport transactionQuerySupport;
+
     public String consumeReportJson(TransactionParam param) throws AppServiceException {
-        TransactionQuery q = TransactionQueryAssembler.from(param);
+        TransactionQuery q = buildQuery(param);
         return JSONArray.toJSONString(transactionRepository.consumeReport(q));
     }
 
     public String weekConsumeReportJson(TransactionParam param) throws AppServiceException {
-        TransactionQuery q = TransactionQueryAssembler.from(param);
+        TransactionQuery q = buildQuery(param);
         return JSONArray.toJSONString(transactionRepository.weekConsumeReport(q));
     }
 
     public String monthConsumeReportJson(TransactionParam param) throws AppServiceException {
-        TransactionQuery q = TransactionQueryAssembler.from(param);
+        TransactionQuery q = buildQuery(param);
         return JSONArray.toJSONString(transactionRepository.monthConsumeReport(q));
     }
 
     public String monthIncomeReportJson(TransactionParam param) throws AppServiceException {
-        TransactionQuery q = TransactionQueryAssembler.from(param);
+        TransactionQuery q = buildQuery(param);
         return JSONArray.toJSONString(transactionRepository.monthIncomeReport(q));
     }
 
     public String monthExpenseReportJson(TransactionParam param) throws AppServiceException {
-        TransactionQuery q = TransactionQueryAssembler.from(param);
+        TransactionQuery q = buildQuery(param);
         return JSONArray.toJSONString(transactionRepository.monthExpenseReport(q));
+    }
+
+    private TransactionQuery buildQuery(TransactionParam param) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        transactionQuerySupport.enrich(q);
+        return q;
     }
 
     /**

@@ -26,6 +26,88 @@
     <sql id="excludeTransferC">
         and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
     </sql>
+    <sql id="activeTransactionT">
+        and (t.deleted is null or t.deleted = 0)
+    </sql>
+    <sql id="activeTransactionC">
+        and (c.deleted is null or c.deleted = 0)
+    </sql>
+    <sql id="filterBankCardT">
+        <if test="q != null and q.bankCardId != null">
+            and (
+                t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
+                or (
+                    (t.bank_card_id is null or trim(t.bank_card_id) = '')
+                    and exists (
+                        select 1 from fin_bank_account fc
+                        where fc.id = #{q.bankCardId,jdbcType=VARCHAR}
+                        and (fc.deleted is null or fc.deleted != 1)
+                        and upper(trim(coalesce(st.source_bank_code, ''))) = upper(trim(coalesce(fc.bank_code, '')))
+                    )
+                )
+            )
+        </if>
+    </sql>
+    <sql id="filterCategoryCodesT">
+        <if test="q != null and q.consumes != null">
+            and (
+                t.consume_code in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+                or t.category_code in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+                or t.consume_id in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+                or t.category_id in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+            )
+        </if>
+    </sql>
+    <sql id="filterBankCardC">
+        <if test="q != null and q.bankCardId != null">
+            and (
+                c.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
+                or (
+                    (c.bank_card_id is null or trim(c.bank_card_id) = '')
+                    and exists (
+                        select 1 from fin_bank_account fc
+                        where fc.id = #{q.bankCardId,jdbcType=VARCHAR}
+                        and (fc.deleted is null or fc.deleted != 1)
+                        and upper(trim(coalesce(st.source_bank_code, ''))) = upper(trim(coalesce(fc.bank_code, '')))
+                    )
+                )
+            )
+        </if>
+    </sql>
+    <sql id="filterCategoryCodesC">
+        <if test="q != null and q.consumes != null">
+            and (
+                c.consume_code in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+                or c.category_code in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+                or c.consume_id in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+                or c.category_id in
+                <foreach collection="q.consumes" item="consumeCode" open="(" separator="," close=")">
+                    #{consumeCode,jdbcType=VARCHAR}
+                </foreach>
+            )
+        </if>
+    </sql>
     <sql id="filterTxnTypeIncomeT">
         and (
             cat.txn_types like '%income%'
@@ -275,6 +357,7 @@
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="activeTransactionT"/>
         <include refid="excludeTransferT"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
@@ -295,26 +378,24 @@
             <if test="q.consumptionType != null">
                 and t.consumption_type = #{q.consumptionType,jdbcType=NUMERIC}
             </if>
-            <if test="q.bankCardId != null">
-                and t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
-            </if>
+            <include refid="filterBankCardT"/>
             <if test="q.cardTypeName != null">
                 and t.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
             <if test="q.consumeID != null">
-                and t.consume_id = #{q.consumeID,jdbcType=VARCHAR}
+                and (t.consume_id = #{q.consumeID,jdbcType=VARCHAR} or t.category_id = #{q.consumeID,jdbcType=VARCHAR})
             </if>
             <if test="q.consumeCode != null">
-                and t.consume_code = #{q.consumeCode,jdbcType=VARCHAR}
+                and (t.consume_code = #{q.consumeCode,jdbcType=VARCHAR} or t.category_code = #{q.consumeCode,jdbcType=VARCHAR})
             </if>
-            <if test="q.consumes != null">
-                and t.consume_code in
-                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                    #{consumeID,jdbcType=VARCHAR}
-                </foreach>
-            </if>
+            <include refid="filterCategoryCodesT"/>
             <if test="q.emptyConsume != null and q.emptyConsume == true">
-                and (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
+                and (
+                    t.consume_name is null or length(trim(t.consume_name)) = 0
+                    or t.consume_code is null or length(trim(t.consume_code)) = 0
+                    or t.category_name is null or length(trim(t.category_name)) = 0
+                    or t.category_code is null or length(trim(t.category_code)) = 0
+                )
             </if>
             <if test="q.consumeName != null">
                 and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
@@ -340,9 +421,12 @@
     </select>
 
     <select id="countTransaction" resultType="java.lang.Integer">
-        select count(t.id) from transaction t
+        select count(distinct t.id) from transaction t
+        left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
+        left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="activeTransactionT"/>
         <include refid="excludeTransferT"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
@@ -363,26 +447,24 @@
             <if test="q.consumptionType != null">
                 and t.consumption_type = #{q.consumptionType,jdbcType=NUMERIC}
             </if>
-            <if test="q.bankCardId != null">
-                and t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
-            </if>
+            <include refid="filterBankCardT"/>
             <if test="q.cardTypeName != null">
                 and t.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
             <if test="q.consumeID != null">
-                and t.consume_id = #{q.consumeID,jdbcType=VARCHAR}
+                and (t.consume_id = #{q.consumeID,jdbcType=VARCHAR} or t.category_id = #{q.consumeID,jdbcType=VARCHAR})
             </if>
             <if test="q.consumeCode != null">
-                and t.consume_code = #{q.consumeCode,jdbcType=VARCHAR}
+                and (t.consume_code = #{q.consumeCode,jdbcType=VARCHAR} or t.category_code = #{q.consumeCode,jdbcType=VARCHAR})
             </if>
-            <if test="q.consumes != null">
-                and t.consume_code in
-                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                    #{consumeID,jdbcType=VARCHAR}
-                </foreach>
-            </if>
+            <include refid="filterCategoryCodesT"/>
             <if test="q.emptyConsume != null and q.emptyConsume == true">
-                and (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
+                and (
+                    t.consume_name is null or length(trim(t.consume_name)) = 0
+                    or t.consume_code is null or length(trim(t.consume_code)) = 0
+                    or t.category_name is null or length(trim(t.category_name)) = 0
+                    or t.category_code is null or length(trim(t.category_code)) = 0
+                )
             </if>
             <if test="q.consumeName != null">
                 and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
@@ -416,8 +498,10 @@
         )) as `value`,
         case when (isnull(c.consume_name)=1 or length(trim(c.consume_name))=0) then 'unkown' else c.consume_name end as `key`
         from transaction c
+        left join statement st on st.id = c.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="activeTransactionC"/>
         and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes != ''">
@@ -453,12 +537,8 @@
             <if test="q.cardTypeName != null">
                 and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="q.consumes != null">
-                and c.consume_code in
-                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                    #{consumeID,jdbcType=VARCHAR}
-                </foreach>
-            </if>
+            <include refid="filterCategoryCodesC"/>
+            <include refid="filterBankCardC"/>
             <if test="q.demoArea != null">
                 and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
@@ -472,8 +552,10 @@
         select round(sum(expense_amt)) as `value`, wday as `key` from (
         select weekday(c.bookkeeping_date) wday, (<include refid="rowExpenseAmountC"/>) as expense_amt
         from transaction c
+        left join statement st on st.id = c.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="activeTransactionC"/>
         <include refid="excludeTransferC"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
@@ -497,12 +579,8 @@
             <if test="q.cardTypeName != null">
                 and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="q.consumes != null">
-                and c.consume_code in
-                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                    #{consumeID,jdbcType=VARCHAR}
-                </foreach>
-            </if>
+            <include refid="filterCategoryCodesC"/>
+            <include refid="filterBankCardC"/>
             <if test="q.demoArea != null">
                 and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
@@ -529,8 +607,10 @@
         when cmonth = 12 then 'December' else cmonth end 'key'
         from (select sum(expense_amt) balance_money,cmonth
         from (select (<include refid="rowExpenseAmountC"/>) as expense_amt, month(c.transaction_date) cmonth from transaction c
+        left join statement st on st.id = c.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
+        <include refid="activeTransactionC"/>
         <include refid="excludeTransferC"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
@@ -551,12 +631,8 @@
             <if test="q.cardTypeName != null">
                 and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
             </if>
-            <if test="q.consumes != null">
-                and c.consume_code in
-                <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                    #{consumeID,jdbcType=VARCHAR}
-                </foreach>
-            </if>
+            <include refid="filterCategoryCodesC"/>
+            <include refid="filterBankCardC"/>
             <if test="q.demoArea != null">
                 and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
@@ -589,8 +665,10 @@
                     else 0
                 end as amount
             from transaction c
+            left join statement st on st.id = c.statement_id and (st.deleted is null or st.deleted != 1)
             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
+            <include refid="activeTransactionC"/>
             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
                 <if test="q.year != null and q.year != ''">
@@ -605,12 +683,8 @@
                 <if test="q.cardTypeName != null and q.cardTypeName != ''">
                     and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
                 </if>
-                <if test="q.consumes != null">
-                    and c.consume_code in
-                    <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                        #{consumeID,jdbcType=VARCHAR}
-                    </foreach>
-                </if>
+                <include refid="filterCategoryCodesC"/>
+                <include refid="filterBankCardC"/>
                 <if test="q.demoArea != null and q.demoArea != ''">
                     and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                     or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
@@ -650,8 +724,10 @@
                     else 0
                 end as amount
             from transaction c
+            left join statement st on st.id = c.statement_id and (st.deleted is null or st.deleted != 1)
             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
+            <include refid="activeTransactionC"/>
             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
                 <if test="q.year != null and q.year != ''">
@@ -666,12 +742,8 @@
                 <if test="q.cardTypeName != null and q.cardTypeName != ''">
                     and c.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
                 </if>
-                <if test="q.consumes != null">
-                    and c.consume_code in
-                    <foreach collection="q.consumes" item="consumeID" open="(" separator="," close=")">
-                        #{consumeID,jdbcType=VARCHAR}
-                    </foreach>
-                </if>
+                <include refid="filterCategoryCodesC"/>
+                <include refid="filterBankCardC"/>
                 <if test="q.demoArea != null and q.demoArea != ''">
                     and (c.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                     or c.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )

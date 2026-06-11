@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { Button, Input, Modal, Popconfirm, Space, Tag, Tooltip, message } from 'antd'
+import { Button, Input, Modal, Popconfirm, Space, Tooltip, message } from 'antd'
 import {
   CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
@@ -14,12 +14,16 @@ import {
   fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
+import { useCardTree } from '../../hooks/useCardTree'
 import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
 import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
 import { useFilterApply } from '../../hooks/useFilterApply'
 import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
-import { TransactionSummaryBar } from '../../components/TransactionSummaryBar'
+import { TransactionKpiStrip } from '../../components/TransactionKpiStrip'
+import { TransactionActiveFilters, type ActiveFilterChip } from '../../components/TransactionActiveFilters'
+import { TransactionLedgerCell, TransactionTypeBadge } from '../../components/TransactionLedgerCell'
+import { TransactionSelectionBar } from '../../components/TransactionSelectionBar'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
@@ -28,7 +32,7 @@ import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
-import { defaultPeriodRange } from '../../utils/periodPresets'
+import { defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 
 type TxFilters = {
@@ -45,6 +49,17 @@ function findTreeTitle(nodes: { title: string; value: string; children?: typeof 
     if (n.value === value) return n.title
     if (n.children) {
       const t = findTreeTitle(n.children, value)
+      if (t) return t
+    }
+  }
+  return ''
+}
+
+function findCardTitle(nodes: { id: string; text: string; children?: typeof nodes }[], id: string): string {
+  for (const n of nodes) {
+    if (n.id === id) return n.text
+    if (n.children) {
+      const t = findCardTitle(n.children, id)
       if (t) return t
     }
   }
@@ -75,7 +90,9 @@ export function TransactionsPage() {
     unclassified: unclassifiedFromUrl,
   }
 
-  const { draft, setDraft, applied, applying, isDirty, applySync } = useFilterApply(initial)
+  const { draft, setDraft, applied, applying, isDirty, applySync, patchBoth, resetBoth } = useFilterApply(initial)
+  const appliedRef = useRef(applied)
+  appliedRef.current = applied
 
   useEffect(() => {
     if (unclassifiedFromUrl) {
@@ -84,6 +101,88 @@ export function TransactionsPage() {
   }, [unclassifiedFromUrl, setDraft])
 
   const { treeData } = useConsumeTreeSelect()
+  const { tree: cardTree } = useCardTree()
+
+  const reload = useCallback(async () => {
+    setTableLoading(true)
+    applySync()
+    try {
+      await actionRef.current?.reload?.()
+      qc.invalidateQueries({ queryKey: ['financial-pulse'] })
+      qc.invalidateQueries({ queryKey: ['decision-cards'] })
+      qc.invalidateQueries({ queryKey: ['wealth'] })
+      qc.invalidateQueries({ queryKey: ['cashflow'] })
+      qc.invalidateQueries({ queryKey: ['tx-stats'] })
+    } finally {
+      setTableLoading(false)
+    }
+  }, [applySync, qc])
+
+  const applyFilterPatch = useCallback((patch: Partial<TxFilters>) => {
+    const next = { ...appliedRef.current, ...patch }
+    appliedRef.current = next
+    patchBoth(patch)
+    void reload()
+  }, [patchBoth, reload])
+
+  const appliedPeriod = useMemo(
+    () => periodFromStrings(applied.start, applied.end),
+    [applied.start, applied.end],
+  )
+  const periodLabel = useMemo(
+    () => formatPeriodPreview(appliedPeriod[0], appliedPeriod[1]),
+    [appliedPeriod],
+  )
+
+  const activeFilterChips: ActiveFilterChip[] = useMemo(() => {
+    const chips: ActiveFilterChip[] = []
+    if (applied.card) {
+      const label = findCardTitle(cardTree, applied.card) || applied.card
+      chips.push({
+        key: 'card',
+        label: `Card: ${label}`,
+        onRemove: () => applyFilterPatch({ card: '' }),
+      })
+    }
+    if (applied.consume) {
+      const label = findTreeTitle(treeData, applied.consume) || applied.consume
+      chips.push({
+        key: 'consume',
+        label: `Category: ${label}`,
+        onRemove: () => applyFilterPatch({ consume: '' }),
+      })
+    }
+    if (applied.keyword.trim()) {
+      chips.push({
+        key: 'keyword',
+        label: `Keyword: ${applied.keyword.trim()}`,
+        onRemove: () => applyFilterPatch({ keyword: '' }),
+      })
+    }
+    if (applied.unclassified) {
+      chips.push({
+        key: 'unclassified',
+        label: 'Unclassified only',
+        onRemove: () => applyFilterPatch({ unclassified: false }),
+      })
+    }
+    return chips
+  }, [applied, cardTree, treeData, applyFilterPatch])
+
+  const toggleUnclassifiedFilter = useCallback(() => {
+    applyFilterPatch({ unclassified: !appliedRef.current.unclassified })
+  }, [applyFilterPatch])
+
+  const clearAllFilters = useCallback(() => {
+    appliedRef.current = initial
+    resetBoth(initial)
+    void reload()
+  }, [initial, resetBoth, reload])
+
+  const clearSelection = useCallback(() => {
+    setSelectedRowKeys([])
+    setSelectedRows([])
+  }, [])
 
   const statsParams = useMemo(() => ({
     transactionDateStartStr: applied.start,
@@ -144,135 +243,124 @@ export function TransactionsPage() {
     }
   }
 
-  const columns: ProColumns<TransactionRow>[] = useMemo(() => [
-    {
-      title: <TableHeader name="Date" />,
-      dataIndex: 'transactionDate',
-      width: 120,
-      sorter: true,
-      editable: () => true,
-      valueType: 'date',
-      fieldProps: { size: 'small', format: 'MM/DD/YYYY' },
-      render: (_, r) => <span className="fs-mono">{formatTableDate(r.transactionDate)}</span>,
-    },
-    {
-      title: <TableHeader name="Type" />,
-      dataIndex: 'txnKind',
-      width: 100,
-      editable: () => true,
-      valueType: 'select',
-      valueEnum: {
-        expense: { text: 'Expense' },
-        income: { text: 'Income' },
-        transfer: { text: 'Transfer' },
-      },
-      render: (_, r) => {
-        if (r.txnKind === 'transfer') return <Tag className="fs-tag" color="orange">Transfer</Tag>
-        const k = rowTxnKind(r)
-        return <Tag className="fs-tag" color={k === 'income' ? 'green' : 'default'}>{k}</Tag>
-      },
-    },
-    {
-      title: <TableHeader name="Description" />,
-      dataIndex: 'transactionDesc',
-      ellipsis: true,
-      editable: () => true,
-      fieldProps: { size: 'small' },
-      render: (_, r) => <span className="fs-cell-text" title={cellText(r.transactionDesc)}>{cellText(r.transactionDesc)}</span>,
-    },
-    {
-      title: <TableHeader name="Amount" unit="CNY" />,
-      dataIndex: 'editAmount',
-      width: 120,
-      align: 'right',
-      sorter: true,
-      editable: () => true,
-      valueType: 'digit',
-      fieldProps: { size: 'small', min: 0, precision: 2, style: { width: '100%' } },
-      render: (_, r) => (
-        <MoneyText value={rowAmount(r)} type={moneyTypeFromRow(rowTxnKind(r), r.balanceMoney)} />
-      ),
-    },
-    {
-      title: <TableHeader name="Card" />,
-      dataIndex: 'bankCode',
-      width: 128,
-      ellipsis: true,
-      editable: false,
-      render: (_, r) => <TransactionCardCell row={r} />,
-    },
-    {
-      title: <TableHeader name="Category" />,
-      dataIndex: 'consumeCode',
-      width: 160,
-      ellipsis: true,
-      editable: () => true,
-      valueType: 'treeSelect',
-      fieldProps: { treeData, treeDefaultExpandAll: true, allowClear: true, size: 'small', style: { width: '100%' } },
-      render: (_, r) => <span className="fs-cell-text" title={cellText(r.consumeName)}>{cellText(r.consumeName)}</span>,
-    },
-    {
-      title: <TableHeader name="Memo" />,
-      dataIndex: 'demoArea',
-      width: 120,
-      ellipsis: true,
-      editable: () => true,
-      fieldProps: { size: 'small' },
-      render: (_, r) => <span className="fs-cell-muted" title={cellText(r.demoArea)}>{cellText(r.demoArea)}</span>,
-    },
-    {
-      title: '',
-      valueType: 'option',
-      width: 72,
-      fixed: 'right',
-      className: 'fs-col-actions',
-      render: (_, record, __, action) => (
-        <div className="fs-inline-actions">
-          <Tooltip title="Edit">
-            <Button
-              type="text"
-              size="small"
-              icon={<EditOutlined />}
-              className="fs-row-action"
-              disabled={editableKeys.length > 0}
-              onClick={() => {
-                setEditableKeys([record.id])
-                action?.startEditable?.(record.id)
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Delete this transaction?"
-            onConfirm={async () => {
-              await deleteTransaction(record.id)
-              message.success('Deleted')
-              await reload()
-            }}
-          >
-            <Tooltip title="Delete">
-              <Button type="text" size="small" danger icon={<DeleteOutlined />} className="fs-row-action"
-                disabled={editableKeys.length > 0} />
-            </Tooltip>
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ], [treeData, editableKeys])
+  const categoryColumn: ProColumns<TransactionRow> = useMemo(() => ({
+    title: <TableHeader name="Category" />,
+    dataIndex: 'consumeCode',
+    width: 168,
+    ellipsis: true,
+    editable: () => true,
+    valueType: 'treeSelect',
+    fieldProps: { treeData, treeDefaultExpandAll: true, allowClear: true, size: 'small', style: { width: '100%' } },
+    render: (_, r) => <span className="fs-cell-text" title={cellText(r.consumeName)}>{cellText(r.consumeName)}</span>,
+  }), [treeData])
 
-  const reload = async () => {
-    setTableLoading(true)
-    applySync()
-    try {
-      await actionRef.current?.reload?.()
-      qc.invalidateQueries({ queryKey: ['financial-pulse'] })
-      qc.invalidateQueries({ queryKey: ['decision-cards'] })
-      qc.invalidateQueries({ queryKey: ['wealth'] })
-      qc.invalidateQueries({ queryKey: ['cashflow'] })
-      qc.invalidateQueries({ queryKey: ['tx-stats'] })
-    } finally {
-      setTableLoading(false)
+  const memoColumn: ProColumns<TransactionRow> = useMemo(() => ({
+    title: <TableHeader name="Memo" />,
+    dataIndex: 'demoArea',
+    width: 140,
+    ellipsis: true,
+    editable: () => true,
+    fieldProps: { size: 'small' },
+    render: (_, r) => <span className="fs-cell-muted" title={cellText(r.demoArea)}>{cellText(r.demoArea)}</span>,
+  }), [])
+
+  const columns: ProColumns<TransactionRow>[] = useMemo(() => {
+    const base: ProColumns<TransactionRow>[] = [
+      {
+        title: <TableHeader name="Date" />,
+        dataIndex: 'transactionDate',
+        width: 96,
+        sorter: true,
+        editable: () => true,
+        valueType: 'date',
+        fieldProps: { size: 'small', format: 'MM/DD/YYYY' },
+        render: (_, r) => <span className="fs-tx-date">{formatTableDate(r.transactionDate)}</span>,
+      },
+      {
+        title: <TableHeader name="Transaction" />,
+        dataIndex: 'transactionDesc',
+        ellipsis: true,
+        editable: () => true,
+        fieldProps: { size: 'small' },
+        render: (_, r) => <TransactionLedgerCell row={r} />,
+      },
+      {
+        title: <TableHeader name="Type" />,
+        dataIndex: 'txnKind',
+        width: 88,
+        editable: () => true,
+        valueType: 'select',
+        valueEnum: {
+          expense: { text: 'Expense' },
+          income: { text: 'Income' },
+          transfer: { text: 'Transfer' },
+        },
+        render: (_, r) => <TransactionTypeBadge kind={r.txnKind || rowTxnKind(r)} />,
+      },
+      {
+        title: <TableHeader name="Amount" unit="CNY" />,
+        dataIndex: 'editAmount',
+        width: 116,
+        align: 'right',
+        sorter: true,
+        editable: () => true,
+        valueType: 'digit',
+        fieldProps: { size: 'small', min: 0, precision: 2, style: { width: '100%' } },
+        render: (_, r) => (
+          <MoneyText value={rowAmount(r)} type={moneyTypeFromRow(rowTxnKind(r), r.balanceMoney)} />
+        ),
+      },
+      {
+        title: <TableHeader name="Card" />,
+        dataIndex: 'bankCode',
+        width: 112,
+        ellipsis: true,
+        editable: false,
+        render: (_, r) => <TransactionCardCell row={r} />,
+      },
+      {
+        title: '',
+        valueType: 'option',
+        width: 72,
+        fixed: 'right',
+        className: 'fs-col-actions',
+        render: (_, record, __, action) => (
+          <div className="fs-inline-actions">
+            <Tooltip title="Edit">
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                className="fs-row-action"
+                disabled={editableKeys.length > 0}
+                onClick={() => {
+                  setEditableKeys([record.id])
+                  action?.startEditable?.(record.id)
+                }}
+              />
+            </Tooltip>
+            <Popconfirm
+              title="Delete this transaction?"
+              onConfirm={async () => {
+                await deleteTransaction(record.id)
+                message.success('Deleted')
+                await reload()
+              }}
+            >
+              <Tooltip title="Delete">
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} className="fs-row-action"
+                  disabled={editableKeys.length > 0} />
+              </Tooltip>
+            </Popconfirm>
+          </div>
+        ),
+      },
+    ]
+    if (editableKeys.length > 0) {
+      base.splice(5, 0, categoryColumn, memoColumn)
     }
-  }
+    return base
+  }, [treeData, editableKeys, categoryColumn, memoColumn])
 
   const runBatch = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
@@ -315,15 +403,14 @@ export function TransactionsPage() {
   return (
     <DataPageLayout
       title="Transactions"
+      subtitle={`Ledger for ${periodLabel} · double-click a row to edit`}
       icon={<UnorderedListOutlined />}
-      className="fs-data-page--dense fs-data-page--fill"
+      className={`fs-data-page--dense fs-data-page--fill fs-data-page--transactions${editableKeys.length > 0 ? ' fs-data-page--editing' : ''}`}
       toolbar={(
         <FilterToolbar
           loading={tableLoading || applying}
           onApply={reload}
           dirty={isDirty}
-          selectedCount={selectedRowKeys.length}
-          actions={batchActions}
         >
           <PeriodRangePicker
             size="small"
@@ -347,22 +434,29 @@ export function TransactionsPage() {
           <Input.Search
             className="fs-filter-control fs-filter-control--keyword"
             size="small"
-            placeholder="Keyword"
+            placeholder="Search description or memo"
             allowClear
             disabled={disabled}
             value={draft.keyword}
             onChange={(e) => setDraft((f) => ({ ...f, keyword: e.target.value }))}
-            onSearch={(v) => { setDraft((f) => ({ ...f, keyword: v })); reload() }} />
-          <Button
-            size="small"
-            type={draft.unclassified ? 'primary' : 'default'}
-            onClick={() => setDraft((f) => ({ ...f, unclassified: !f.unclassified }))}
-          >
-            Unclassified
-          </Button>
+            onSearch={(v) => { setDraft((f) => ({ ...f, keyword: v })); reload() }}
+          />
         </FilterToolbar>
       )}
     >
+      <TransactionKpiStrip
+        total={stats?.total}
+        income={stats?.income}
+        expense={stats?.expense}
+        net={stats?.net}
+        unclassified={stats?.unclassified}
+        transfers={stats?.transfers}
+        truncated={stats?.truncated}
+        loading={statsBusy}
+        unclassifiedActive={applied.unclassified}
+        onUnclassifiedClick={toggleUnclassifiedFilter}
+      />
+      <TransactionActiveFilters chips={activeFilterChips} onClearAll={clearAllFilters} />
       {editableKeys.length > 0 && (
         <div className="fs-edit-banner">
           <span>Editing row — press Save or Cancel when done</span>
@@ -391,30 +485,16 @@ export function TransactionsPage() {
           </Space>
         </div>
       )}
-      <div ref={tablePanelRef} className="fs-table-panel fs-table-panel--editable">
+      <div ref={tablePanelRef} className="fs-table-panel fs-table-panel--editable fs-table-panel--transactions">
         <ProTable<TransactionRow>
-          className="fs-data-table fs-data-table--with-summary"
+          className="fs-data-table fs-data-table--transactions"
           actionRef={actionRef}
           rowKey="id"
           size="small"
           scroll={{ x: 'max-content', y: tableHeight }}
           search={false}
           loading={tableLoading}
-          toolbar={{
-            title: (
-              <TransactionSummaryBar
-                total={stats?.total}
-                income={stats?.income}
-                expense={stats?.expense}
-                net={stats?.net}
-                unclassified={stats?.unclassified}
-                transfers={stats?.transfers}
-                truncated={stats?.truncated}
-                loading={statsBusy}
-              />
-            ),
-          }}
-          options={{ density: true, reload: true, setting: true }}
+          options={{ density: true, reload: () => reload(), setting: true }}
           rowSelection={{
             selectedRowKeys,
             onChange: (keys, rows) => {
@@ -434,16 +514,17 @@ export function TransactionsPage() {
             emptyText: <EmptyState compact title="No transactions" description="Try widening the date range or clearing filters." />,
           }}
           request={async (params) => {
+            const filters = appliedRef.current
             try {
               const res = await listTransactions({
                 page: params.current || 1,
                 rows: params.pageSize || 20,
-                transactionDateStartStr: applied.start,
-                transactionDateEndStr: applied.end,
-                cardId: applied.card || undefined,
-                consumeID: applied.consume,
-                demoArea: applied.keyword,
-                emptyConsume: applied.unclassified ? '1' : undefined,
+                transactionDateStartStr: filters.start,
+                transactionDateEndStr: filters.end,
+                cardId: filters.card || undefined,
+                consumeID: filters.consume,
+                demoArea: filters.keyword,
+                emptyConsume: filters.unclassified ? '1' : undefined,
               })
               const rows = res.rows.map((r) => ({
                 ...r,
@@ -476,9 +557,12 @@ export function TransactionsPage() {
               </div>,
             ],
           }}
-          pagination={{ defaultPageSize: 20, showSizeChanger: true, size: 'small', showTotal: (t) => `${t} rows` }}
+          pagination={{ defaultPageSize: 20, showSizeChanger: true, size: 'small', showTotal: (t) => `${t.toLocaleString()} transactions` }}
         />
       </div>
+      <TransactionSelectionBar count={selectedRowKeys.length} disabled={disabled} onClear={clearSelection}>
+        {batchActions}
+      </TransactionSelectionBar>
       <Modal title="Mark as transfer" open={transferOpen} onOk={markTransfer} onCancel={() => setTransferOpen(false)}>
         Pair two transactions as an internal transfer (excluded from income/expense reports).
         {selectedRows.length === 2 && (

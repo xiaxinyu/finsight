@@ -96,8 +96,6 @@ export function StatementListPage() {
   const [summary, setSummary] = useState({ total: 0, pending: 0, committed: 0 })
   const [sourceDrawer, setSourceDrawer] = useState<StatementListRow | null>(null)
 
-  const pendingBanner = summary.pending > 0 && statusFilter !== 'committed'
-
   const openSource = useCallback((row: StatementListRow, e?: MouseEvent) => {
     e?.stopPropagation()
     setSourceDrawer(row)
@@ -147,24 +145,6 @@ export function StatementListPage() {
           onClick={() => setStatusFilter('committed')}
         />
       </div>
-
-      {pendingBanner && (
-        <Alert
-          type="warning"
-          showIcon
-          className="fs-import-history-alert"
-          message={`${summary.pending} import${summary.pending === 1 ? '' : 's'} still in preview`}
-          description="Preview rows are not in Transactions until you commit. Open a pending import and click「Commit to ledger」."
-        />
-      )}
-
-      <Alert
-        type="info"
-        showIcon
-        className="fs-import-history-hint"
-        message="Inspect raw import data"
-        description="Click any row, or use the View source link / Source column, to open parsed file content for line-by-line review."
-      />
 
       <div className="fs-import-history-toolbar">
         <Input
