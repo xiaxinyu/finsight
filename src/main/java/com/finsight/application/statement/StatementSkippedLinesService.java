@@ -6,13 +6,16 @@ import com.finsight.domain.model.Transaction;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -24,6 +27,8 @@ public class StatementSkippedLinesService {
     private static final Pattern AMOUNT_TOKEN = Pattern.compile(
             "[-+]?\\d{1,3}(?:,\\d{3})+\\.\\d{1,2}|[-+]?\\d+\\.\\d{1,2}");
     private static final Pattern STRICT_DATE = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$");
+    private static final Pattern CURRENCY_TOKEN = Pattern.compile(
+            "^(?i)(CNY|RMB|人民币|GBP|USD|EUR|HKD|JPY|AUD|CAD|SGD|CHF)$");
 
     private static final class SourceRow {
         final int fileLineNumber;
@@ -69,6 +74,9 @@ public class StatementSkippedLinesService {
             SourceRow source = sourceRows.get(i);
             String raw = formatRaw(source.cells);
             if (StringUtils.isBlank(raw) || isNoiseLine(raw)) {
+                continue;
+            }
+            if (isHeaderRow(raw) || looksLikeContinuationLine(raw, source.cells)) {
                 continue;
             }
             skipped.add(buildSkippedRow(source, i + 1, raw, bankCode, cardType, sourceRows, i));
@@ -169,30 +177,45 @@ public class StatementSkippedLinesService {
             return matched;
         }
         boolean[] txnUsed = new boolean[transactions.size()];
-        boolean[] rowUsed = new boolean[rows.size()];
+        Map<String, Deque<Integer>> txnByKey = indexTransactionsByDateAndPrimaryAmount(transactions);
 
-        List<MatchCandidate> strong = new ArrayList<>();
-        List<MatchCandidate> weak = new ArrayList<>();
         for (int i = 0; i < rows.size(); i++) {
             String[] row = rows.get(i);
             if (row == null) {
                 continue;
             }
-            for (int t = 0; t < transactions.size(); t++) {
-                int score = rowMatchScore(row, transactions.get(t));
-                if (score >= 110) {
-                    strong.add(new MatchCandidate(score, i, t));
-                } else if (score >= 10) {
-                    weak.add(new MatchCandidate(score, i, t));
-                }
+            String rowKey = rowMatchKey(row);
+            if (rowKey == null) {
+                continue;
+            }
+            Deque<Integer> pool = txnByKey.get(rowKey);
+            if (pool == null || pool.isEmpty()) {
+                continue;
+            }
+            int bestTxn = pickBestTxnIndex(row, pool, transactions, txnUsed);
+            if (bestTxn >= 0) {
+                txnUsed[bestTxn] = true;
+                matched.add(i);
             }
         }
-        strong.sort(Comparator.comparingInt(MatchCandidate::score).reversed());
-        for (MatchCandidate c : strong) {
-            if (!rowUsed[c.rowIdx()] && !txnUsed[c.txnIdx()]) {
-                rowUsed[c.rowIdx()] = true;
-                txnUsed[c.txnIdx()] = true;
-                matched.add(c.rowIdx());
+
+        boolean[] rowUsed = new boolean[rows.size()];
+        for (int idx : matched) {
+            rowUsed[idx] = true;
+        }
+        List<MatchCandidate> weak = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            if (rowUsed[i] || rows.get(i) == null) {
+                continue;
+            }
+            for (int t = 0; t < transactions.size(); t++) {
+                if (txnUsed[t]) {
+                    continue;
+                }
+                int score = rowMatchScore(rows.get(i), transactions.get(t));
+                if (score >= 10) {
+                    weak.add(new MatchCandidate(score, i, t));
+                }
             }
         }
         weak.sort(Comparator.comparingInt(MatchCandidate::score).reversed());
@@ -206,7 +229,228 @@ public class StatementSkippedLinesService {
         return matched;
     }
 
+    private Map<String, Deque<Integer>> indexTransactionsByDateAndPrimaryAmount(List<Transaction> transactions) {
+        Map<String, Deque<Integer>> index = new HashMap<>();
+        for (int t = 0; t < transactions.size(); t++) {
+            String key = txnMatchKey(transactions.get(t));
+            if (key == null) {
+                continue;
+            }
+            index.computeIfAbsent(key, ignored -> new ArrayDeque<>()).addLast(t);
+        }
+        return index;
+    }
+
+    private int pickBestTxnIndex(
+            String[] row,
+            Deque<Integer> pool,
+            List<Transaction> transactions,
+            boolean[] txnUsed) {
+        String joined = formatRaw(row);
+        int bestTxn = -1;
+        int bestScore = -1;
+        for (int t : pool) {
+            if (txnUsed[t]) {
+                continue;
+            }
+            int score = rowDetailScore(joined, row, transactions.get(t));
+            if (score > bestScore) {
+                bestScore = score;
+                bestTxn = t;
+            }
+        }
+        return bestTxn;
+    }
+
+    private int rowDetailScore(String joined, String[] row, Transaction txn) {
+        int score = 0;
+        if (StringUtils.isNotBlank(txn.getTransactionDesc()) && joined.contains(txn.getTransactionDesc().trim())) {
+            score += 5;
+        }
+        if (StringUtils.isNotBlank(txn.getOpponentName()) && joined.contains(txn.getOpponentName().trim())) {
+            score += 3;
+        }
+        String memo = txn.getDemoArea();
+        if (StringUtils.isNotBlank(memo)) {
+            for (String part : memo.split("\\s+")) {
+                if (part.length() >= 4 && joined.contains(part)) {
+                    score += 2;
+                    break;
+                }
+            }
+        }
+        return score;
+    }
+
     private record MatchCandidate(int score, int rowIdx, int txnIdx) {
+    }
+
+    private String txnMatchKey(Transaction txn) {
+        if (txn == null || txn.getTransactionDate() == null) {
+            return null;
+        }
+        String date = new SimpleDateFormat("yyyy-MM-dd").format(txn.getTransactionDate());
+        String amount = txnSignedAmountKey(txn);
+        if (StringUtils.isBlank(amount)) {
+            return null;
+        }
+        return date + "|" + amount;
+    }
+
+    private String rowMatchKey(String[] row) {
+        if (row == null || row.length == 0) {
+            return null;
+        }
+        String date = firstStrictDateCell(row);
+        if (StringUtils.isBlank(date)) {
+            return null;
+        }
+        String dualColumnKey = dualColumnRowMatchKey(row, date);
+        if (dualColumnKey != null) {
+            return dualColumnKey;
+        }
+        String primaryAmount = extractPrimaryAmountCell(row);
+        if (StringUtils.isBlank(primaryAmount)) {
+            return null;
+        }
+        try {
+            double signed = Double.parseDouble(primaryAmount.replace(",", "").trim());
+            if (Math.abs(signed) < 0.001) {
+                return null;
+            }
+            return date + "|" + signedAmountKey(signed);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /** CRBANK-style CSV: date, channel, income, expense, balance, ... */
+    private String dualColumnRowMatchKey(String[] row, String date) {
+        if (row.length < 4 || !date.equals(normalizeDateToken(StringUtils.trimToEmpty(row[0])))) {
+            return null;
+        }
+        if (isCurrencyCell(row[1])) {
+            return null;
+        }
+        if (!isNumericAmountCell(row[2]) || !isNumericAmountCell(row[3])) {
+            return null;
+        }
+        try {
+            double income = Double.parseDouble(row[2].replace(",", "").trim());
+            double expense = Double.parseDouble(row[3].replace(",", "").trim());
+            if (income > 0.001) {
+                return date + "|" + signedAmountKey(income);
+            }
+            if (expense > 0.001) {
+                return date + "|" + signedAmountKey(-expense);
+            }
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+        return null;
+    }
+
+    private String txnSignedAmountKey(Transaction txn) {
+        double income = txn.getIncomeMoney() == null ? 0.0 : Math.max(0.0, txn.getIncomeMoney());
+        double expense = txn.getExpenseAmount() == null ? 0.0 : Math.max(0.0, txn.getExpenseAmount());
+        if (expense <= 0.0 && txn.getBalanceMoney() != null && txn.getBalanceMoney() > 0) {
+            expense = txn.getBalanceMoney();
+        }
+        if (income > 0.001) {
+            return signedAmountKey(income);
+        }
+        if (expense > 0.001) {
+            return signedAmountKey(-expense);
+        }
+        return "";
+    }
+
+    private String signedAmountKey(double amount) {
+        return String.format(Locale.ROOT, "%.2f", amount);
+    }
+
+    private String firstStrictDateCell(String[] row) {
+        for (String cell : row) {
+            String normalized = normalizeDateToken(StringUtils.trimToEmpty(cell));
+            if (STRICT_DATE.matcher(normalized).matches()) {
+                return normalized;
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Transaction amount only — never use balance column (e.g. 49,494.31), which collides with other txns.
+     */
+    private String extractPrimaryAmountCell(String[] row) {
+        if (row == null || row.length < 2) {
+            return "";
+        }
+        int dateIdx = -1;
+        for (int i = 0; i < row.length; i++) {
+            String normalized = normalizeDateToken(StringUtils.trimToEmpty(row[i]));
+            if (STRICT_DATE.matcher(normalized).matches()) {
+                dateIdx = i;
+                break;
+            }
+        }
+        if (dateIdx < 0) {
+            return "";
+        }
+        if (dateIdx == 0 && row.length >= 4 && !isCurrencyCell(row[1])
+                && isNumericAmountCell(row[2]) && isNumericAmountCell(row[3])) {
+            try {
+                double income = Double.parseDouble(row[2].replace(",", "").trim());
+                double expense = Double.parseDouble(row[3].replace(",", "").trim());
+                if (Math.abs(income) >= 0.001) {
+                    return row[2];
+                }
+                if (Math.abs(expense) >= 0.001) {
+                    return row[3];
+                }
+            } catch (NumberFormatException ignore) {
+                // fall through
+            }
+        }
+        for (int i = dateIdx + 1; i < row.length; i++) {
+            if (isCurrencyCell(row[i]) && i + 1 < row.length && isAmountCell(row[i + 1])) {
+                return StringUtils.trimToEmpty(row[i + 1]);
+            }
+        }
+        for (int i = dateIdx + 1; i < row.length; i++) {
+            if (isAmountCell(row[i])) {
+                return StringUtils.trimToEmpty(row[i]);
+            }
+        }
+        return "";
+    }
+
+    private boolean isCurrencyCell(String cell) {
+        return StringUtils.isNotBlank(cell) && CURRENCY_TOKEN.matcher(cell.trim()).matches();
+    }
+
+    private boolean isNumericAmountCell(String cell) {
+        if (StringUtils.isBlank(cell)) {
+            return false;
+        }
+        String normalized = cell.replace(",", "").trim();
+        try {
+            Double.parseDouble(normalized);
+            return true;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
+    }
+
+    private boolean isAmountCell(String cell) {
+        if (!isNumericAmountCell(cell)) {
+            return false;
+        }
+        try {
+            return Math.abs(Double.parseDouble(cell.replace(",", "").trim())) >= 0.001;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     private int rowMatchScore(String[] row, Transaction txn) {
@@ -227,14 +471,12 @@ public class StatementSkippedLinesService {
             score += 10;
         }
 
-        double income = txn.getIncomeMoney() == null ? 0.0 : Math.max(0.0, txn.getIncomeMoney());
-        double expense = txn.getBalanceMoney() == null ? 0.0 : Math.max(0.0, txn.getBalanceMoney());
-        boolean rowHasAmount = hasAmountToken(joined);
-
-        if (rowAmountMatchesTxn(joined, row, income, expense)) {
-            return score + 100;
+        String rowKey = rowMatchKey(row);
+        String txnKey = txnMatchKey(txn);
+        if (rowKey != null && rowKey.equals(txnKey)) {
+            return score + 100 + rowDetailScore(joined, row, txn);
         }
-        if (rowHasAmount) {
+        if (StringUtils.isNotBlank(extractPrimaryAmountCell(row))) {
             return 0;
         }
         if (StringUtils.isNotBlank(txn.getTransactionDesc()) && joined.contains(txn.getTransactionDesc().trim())) {
@@ -243,46 +485,7 @@ public class StatementSkippedLinesService {
         if (StringUtils.isNotBlank(txn.getOpponentName()) && joined.contains(txn.getOpponentName().trim())) {
             score += 3;
         }
-        String memo = txn.getDemoArea();
-        if (StringUtils.isNotBlank(memo)) {
-            for (String part : memo.split("\\s+")) {
-                if (part.length() >= 4 && joined.contains(part)) {
-                    score += 2;
-                    break;
-                }
-            }
-        }
         return score >= 10 ? score : 0;
-    }
-
-    private boolean rowAmountMatchesTxn(String joined, String[] row, double income, double expense) {
-        if (income > 0 && amountPresentInText(joined, income)) {
-            return true;
-        }
-        if (expense > 0 && amountPresentInText(joined, expense)) {
-            return true;
-        }
-        if (row == null) {
-            return false;
-        }
-        for (String cell : row) {
-            if (cellAmountMatches(cell, income) || cellAmountMatches(cell, expense)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean cellAmountMatches(String cell, double amount) {
-        if (amount <= 0 || StringUtils.isBlank(cell)) {
-            return false;
-        }
-        try {
-            double cellVal = Double.parseDouble(cell.replace(",", "").trim());
-            return Math.abs(Math.abs(cellVal) - amount) < 0.015;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
     }
 
     /** Continuation rows (no date) are merged by CMB importer into the previous line — not parse failures. */
@@ -299,28 +502,6 @@ public class StatementSkippedLinesService {
                 consumed.add(i);
             }
         }
-    }
-
-    private boolean amountPresentInText(String text, double amount) {
-        if (amount <= 0) {
-            return false;
-        }
-        String normalized = text.replace(",", "");
-        double abs = Math.abs(amount);
-        String[] candidates = {
-                String.format(Locale.ROOT, "%.2f", abs),
-                String.format(Locale.ROOT, "-%.2f", abs),
-                String.format(Locale.ROOT, "%.2f", amount),
-                String.format(Locale.ROOT, "%.2f", -amount),
-                new DecimalFormat("0.##").format(abs),
-                "-" + new DecimalFormat("0.##").format(abs),
-        };
-        for (String c : candidates) {
-            if (StringUtils.isNotBlank(c) && normalized.contains(c)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String classifySkipReason(String[] row, String raw, String bankCode, String cardType) {

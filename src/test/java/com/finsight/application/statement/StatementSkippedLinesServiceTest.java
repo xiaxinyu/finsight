@@ -4,11 +4,8 @@ import com.finsight.domain.model.Statement;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StatementSkippedLinesServiceTest {
@@ -16,7 +13,7 @@ class StatementSkippedLinesServiceTest {
     private final StatementSkippedLinesService service = new StatementSkippedLinesService();
 
     @Test
-    void analyze_marksHeaderAndNoiseAsSkipped() {
+    void analyze_marksHeaderAndNoiseAsIgnoredNotSkipped() {
         Statement statement = new Statement();
         statement.setSource("CRBANK");
         statement.setFileName("crbank.csv");
@@ -28,21 +25,11 @@ class StatementSkippedLinesServiceTest {
                 "2025-10-02,ATM,500.00,0,1500.00,工资,公司,622201,上海"
         ));
 
-        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
-        Set<String> reasons = skipped.stream().map(SkippedImportRow::getReason).collect(Collectors.toSet());
-
-        assertFalse(skipped.isEmpty());
-        assertTrue(reasons.stream().anyMatch(r -> r.contains("metadata") || r.contains("header") || r.contains("Preamble")));
-        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("2025-10-01")));
-        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("2025-10-02")));
-        SkippedImportRow header = skipped.stream()
-                .filter(r -> r.getReason().contains("header"))
-                .findFirst()
-                .orElse(null);
-        assertTrue(header != null);
-        assertTrue(header.getFileLineNumber() > 0);
-        assertTrue(header.getColumns() != null && !header.getColumns().isEmpty());
-        assertTrue(header.getHint() != null && header.getHint().contains("columns="));
+        ImportLineStats stats = service.summarize(statement, "debit", 2);
+        assertTrue(stats.skipped() == 0);
+        assertTrue(stats.ignored() > 0);
+        assertTrue(stats.skippedRows().stream().noneMatch(r -> r.getRawText().contains("2025-10-01")));
+        assertTrue(stats.skippedRows().stream().noneMatch(r -> r.getRawText().contains("2025-10-02")));
     }
 
     @Test
@@ -157,6 +144,22 @@ class StatementSkippedLinesServiceTest {
         List<SkippedImportRow> skipped = service.analyze(statement, "debit");
         assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("48,333.30")));
         assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("75,000.30")));
+    }
+
+    @Test
+    void analyze_balanceColumnDoesNotStealTxnMatch() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-05-26 CNY -3.00 49,494.31 快捷支付 深圳市地铁相关运营主体",
+                "2025-05-27 CNY 49,494.31 100,000.00 行内转账转入 某人"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("深圳市地铁")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("-3.00")));
     }
 
     @Test
