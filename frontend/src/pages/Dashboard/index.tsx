@@ -301,15 +301,15 @@ export function DashboardPage() {
                     <span>Cashflow report</span>
                     <small>Monthly surplus & deficit months</small>
                   </Link>
-                  <Link to="/reports/income-vs-expense" className="fs-dash-shortcut">
+                  <Link to="/reports/spending-drift" className="fs-dash-shortcut">
                     <RiseOutlined />
-                    <span>Income vs expense</span>
-                    <small>Period comparison</small>
+                    <span>Spending drift</span>
+                    <small>Period-over-period</small>
                   </Link>
-                  <Link to="/reports/category" className="fs-dash-shortcut">
+                  <Link to="/reports/budget-vs-actual" className="fs-dash-shortcut">
                     <FallOutlined />
-                    <span>Category drill-down</span>
-                    <small>Filter by card & category</small>
+                    <span>Budget vs actual</span>
+                    <small>Utilization by bucket</small>
                   </Link>
                   <Link to="/wealth" className="fs-dash-shortcut">
                     <LineChartOutlined />

@@ -269,7 +269,7 @@ export function TransactionsPage() {
       {
         title: <TableHeader name="Date" />,
         dataIndex: 'transactionDate',
-        width: 96,
+        width: 88,
         sorter: true,
         editable: () => true,
         valueType: 'date',
@@ -287,7 +287,7 @@ export function TransactionsPage() {
       {
         title: <TableHeader name="Type" />,
         dataIndex: 'txnKind',
-        width: 88,
+        width: 76,
         editable: () => true,
         valueType: 'select',
         valueEnum: {
@@ -300,7 +300,7 @@ export function TransactionsPage() {
       {
         title: <TableHeader name="Amount" unit="CNY" />,
         dataIndex: 'editAmount',
-        width: 116,
+        width: 108,
         align: 'right',
         sorter: true,
         editable: () => true,
@@ -313,7 +313,7 @@ export function TransactionsPage() {
       {
         title: <TableHeader name="Card" />,
         dataIndex: 'bankCode',
-        width: 112,
+        width: 100,
         ellipsis: true,
         editable: false,
         render: (_, r) => <TransactionCardCell row={r} />,
@@ -321,7 +321,7 @@ export function TransactionsPage() {
       {
         title: '',
         valueType: 'option',
-        width: 72,
+        width: 64,
         fixed: 'right',
         className: 'fs-col-actions',
         render: (_, record, __, action) => (
@@ -403,7 +403,7 @@ export function TransactionsPage() {
   return (
     <DataPageLayout
       title="Transactions"
-      subtitle={`Ledger for ${periodLabel} · double-click a row to edit`}
+      subtitle={periodLabel}
       icon={<UnorderedListOutlined />}
       className={`fs-data-page--dense fs-data-page--fill fs-data-page--transactions${editableKeys.length > 0 ? ' fs-data-page--editing' : ''}`}
       toolbar={(
@@ -485,16 +485,20 @@ export function TransactionsPage() {
           </Space>
         </div>
       )}
-      <div ref={tablePanelRef} className="fs-table-panel fs-table-panel--editable fs-table-panel--transactions">
+      <div
+        ref={tablePanelRef}
+        className={`fs-table-panel fs-table-panel--editable fs-table-panel--transactions fs-table-panel--tx-overlay${selectedRowKeys.length > 0 ? ' fs-table-panel--has-selection' : ''}`}
+      >
         <ProTable<TransactionRow>
-          className="fs-data-table fs-data-table--transactions"
+          className="fs-data-table fs-data-table--transactions fs-data-table--compact"
           actionRef={actionRef}
           rowKey="id"
           size="small"
           scroll={{ x: 'max-content', y: tableHeight }}
           search={false}
           loading={tableLoading}
-          options={{ density: true, reload: () => reload(), setting: true }}
+          options={{ density: true, reload: () => reload(), setting: true, fullScreen: false }}
+          tableAlertRender={false}
           rowSelection={{
             selectedRowKeys,
             onChange: (keys, rows) => {
@@ -557,12 +561,18 @@ export function TransactionsPage() {
               </div>,
             ],
           }}
-          pagination={{ defaultPageSize: 20, showSizeChanger: true, size: 'small', showTotal: (t) => `${t.toLocaleString()} transactions` }}
+          pagination={{
+            defaultPageSize: 50,
+            pageSizeOptions: [20, 50, 100, 200],
+            showSizeChanger: true,
+            size: 'small',
+            showTotal: (t) => `${t.toLocaleString()} txns`,
+          }}
         />
+        <TransactionSelectionBar count={selectedRowKeys.length} disabled={disabled} onClear={clearSelection}>
+          {batchActions}
+        </TransactionSelectionBar>
       </div>
-      <TransactionSelectionBar count={selectedRowKeys.length} disabled={disabled} onClear={clearSelection}>
-        {batchActions}
-      </TransactionSelectionBar>
       <Modal title="Mark as transfer" open={transferOpen} onOk={markTransfer} onCancel={() => setTransferOpen(false)}>
         Pair two transactions as an internal transfer (excluded from income/expense reports).
         {selectedRows.length === 2 && (

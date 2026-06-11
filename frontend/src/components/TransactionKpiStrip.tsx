@@ -11,6 +11,8 @@ export type TransactionKpiStripProps = {
   loading?: boolean
   onUnclassifiedClick?: () => void
   unclassifiedActive?: boolean
+  /** cards = grid tiles; compact = single-line strip (max table space) */
+  variant?: 'cards' | 'compact'
 }
 
 type KpiCardProps = {
@@ -42,6 +44,35 @@ function savingsRate(income: number, net: number): string {
   return `${((net / income) * 100).toFixed(1)}%`
 }
 
+function InlineStat({
+  label,
+  value,
+  tone,
+  active,
+  onClick,
+  title,
+}: {
+  label: string
+  value: string
+  tone?: 'income' | 'expense' | 'warn' | 'default'
+  active?: boolean
+  onClick?: () => void
+  title?: string
+}) {
+  const Tag = onClick ? 'button' : 'span'
+  return (
+    <Tag
+      type={onClick ? 'button' : undefined}
+      className={`fs-tx-kpi-inline${tone && tone !== 'default' ? ` fs-tx-kpi-inline--${tone}` : ''}${active ? ' fs-tx-kpi-inline--active' : ''}${onClick ? ' fs-tx-kpi-inline--clickable' : ''}`}
+      onClick={onClick}
+      title={title}
+    >
+      <span className="fs-tx-kpi-inline-value">{value}</span>
+      <span className="fs-tx-kpi-inline-label">{label}</span>
+    </Tag>
+  )
+}
+
 export function TransactionKpiStrip({
   total = 0,
   income = 0,
@@ -53,10 +84,51 @@ export function TransactionKpiStrip({
   loading = false,
   onUnclassifiedClick,
   unclassifiedActive = false,
+  variant = 'compact',
 }: TransactionKpiStripProps) {
   const busy = loading
   const netTone = net >= 0 ? 'income' : 'expense'
   const avgExpense = total > transfers ? expense / Math.max(1, total - transfers) : 0
+
+  if (variant === 'compact') {
+    return (
+      <div className="fs-tx-kpi-strip fs-tx-kpi-strip--compact">
+        <InlineStat
+          label={truncated ? 'Txns*' : 'Txns'}
+          value={busy ? '…' : String(total)}
+          title={truncated ? 'Partial count for current filters' : undefined}
+        />
+        <span className="fs-tx-kpi-inline-sep" aria-hidden />
+        <InlineStat label="In" value={busy ? '…' : formatMoney(income)} tone="income" title="Income" />
+        <span className="fs-tx-kpi-inline-sep" aria-hidden />
+        <InlineStat label="Out" value={busy ? '…' : formatMoney(expense)} tone="expense" title="Expense" />
+        <span className="fs-tx-kpi-inline-sep" aria-hidden />
+        <InlineStat label="Net" value={busy ? '…' : formatMoney(net)} tone={netTone} />
+        <span className="fs-tx-kpi-inline-sep" aria-hidden />
+        <InlineStat
+          label="Save"
+          value={busy ? '…' : savingsRate(income, net)}
+          tone={netTone}
+          title="Savings rate"
+        />
+        <span className="fs-tx-kpi-inline-sep" aria-hidden />
+        <InlineStat
+          label="Avg"
+          value={busy ? '…' : formatMoney(avgExpense)}
+          title="Avg spend per non-transfer txn"
+        />
+        <span className="fs-tx-kpi-inline-sep" aria-hidden />
+        <InlineStat
+          label="Uncls"
+          value={busy ? '…' : String(unclassified)}
+          tone={unclassified > 0 ? 'warn' : 'default'}
+          active={unclassifiedActive}
+          onClick={onUnclassifiedClick}
+          title="Unclassified — click to filter"
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="fs-tx-kpi-strip">
