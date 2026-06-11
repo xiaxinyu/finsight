@@ -42,6 +42,7 @@ public class SchemaMigrationVerificationService {
         out.put("blankPatternRuleRows", countBlankPatternRules());
         out.put("archivedConsumeCategory", tableExists("_archive_consume_category"));
         out.put("archivedConsumeRule", tableExists("_archive_consume_rule"));
+        out.put("leftoverLegacyTables", listLeftoverLegacyTables());
 
         Double income = jdbcTemplate.queryForObject(
                 "select coalesce(sum(income_money),0) from transaction where coalesce(deleted,0)=0",
@@ -126,5 +127,19 @@ public class SchemaMigrationVerificationService {
                 Integer.class,
                 table);
         return n != null && n > 0;
+    }
+
+    private List<String> listLeftoverLegacyTables() {
+        List<String> leftovers = new ArrayList<>();
+        for (String table : List.of(
+                "_deprecated_medical", "_deprecated_endowment", "_deprecated_accumulation",
+                "_deprecated_unemployment", "_deprecated_bank_card",
+                "auth_user", "django_migrations", "deposit", "CREDIT", "card",
+                "medical", "endowment", "accumulation", "unemployment")) {
+            if (tableExists(table)) {
+                leftovers.add(table);
+            }
+        }
+        return leftovers;
     }
 }

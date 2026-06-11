@@ -3,7 +3,7 @@ package com.finsight.domain.model;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@TableName("unemployment")
+@TableName("ben_contribution")
 public class UnEmployment extends Base {
     private static final long serialVersionUID = 1L;
     private String unitNo;

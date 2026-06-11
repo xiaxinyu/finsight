@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 /**
  * Created by Summer.Xia on 10/8/2015.
  */
-@TableName("endowment")
+@TableName("ben_contribution")
 public class Endowment extends Base {
     private static final long serialVersionUID = 1L;
     private String unitNo;

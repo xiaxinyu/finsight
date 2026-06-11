@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 /**
  * Created by Summer.Xia on 10/13/2015.
  */
-@TableName("medical")
+@TableName("ben_contribution")
 public class Medical extends Base {
     private static final long serialVersionUID = 1L;
     private String unitNo;

@@ -1,6 +1,8 @@
 # Schema & rule engine regression checklist
 
-After Flyway V11+ migrations:
+Unused-table cleanup is **manual** only: `scripts/db/cleanup-unused-tables.sql` (not on app startup).
+
+After Flyway migrate:
 
 1. `mvn clean package`
 2. `mvn checkstyle:check`

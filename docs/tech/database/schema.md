@@ -36,7 +36,7 @@ See also: [table-usage.md](table-usage.md), [legacy-mapping.md](legacy-mapping.m
 | `fs_user` / `fs_role` / `fs_user_role` | auth | Login & RBAC |
 | `ben_contribution` | ben | Social insurance (legacy APIs write here) |
 | `house_rent` | legacy | Rent listing API |
-| `card` | legacy | VIEW over `fin_bank_account` after V16 |
+| `fin_bank_account` | fin | Canonical bank cards（legacy `card` 可手动删，见 `scripts/db/cleanup-unused-tables.sql`） |
 
 ## Archived (renamed, not dropped)
 
