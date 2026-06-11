@@ -26,6 +26,7 @@ public class DecisionTreeClassifier {
     private final Map<String, List<RuleEntry>> tokenIndex = new ConcurrentHashMap<>();
     private volatile List<RuleEntry> regexEntries = new ArrayList<>();
     private volatile List<RuleEntry> containsPhrases = new ArrayList<>();
+    private volatile List<RuleEntry> startswithPhrases = new ArrayList<>();
 
     public void reload(){
         rules = ruleService.listActive();
@@ -33,6 +34,7 @@ public class DecisionTreeClassifier {
         tokenIndex.clear();
         regexEntries = new ArrayList<>();
         containsPhrases = new ArrayList<>();
+        startswithPhrases = new ArrayList<>();
         categoryMap.clear();
         for (ConsumeCategory c : categoryService.listAll()){
             if (c == null) continue;
@@ -86,6 +88,13 @@ public class DecisionTreeClassifier {
                 equalsIndex.computeIfAbsent(pat, k -> new ArrayList<>()).add(e);
             } else if ("regex".equals(type)){
                 try{ e.compiled = Pattern.compile(pat); regexEntries.add(e); }catch(Exception ignore){}
+            } else if ("startswith".equals(type)) {
+                startswithPhrases.add(e);
+                for (String t : splitTokens(pat)) {
+                    if (StringUtils.hasText(t)) {
+                        tokenIndex.computeIfAbsent(t, k -> new ArrayList<>()).add(e);
+                    }
+                }
             } else {
                 containsPhrases.add(e);
                 for(String t : splitTokens(pat)){
@@ -99,7 +108,7 @@ public class DecisionTreeClassifier {
 
     public Result classify(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate){
         if (rules == null) reload();
-        String text = normalize(narration);
+        String text = normalize(ClassificationTextNormalizer.expand(narration));
         if (!StringUtils.hasText(text)) return null;
         String b = s(bankCode).toLowerCase();
         String c = s(cardTypeCode).toLowerCase();
@@ -144,7 +153,19 @@ public class DecisionTreeClassifier {
         }
         if (bestContains != null) return toResult(bestContains);
 
-        Set<String> tokenSet = tokenizeSet(narration);
+        RuleEntry bestStartsWith = null;
+        for (RuleEntry e : startswithPhrases) {
+            if (!matchContext(e, b, c, amount, txnDate)) continue;
+            String p = normalize(e.pattern);
+            if (StringUtils.hasText(p) && (text.startsWith(p) || text.contains(" " + p))) {
+                if (bestStartsWith == null || betterThan(e, bestStartsWith)) {
+                    bestStartsWith = e;
+                }
+            }
+        }
+        if (bestStartsWith != null) return toResult(bestStartsWith);
+
+        Set<String> tokenSet = tokenizeSet(ClassificationTextNormalizer.expand(narration));
         Map<String, Integer> scores = new HashMap<>();
         Map<String, Integer> hits = new HashMap<>();
         Map<String, Integer> strongHits = new HashMap<>();
@@ -235,6 +256,9 @@ public class DecisionTreeClassifier {
         }
         if ("regex".equals(t)) {
             return 80;
+        }
+        if ("startswith".equals(t)) {
+            return 70;
         }
         return 40;
     }
@@ -467,7 +491,8 @@ public class DecisionTreeClassifier {
 
     public List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate, int topN){
         if (rules == null) reload();
-        String text = normalize(narration);
+        String expanded = ClassificationTextNormalizer.expand(narration);
+        String text = normalize(expanded);
         if (!StringUtils.hasText(text)) return java.util.Collections.emptyList();
         String b = s(bankCode).toLowerCase();
         String c = s(cardTypeCode).toLowerCase();
@@ -520,8 +545,21 @@ public class DecisionTreeClassifier {
             }catch(Exception ignore){}
         }
 
+        for (RuleEntry e : startswithPhrases) {
+            if (!matchContext(e, b, c, amount, txnDate)) continue;
+            String p = normalize(e.pattern);
+            if (StringUtils.hasText(p) && (text.startsWith(p) || text.contains(" " + p))) {
+                int sc = scoreFor(e);
+                int ps = aggScore.getOrDefault(e.categoryId, 0);
+                int pp = aggPriority.getOrDefault(e.categoryId, Integer.MAX_VALUE);
+                aggScore.put(e.categoryId, Math.max(ps, sc));
+                aggPriority.put(e.categoryId, Math.min(pp, e.priority));
+                strongCats.add(e.categoryId);
+            }
+        }
+
         Set<String> seen = new HashSet<>();
-        Set<String> tokenSet = tokenizeSet(narration);
+        Set<String> tokenSet = tokenizeSet(expanded);
         for(Map.Entry<String,List<RuleEntry>> en : tokenIndex.entrySet()){
             String token = en.getKey();
             if(seen.contains(token)) continue;
@@ -570,7 +608,7 @@ public class DecisionTreeClassifier {
     }
  
     public List<String> tokens(String text){
-        String input = text == null ? "" : text;
+        String input = ClassificationTextNormalizer.expand(text == null ? "" : text);
         java.util.Set<String> set = tokenizeSet(input);
         List<String> list = new ArrayList<>(set == null ? java.util.Collections.emptyList() : set);
         list.sort((a,b) -> {

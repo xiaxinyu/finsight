@@ -10,7 +10,7 @@ import { createTransfer } from '../../api/finance'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
-  classifyTransactions, parseReclassifyResult, deleteTransaction, expenseToIncome,
+  classifyTransactions, classifyUnclassifiedInFilter, parseReclassifyResult, deleteTransaction, expenseToIncome,
   fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
@@ -394,9 +394,16 @@ export function TransactionsPage() {
       <Button size="small" disabled={disabled || selectedRowKeys.length !== 2} icon={<SwapOutlined />} onClick={() => setTransferOpen(true)}>Mark transfer</Button>
       <Button size="small" danger disabled={disabled} icon={<DeleteOutlined />} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
       <Button size="small" disabled={disabled} icon={<ThunderboltOutlined />} onClick={async () => {
-        if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
         try {
-          const raw = await classifyTransactions(selectedRowKeys.join(','), { persist: true })
+          let raw
+          if (selectedRowKeys.length) {
+            raw = await classifyTransactions(selectedRowKeys.join(','), { persist: true })
+          } else if (applied.unclassified) {
+            raw = await classifyUnclassifiedInFilter(statsParams)
+          } else {
+            message.warning('Select rows, or filter Unclassified and click again')
+            return
+          }
           const r = parseReclassifyResult(raw)
           const detail = r
             ? `Applied ${r.classified}, skipped ${r.skipped}${r.noMatch ? `, no match ${r.noMatch}` : ''}`

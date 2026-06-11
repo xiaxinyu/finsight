@@ -132,6 +132,19 @@ export async function classifyTransactions(ids: string, options?: { persist?: bo
   return postCommon(`/transaction/classify?${params.toString()}`, {})
 }
 
+/** Auto-classify all unclassified rows matching the current list filters (max 5000). */
+export async function classifyUnclassifiedInFilter(filters: TransactionQuery) {
+  const params = new URLSearchParams()
+  params.set('scope', 'unclassified')
+  params.set('persist', 'true')
+  for (const [key, value] of Object.entries(filters)) {
+    if (value != null && value !== '') {
+      params.set(key, String(value))
+    }
+  }
+  return postCommon(`/transaction/classify?${params.toString()}`, {})
+}
+
 export function parseReclassifyResult(raw: unknown): ReclassifyResult | null {
   if (!raw || typeof raw !== 'object') return null
   const outer = raw as { data?: string; success?: boolean }

@@ -3,16 +3,22 @@ package com.finsight.application.transaction;
 import com.finsight.application.card.BankCardService;
 import com.finsight.application.consume.ClassificationNarrationBuilder;
 import com.finsight.application.consume.ClassificationService;
+import com.finsight.application.query.TransactionQuery;
+import com.finsight.application.query.TransactionQueryAssembler;
 import com.finsight.application.support.TransactionIdList;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.BankCard;
+import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.port.TransactionRepository;
+import com.finsight.web.api.dto.TransactionParam;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Re-runs the rule engine against ledger rows. Defaults are conservative: only unclassified rows,
@@ -20,6 +26,8 @@ import java.util.List;
  */
 @Service
 public class TransactionReclassificationService {
+
+    private static final int BATCH_CAP = 5000;
 
     private final TransactionRepository transactionRepository;
     private final ClassificationService classificationService;
@@ -81,6 +89,30 @@ public class TransactionReclassificationService {
             }
         }
         return result;
+    }
+
+    /**
+     * Re-runs the rule engine on unclassified rows matching list filters (date, card, keyword, etc.).
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public TransactionReclassificationResult reclassifyUnclassified(TransactionParam param,
+                                                                    boolean persist,
+                                                                    boolean useOtherFallback,
+                                                                    String userName) throws AppServiceException {
+        TransactionQuery q = TransactionQueryAssembler.from(param);
+        q.setEmptyConsume(Boolean.TRUE);
+        Page page = new Page(1, BATCH_CAP);
+        List<Transaction> list = transactionRepository.getTransactions(q, page);
+        String ids = list.stream()
+                .map(Transaction::getId)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.joining(","));
+        if (StringUtils.isBlank(ids)) {
+            TransactionReclassificationResult empty = new TransactionReclassificationResult();
+            empty.setDryRun(!persist);
+            return empty;
+        }
+        return reclassify(ids, persist, false, useOtherFallback, userName);
     }
 
     private ClassificationService.Result resolveCategory(Transaction tx, boolean useOtherFallback) {

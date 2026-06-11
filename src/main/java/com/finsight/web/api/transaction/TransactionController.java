@@ -115,14 +115,21 @@ public class TransactionController extends ControllerHelper {
     @RequestMapping("/transaction/classify")
     @ResponseBody
     public CommonResult classifyTransaction(
+            TransactionParam param,
             Transaction transaction,
             @RequestParam(value = "ids", required = false) String ids,
+            @RequestParam(value = "scope", required = false) String scope,
             @RequestParam(value = "persist", required = false, defaultValue = "false") boolean persist,
             @RequestParam(value = "overrideExisting", required = false, defaultValue = "false") boolean overrideExisting,
             @RequestParam(value = "useOtherFallback", required = false, defaultValue = "false") boolean useOtherFallback,
             @RequestParam(value = "bankCode", required = false) String bankCode,
             @RequestParam(value = "cardTypeCode", required = false) String cardTypeCode) {
         return runCommon(logger, "classify transaction", () -> {
+            if ("unclassified".equalsIgnoreCase(StringUtils.trimToEmpty(scope))) {
+                TransactionReclassificationResult result = transactionReclassificationService.reclassifyUnclassified(
+                        param, persist, useOtherFallback, authenticationFacade.getUserName());
+                return CommonResult.success(JSON.toJSONString(result));
+            }
             if (StringUtils.isNotBlank(ids)) {
                 TransactionReclassificationResult result = transactionReclassificationService.reclassify(
                         ids, persist, overrideExisting, useOtherFallback, authenticationFacade.getUserName());
