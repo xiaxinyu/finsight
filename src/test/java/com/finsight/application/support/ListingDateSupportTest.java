@@ -9,6 +9,7 @@ import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ListingDateSupportTest {
@@ -38,6 +39,13 @@ class ListingDateSupportTest {
         assertNotNull(range[1]);
         assertEquals("2025-03-01", format(range[0]));
         assertEquals("2025-03-31", format(range[1]));
+    }
+
+    @Test
+    void parseMmDdYyyyOrNull_returnsNullBoundsWhenBothBlank() throws Exception {
+        Date[] range = ListingDateSupport.parseMmDdYyyyOrNull("", "");
+        assertNull(range[0]);
+        assertNull(range[1]);
     }
 
     @Test

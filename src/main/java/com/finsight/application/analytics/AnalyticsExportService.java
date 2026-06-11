@@ -21,19 +21,30 @@ public class AnalyticsExportService {
 
     public List<Map<String, Object>> exportRows(String startStr, String endStr, int limit) throws AppServiceException {
         int cap = limit <= 0 ? 5000 : Math.min(limit, 20000);
-        Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
+        Date[] range = ListingDateSupport.parseMmDdYyyyOrNull(
                 StringUtils.defaultIfBlank(startStr, ""),
                 StringUtils.defaultIfBlank(endStr, ""));
+        if (range[0] != null && range[1] != null) {
+            String sql = """
+                    SELECT txn_date, direction, amount, category_code, category_name,
+                           category_l1_code, category_l1_name, bank_code, card_type_code,
+                           transaction_desc, opponent_name, memo, is_transfer, statement_id
+                    FROM v_transaction_analytics
+                    WHERE txn_date >= ? AND txn_date <= ?
+                    ORDER BY txn_date DESC, amount DESC
+                    LIMIT ?
+                    """;
+            return jdbcTemplate.queryForList(sql, range[0], range[1], cap);
+        }
         String sql = """
                 SELECT txn_date, direction, amount, category_code, category_name,
                        category_l1_code, category_l1_name, bank_code, card_type_code,
                        transaction_desc, opponent_name, memo, is_transfer, statement_id
                 FROM v_transaction_analytics
-                WHERE txn_date >= ? AND txn_date <= ?
                 ORDER BY txn_date DESC, amount DESC
                 LIMIT ?
                 """;
-        return jdbcTemplate.queryForList(sql, range[0], range[1], cap);
+        return jdbcTemplate.queryForList(sql, cap);
     }
 
     public String toCsv(List<Map<String, Object>> rows) {

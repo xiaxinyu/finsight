@@ -4,12 +4,17 @@ import quarterOfYear from 'dayjs/plugin/quarterOfYear'
 dayjs.extend(quarterOfYear)
 
 export type PeriodRange = [Dayjs, Dayjs]
+/** Sentinel range for “no date filter” — never sent to the API as literal bounds. */
+export const ALL_TIME_PERIOD: PeriodRange = [dayjs('1900-01-01'), dayjs('1900-01-01')]
+
 export type PeriodPresetId =
+  | 'allTime'
   | 'last7'
   | 'last30'
   | 'thisMonth'
   | 'thisQuarter'
   | 'thisYear'
+  | 'lastYear'
   | 'lastMonth'
   | 'lastQuarter'
   | 'last3Months'
@@ -55,15 +60,19 @@ export const PERIOD_SECTION_LABELS: Record<PeriodSection, string> = {
 type BuiltinPresetId = Exclude<PeriodPresetId, 'custom'>
 
 export const SECTION_PRESET_IDS: Record<PeriodSection, BuiltinPresetId[]> = {
-  recommended: ['last7', 'thisMonth', 'last12Months'],
+  recommended: ['allTime', 'last7', 'thisMonth', 'last12Months'],
   relative: ['last30'],
   calendar: [
-    'thisQuarter', 'thisYear', 'lastMonth', 'lastQuarter',
+    'thisQuarter', 'thisYear', 'lastYear', 'lastMonth', 'lastQuarter',
     'last3Months', 'last6Months',
   ],
 }
 
 const PRESETS: Record<BuiltinPresetId, PresetDef> = {
+  allTime: {
+    label: 'All time',
+    range: () => ALL_TIME_PERIOD,
+  },
   last7: {
     label: 'Last 7 days',
     range: () => [dayjs().subtract(6, 'day').startOf('day'), endToday()],
@@ -95,6 +104,17 @@ const PRESETS: Record<BuiltinPresetId, PresetDef> = {
       const anchor = range[0].add(dir, 'year')
       const isCurrent = anchor.isSame(dayjs(), 'year')
       return [anchor.startOf('year'), isCurrent ? endToday() : anchor.endOf('year')]
+    },
+  },
+  lastYear: {
+    label: 'Last year',
+    range: () => {
+      const y = dayjs().subtract(1, 'year')
+      return [y.startOf('year'), y.endOf('year')]
+    },
+    shift: (range, dir) => {
+      const anchor = range[0].add(dir, 'year')
+      return [anchor.startOf('year'), anchor.endOf('year')]
     },
   },
   lastMonth: {
@@ -136,7 +156,12 @@ const PRESETS: Record<BuiltinPresetId, PresetDef> = {
   },
 }
 
+export function isAllTimePeriod(range: PeriodRange): boolean {
+  return range[0].isSame(ALL_TIME_PERIOD[0], 'day') && range[1].isSame(ALL_TIME_PERIOD[1], 'day')
+}
+
 export function formatPeriodPreview(start: Dayjs, end: Dayjs): string {
+  if (isAllTimePeriod([start, end])) return 'No date filter'
   if (start.isSame(end, 'month') && start.isSame(end, 'year')) {
     if (start.isSame(start.startOf('month'), 'day') && end.isSame(end.endOf('month'), 'day')) {
       return start.format('MMM YYYY')
@@ -150,7 +175,7 @@ export function formatPeriodPreview(start: Dayjs, end: Dayjs): string {
 }
 
 export function defaultPeriodRange(): PeriodRange {
-  return PRESETS.thisYear.range()
+  return PRESETS.allTime.range()
 }
 
 export function defaultComparePeriodRange(): PeriodRange {
@@ -159,7 +184,7 @@ export function defaultComparePeriodRange(): PeriodRange {
 }
 
 export function presetRange(id: PeriodPresetId): PeriodRange {
-  if (id === 'custom') return defaultPeriodRange()
+  if (id === 'custom') return ALL_TIME_PERIOD
   return PRESETS[id].range()
 }
 
@@ -169,7 +194,9 @@ export function presetLabel(id: PeriodPresetId): string {
 }
 
 export function detectPresetId(range: PeriodRange): PeriodPresetId {
+  if (isAllTimePeriod(range)) return 'allTime'
   for (const id of Object.keys(PRESETS) as BuiltinPresetId[]) {
+    if (id === 'allTime') continue
     const [s, e] = PRESETS[id].range()
     if (s.isSame(range[0], 'day') && e.isSame(range[1], 'day')) {
       return id
@@ -187,6 +214,7 @@ export function presetsForSection(section: PeriodSection): Array<{ id: BuiltinPr
 }
 
 export function shiftPeriod(range: PeriodRange, presetId: PeriodPresetId, dir: -1 | 1): PeriodRange {
+  if (presetId === 'allTime') return range
   if (presetId !== 'custom') {
     const preset = PRESETS[presetId]
     if (preset?.shift) return preset.shift(range, dir)
@@ -195,6 +223,7 @@ export function shiftPeriod(range: PeriodRange, presetId: PeriodPresetId, dir: -
 }
 
 export function periodTriggerLabel(range: PeriodRange, presetId: PeriodPresetId): string {
+  if (presetId === 'allTime' || isAllTimePeriod(range)) return PRESETS.allTime.label
   if (presetId !== 'custom') return PRESETS[presetId].label
   return formatPeriodPreview(range[0], range[1])
 }

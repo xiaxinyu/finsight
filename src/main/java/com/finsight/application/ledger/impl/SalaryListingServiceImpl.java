@@ -29,7 +29,7 @@ public class SalaryListingServiceImpl implements ISalaryListingService {
     @Override
     public CollectionResult<Transaction> listSalaryTransactions(TransactionParam param) throws AppServiceException {
         TransactionQuery q = new TransactionQuery();
-        java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(
+        java.util.Date[] range = ListingDateSupport.parseMmDdYyyyOrNull(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         q.setTransactionDateStart(range[0]);
         q.setTransactionDateEnd(range[1]);

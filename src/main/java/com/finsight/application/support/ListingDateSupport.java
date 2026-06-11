@@ -74,6 +74,22 @@ public final class ListingDateSupport {
     }
 
     /**
+     * Parses date strings when present; when both are blank returns {@code [null, null]} (no date filter).
+     */
+    public static Date[] parseMmDdYyyyOrNull(String transactionDateStartStr, String transactionDateEndStr)
+            throws AppServiceException {
+        Date from = null;
+        Date to = null;
+        if (!StringTool.isNullOrEmpty(transactionDateStartStr)) {
+            from = parseMmDdYyyy(transactionDateStartStr);
+        }
+        if (!StringTool.isNullOrEmpty(transactionDateEndStr)) {
+            to = parseMmDdYyyy(transactionDateEndStr);
+        }
+        return new Date[]{from, to};
+    }
+
+    /**
      * Parses date strings if present; when both are blank returns current calendar year range
      * [yyyy-01-01 00:00:00, yyyy-12-31 23:59:59 (date granularity)].
      */

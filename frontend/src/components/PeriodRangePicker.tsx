@@ -6,6 +6,7 @@ import {
   PERIOD_SECTION_LABELS,
   detectPresetId,
   formatPeriodPreview,
+  isAllTimePeriod,
   periodTriggerLabel,
   presetRange,
   presetsForSection,
@@ -57,7 +58,10 @@ export function PeriodRangePicker({
     () => periodTriggerLabel(value, presetId) || placeholder,
     [value, presetId, placeholder],
   )
-  const preview = useMemo(() => formatPeriodPreview(value[0], value[1]), [value])
+  const preview = useMemo(
+    () => (isAllTimePeriod(value) ? 'No date filter' : formatPeriodPreview(value[0], value[1])),
+    [value],
+  )
   const draftPreview = useMemo(() => {
     if (!draftStart || !draftEnd) return 'Select start and end dates'
     return formatPeriodPreview(draftStart, draftEnd)
@@ -229,10 +233,17 @@ export function PeriodRangePicker({
 }
 
 export function periodFromStrings(start: string, end: string): PeriodRange {
+  if (!start?.trim() && !end?.trim()) {
+    return presetRange('allTime')
+  }
   return [dayjs(start, 'MM/DD/YYYY'), dayjs(end, 'MM/DD/YYYY')]
 }
 
-export function periodToStrings(range: PeriodRange): { start: string; end: string } {
+export function periodToStrings(range: PeriodRange, presetId?: PeriodPresetId): { start: string; end: string } {
+  const id = presetId ?? detectPresetId(range)
+  if (id === 'allTime' || isAllTimePeriod(range)) {
+    return { start: '', end: '' }
+  }
   return {
     start: range[0].format('MM/DD/YYYY'),
     end: range[1].format('MM/DD/YYYY'),

@@ -32,7 +32,7 @@ import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
-import { defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
+import { formatPeriodPreview } from '../../utils/periodPresets'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 
 type TxFilters = {
@@ -82,8 +82,8 @@ export function TransactionsPage() {
   const cardFromUrl = searchParams.get('cardId') || ''
 
   const initial: TxFilters = {
-    start: periodToStrings(defaultPeriodRange()).start,
-    end: periodToStrings(defaultPeriodRange()).end,
+    start: '',
+    end: '',
     card: cardFromUrl,
     consume: '',
     keyword: '',
@@ -129,10 +129,10 @@ export function TransactionsPage() {
     () => periodFromStrings(applied.start, applied.end),
     [applied.start, applied.end],
   )
-  const periodLabel = useMemo(
-    () => formatPeriodPreview(appliedPeriod[0], appliedPeriod[1]),
-    [appliedPeriod],
-  )
+  const periodLabel = useMemo(() => {
+    if (!applied.start && !applied.end) return 'All time'
+    return formatPeriodPreview(appliedPeriod[0], appliedPeriod[1])
+  }, [applied.start, applied.end, appliedPeriod])
 
   const activeFilterChips: ActiveFilterChip[] = useMemo(() => {
     const chips: ActiveFilterChip[] = []
@@ -185,8 +185,8 @@ export function TransactionsPage() {
   }, [])
 
   const statsParams = useMemo(() => ({
-    transactionDateStartStr: applied.start,
-    transactionDateEndStr: applied.end,
+    transactionDateStartStr: applied.start || undefined,
+    transactionDateEndStr: applied.end || undefined,
     cardId: applied.card || undefined,
     consumeID: applied.consume || undefined,
     demoArea: applied.keyword || undefined,
@@ -430,8 +430,8 @@ export function TransactionsPage() {
             size="small"
             disabled={disabled}
             value={periodFromStrings(draft.start, draft.end)}
-            onChange={(range) => {
-              const { start, end } = periodToStrings(range)
+            onChange={(range, presetId) => {
+              const { start, end } = periodToStrings(range, presetId)
               setDraft((f) => ({ ...f, start, end }))
             }}
           />
@@ -537,8 +537,8 @@ export function TransactionsPage() {
               const res = await listTransactions({
                 page: params.current || 1,
                 rows: params.pageSize || 20,
-                transactionDateStartStr: filters.start,
-                transactionDateEndStr: filters.end,
+                transactionDateStartStr: filters.start || undefined,
+                transactionDateEndStr: filters.end || undefined,
                 cardId: filters.card || undefined,
                 consumeID: filters.consume,
                 demoArea: filters.keyword,

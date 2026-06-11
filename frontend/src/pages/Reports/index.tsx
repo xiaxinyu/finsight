@@ -38,8 +38,8 @@ function buildParams(cfg: NonNullable<(typeof reportConfigs)[string]>, f: Report
   if (f.card) p.cardId = f.card
   if (f.consume) p.consumeID = f.consume
   const { start, end } = periodToStrings(f.period)
-  p.transactionDateStartStr = start
-  p.transactionDateEndStr = end
+  if (start) p.transactionDateStartStr = start
+  if (end) p.transactionDateEndStr = end
   return p
 }
 

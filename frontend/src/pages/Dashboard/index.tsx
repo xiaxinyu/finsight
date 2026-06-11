@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import dayjs from 'dayjs'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Alert, Col, Progress, Row, Typography } from 'antd'
@@ -43,16 +44,15 @@ export function DashboardPage() {
 
   const { data: summary, isLoading, isError, error } = useQuery({
     queryKey: ['home-summary', periodKey.start, periodKey.end],
-    queryFn: () => homeSummary(period[0].year(), periodKey),
+    queryFn: () => homeSummary(dayjs().year(), periodKey.start ? periodKey : undefined),
   })
 
   const { data: periodReport, isFetching: totalsLoading } = useQuery({
     queryKey: ['dash-period', periodKey],
     queryFn: async () => {
-      const base = {
-        transactionDateStartStr: periodKey.start,
-        transactionDateEndStr: periodKey.end,
-      }
+      const base: Record<string, string> = {}
+      if (periodKey.start) base.transactionDateStartStr = periodKey.start
+      if (periodKey.end) base.transactionDateEndStr = periodKey.end
       const [inc, exp, cats] = await Promise.all([
         fetchReport('/transaction-report/month-income', { ...base, txnTypes: 'income' }),
         fetchReport('/transaction-report/month-expense', { ...base, txnTypes: 'expense' }),
