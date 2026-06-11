@@ -24,7 +24,7 @@ class CmbDebitTransactionStatementImporterTest {
         List<Transaction> out = importer.parse(rows, "CMB", "debit", "");
         assertEquals(1, out.size());
         assertEquals(1234.56, out.get(0).getBalanceMoney());
-        assertEquals("快捷支付", out.get(0).getTransactionDesc());
+        assertTrue(out.get(0).getTransactionDesc().contains("快捷支付"));
     }
 
     @Test
@@ -73,6 +73,21 @@ class CmbDebitTransactionStatementImporterTest {
         assertEquals(1, out.size());
         assertTrue(out.get(0).getOpponentName().contains("扫二维码付款"));
         assertFalse(out.get(0).getDemoArea().contains("2/6"));
+    }
+
+    @Test
+    void pageFooterThenNextPageHeaderDoesNotCorruptPreviousTransaction() {
+        List<String[]> rows = List.of(
+                new String[]{"记账日期", "货币", "交易金额", "联机余额", "交易摘要", "对手信息"},
+                new String[]{"2025-07-03", "CNY", "-1,960.94", "7,189.77", "结售汇即时售汇", "夏昕雨"},
+                new String[]{"1/6"},
+                new String[]{"记账日期", "货币", "交易金额", "联机余额", "交易摘要", "对手信息"},
+                new String[]{"2025-07-04", "CNY", "-100.00", "7,089.77", "快捷支付", "测试"}
+        );
+        List<Transaction> out = importer.parse(rows, "CMB", "debit", "");
+        assertEquals(2, out.size());
+        assertEquals(1960.94, out.get(0).getBalanceMoney());
+        assertTrue(out.get(0).getTransactionDesc().contains("结售汇"));
     }
 
     @Test

@@ -537,7 +537,7 @@ public class StatementSkippedLinesService {
         if (!hasAmount) {
             return "Has date but no amount — not imported as a transaction";
         }
-        return "Row not linked to a parsed transaction "
+        return "Import parser did not produce a transaction for this row "
                 + "(bank=" + bankCode + ", card=" + cardType + ", columns=" + row.length + ")";
     }
 

@@ -147,6 +147,53 @@ class StatementSkippedLinesServiceTest {
     }
 
     @Test
+    void analyze_allFiveReportedPageBoundaryRows_parseAndLink() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-07-03 CNY -1,960.94 7,189.77 结售汇即时售汇 夏昕雨",
+                "1/6",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-08-08 CNY -3.00 795.98 快捷支付 扫二维码付款",
+                "2/6",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-10-14 CNY 48,333.30 190,183.34 行内转账转入 欧涛",
+                "3/6",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-12-03 CNY -5,749.00 2,362.39 转账汇款 夏昕雨",
+                "4/6",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2026-03-22 CNY 200,000.00 200,659.99 个贷放款 夏昕雨",
+                "5/6"
+        ));
+
+        ImportLineStats stats = service.summarize(statement, "debit", -1);
+        assertEquals(5, stats.transactions());
+        assertEquals(0, stats.skipped());
+    }
+
+    @Test
+    void analyze_pageBoundaryTxnNotMarkedSkipped() {
+        Statement statement = new Statement();
+        statement.setSource("CMB");
+        statement.setFileName("cmb.pdf");
+        statement.setContent(String.join("\n",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-10-14 CNY 75,000.30 141,850.04 行内转账转入 欧涛",
+                "2025-10-14 CNY 48,333.30 190,183.34 行内转账转入 欧涛",
+                "3/6",
+                "记账日期 货币 交易金额 联机余额 交易摘要 对手信息",
+                "2025-10-15 CNY 39,000.00 229,183.34 汇入汇款 夏昕雨"
+        ));
+
+        List<SkippedImportRow> skipped = service.analyze(statement, "debit");
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("48,333.30")));
+        assertTrue(skipped.stream().noneMatch(r -> r.getRawText().contains("75,000.30")));
+    }
+
+    @Test
     void analyze_balanceColumnDoesNotStealTxnMatch() {
         Statement statement = new Statement();
         statement.setSource("CMB");

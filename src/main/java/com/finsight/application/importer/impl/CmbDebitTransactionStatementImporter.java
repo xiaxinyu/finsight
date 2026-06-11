@@ -124,7 +124,11 @@ public class CmbDebitTransactionStatementImporter implements StatementImporter {
             if (StringUtils.isBlank(line)) {
                 continue;
             }
-            if (isNoiseLine(line)) {
+            if (isNoiseLine(line) || isHeaderLine(line)) {
+                if (pending != null) {
+                    merged.add(pending);
+                    pending = null;
+                }
                 continue;
             }
             if (pending == null || looksLikeTransactionStart(line)) {
