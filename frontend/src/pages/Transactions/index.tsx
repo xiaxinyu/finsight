@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Button, Input, Modal, Popconfirm, Space, Tooltip, message } from 'antd'
 import {
-  CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined,
+  DeleteOutlined, EditOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
 import { createTransfer } from '../../api/finance'
@@ -18,7 +18,7 @@ import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useCardTree } from '../../hooks/useCardTree'
 import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
 import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
-import { TransactionInlineEditFields } from '../../components/TransactionInlineEditFields'
+import { TransactionEditPanel, type TransactionEditDraft } from '../../components/TransactionEditPanel'
 import { useFilterApply } from '../../hooks/useFilterApply'
 import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
@@ -92,7 +92,9 @@ export function TransactionsPage() {
   const [searchParams] = useSearchParams()
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [selectedRows, setSelectedRows] = useState<TransactionRow[]>([])
-  const [editableKeys, setEditableKeys] = useState<React.Key[]>([])
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState<TransactionEditDraft | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
   const [tableLoading, setTableLoading] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
   const [classifyPreviewOpen, setClassifyPreviewOpen] = useState(false)
@@ -220,10 +222,27 @@ export function TransactionsPage() {
     staleTime: 20_000,
   })
 
-  const disabled = tableLoading || applying
+  const disabled = tableLoading || applying || editingId != null
   const statsBusy = statsLoading || applying
 
-  const onSaveRow = async (
+  const startEdit = useCallback((row: TransactionRow) => {
+    setEditingId(row.id)
+    setEditDraft({
+      transactionDate: row.transactionDate,
+      transactionDesc: cellText(row.transactionDesc),
+      txnKind: row.txnKind || rowTxnKind(row),
+      editAmount: rowAmount(row),
+      consumeCode: row.consumeCode || row.consumeID || '',
+      demoArea: cellText(row.demoArea),
+    })
+  }, [])
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null)
+    setEditDraft(null)
+  }, [])
+
+  const onSaveRow = useCallback(async (
     _key: unknown,
     row: TransactionRow & { editAmount?: number },
   ) => {
@@ -256,13 +275,29 @@ export function TransactionsPage() {
     try {
       await updateTransaction(payload)
       message.success('Saved')
-      setEditableKeys([])
+      cancelEdit()
       await reload()
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Save failed')
       throw e
     }
-  }
+  }, [treeData, reload, cancelEdit])
+
+  const saveEdit = useCallback(async () => {
+    if (!editingId || !editDraft) return
+    setEditSaving(true)
+    try {
+      await onSaveRow(editingId, {
+        id: editingId,
+        ...editDraft,
+        consumeID: editDraft.consumeCode,
+      } as TransactionRow & { editAmount?: number })
+    } catch {
+      // onSaveRow shows error
+    } finally {
+      setEditSaving(false)
+    }
+  }, [editingId, editDraft, onSaveRow])
 
   const columns: ProColumns<TransactionRow>[] = useMemo(() => {
     const base: ProColumns<TransactionRow>[] = [
@@ -271,9 +306,6 @@ export function TransactionsPage() {
         dataIndex: 'transactionDate',
         width: 88,
         sorter: true,
-        editable: () => true,
-        valueType: 'date',
-        fieldProps: { size: 'small', format: 'MM/DD/YYYY' },
         render: (_, r) => <span className="fs-tx-date">{formatTableDate(r.transactionDate)}</span>,
       },
       {
@@ -281,48 +313,12 @@ export function TransactionsPage() {
         dataIndex: 'transactionDesc',
         className: 'fs-col-tx-desc',
         ellipsis: true,
-        editable: () => true,
         render: (_, r) => <TransactionLedgerCell row={r} />,
-        renderFormItem: (_, { record, value, onChange }, form) => (
-          <TransactionInlineEditFields
-            treeData={treeData}
-            description={String(value ?? '')}
-            onDescriptionChange={(v) => onChange?.(v)}
-            categoryCode={String(record?.consumeCode ?? record?.consumeID ?? '')}
-            onCategoryChange={(code) => {
-              if (!record?.id) return
-              form.setFieldValue([record.id, 'consumeCode'], code)
-              form.setFieldValue([record.id, 'consumeID'], code)
-            }}
-            memo={String(record?.demoArea ?? '')}
-            onMemoChange={(v) => {
-              if (!record?.id) return
-              form.setFieldValue([record.id, 'demoArea'], v)
-            }}
-          />
-        ),
-      },
-      {
-        dataIndex: 'consumeCode',
-        hideInTable: true,
-        editable: () => true,
-      },
-      {
-        dataIndex: 'demoArea',
-        hideInTable: true,
-        editable: () => true,
       },
       {
         title: <TableHeader name="Type" />,
         dataIndex: 'txnKind',
         width: 76,
-        editable: () => true,
-        valueType: 'select',
-        valueEnum: {
-          expense: { text: 'Expense' },
-          income: { text: 'Income' },
-          transfer: { text: 'Transfer' },
-        },
         render: (_, r) => <TransactionTypeBadge kind={r.txnKind || rowTxnKind(r)} />,
       },
       {
@@ -331,9 +327,6 @@ export function TransactionsPage() {
         width: 108,
         align: 'right',
         sorter: true,
-        editable: () => true,
-        valueType: 'digit',
-        fieldProps: { size: 'small', min: 0, precision: 2, style: { width: '100%' } },
         render: (_, r) => (
           <MoneyText value={rowAmount(r)} type={moneyTypeFromRow(rowTxnKind(r), r.balanceMoney)} />
         ),
@@ -352,7 +345,7 @@ export function TransactionsPage() {
         width: 64,
         fixed: 'right',
         className: 'fs-col-actions',
-        render: (_, record, __, action) => (
+        render: (_, record) => (
           <div className="fs-inline-actions">
             <Tooltip title="Edit">
               <Button
@@ -360,11 +353,8 @@ export function TransactionsPage() {
                 size="small"
                 icon={<EditOutlined />}
                 className="fs-row-action"
-                disabled={editableKeys.length > 0}
-                onClick={() => {
-                  setEditableKeys([record.id])
-                  action?.startEditable?.(record.id)
-                }}
+                disabled={editingId != null}
+                onClick={() => startEdit(record)}
               />
             </Tooltip>
             <Popconfirm
@@ -377,7 +367,7 @@ export function TransactionsPage() {
             >
               <Tooltip title="Delete">
                 <Button type="text" size="small" danger icon={<DeleteOutlined />} className="fs-row-action"
-                  disabled={editableKeys.length > 0} />
+                  disabled={editingId != null} />
               </Tooltip>
             </Popconfirm>
           </div>
@@ -385,7 +375,7 @@ export function TransactionsPage() {
       },
     ]
     return base
-  }, [treeData, editableKeys])
+  }, [editingId, startEdit])
 
   const runBatch = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
@@ -486,7 +476,7 @@ export function TransactionsPage() {
       title="Transactions"
       subtitle={periodLabel}
       icon={<UnorderedListOutlined />}
-      className={`fs-data-page--dense fs-data-page--fill fs-data-page--transactions${editableKeys.length > 0 ? ' fs-data-page--editing' : ''}`}
+      className={`fs-data-page--dense fs-data-page--fill fs-data-page--transactions${editingId ? ' fs-data-page--editing' : ''}`}
       toolbar={(
         <FilterToolbar
           loading={tableLoading || applying}
@@ -538,34 +528,6 @@ export function TransactionsPage() {
         onUnclassifiedClick={toggleUnclassifiedFilter}
       />
       <TransactionActiveFilters chips={activeFilterChips} onClearAll={clearAllFilters} />
-      {editableKeys.length > 0 && (
-        <div className="fs-edit-banner">
-          <span>Editing row — press Save or Cancel when done</span>
-          <Space size={8}>
-            <Button
-              type="primary"
-              size="small"
-              icon={<CheckOutlined />}
-              onClick={async () => {
-                const key = editableKeys[0]
-                if (key != null) await actionRef.current?.saveEditable?.(key)
-              }}
-            >
-              Save
-            </Button>
-            <Button
-              size="small"
-              icon={<CloseOutlined />}
-              onClick={async () => {
-                const key = editableKeys[0]
-                if (key != null) await actionRef.current?.cancelEditable?.(key)
-              }}
-            >
-              Cancel
-            </Button>
-          </Space>
-        </div>
-      )}
       <div
         ref={tablePanelRef}
         className={`fs-table-panel fs-table-panel--editable fs-table-panel--transactions fs-table-panel--tx-overlay${selectedRowKeys.length > 0 ? ' fs-table-panel--has-selection' : ''}`}
@@ -587,14 +549,35 @@ export function TransactionsPage() {
               setSelectedRows(rows as TransactionRow[])
             },
           }}
-          rowClassName={(record) => (editableKeys.includes(record.id) ? 'fs-row-editing' : 'fs-table-row')}
+          rowClassName={(record) => (record.id === editingId ? 'fs-row-editing' : 'fs-table-row')}
           onRow={(record) => ({
             onDoubleClick: () => {
-              if (editableKeys.includes(record.id)) return
-              setEditableKeys([record.id])
-              actionRef.current?.startEditable?.(record.id)
+              if (editingId != null) return
+              startEdit(record)
             },
           })}
+          expandable={{
+            expandedRowKeys: editingId ? [editingId] : [],
+            showExpandColumn: false,
+            expandIcon: () => null,
+            expandedRowRender: (record) => {
+              if (record.id !== editingId || !editDraft) return null
+              const cardSummary = [cellText(record.bankCode), cellText(record.cardTypeName), cellText(record.bankCardName)]
+                .filter(Boolean)
+                .join(' · ')
+              return (
+                <TransactionEditPanel
+                  draft={editDraft}
+                  onChange={setEditDraft}
+                  treeData={treeData}
+                  cardSummary={cardSummary}
+                  saving={editSaving}
+                  onSave={() => void saveEdit()}
+                  onCancel={cancelEdit}
+                />
+              )
+            },
+          }}
           locale={{
             emptyText: <EmptyState compact title="No transactions" description="Try widening the date range or clearing filters." />,
           }}
@@ -624,24 +607,6 @@ export function TransactionsPage() {
             }
           }}
           columns={columns}
-          editable={{
-            type: 'single',
-            editableKeys,
-            onChange: setEditableKeys,
-            onSave: onSaveRow,
-            saveText: <CheckOutlined />,
-            cancelText: <CloseOutlined />,
-            actionRender: (_row, _config, { save, cancel }) => [
-              <div key="edit-actions" className="fs-inline-actions fs-inline-actions--edit">
-                <Tooltip title="Save">
-                  <span className="fs-editable-save">{save}</span>
-                </Tooltip>
-                <Tooltip title="Cancel">
-                  <span className="fs-editable-cancel">{cancel}</span>
-                </Tooltip>
-              </div>,
-            ],
-          }}
           pagination={{
             defaultPageSize: 50,
             pageSizeOptions: [20, 50, 100, 200],
