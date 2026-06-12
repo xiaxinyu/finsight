@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ThunderboltOutlined } from '@ant-design/icons'
-import { Alert, Button, Modal, Space, Table, Tag, Tooltip, TreeSelect, Typography } from 'antd'
+import { Alert, Button, Modal, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { CategoryPicker } from './CategoryPicker'
 import type { TreeSelectNode } from '../hooks/useConsumeTree'
 import type { ReclassifyPreviewRow, ReclassifyResult } from '../api/transaction'
 import { cellText, formatTableDate } from '../utils/cell'
@@ -114,7 +115,7 @@ export function ClassifyConfirmModal({
         </div>
       )}
       open={open}
-      width={920}
+      width={980}
       centered
       destroyOnClose
       maskClosable={!busy}
@@ -205,7 +206,7 @@ export function ClassifyConfirmModal({
           },
           {
             title: 'Category',
-            width: 280,
+            width: 340,
             render: (_, r) => {
               const meta = sourceMeta(r.source, r.action)
               return (
@@ -214,18 +215,13 @@ export function ClassifyConfirmModal({
                     {meta && <Tag bordered={false} color={meta.color} className="fs-classify-tag">{meta.label}</Tag>}
                     {r.userEdited && <Tag bordered={false} color="orange" className="fs-classify-tag">Edited</Tag>}
                   </div>
-                  <TreeSelect
-                    size="small"
-                    className="fs-classify-picker"
-                    popupClassName="fs-classify-picker-popup"
+                  <CategoryPicker
                     treeData={treeData}
-                    treeDefaultExpandAll
-                    allowClear
-                    showSearch
-                    treeNodeFilterProp="title"
-                    placeholder={r.suggestedKeywords?.length ? `Try: ${r.suggestedKeywords.slice(0, 2).join(', ')}` : 'Select category'}
-                    value={r.categoryCode || undefined}
-                    onChange={(v) => updateCategory(r.id, v as string | undefined)}
+                    size="middle"
+                    className="fs-classify-picker"
+                    placeholder={r.suggestedKeywords?.length ? `Search: ${r.suggestedKeywords.slice(0, 2).join(', ')}` : 'Search or pick category'}
+                    value={r.categoryCode}
+                    onChange={(v) => updateCategory(r.id, v || undefined)}
                   />
                 </div>
               )

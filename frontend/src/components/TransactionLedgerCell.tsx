@@ -12,7 +12,7 @@ export function TransactionTypeBadge({ kind }: { kind: string }) {
   return <span className="fs-tx-type fs-tx-type--expense">Expense</span>
 }
 
-export function TransactionLedgerCell({ row }: { row: TransactionRow }) {
+export function TransactionLedgerCell({ row, showMeta = true }: { row: TransactionRow; showMeta?: boolean }) {
   const desc = cellText(row.transactionDesc) || '—'
   const category = cellText(row.consumeName)
   const memo = cellText(row.demoArea)
@@ -23,14 +23,16 @@ export function TransactionLedgerCell({ row }: { row: TransactionRow }) {
       <Typography.Text strong className="fs-tx-ledger-title" ellipsis={{ tooltip: desc }}>
         {desc}
       </Typography.Text>
-      {meta ? (
-        <Typography.Text type="secondary" className="fs-tx-ledger-meta" ellipsis={{ tooltip: meta }}>
-          {meta}
-        </Typography.Text>
-      ) : (
-        <Typography.Text type="secondary" className="fs-tx-ledger-meta fs-tx-ledger-meta--empty">
-          No category
-        </Typography.Text>
+      {showMeta && (
+        meta ? (
+          <Typography.Text type="secondary" className="fs-tx-ledger-meta" ellipsis={{ tooltip: meta }}>
+            {meta}
+          </Typography.Text>
+        ) : (
+          <Typography.Text type="secondary" className="fs-tx-ledger-meta fs-tx-ledger-meta--empty">
+            No category
+          </Typography.Text>
+        )
       )}
     </div>
   )

@@ -738,6 +738,7 @@
   border-top: 1px solid #dbeafe !important;
   border-bottom: 1px solid #dbeafe !important;
   vertical-align: middle;
+  overflow: visible;
 }
 
 .fs-row-editing > td:first-child {
@@ -1427,7 +1428,107 @@
 }
 
 .fs-classify-picker .ant-select-selector {
+  border-radius: 8px !important;
+}
+
+/* Large category cascader — table edit + classify modal */
+.fs-category-picker {
+  width: 100%;
+}
+
+.fs-category-picker .ant-select-selector {
+  min-height: 36px !important;
+  padding: 4px 12px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+}
+
+.fs-category-picker--compact .ant-select-selector {
+  min-height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
   border-radius: 6px !important;
+}
+
+.fs-data-table--transactions .fs-col-tx-desc {
+  min-width: 220px;
+}
+
+.fs-tx-inline-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 220px;
+  max-width: min(420px, 52vw);
+  padding: 4px 0;
+}
+
+.fs-tx-inline-edit__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fs-tx-inline-edit__label {
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.fs-tx-inline-edit__desc,
+.fs-tx-inline-edit .fs-category-picker,
+.fs-tx-inline-edit .ant-cascader {
+  width: 100%;
+}
+
+.fs-row-editing .fs-col-tx-desc {
+  vertical-align: top;
+}
+
+.fs-category-picker-popup.ant-select-dropdown {
+  padding: 8px;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
+}
+
+.fs-category-picker-popup .ant-cascader-menus {
+  align-items: stretch;
+  gap: 4px;
+}
+
+.fs-category-picker-popup .ant-cascader-menu {
+  min-width: 260px;
+  max-width: 340px;
+  height: 380px;
+  padding: 6px 4px;
+}
+
+.fs-category-picker-popup .ant-cascader-menu-item {
+  line-height: 1.45;
+  padding: 10px 14px;
+  margin: 2px 4px;
+  border-radius: 8px;
+  font-size: 14px;
+  min-height: 42px;
+  align-items: center;
+}
+
+.fs-category-picker-popup .ant-cascader-menu-item-content {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.fs-category-picker-popup .ant-cascader-menu-item-active:not(.ant-cascader-menu-item-disabled),
+.fs-category-picker-popup .ant-cascader-menu-item:hover:not(.ant-cascader-menu-item-disabled) {
+  background: rgba(29, 78, 216, 0.1);
+  font-weight: 500;
+}
+
+.fs-category-picker-popup .ant-cascader-menu-item-expand-icon {
+  font-size: 11px;
+  margin-inline-start: 8px;
 }
 
 .fs-classify-why {

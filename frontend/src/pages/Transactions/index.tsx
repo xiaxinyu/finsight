@@ -18,6 +18,7 @@ import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useCardTree } from '../../hooks/useCardTree'
 import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
 import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
+import { TransactionInlineEditFields } from '../../components/TransactionInlineEditFields'
 import { useFilterApply } from '../../hooks/useFilterApply'
 import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
@@ -263,27 +264,6 @@ export function TransactionsPage() {
     }
   }
 
-  const categoryColumn: ProColumns<TransactionRow> = useMemo(() => ({
-    title: <TableHeader name="Category" />,
-    dataIndex: 'consumeCode',
-    width: 168,
-    ellipsis: true,
-    editable: () => true,
-    valueType: 'treeSelect',
-    fieldProps: { treeData, treeDefaultExpandAll: true, allowClear: true, size: 'small', style: { width: '100%' } },
-    render: (_, r) => <span className="fs-cell-text" title={cellText(r.consumeName)}>{cellText(r.consumeName)}</span>,
-  }), [treeData])
-
-  const memoColumn: ProColumns<TransactionRow> = useMemo(() => ({
-    title: <TableHeader name="Memo" />,
-    dataIndex: 'demoArea',
-    width: 140,
-    ellipsis: true,
-    editable: () => true,
-    fieldProps: { size: 'small' },
-    render: (_, r) => <span className="fs-cell-muted" title={cellText(r.demoArea)}>{cellText(r.demoArea)}</span>,
-  }), [])
-
   const columns: ProColumns<TransactionRow>[] = useMemo(() => {
     const base: ProColumns<TransactionRow>[] = [
       {
@@ -299,10 +279,38 @@ export function TransactionsPage() {
       {
         title: <TableHeader name="Transaction" />,
         dataIndex: 'transactionDesc',
+        className: 'fs-col-tx-desc',
         ellipsis: true,
         editable: () => true,
-        fieldProps: { size: 'small' },
         render: (_, r) => <TransactionLedgerCell row={r} />,
+        renderFormItem: (_, { record, value, onChange }, form) => (
+          <TransactionInlineEditFields
+            treeData={treeData}
+            description={String(value ?? '')}
+            onDescriptionChange={(v) => onChange?.(v)}
+            categoryCode={String(record?.consumeCode ?? record?.consumeID ?? '')}
+            onCategoryChange={(code) => {
+              if (!record?.id) return
+              form.setFieldValue([record.id, 'consumeCode'], code)
+              form.setFieldValue([record.id, 'consumeID'], code)
+            }}
+            memo={String(record?.demoArea ?? '')}
+            onMemoChange={(v) => {
+              if (!record?.id) return
+              form.setFieldValue([record.id, 'demoArea'], v)
+            }}
+          />
+        ),
+      },
+      {
+        dataIndex: 'consumeCode',
+        hideInTable: true,
+        editable: () => true,
+      },
+      {
+        dataIndex: 'demoArea',
+        hideInTable: true,
+        editable: () => true,
       },
       {
         title: <TableHeader name="Type" />,
@@ -376,11 +384,8 @@ export function TransactionsPage() {
         ),
       },
     ]
-    if (editableKeys.length > 0) {
-      base.splice(5, 0, categoryColumn, memoColumn)
-    }
     return base
-  }, [treeData, editableKeys, categoryColumn, memoColumn])
+  }, [treeData, editableKeys])
 
   const runBatch = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (!selectedRowKeys.length) { message.warning('Select rows first'); return }

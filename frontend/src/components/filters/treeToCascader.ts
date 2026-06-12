@@ -14,6 +14,28 @@ export function treeToCascaderOptions(nodes: TreeNode[]): CascaderOption[] {
   }))
 }
 
+/** Cascader options from consume tree nodes ({ title, value }). */
+export function labeledTreeToCascader(
+  nodes: { title: string; value: string; children?: typeof nodes }[],
+): CascaderOption[] {
+  return nodes.map((n) => ({
+    value: n.value,
+    label: n.title,
+    children: n.children?.length ? labeledTreeToCascader(n.children) : undefined,
+  }))
+}
+
+export function findCascaderLabel(nodes: CascaderOption[], target: string): string {
+  for (const n of nodes) {
+    if (n.value === target) return n.label
+    if (n.children?.length) {
+      const child = findCascaderLabel(n.children, target)
+      if (child) return child
+    }
+  }
+  return ''
+}
+
 export function findCascaderPath(
   nodes: CascaderOption[],
   target: string,
