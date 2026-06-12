@@ -203,6 +203,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>-Djdk.attach.allowAttachSelf=true -XX:+EnableDynamicAgentLoading</argLine>
+                    <excludedGroups>docker-integration</excludedGroups>
                 </configuration>
             </plugin>
             <plugin>

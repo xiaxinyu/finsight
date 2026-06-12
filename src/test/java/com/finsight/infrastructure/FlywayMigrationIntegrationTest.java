@@ -1,5 +1,6 @@
 package com.finsight.infrastructure;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Opt-in via {@code mvn test -Dgroups=docker-integration} (see issue P3-2). */
+@Tag("docker-integration")
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest
 class FlywayMigrationIntegrationTest {
