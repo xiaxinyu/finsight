@@ -12,10 +12,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,7 +53,7 @@ class RecommendationServiceTest {
         advisor.setEnabled(true);
         when(features.getAdvisor()).thenReturn(advisor);
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("fin_recommendation_feedback"))).thenReturn(1);
-        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("fin_insight_card"))).thenReturn(0);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("fin_insight_card"))).thenReturn(1);
         when(jdbcTemplate.queryForList(anyString(), eq(String.class), anyString()))
                 .thenReturn(List.of("data_trust"));
         when(profileService.currentProfile()).thenReturn(Map.of(
@@ -65,6 +68,23 @@ class RecommendationServiceTest {
 
         assertTrue(cards.stream().noneMatch(c -> "data_trust".equals(c.get("id"))));
         verify(profileService).currentProfile();
+        verify(jdbcTemplate, atLeastOnce()).update(
+                argThat((String sql) -> sql.contains("on duplicate key update")),
+                eq("user1:liquidity_safety"),
+                eq("user1"),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any());
+    }
+
+    @Test
+    void storageId_scopesCardKeyPerUser() {
+        assertEquals("alice:income_stability", RecommendationService.storageId("alice", "income_stability"));
+        assertEquals("bob:income_stability", RecommendationService.storageId("bob", "income_stability"));
     }
 
     @Test

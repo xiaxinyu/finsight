@@ -142,19 +142,31 @@ public class RecommendationService {
             return;
         }
         for (Map<String, Object> card : cards) {
-            String id = card.get("id") != null && !String.valueOf(card.get("id")).isBlank()
+            String cardKey = card.get("id") != null && !String.valueOf(card.get("id")).isBlank()
                     ? String.valueOf(card.get("id"))
                     : UUID.randomUUID().toString();
-            card.put("id", id);
+            if (card.get("id") == null || String.valueOf(card.get("id")).isBlank()) {
+                card.put("id", cardKey);
+            }
+            String storageId = storageId(userId, cardKey);
             jdbcTemplate.update(
                     "insert into fin_insight_card (id, user_id, card_type, priority, title, reason, impact_amount, "
                             + "evidence_json, actions_json, created_at, expires_at) "
-                            + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(3), date_add(now(3), interval 7 day))",
-                    id, userId, card.get("type"), card.get("priority"), card.get("title"), card.get("reason"),
+                            + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(3), date_add(now(3), interval 7 day)) "
+                            + "on duplicate key update "
+                            + "user_id = values(user_id), card_type = values(card_type), priority = values(priority), "
+                            + "title = values(title), reason = values(reason), impact_amount = values(impact_amount), "
+                            + "evidence_json = values(evidence_json), actions_json = values(actions_json), "
+                            + "created_at = now(3), expires_at = date_add(now(3), interval 7 day)",
+                    storageId, userId, card.get("type"), card.get("priority"), card.get("title"), card.get("reason"),
                     card.get("impactAmount"),
                     com.alibaba.fastjson.JSON.toJSONString(card.get("evidenceRefs")),
                     com.alibaba.fastjson.JSON.toJSONString(card.get("actions")));
         }
+    }
+
+    static String storageId(String userId, String cardKey) {
+        return userId + ":" + cardKey;
     }
 
     private static Map<String, Object> recommendation(String type, int priority, String title, String reason,
