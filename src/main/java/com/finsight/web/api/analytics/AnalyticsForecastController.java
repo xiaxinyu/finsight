@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.finsight.common.exception.AppServiceException;
+
 import java.util.Map;
 
 @RestController
@@ -44,6 +46,12 @@ public class AnalyticsForecastController {
     public CommonResult forecastCategories(@RequestParam int year) throws Exception {
         featureFlags.requireForecast();
         return CommonResult.success(forecastService.forecast(year, "base"));
+    }
+
+    @GetMapping("/forecast/lines")
+    public CommonResult forecastLines(@RequestParam String runId) throws AppServiceException {
+        featureFlags.requireForecast();
+        return CommonResult.success(forecastService.forecastLines(runId));
     }
 
     @GetMapping("/trends")

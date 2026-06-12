@@ -2,6 +2,7 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.finance.BillService;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.MetricCode;
 import com.finsight.domain.port.MetricMonthlyRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,6 +20,10 @@ import java.util.UUID;
 
 @Service
 public class ForecastService {
+
+    public static final String METRIC_INCOME_FORECAST = "INCOME_FORECAST";
+    public static final String METRIC_EXPENSE_FORECAST = "EXPENSE_FORECAST";
+    public static final String METRIC_NET_FORECAST = "NET_FORECAST";
 
     private static final DateTimeFormatter YM = DateTimeFormatter.ofPattern("yyyy-MM");
 
@@ -87,6 +92,7 @@ public class ForecastService {
         jdbcTemplate.update("insert into fin_forecast_run (id, user_id, scenario, target_year, params_json, created_at) "
                         + "values (?, ?, ?, ?, ?, now(3))",
                 runId, userId, scenario, year, "{\"method\":\"rolling_mean_seasonal\"}");
+        persistForecastLines(runId, months);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("year", year);
@@ -100,6 +106,34 @@ public class ForecastService {
         out.put("metricsGate", metricsGate);
         out.put("metricsSource", reportFallback ? "report_sql" : "fin_metric_monthly");
         return out;
+    }
+
+    public List<Map<String, Object>> forecastLines(String runId) throws AppServiceException {
+        String userId = userKey();
+        if (!tableExists("fin_forecast_line")) {
+            throw new AppServiceException("Forecast lines are not available");
+        }
+        Integer owned = jdbcTemplate.queryForObject(
+                "select count(*) from fin_forecast_run where id = ? and user_id = ?",
+                Integer.class,
+                runId,
+                userId);
+        if (owned == null || owned == 0) {
+            throw new AppServiceException("Forecast run not found");
+        }
+        return jdbcTemplate.query(
+                "select month_key, metric_code, metric_value, lower_bound, upper_bound "
+                        + "from fin_forecast_line where run_id = ? order by month_key, metric_code",
+                (rs, rowNum) -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("monthKey", rs.getString("month_key"));
+                    row.put("metricCode", rs.getString("metric_code"));
+                    row.put("metricValue", rs.getBigDecimal("metric_value"));
+                    row.put("lowerBound", rs.getBigDecimal("lower_bound"));
+                    row.put("upperBound", rs.getBigDecimal("upper_bound"));
+                    return row;
+                },
+                runId);
     }
 
     public Map<String, Object> simulateScenario(Map<String, Object> params) throws Exception {
@@ -151,6 +185,43 @@ public class ForecastService {
 
     private static double round(double v) {
         return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private void persistForecastLines(String runId, List<Map<String, Object>> months) {
+        if (!tableExists("fin_forecast_line")) {
+            return;
+        }
+        for (Map<String, Object> month : months) {
+            String monthKey = String.valueOf(month.get("yearMonth"));
+            insertForecastLine(runId, monthKey, METRIC_INCOME_FORECAST, ((Number) month.get("income")).doubleValue());
+            insertForecastLine(runId, monthKey, METRIC_EXPENSE_FORECAST, ((Number) month.get("expense")).doubleValue());
+            insertForecastLine(runId, monthKey, METRIC_NET_FORECAST, ((Number) month.get("net")).doubleValue());
+        }
+    }
+
+    private void insertForecastLine(String runId, String monthKey, String metricCode, double value) {
+        BigDecimal metricValue = BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal lower = metricValue.multiply(BigDecimal.valueOf(0.9)).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal upper = metricValue.multiply(BigDecimal.valueOf(1.1)).setScale(4, RoundingMode.HALF_UP);
+        jdbcTemplate.update(
+                "insert into fin_forecast_line (id, run_id, month_key, metric_code, metric_value, lower_bound, upper_bound) "
+                        + "values (?, ?, ?, ?, ?, ?, ?)",
+                UUID.randomUUID().toString(),
+                runId,
+                monthKey,
+                metricCode,
+                metricValue,
+                lower,
+                upper);
+    }
+
+    private boolean tableExists(String table) {
+        Integer count = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.tables "
+                        + "where table_schema = database() and table_name = ?",
+                Integer.class,
+                table);
+        return count != null && count > 0;
     }
 
     private String userKey() {
