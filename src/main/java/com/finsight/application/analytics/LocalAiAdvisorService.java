@@ -1,6 +1,5 @@
 package com.finsight.application.analytics;
 
-import com.finsight.common.exception.AppServiceException;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;

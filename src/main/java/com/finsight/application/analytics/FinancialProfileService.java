@@ -4,7 +4,6 @@ import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.finance.CashflowService;
 import com.finsight.application.finance.DataQualityService;
 import com.finsight.application.finance.WealthService;
-import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.port.MetricMonthlyRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
