@@ -3,6 +3,8 @@ package com.finsight.web.config;
 import com.finsight.application.config.FinsightFeatureProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,7 +30,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    AuthenticationManager authenticationManager,
-                                                   FinsightFeatureProperties features) throws Exception {
+                                                   FinsightFeatureProperties features,
+                                                   Environment environment) throws Exception {
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
         if (features.getSecurity().isCsrfEnabled()) {
             http.csrf(csrf -> csrf.ignoringRequestMatchers("/app/**"));
@@ -40,8 +43,13 @@ public class SecurityConfig {
             if (features.getSecurity().isActuatorPublic()) {
                 auth.requestMatchers("/actuator/health").permitAll();
             }
-            auth.requestMatchers("/actuator/**", "/encrypt/**").authenticated()
-                    .anyRequest().authenticated();
+            auth.requestMatchers("/actuator/**").authenticated();
+            if (environment.acceptsProfiles(Profiles.of("prod"))) {
+                auth.requestMatchers("/encrypt/**").denyAll();
+            } else {
+                auth.requestMatchers("/encrypt/**").authenticated();
+            }
+            auth.anyRequest().authenticated();
         });
         http.authenticationManager(authenticationManager);
         http.formLogin(form -> form
