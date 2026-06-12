@@ -26,6 +26,7 @@ import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
 import { fetchForecast, fetchTrends } from '../../api/analytics'
 import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
+import { CashRiskReport } from './CashRiskReport'
 
 type ReportFilters = {
   period: [dayjs.Dayjs, dayjs.Dayjs]
@@ -77,11 +78,6 @@ export function ReportsPage() {
       if (cfg.type === 'trendChanges') {
         const toYear = applied.period[1].year()
         return { trends: await fetchTrends(toYear - 1, toYear) }
-      }
-      if (cfg.type === 'cashRisk') {
-        const year = applied.period[1].year()
-        const forecast = await fetchForecast(year, 'stress')
-        return { forecast }
       }
       if (cfg.type === 'budgetVsActual') {
         const r = periodToStrings(applied.period)
@@ -220,6 +216,15 @@ export function ReportsPage() {
           locale={{ emptyText: <EmptyState compact title="No transfers in period" description="Mark transfer pairs on the Transactions page." /> }}
         />
       </DataPageLayout>
+    )
+  }
+
+  if (cfg.type === 'cashRisk') {
+    return (
+      <CashRiskReport
+        title={cfg.title}
+        subtitle={cfg.subtitle}
+      />
     )
   }
 

@@ -33,6 +33,26 @@ export async function fetchForecast(year: number, scenario = 'base') {
   return unwrap<Record<string, unknown>>(await getJson(`/api/v1/analytics/forecast?year=${year}&scenario=${scenario}`))
 }
 
+export type CashRiskCalendarResponse = {
+  year: number
+  scenario: string
+  deficitMonths: string[]
+  months: { yearMonth: string; net: number; riskLevel: string }[]
+  days: {
+    date: string
+    inflow: number
+    outflow: number
+    riskLevel: string
+    events: { type: string; label: string; amount: number }[]
+  }[]
+}
+
+export async function fetchCashRiskCalendar(year: number, scenario = 'stress') {
+  return unwrap<CashRiskCalendarResponse>(
+    await getJson(`/api/v1/analytics/cash-risk-calendar?year=${year}&scenario=${scenario}`),
+  )
+}
+
 export async function fetchTrends(fromYear: number, toYear: number) {
   return unwrap<Record<string, unknown>>(await getJson(`/api/v1/analytics/trends?fromYear=${fromYear}&toYear=${toYear}`))
 }
