@@ -2,7 +2,6 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.finance.BillService;
-import com.finsight.domain.model.Bill;
 import com.finsight.domain.model.MetricCode;
 import com.finsight.domain.port.MetricMonthlyRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
