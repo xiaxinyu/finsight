@@ -9,6 +9,9 @@ public class FinsightFeatureProperties {
 
     private Planning planning = new Planning();
     private Advisor advisor = new Advisor();
+    private Profile profile = new Profile();
+    private Forecast forecast = new Forecast();
+    private MerchantMining merchantMining = new MerchantMining();
     private Metrics metrics = new Metrics();
     private Security security = new Security();
 
@@ -26,6 +29,30 @@ public class FinsightFeatureProperties {
 
     public void setAdvisor(Advisor advisor) {
         this.advisor = advisor;
+    }
+
+    public Profile getProfile() {
+        return profile;
+    }
+
+    public void setProfile(Profile profile) {
+        this.profile = profile;
+    }
+
+    public Forecast getForecast() {
+        return forecast;
+    }
+
+    public void setForecast(Forecast forecast) {
+        this.forecast = forecast;
+    }
+
+    public MerchantMining getMerchantMining() {
+        return merchantMining;
+    }
+
+    public void setMerchantMining(MerchantMining merchantMining) {
+        this.merchantMining = merchantMining;
     }
 
     public Metrics getMetrics() {
@@ -57,6 +84,51 @@ public class FinsightFeatureProperties {
     }
 
     public static class Advisor {
+        private boolean enabled = true;
+        private boolean localAiEnabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isLocalAiEnabled() {
+            return localAiEnabled;
+        }
+
+        public void setLocalAiEnabled(boolean localAiEnabled) {
+            this.localAiEnabled = localAiEnabled;
+        }
+    }
+
+    public static class Profile {
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+    }
+
+    public static class Forecast {
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+    }
+
+    public static class MerchantMining {
         private boolean enabled = true;
 
         public boolean isEnabled() {

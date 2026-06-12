@@ -45,12 +45,20 @@ finsight:
     transfers: true
   classification:
     import-other-fallback: false
+  # Feature flags — see docs/tech/FEATURE_FLAGS.md
   planning:
-    persist: false
+    persist: false          # true: budgets/bills/goals persist to MySQL (dual-run with in-memory store)
   advisor:
-    enabled: true
+    enabled: true           # false: /api/v1/advisor/recommendations returns 404
+    local-ai-enabled: true  # false: /api/v1/advisor/ask returns 404
+  profile:
+    enabled: true           # false: /api/v1/analytics/profile returns 404; hides Profile nav
+  forecast:
+    enabled: true           # false: forecast/trends/scenarios/cash-risk APIs return 404
+  merchant-mining:
+    enabled: true           # false: /api/v1/advisor/merchants/* returns 404
   metrics:
-    reconcile-gate: false
+    reconcile-gate: false   # true: block advisor metrics when reconciliation fails
   security:
     csrf-enabled: false
     actuator-public: true

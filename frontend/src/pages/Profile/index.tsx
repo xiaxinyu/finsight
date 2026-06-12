@@ -7,19 +7,31 @@ import { fetchProfile } from '../../api/analytics'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { FsChart } from '../../components/FsChart'
+import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { buildProfileRadarOption, PROFILE_DIM_LABELS } from './profileRadar'
 
 export function ProfilePage() {
+  const { flags } = useFeatureFlags()
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['financial-profile'],
     queryFn: fetchProfile,
+    enabled: flags.profile,
   })
 
   const radarOption = useMemo(
     () => buildProfileRadarOption(data?.dimensions),
     [data?.dimensions],
   )
+
+  if (!flags.profile) {
+    return (
+      <DataPageLayout title="Financial Profile" icon={<UserOutlined />}>
+        <EmptyState title="Profile module disabled" description="Enable finsight.profile.enabled in server configuration." />
+      </DataPageLayout>
+    )
+  }
 
   if (isLoading) return <PageSkeleton />
   if (isError) {

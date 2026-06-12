@@ -59,6 +59,10 @@ mvn test
 
 完整 UI 启动说明见 [docs/tech/REPORT_UI.md](docs/tech/REPORT_UI.md)。
 
+## Feature flags
+
+See [docs/tech/FEATURE_FLAGS.md](docs/tech/FEATURE_FLAGS.md). Runtime toggles live under `finsight.*` in `application.yml`; the SPA reads `GET /api/v1/features`.
+
 ## Environment Variables
 
 Set these for local/prod instead of hardcoding secrets:
