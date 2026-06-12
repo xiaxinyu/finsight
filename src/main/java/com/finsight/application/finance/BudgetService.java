@@ -1,5 +1,6 @@
 package com.finsight.application.finance;
 
+import com.finsight.application.analytics.MetricRefreshTrigger;
 import com.finsight.application.support.ListingDateSupport;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.Budget;
@@ -20,12 +21,16 @@ import java.util.Map;
 @Service
 public class BudgetService {
 
-    private final PlanningPreferencesStore preferencesStore;
+    private final PlanningPreferencesGateway planningGateway;
     private final FinancialMapper financialMapper;
+    private final MetricRefreshTrigger metricRefreshTrigger;
 
-    public BudgetService(PlanningPreferencesStore preferencesStore, FinancialMapper financialMapper) {
-        this.preferencesStore = preferencesStore;
+    public BudgetService(PlanningPreferencesGateway planningGateway,
+                         FinancialMapper financialMapper,
+                         MetricRefreshTrigger metricRefreshTrigger) {
+        this.planningGateway = planningGateway;
         this.financialMapper = financialMapper;
+        this.metricRefreshTrigger = metricRefreshTrigger;
     }
 
     public Budget currentMonthlyBudget() {
@@ -43,14 +48,16 @@ public class BudgetService {
     }
 
     public List<BudgetLine> linesForBudget(String budgetId) {
-        return preferencesStore.budgetLinesForCurrentMonth();
+        return planningGateway.budgetLinesForCurrentMonth();
     }
 
     public BudgetLine saveLine(BudgetLine line) {
         if (line.getBudgetId() == null || line.getBudgetId().isBlank()) {
             line.setBudgetId(currentMonthlyBudget().getId());
         }
-        return preferencesStore.upsertBudgetLine(line);
+        BudgetLine saved = planningGateway.upsertBudgetLine(line);
+        metricRefreshTrigger.refreshCurrentMonth();
+        return saved;
     }
 
     public List<Map<String, Object>> budgetVsActual() throws AppServiceException {

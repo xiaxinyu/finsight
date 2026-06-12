@@ -45,6 +45,15 @@ finsight:
     transfers: true
   classification:
     import-other-fallback: false
+  planning:
+    persist: false
+  advisor:
+    enabled: true
+  metrics:
+    reconcile-gate: false
+  security:
+    csrf-enabled: false
+    actuator-public: true
 
 server:
   servlet:

@@ -5,6 +5,10 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * @deprecated Prefer {@link com.finsight.application.analytics.ForecastService} via /api/v1/analytics/scenarios.
+ */
+@Deprecated
 @Service
 public class ScenarioService {
 

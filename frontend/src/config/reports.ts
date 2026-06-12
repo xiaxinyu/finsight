@@ -1,7 +1,7 @@
 export type ReportConfig = {
   title: string
   subtitle?: string
-  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers'
+  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'cashRisk'
   endpoint?: string
   txnType?: 'income' | 'expense'
   chartKind?: 'bar' | 'donut'
@@ -55,6 +55,22 @@ export const reportConfigs: Record<string, ReportConfig> = {
     title: 'Bills Calendar',
     subtitle: 'Upcoming fixed payments in the next 30 days',
     type: 'billsCalendar',
+  },
+  'annual-outlook': {
+    title: 'Annual Outlook',
+    subtitle: 'Statistical income/expense forecast with scenario bands',
+    type: 'annualOutlook',
+  },
+  'trend-changes': {
+    title: 'Trend Changes',
+    subtitle: 'Category growth and savings inflection points',
+    type: 'trendChanges',
+    compareYear: true,
+  },
+  'cash-risk': {
+    title: 'Cash Risk',
+    subtitle: 'Projected deficit months and liquidity pressure',
+    type: 'cashRisk',
   },
 }
 

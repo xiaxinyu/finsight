@@ -324,5 +324,71 @@ export function buildReportView(
     }
   }
 
+  if ('forecast' in data && data.forecast) {
+    const forecast = data.forecast as Record<string, unknown>
+    const months = (forecast.months as Record<string, unknown>[]) || []
+    const incomeTotal = Number(forecast.yearIncome || 0)
+    const expenseTotal = Number(forecast.yearExpense || 0)
+    const net = Number(forecast.yearNet || incomeTotal - expenseTotal)
+    const deficits = (forecast.deficitMonths as string[]) || []
+    return {
+      insights: [{ text: deficits.length ? `Projected deficit in ${deficits.length} month(s).` : 'No projected deficit months in base scenario.' }],
+      kpis: [
+        { key: 'inc', label: 'Forecast income', value: formatMoney(incomeTotal), tone: 'income' },
+        { key: 'exp', label: 'Forecast expense', value: formatMoney(expenseTotal), tone: 'expense' },
+        { key: 'net', label: 'Forecast net', value: formatMoney(net), tone: net >= 0 ? 'income' : 'expense' },
+        { key: 'def', label: 'Deficit months', value: String(deficits.length), tone: deficits.length ? 'warn' : 'neutral' },
+      ],
+      chartTitle: 'Forecast cash flow (dashed = projected)',
+      chartOption: {
+        ...chartBase,
+        legend: { data: ['Income', 'Expense', 'Net'], top: 4 },
+        xAxis: { type: 'category', data: months.map((m) => String(m.yearMonth)), axisLabel: { fontSize: 10 } },
+        yAxis: { type: 'value' },
+        series: [
+          { name: 'Income', type: 'line', smooth: true, data: months.map((m) => Number(m.income || 0)), lineStyle: { type: 'dashed' }, itemStyle: { color: '#16a34a' } },
+          { name: 'Expense', type: 'line', smooth: true, data: months.map((m) => Number(m.expense || 0)), lineStyle: { type: 'dashed' }, itemStyle: { color: '#ea580c' } },
+          { name: 'Net', type: 'line', smooth: true, data: months.map((m) => Number(m.net || 0)), lineStyle: { type: 'dashed', width: 2 }, itemStyle: { color: '#2563eb' } },
+        ],
+      },
+      tableCols: [
+        { title: 'Month', dataIndex: 'yearMonth', sortType: 'text' },
+        { title: 'Income', dataIndex: 'income', unit: 'CNY', align: 'right', sortType: 'number' },
+        { title: 'Expense', dataIndex: 'expense', unit: 'CNY', align: 'right', sortType: 'number' },
+        { title: 'Net', dataIndex: 'net', unit: 'CNY', align: 'right', sortType: 'number' },
+      ],
+      tableData: months,
+      tableSummary: { yearMonth: 'Year total', income: incomeTotal, expense: expenseTotal, net },
+    }
+  }
+
+  if ('trends' in data && data.trends) {
+    const trends = data.trends as Record<string, unknown>
+    const growth = (trends.topCategoryGrowth as Record<string, unknown>[]) || []
+    return {
+      insights: growth.slice(0, 3).map((g) => ({
+        text: `${g.categoryCode}: ${g.pctChange}% YoY (${formatMoney(Number(g.deltaAmount || 0))})`,
+      })),
+      kpis: [
+        { key: 'from', label: 'From year', value: String(trends.fromYear || '') },
+        { key: 'to', label: 'To year', value: String(trends.toYear || '') },
+        { key: 'n', label: 'Significant shifts', value: String(growth.length) },
+      ],
+      chartTitle: 'Top category growth',
+      chartOption: {
+        ...chartBase,
+        xAxis: { type: 'category', data: growth.map((g) => String(g.categoryCode)), axisLabel: { fontSize: 10, rotate: 20 } },
+        yAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
+        series: [{ type: 'bar', data: growth.map((g) => Number(g.pctChange || 0)), itemStyle: { color: '#7c3aed' }, barMaxWidth: 22 }],
+      },
+      tableCols: [
+        { title: 'Category', dataIndex: 'categoryCode', sortType: 'text' },
+        { title: 'Change %', dataIndex: 'pctChange', align: 'right', sortType: 'number' },
+        { title: 'Delta', dataIndex: 'deltaAmount', unit: 'CNY', align: 'right', sortType: 'number' },
+      ],
+      tableData: growth,
+    }
+  }
+
   return empty
 }

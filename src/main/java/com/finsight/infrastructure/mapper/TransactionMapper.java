@@ -34,4 +34,6 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     Double sumIncomeForRange(@Param("start") Date start, @Param("end") Date end);
 
     List<String> listIdsNeedingAmountNormalization();
+
+    java.util.Map<String, Object> aggregateStats(@Param("q") TransactionQuery query);
 }

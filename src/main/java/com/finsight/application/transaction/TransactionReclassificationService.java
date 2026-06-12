@@ -1,5 +1,6 @@
 package com.finsight.application.transaction;
 
+import com.finsight.application.analytics.MetricRefreshTrigger;
 import com.finsight.application.card.BankCardService;
 import com.finsight.application.classification.CategoryRecommendation;
 import com.finsight.application.classification.ClassificationRecommendationService;
@@ -18,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -37,17 +39,20 @@ public class TransactionReclassificationService {
     private final BankCardService bankCardService;
     private final ITransactionService transactionService;
     private final ClassificationRecommendationService recommendationService;
+    private final MetricRefreshTrigger metricRefreshTrigger;
 
     public TransactionReclassificationService(TransactionRepository transactionRepository,
                                                 ClassificationService classificationService,
                                                 BankCardService bankCardService,
                                                 ITransactionService transactionService,
-                                                ClassificationRecommendationService recommendationService) {
+                                                ClassificationRecommendationService recommendationService,
+                                                MetricRefreshTrigger metricRefreshTrigger) {
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
         this.bankCardService = bankCardService;
         this.transactionService = transactionService;
         this.recommendationService = recommendationService;
+        this.metricRefreshTrigger = metricRefreshTrigger;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -60,6 +65,7 @@ public class TransactionReclassificationService {
         TransactionReclassificationResult result = new TransactionReclassificationResult();
         result.setDryRun(!persist);
         result.setRequested(ids.size());
+        List<Date> changedDates = new ArrayList<>();
 
         for (String id : ids) {
             if (StringUtils.isBlank(id)) {
@@ -102,6 +108,9 @@ public class TransactionReclassificationService {
                     outcome.source, outcome.confidence, outcome.reason, outcome.suggestedKeywords);
             if (persist) {
                 applyCategory(tx, outcome.match, userName);
+                if (tx.getTransactionDate() != null) {
+                    changedDates.add(tx.getTransactionDate());
+                }
                 result.setClassified(result.getClassified() + 1);
                 if (outcome.suggested) {
                     result.setSuggested(result.getSuggested() + 1);
@@ -112,6 +121,9 @@ public class TransactionReclassificationService {
                     result.setSuggested(result.getSuggested() + 1);
                 }
             }
+        }
+        if (persist && result.getClassified() > 0) {
+            metricRefreshTrigger.afterTransactionsChanged(changedDates);
         }
         return result;
     }

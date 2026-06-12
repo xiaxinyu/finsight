@@ -23,6 +23,7 @@ import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRange
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
+import { fetchForecast, fetchTrends } from '../../api/analytics'
 import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
 
@@ -68,6 +69,19 @@ export function ReportsPage() {
       if (!cfg) return null
       if (cfg.type === 'billsCalendar') {
         return { calendar: await billCalendar() }
+      }
+      if (cfg.type === 'annualOutlook') {
+        const year = applied.period[1].year()
+        return { forecast: await fetchForecast(year, 'base') }
+      }
+      if (cfg.type === 'trendChanges') {
+        const toYear = applied.period[1].year()
+        return { trends: await fetchTrends(toYear - 1, toYear) }
+      }
+      if (cfg.type === 'cashRisk') {
+        const year = applied.period[1].year()
+        const forecast = await fetchForecast(year, 'stress')
+        return { forecast }
       }
       if (cfg.type === 'budgetVsActual') {
         const r = periodToStrings(applied.period)

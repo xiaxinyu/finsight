@@ -1,5 +1,6 @@
 package com.finsight.web.config;
 
+import com.finsight.application.config.FinsightFeatureProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.slf4j.Logger;
@@ -25,14 +26,23 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   AuthenticationManager authenticationManager,
+                                                   FinsightFeatureProperties features) throws Exception {
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
-        http.csrf(csrf -> csrf.disable());
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/oauth/**", "/login/**", "/logout/**", "/actuator/health", "/plugins/**", "/login-error.json", "/app/**").permitAll()
-                .requestMatchers("/actuator/**", "/encrypt/**").authenticated()
-                .anyRequest().authenticated()
-        );
+        if (features.getSecurity().isCsrfEnabled()) {
+            http.csrf(csrf -> csrf.ignoringRequestMatchers("/app/**"));
+        } else {
+            http.csrf(csrf -> csrf.disable());
+        }
+        http.authorizeHttpRequests(auth -> {
+            auth.requestMatchers("/oauth/**", "/login/**", "/logout/**", "/plugins/**", "/login-error.json", "/app/**").permitAll();
+            if (features.getSecurity().isActuatorPublic()) {
+                auth.requestMatchers("/actuator/health").permitAll();
+            }
+            auth.requestMatchers("/actuator/**", "/encrypt/**").authenticated()
+                    .anyRequest().authenticated();
+        });
         http.authenticationManager(authenticationManager);
         http.formLogin(form -> form
                 .loginPage("/app/login")

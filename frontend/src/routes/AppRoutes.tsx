@@ -10,6 +10,7 @@ import { LedgersPage } from '../pages/Ledgers'
 import { PlanningPage } from '../pages/Planning'
 import { WealthPage } from '../pages/Wealth'
 import { GoalsPage } from '../pages/Goals'
+import { ProfilePage } from '../pages/Profile'
 import { UsersAdminPage } from '../pages/Admin/Users'
 import { CardsAdminPage } from '../pages/Admin/Cards'
 import { RulesAdminPage } from '../pages/Admin/Rules'
@@ -25,6 +26,7 @@ export function AppRoutes() {
         <Route path="/planning" element={<PlanningPage />} />
         <Route path="/wealth" element={<WealthPage />} />
         <Route path="/goals" element={<GoalsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/statements/upload" element={<StatementUploadPage />} />
         <Route path="/statements" element={<StatementListPage />} />

@@ -6,4 +6,15 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
 
 account:
-  desSignKey: ${ACCOUNT_DES_SIGN_KEY}
+  des-sign-key: ${ACCOUNT_DES_SIGN_KEY}
+
+finsight:
+  security:
+    csrf-enabled: true
+    actuator-public: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -20,6 +20,7 @@ import {
   TeamOutlined,
   ThunderboltOutlined,
   UploadOutlined,
+  UserOutlined,
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
@@ -37,6 +38,7 @@ export const menuItems: FsMenuItem[] = [
   { key: '/planning', icon: <FundOutlined />, label: 'Planning', path: '/planning' },
   { key: '/wealth', icon: <BankOutlined />, label: 'Wealth', path: '/wealth' },
   { key: '/goals', icon: <AimOutlined />, label: 'Goals', path: '/goals' },
+  { key: '/profile', icon: <UserOutlined />, label: 'Profile', path: '/profile' },
   {
     key: 'transactions',
     icon: <FileTextOutlined />,
@@ -58,6 +60,9 @@ export const menuItems: FsMenuItem[] = [
       { key: '/reports/fixed-vs-variable', icon: <CalendarOutlined />, label: 'Fixed vs Variable', path: '/reports/fixed-vs-variable' },
       { key: '/reports/spending-drift', icon: <RiseOutlined />, label: 'Spending Drift', path: '/reports/spending-drift' },
       { key: '/reports/bills-calendar', icon: <LineChartOutlined />, label: 'Bills Calendar', path: '/reports/bills-calendar' },
+      { key: '/reports/annual-outlook', icon: <ThunderboltOutlined />, label: 'Annual Outlook', path: '/reports/annual-outlook' },
+      { key: '/reports/trend-changes', icon: <RiseOutlined />, label: 'Trend Changes', path: '/reports/trend-changes' },
+      { key: '/reports/cash-risk', icon: <FundOutlined />, label: 'Cash Risk', path: '/reports/cash-risk' },
     ],
   },
   {

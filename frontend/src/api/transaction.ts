@@ -95,6 +95,29 @@ export function aggregateTransactionRows(rows: TransactionRow[]): Omit<Transacti
 }
 
 export async function fetchTransactionStats(params: TransactionQuery): Promise<TransactionStats> {
+  try {
+    const q = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => {
+      if (v != null && v !== '') q.set(k, String(v))
+    })
+    const suffix = q.toString() ? `?${q.toString()}` : ''
+    const raw = await getJson<Record<string, unknown>>(`/api/v1/transactions/stats${suffix}`)
+    const n = normalizeResult(raw)
+    if (n.ok && n.data) {
+      const d = n.data as Record<string, unknown>
+      return {
+        total: Number(d.total || 0),
+        income: Number(d.income || 0),
+        expense: Number(d.expense || 0),
+        net: Number(d.net || 0),
+        transfers: Number(d.transfers || 0),
+        unclassified: Number(d.unclassified || 0),
+        truncated: Boolean(d.truncated),
+      }
+    }
+  } catch {
+    // fallback to client aggregation below
+  }
   const probe = await listTransactions({ ...params, page: 1, rows: 1 })
   const total = probe.total
   if (total === 0) {

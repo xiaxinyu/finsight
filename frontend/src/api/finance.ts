@@ -99,6 +99,10 @@ export async function goalProgress(id: string) {
   return unwrap<Record<string, unknown>>(await getJson(`/api/v1/goals/${id}/progress`))
 }
 
+export async function goalAdvice(id: string) {
+  return unwrap<Record<string, unknown>>(await getJson(`/api/v1/goals/${id}/advice`))
+}
+
 export async function simulateScenario(params: { lumpSumExpense?: number; incomeChangePct?: number; newMonthlyBill?: number }) {
   return unwrap<{
     baseline: Record<string, number>

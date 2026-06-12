@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Col, Form, Input, InputNumber, Row, Table, Tag, message } from 'antd'
+import { Alert, Button, Col, Form, Input, InputNumber, Row, Table, Tabs, Tag, message } from 'antd'
+import { Link } from 'react-router-dom'
 import { CalendarOutlined, FundOutlined } from '@ant-design/icons'
-import { billCalendar, budgetVsActual, cashflowMetrics, listBills, saveBill, saveBudgetLine } from '../../api/finance'
+import { billCalendar, budgetVsActual, cashflowMetrics, listBills, listGoals, saveBill, saveBudgetLine } from '../../api/finance'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { KpiGrid } from '../../components/KpiGrid'
 import { EmptyState } from '../../components/EmptyState'
@@ -27,6 +28,7 @@ export function PlanningPage() {
   const { data: bva, isError: bvaErr, error: bvaError } = useQuery({ queryKey: ['budget-vs-actual'], queryFn: () => budgetVsActual() })
   const { data: bills } = useQuery({ queryKey: ['bills'], queryFn: listBills })
   const { data: calendar } = useQuery({ queryKey: ['bill-calendar'], queryFn: billCalendar })
+  const { data: goals } = useQuery({ queryKey: ['goals'], queryFn: listGoals })
 
   const tableHeight = useViewportTableHeight(320)
   const bvaMeta = bva?.[0]
@@ -70,6 +72,14 @@ export function PlanningPage() {
           message="Failed to load planning data"
           description={loadError instanceof Error ? loadError.message : 'Please sign in again.'} />
       )}
+      <Tabs
+        size="small"
+        items={[
+          {
+            key: 'overview',
+            label: 'Overview',
+            children: (
+              <>
       <KpiGrid items={[
         { key: 'safe', label: 'Safe to spend', value: formatMoney(safe), icon: <FundOutlined /> },
         { key: 'runway', label: 'Runway (months)', value: runway.toFixed(1), icon: <CalendarOutlined /> },
@@ -144,6 +154,59 @@ export function PlanningPage() {
           </div>
         </Col>
       </Row>
+              </>
+            ),
+          },
+          {
+            key: 'timeline',
+            label: 'Timeline',
+            children: (
+              <Row gutter={[12, 12]}>
+                <Col xs={24} lg={14}>
+                  <div className="fs-table-panel" style={{ padding: 0 }}>
+                    <Table
+                      className="fs-data-table"
+                      size="small"
+                      rowKey={(_, i) => `cal-${i}`}
+                      pagination={false}
+                      scroll={{ y: tableHeight }}
+                      dataSource={calendar || []}
+                      columns={[
+                        { title: 'Date', dataIndex: 'date', render: (v) => formatTableDate(v) },
+                        { title: 'Bill', dataIndex: 'name' },
+                        { title: 'Amount', dataIndex: 'amount', align: 'right', render: (v) => formatMoney(Number(v)) },
+                      ]}
+                    />
+                  </div>
+                </Col>
+                <Col xs={24} lg={10}>
+                  <div className="fs-table-panel" style={{ padding: 12 }}>
+                    <h4 style={{ marginTop: 0 }}>Goals on timeline</h4>
+                    {(goals || []).length === 0 ? (
+                      <>
+                        <EmptyState compact title="No goals" description="Set a savings goal on the Goals page." />
+                        <Link to="/goals" style={{ display: 'block', marginTop: 8 }}>Open Goals →</Link>
+                      </>
+                    ) : (
+                      <ul className="fs-planning-timeline">
+                        {(goals || []).map((g) => (
+                          <li key={String(g.id)}>
+                            <strong>{String(g.name)}</strong>
+                            <span>{formatMoney(Number(g.monthlyContribution || 0))}/mo</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div style={{ marginTop: 12 }}>
+                      <Link to="/reports/annual-outlook">Open annual outlook →</Link>
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            ),
+          },
+        ]}
+      />
     </DataPageLayout>
   )
 }

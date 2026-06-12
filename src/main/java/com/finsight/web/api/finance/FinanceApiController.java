@@ -6,6 +6,7 @@ import com.finsight.application.finance.CashflowService;
 import com.finsight.application.finance.DataQualityService;
 import com.finsight.application.finance.FinancialAccountService;
 import com.finsight.application.finance.FinancialGoalService;
+import com.finsight.application.finance.GoalAdviceService;
 import com.finsight.application.finance.FinancialPulseService;
 import com.finsight.application.finance.InsightService;
 import com.finsight.application.finance.ScenarioService;
@@ -34,6 +35,7 @@ public class FinanceApiController {
     private final BillService billService;
     private final WealthService wealthService;
     private final FinancialGoalService goalService;
+    private final GoalAdviceService goalAdviceService;
     private final ScenarioService scenarioService;
     private final InsightService insightService;
 
@@ -46,6 +48,7 @@ public class FinanceApiController {
                                 BillService billService,
                                 WealthService wealthService,
                                 FinancialGoalService goalService,
+                                GoalAdviceService goalAdviceService,
                                 ScenarioService scenarioService,
                                 InsightService insightService) {
         this.accountService = accountService;
@@ -57,6 +60,7 @@ public class FinanceApiController {
         this.billService = billService;
         this.wealthService = wealthService;
         this.goalService = goalService;
+        this.goalAdviceService = goalAdviceService;
         this.scenarioService = scenarioService;
         this.insightService = insightService;
     }
@@ -169,6 +173,11 @@ public class FinanceApiController {
         FinancialGoal g = goalService.list().stream().filter(x -> id.equals(x.getId())).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Goal not found"));
         return CommonResult.success(goalService.progress(g));
+    }
+
+    @GetMapping("/goals/{id}/advice")
+    public CommonResult goalAdvice(@PathVariable String id) throws Exception {
+        return CommonResult.success(goalAdviceService.advise(id));
     }
 
     @PostMapping("/scenarios/simulate")

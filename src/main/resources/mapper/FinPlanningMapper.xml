@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.finsight.infrastructure.mapper.FinPlanningMapper">
+
+    <select id="findBudget" resultType="com.finsight.domain.model.Budget">
+        select id, name, period_type as periodType, year_val as year, month_val as month, deleted
+        from fin_budget
+        where user_id = #{userId} and month_key = #{monthKey} and coalesce(deleted,0)=0
+        limit 1
+    </select>
+
+    <insert id="insertBudget">
+        insert into fin_budget (id, user_id, month_key, name, period_type, year_val, month_val, deleted, created_at, updated_at)
+        values (#{budget.id}, #{userId}, #{monthKey}, #{budget.name}, #{budget.periodType},
+                #{budget.year}, #{budget.month}, coalesce(#{budget.deleted},0), now(3), now(3))
+    </insert>
+
+    <update id="updateBudget">
+        update fin_budget
+        set name = #{budget.name}, updated_at = now(3)
+        where id = #{budget.id}
+    </update>
+
+    <select id="listBudgetLines" resultType="com.finsight.domain.model.BudgetLine">
+        select id, budget_id as budgetId, category_code as categoryCode, bucket_key as bucketKey,
+               limit_amount as limitAmount, rollover
+        from fin_budget_line
+        where budget_id = #{budgetId}
+    </select>
+
+    <insert id="insertBudgetLine">
+        insert into fin_budget_line (id, budget_id, user_id, category_code, bucket_key, limit_amount, rollover, created_at, updated_at)
+        values (#{line.id}, #{line.budgetId}, #{userId}, #{line.categoryCode}, #{line.bucketKey},
+                #{line.limitAmount}, #{line.rollover}, now(3), now(3))
+    </insert>
+
+    <update id="updateBudgetLine">
+        update fin_budget_line
+        set category_code = #{line.categoryCode}, bucket_key = #{line.bucketKey},
+            limit_amount = #{line.limitAmount}, rollover = #{line.rollover}, updated_at = now(3)
+        where id = #{line.id}
+    </update>
+
+    <select id="countBudgetLinesForUser" resultType="int">
+        select count(*) from fin_budget_line where user_id = #{userId}
+    </select>
+
+    <select id="listBills" resultType="com.finsight.domain.model.Bill">
+        select id, name, amount, due_day as dueDay, recurrence, account_id as accountId,
+               category_code as categoryCode, enabled, deleted
+        from fin_bill
+        where user_id = #{userId} and coalesce(deleted,0)=0
+        order by due_day
+    </select>
+
+    <insert id="insertBill">
+        insert into fin_bill (id, user_id, name, amount, due_day, recurrence, account_id, category_code,
+                              enabled, deleted, created_at, updated_at)
+        values (#{bill.id}, #{userId}, #{bill.name}, #{bill.amount}, #{bill.dueDay}, #{bill.recurrence},
+                #{bill.accountId}, #{bill.categoryCode}, coalesce(#{bill.enabled},1), coalesce(#{bill.deleted},0),
+                now(3), now(3))
+    </insert>
+
+    <update id="updateBill">
+        update fin_bill
+        set name = #{bill.name}, amount = #{bill.amount}, due_day = #{bill.dueDay}, recurrence = #{bill.recurrence},
+            account_id = #{bill.accountId}, category_code = #{bill.categoryCode},
+            enabled = #{bill.enabled}, deleted = #{bill.deleted}, updated_at = now(3)
+        where id = #{bill.id}
+    </update>
+
+    <select id="countBillsForUser" resultType="int">
+        select count(*) from fin_bill where user_id = #{userId} and coalesce(deleted,0)=0
+    </select>
+
+    <select id="listGoals" resultType="com.finsight.domain.model.FinancialGoal">
+        select id, name, goal_type as goalType, target_amount as targetAmount, current_amount as currentAmount,
+               target_date as targetDate, monthly_contribution as monthlyContribution,
+               linked_account_id as linkedAccountId, deleted
+        from fin_financial_goal
+        where user_id = #{userId} and coalesce(deleted,0)=0
+    </select>
+
+    <insert id="insertGoal">
+        insert into fin_financial_goal (id, user_id, name, goal_type, target_amount, current_amount, target_date,
+                                        monthly_contribution, linked_account_id, deleted, created_at, updated_at)
+        values (#{goal.id}, #{userId}, #{goal.name}, #{goal.goalType}, #{goal.targetAmount}, #{goal.currentAmount},
+                #{goal.targetDate}, #{goal.monthlyContribution}, #{goal.linkedAccountId},
+                coalesce(#{goal.deleted},0), now(3), now(3))
+    </insert>
+
+    <update id="updateGoal">
+        update fin_financial_goal
+        set name = #{goal.name}, goal_type = #{goal.goalType}, target_amount = #{goal.targetAmount},
+            current_amount = #{goal.currentAmount}, target_date = #{goal.targetDate},
+            monthly_contribution = #{goal.monthlyContribution}, linked_account_id = #{goal.linkedAccountId},
+            deleted = #{goal.deleted}, updated_at = now(3)
+        where id = #{goal.id}
+    </update>
+
+    <select id="countGoalsForUser" resultType="int">
+        select count(*) from fin_financial_goal where user_id = #{userId} and coalesce(deleted,0)=0
+    </select>
+
+    <insert id="upsertMetric">
+        insert into fin_metric_monthly (user_id, month_key, metric_code, metric_value, computed_at)
+        values (#{userId}, #{yearMonth}, #{metricCode}, #{value}, now(3))
+        on duplicate key update metric_value = #{value}, computed_at = now(3)
+    </insert>
+
+    <select id="findMetric" resultType="java.math.BigDecimal">
+        select metric_value from fin_metric_monthly
+        where user_id = #{userId} and month_key = #{yearMonth} and metric_code = #{metricCode}
+    </select>
+
+    <select id="listMetrics" resultType="java.util.HashMap">
+        select month_key as yearMonth, metric_code as metricCode, metric_value as metricValue
+        from fin_metric_monthly
+        where user_id = #{userId}
+          and month_key &gt;= #{fromYm}
+          and month_key &lt;= #{toYm}
+        order by month_key, metric_code
+    </select>
+</mapper>

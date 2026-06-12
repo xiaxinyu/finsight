@@ -1,6 +1,7 @@
 package com.finsight.application.statement;
 
 import com.finsight.application.card.BankCardService;
+import com.finsight.application.consume.ClassificationProperties;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.statement.impl.StatementProcessingServiceImpl;
 import com.finsight.domain.model.BankCard;
@@ -24,6 +25,9 @@ class StatementProcessingServiceImplTest {
 
     @Mock
     private ClassificationService classificationService;
+
+    @Mock
+    private ClassificationProperties classificationProperties;
 
     @InjectMocks
     private StatementProcessingServiceImpl service;

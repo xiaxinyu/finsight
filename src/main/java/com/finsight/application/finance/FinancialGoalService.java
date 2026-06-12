@@ -12,21 +12,21 @@ import java.util.Map;
 @Service
 public class FinancialGoalService {
 
-    private final PlanningPreferencesStore preferencesStore;
+    private final PlanningPreferencesGateway planningGateway;
 
-    public FinancialGoalService(PlanningPreferencesStore preferencesStore) {
-        this.preferencesStore = preferencesStore;
+    public FinancialGoalService(PlanningPreferencesGateway planningGateway) {
+        this.planningGateway = planningGateway;
     }
 
     public List<FinancialGoal> list() {
-        return preferencesStore.goals();
+        return planningGateway.goals();
     }
 
     public FinancialGoal save(FinancialGoal goal) {
         if (goal.getCurrentAmount() == null) {
             goal.setCurrentAmount(BigDecimal.ZERO);
         }
-        return preferencesStore.saveGoal(goal);
+        return planningGateway.saveGoal(goal);
     }
 
     public Map<String, Object> progress(FinancialGoal goal) {

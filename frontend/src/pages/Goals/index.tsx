@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Col, Form, Input, InputNumber, Progress, Row } from 'antd'
 import { AimOutlined } from '@ant-design/icons'
-import { goalProgress, listGoals, saveGoal, simulateScenario } from '../../api/finance'
+import { runForecastScenario } from '../../api/analytics'
+import { goalAdvice, goalProgress, listGoals, saveGoal, simulateScenario } from '../../api/finance'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { ContentCard } from '../../components/ContentCard'
 import { EmptyState } from '../../components/EmptyState'
@@ -13,6 +14,11 @@ function GoalCard({ goal }: { goal: Record<string, unknown> }) {
   const { data: progress } = useQuery({
     queryKey: ['goal-progress', goal.id],
     queryFn: () => goalProgress(String(goal.id)),
+    enabled: !!goal.id,
+  })
+  const { data: advice } = useQuery({
+    queryKey: ['goal-advice', goal.id],
+    queryFn: () => goalAdvice(String(goal.id)),
     enabled: !!goal.id,
   })
   const target = Number(goal.targetAmount || 0)
@@ -26,6 +32,12 @@ function GoalCard({ goal }: { goal: Record<string, unknown> }) {
       <div style={{ fontSize: 12, marginTop: 8 }}>
         {formatMoney(current)} / {formatMoney(target)}
         {months != null && <div style={{ marginTop: 4, opacity: 0.7 }}>~{months} months at current contribution</div>}
+        {advice && (
+          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>
+            <div>Recommended: {formatMoney(Number(advice.recommendedMonthly || 0))}/mo</div>
+            <div>Success chance: {Math.round(Number(advice.successProbability || 0) * 100)}%</div>
+          </div>
+        )}
       </div>
     </ContentCard>
   )
@@ -40,6 +52,7 @@ export function GoalsPage() {
     scenario: Record<string, number>
     delta: Record<string, number>
   } | null>(null)
+  const [forecast, setForecast] = useState<Record<string, unknown> | null>(null)
 
   const { data: goals, isError, error } = useQuery({ queryKey: ['goals'], queryFn: listGoals })
 
@@ -52,12 +65,17 @@ export function GoalsPage() {
 
   const onSimulate = async () => {
     const v = await scenarioForm.validateFields()
-    const res = await simulateScenario({
+    const params = {
       lumpSumExpense: Number(v.lumpSum || 0),
       incomeChangePct: Number(v.incomePct || 0),
       newMonthlyBill: Number(v.newBill || 0),
-    })
-    setScenario(res)
+    }
+    const [legacy, next] = await Promise.all([
+      simulateScenario(params),
+      runForecastScenario({ ...params, year: new Date().getFullYear() }),
+    ])
+    setScenario(legacy)
+    setForecast(next)
   }
 
   return (
@@ -94,7 +112,7 @@ export function GoalsPage() {
           </ContentCard>
         </Col>
         <Col xs={24} lg={12}>
-          <ContentCard title="Scenario simulator" size="small">
+          <ContentCard title="Scenario lab" size="small">
             <Form form={scenarioForm} layout="vertical" size="small">
               <Form.Item name="lumpSum" label="One-time expense"><InputNumber style={{ width: '100%' }} /></Form.Item>
               <Form.Item name="incomePct" label="Income change %"><InputNumber style={{ width: '100%' }} /></Form.Item>
@@ -108,6 +126,17 @@ export function GoalsPage() {
                   { key: 'sr', label: 'Scenario runway', value: `${scenario.scenario.runwayMonths?.toFixed(1)} mo` },
                   { key: 'd', label: 'Runway delta', value: `${scenario.delta.runwayMonths >= 0 ? '+' : ''}${scenario.delta.runwayMonths?.toFixed(1)} mo` },
                   { key: 'nw', label: 'Net worth delta', value: formatMoney(scenario.delta.netWorth || 0) },
+                ]} />
+              </div>
+            )}
+            {forecast && (
+              <div style={{ marginTop: 12, fontSize: 12, opacity: 0.9 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Annual forecast (new API)</div>
+                <KpiGrid items={[
+                  { key: 'fy', label: 'Forecast net', value: formatMoney(Number(forecast.yearNet || 0)) },
+                  { key: 'fi', label: 'Forecast income', value: formatMoney(Number(forecast.yearIncome || 0)) },
+                  { key: 'fe', label: 'Forecast expense', value: formatMoney(Number(forecast.yearExpense || 0)) },
+                  { key: 'fd', label: 'Deficit months', value: String((forecast.deficitMonths as string[] | undefined)?.length ?? 0) },
                 ]} />
               </div>
             )}

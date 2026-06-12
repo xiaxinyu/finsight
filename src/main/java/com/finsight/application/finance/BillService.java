@@ -12,18 +12,18 @@ import java.util.Map;
 @Service
 public class BillService {
 
-    private final PlanningPreferencesStore preferencesStore;
+    private final PlanningPreferencesGateway planningGateway;
 
-    public BillService(PlanningPreferencesStore preferencesStore) {
-        this.preferencesStore = preferencesStore;
+    public BillService(PlanningPreferencesGateway planningGateway) {
+        this.planningGateway = planningGateway;
     }
 
     public List<Bill> listEnabled() {
-        return preferencesStore.enabledBills();
+        return planningGateway.enabledBills();
     }
 
     public Bill save(Bill bill) {
-        return preferencesStore.saveBill(bill);
+        return planningGateway.saveBill(bill);
     }
 
     public List<Map<String, Object>> calendarNext30Days() {

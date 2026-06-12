@@ -894,4 +894,33 @@
         where coalesce(t.balance_money, 0) &lt; 0
            or (coalesce(t.income_money, 0) &gt; 0 and coalesce(t.balance_money, 0) &gt; 0)
     </select>
+
+    <select id="aggregateStats" resultType="java.util.HashMap">
+        select
+            count(distinct t.id) as total,
+            coalesce(sum(<include refid="rowIncomeAmountT"/>), 0) as income,
+            coalesce(sum(<include refid="rowExpenseAmountT"/>), 0) as expense,
+            coalesce(sum(case when t.txn_kind = 'transfer' then 1 else 0 end), 0) as transfers,
+            coalesce(sum(case when (t.consume_code is null or trim(t.consume_code) = '')
+                and (t.consume_name is null or trim(t.consume_name) = '') then 1 else 0 end), 0) as unclassified
+        from transaction t
+        left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
+        left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where 1 = 1
+        <include refid="activeTransactionT"/>
+        <if test="q != null">
+            <if test="q.transactionDateStart != null">
+                and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="q.transactionDateEnd != null">
+                and t.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <include refid="filterBankCardT"/>
+            <if test="q.emptyConsume != null and q.emptyConsume == true">
+                and (t.consume_code is null or trim(t.consume_code) = '')
+                and (t.consume_name is null or trim(t.consume_name) = '')
+            </if>
+        </if>
+    </select>
 </mapper>

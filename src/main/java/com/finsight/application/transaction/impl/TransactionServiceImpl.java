@@ -9,6 +9,7 @@ import com.finsight.application.card.BankCardService;
 import com.finsight.domain.model.BankCard;
 import com.finsight.common.exception.AppException;
 import com.finsight.common.exception.AppServiceException;
+import com.finsight.application.analytics.MetricRefreshTrigger;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.application.transaction.TransactionAmountNormalizer;
 import com.finsight.application.transaction.TransactionFieldSanitizer;
@@ -23,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +40,9 @@ public class TransactionServiceImpl implements ITransactionService {
 
     @Autowired
     TransactionRepository transactionRepository;
+
+    @Autowired
+    MetricRefreshTrigger metricRefreshTrigger;
 
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
@@ -250,12 +256,17 @@ public class TransactionServiceImpl implements ITransactionService {
         }
         try {
             int success = 0;
+            List<Date> dates = new ArrayList<>();
             for (Transaction transaction : transactions) {
                 prepareForInsert(transaction, userName);
                 transactionRepository.insert(transaction);
+                if (transaction.getTransactionDate() != null) {
+                    dates.add(transaction.getTransactionDate());
+                }
                 success++;
             }
             invalidateHomeSummaryCache();
+            metricRefreshTrigger.afterTransactionsChanged(dates);
             return success;
         } catch (Exception e) {
             throw new AppServiceException(e);

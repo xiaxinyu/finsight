@@ -12,11 +12,13 @@ import {
 } from '@ant-design/icons'
 import { homeSummary, fetchReport } from '../../api/report'
 import { cashflowMetrics, decisionCards, financialPulse } from '../../api/finance'
+import { advisorFeedback, advisorRecommendations } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
+import { AdvisorStrip } from '../../components/AdvisorStrip'
 import { DashboardInsightStrip } from '../../components/DashboardInsightStrip'
 import { DashboardQualityStrip } from '../../components/DashboardQualityStrip'
 import { AccountBalancePanel } from '../../components/AccountBalancePanel'
@@ -82,9 +84,14 @@ export function DashboardPage() {
     queryKey: ['cashflow'],
     queryFn: cashflowMetrics,
   })
-  const { data: cards, isError: cardsError, error: cardsErr } = useQuery({
+  const { data: advisorCards, isError: cardsError, error: cardsErr, refetch: refetchAdvisor } = useQuery({
+    queryKey: ['advisor-recommendations'],
+    queryFn: advisorRecommendations,
+  })
+  const { data: legacyCards } = useQuery({
     queryKey: ['decision-cards'],
     queryFn: decisionCards,
+    enabled: !advisorCards?.length,
   })
 
   const income = Number(periodReport?.income ?? 0)
@@ -220,7 +227,14 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <DashboardInsightStrip cards={cards || []} />
+          <AdvisorStrip
+            cards={advisorCards || []}
+            onDismiss={async (id) => {
+              await advisorFeedback(id, 'dismiss')
+              refetchAdvisor()
+            }}
+          />
+          {!advisorCards?.length && <DashboardInsightStrip cards={legacyCards || []} />}
 
           <Row gutter={[12, 12]}>
             <Col xs={24} lg={14}>

@@ -119,4 +119,5 @@ sql/
 .idea/
 .settings/
 .vscode/
-db/
+# Local DB dumps only (Flyway scripts live under src/main/resources/db/migration)
+/db/

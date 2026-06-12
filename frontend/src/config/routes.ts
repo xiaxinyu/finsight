@@ -10,6 +10,7 @@ const staticRoutes: RouteMeta[] = [
   { path: '/planning', title: 'Planning', breadcrumb: ['Planning'] },
   { path: '/wealth', title: 'Wealth', breadcrumb: ['Wealth'] },
   { path: '/goals', title: 'Goals', breadcrumb: ['Goals'] },
+  { path: '/profile', title: 'Financial Profile', breadcrumb: ['Profile'] },
   { path: '/transactions', title: 'Transactions', breadcrumb: ['Transactions', 'Detail'] },
   { path: '/statements/upload', title: 'Import Statement', breadcrumb: ['Transactions', 'Import'] },
   { path: '/statements', title: 'Import History', breadcrumb: ['Transactions', 'Import History'] },
@@ -34,6 +35,9 @@ const reportTitles: Record<string, string> = {
   'income-vs-expense': 'Income vs Expense',
   'income-curve': 'Income Curve',
   'expense-curve': 'Expense Curve',
+  'annual-outlook': 'Annual Outlook',
+  'trend-changes': 'Trend Changes',
+  'cash-risk': 'Cash Risk',
 }
 
 const ledgerTitles: Record<string, string> = {
