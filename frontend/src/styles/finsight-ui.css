@@ -3335,3 +3335,73 @@
   gap: 8px;
   margin-bottom: 8px;
 }
+
+.fs-cash-risk-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fs-cash-risk-day {
+  min-height: 52px;
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+.fs-cash-risk-day--high {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.fs-cash-risk-day--medium {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.fs-cash-risk-day--low {
+  background: #f8fafc;
+}
+
+.fs-cash-risk-day-dots {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.fs-cash-risk-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.fs-cash-risk-dot--bill { background: #ea580c; }
+.fs-cash-risk-dot--income { background: #16a34a; }
+.fs-cash-risk-dot--goal { background: #7c3aed; }
+
+.fs-cash-risk-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.fs-cash-risk-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.fs-cash-risk-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fs-cash-risk-event strong {
+  margin-left: auto;
+}

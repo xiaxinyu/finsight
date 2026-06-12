@@ -1,5 +1,6 @@
 package com.finsight.web.api.analytics;
 
+import com.finsight.application.analytics.CashRiskCalendarService;
 import com.finsight.application.analytics.ForecastService;
 import com.finsight.application.analytics.TrendAnalysisService;
 import com.finsight.web.api.dto.CommonResult;
@@ -18,10 +19,14 @@ public class AnalyticsForecastController {
 
     private final ForecastService forecastService;
     private final TrendAnalysisService trendAnalysisService;
+    private final CashRiskCalendarService cashRiskCalendarService;
 
-    public AnalyticsForecastController(ForecastService forecastService, TrendAnalysisService trendAnalysisService) {
+    public AnalyticsForecastController(ForecastService forecastService,
+                                       TrendAnalysisService trendAnalysisService,
+                                       CashRiskCalendarService cashRiskCalendarService) {
         this.forecastService = forecastService;
         this.trendAnalysisService = trendAnalysisService;
+        this.cashRiskCalendarService = cashRiskCalendarService;
     }
 
     @GetMapping("/forecast")
@@ -43,5 +48,11 @@ public class AnalyticsForecastController {
     @PostMapping("/scenarios")
     public CommonResult scenarios(@RequestBody Map<String, Object> body) throws Exception {
         return CommonResult.success(forecastService.simulateScenario(body));
+    }
+
+    @GetMapping("/cash-risk-calendar")
+    public CommonResult cashRiskCalendar(@RequestParam int year,
+                                         @RequestParam(defaultValue = "stress") String scenario) throws Exception {
+        return CommonResult.success(cashRiskCalendarService.calendar(year, scenario));
     }
 }
