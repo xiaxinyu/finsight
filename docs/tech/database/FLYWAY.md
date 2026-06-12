@@ -1,0 +1,42 @@
+# Flyway migrations
+
+SQL migrations live in `src/main/resources/db/migration/`. Flyway runs on application startup (`spring.flyway.enabled: true`).
+
+## CI validation
+
+GitHub Actions job **`backend-flyway`** runs `FlywayMigrationIntegrationTest` against a fresh MySQL 8 Testcontainers database. Any new migration script must pass this job before merge.
+
+Locally (requires Docker):
+
+```bash
+mvn test -Dtest=FlywayMigrationIntegrationTest
+```
+
+Without Docker, the test is skipped automatically (`@Testcontainers(disabledWithoutDocker = true)`).
+
+## Baseline
+
+Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order.
+
+## Recovery (local)
+
+If migration fails mid-way or `flyway_schema_history` is inconsistent:
+
+```bash
+# Inspect status (uses pom.xml flyway plugin defaults)
+mvn flyway:info
+
+# Repair checksum / failed migration metadata (no schema DDL)
+mvn flyway:repair
+
+# Apply pending migrations
+mvn flyway:migrate
+```
+
+Typical order: **`mvn flyway:repair flyway:migrate`**.
+
+Set connection via env or edit `pom.xml` flyway plugin only for local dev — do not commit real credentials.
+
+## Runtime verification
+
+`POST /api/v1/maintenance/verify-schema-migration` checks core tables, row counts, and orphan rules after deploy. See [schema.md](schema.md).
