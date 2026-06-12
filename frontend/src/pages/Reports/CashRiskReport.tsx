@@ -5,6 +5,7 @@ import { BarChartOutlined } from '@ant-design/icons'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { fetchCashRiskCalendar } from '../../api/analytics'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -33,6 +34,7 @@ type CashRiskReportProps = {
 }
 
 export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
+  const { flags } = useFeatureFlags()
   const [year, setYear] = useState(dayjs().year())
   const [scenario, setScenario] = useState('stress')
   const [selectedDay, setSelectedDay] = useState<Dayjs>(dayjs())
@@ -40,6 +42,7 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
   const { data, isLoading, isFetching, isError, error } = useQuery({
     queryKey: ['cash-risk-calendar', year, scenario],
     queryFn: () => fetchCashRiskCalendar(year, scenario),
+    enabled: flags.forecast,
   })
 
   const dayIndex = useMemo(() => indexCashRiskDays(data?.days), [data?.days])
@@ -112,7 +115,11 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
         </div>
       )}
     >
-      {isError && (
+      {!flags.forecast && (
+        <EmptyState title="Forecast module disabled" description="Enable finsight.forecast.enabled to use cash risk calendar." />
+      )}
+
+      {flags.forecast && isError && (
         <Alert
           type="error"
           showIcon
@@ -121,6 +128,8 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
         />
       )}
 
+      {flags.forecast && (
+        <>
       <ReportKpiStrip items={kpis} />
 
       <Row gutter={[12, 12]} className="fs-report-body">
@@ -200,6 +209,8 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
           </ContentCard>
         </Col>
       </Row>
+        </>
+      )}
     </DataPageLayout>
   )
 }

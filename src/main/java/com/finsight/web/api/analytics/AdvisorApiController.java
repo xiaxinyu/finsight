@@ -4,6 +4,7 @@ import com.finsight.application.analytics.LocalAiAdvisorService;
 import com.finsight.application.analytics.MerchantMiningService;
 import com.finsight.application.analytics.RecommendationService;
 import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.config.FeatureFlagService;
 import com.finsight.web.api.dto.CommonResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,40 +22,48 @@ public class AdvisorApiController {
     private final LocalAiAdvisorService aiAdvisorService;
     private final MerchantMiningService merchantMiningService;
     private final AuthenticationFacade authenticationFacade;
+    private final FeatureFlagService featureFlags;
 
     public AdvisorApiController(RecommendationService recommendationService,
                                 LocalAiAdvisorService aiAdvisorService,
                                 MerchantMiningService merchantMiningService,
-                                AuthenticationFacade authenticationFacade) {
+                                AuthenticationFacade authenticationFacade,
+                                FeatureFlagService featureFlags) {
         this.recommendationService = recommendationService;
         this.aiAdvisorService = aiAdvisorService;
         this.merchantMiningService = merchantMiningService;
         this.authenticationFacade = authenticationFacade;
+        this.featureFlags = featureFlags;
     }
 
     @GetMapping("/recommendations")
     public CommonResult recommendations() throws Exception {
+        featureFlags.requireAdvisor();
         return CommonResult.success(recommendationService.topRecommendations(userKey()));
     }
 
     @PostMapping("/feedback")
     public CommonResult feedback(@RequestBody Map<String, String> body) {
+        featureFlags.requireAdvisor();
         recommendationService.feedback(userKey(), body.get("cardId"), body.get("action"));
         return CommonResult.success(Map.of("ok", true));
     }
 
     @PostMapping("/ask")
     public CommonResult ask(@RequestBody Map<String, String> body) throws Exception {
+        featureFlags.requireLocalAi();
         return CommonResult.success(aiAdvisorService.ask(body.get("question")));
     }
 
     @PostMapping("/merchants/refresh")
     public CommonResult refreshMerchants() {
+        featureFlags.requireMerchantMining();
         return CommonResult.success(merchantMiningService.refreshProfiles());
     }
 
     @GetMapping("/merchants/subscriptions")
     public CommonResult subscriptions() {
+        featureFlags.requireMerchantMining();
         return CommonResult.success(merchantMiningService.subscriptions());
     }
 

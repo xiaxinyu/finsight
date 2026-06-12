@@ -28,6 +28,7 @@ import { formatMoney, MONTH_NAMES } from '../../utils/format'
 import { defaultPeriodRange, formatPeriodPreview, type PeriodRange } from '../../utils/periodPresets'
 import { rollupToLevel1 } from '../../utils/reportAnalytics'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 
 function savingsRateLabel(income: number, net: number): string {
   if (income <= 0) return '—'
@@ -40,6 +41,7 @@ function dataTrustScore(unclassified: number): number {
 }
 
 export function DashboardPage() {
+  const { flags } = useFeatureFlags()
   const [period, setPeriod] = useState<PeriodRange>(() => defaultPeriodRange())
   const periodKey = periodToStrings(period)
   const chartHeight = Math.min(useViewportTableHeight(280), 360)
@@ -87,11 +89,12 @@ export function DashboardPage() {
   const { data: advisorCards, isError: cardsError, error: cardsErr, refetch: refetchAdvisor } = useQuery({
     queryKey: ['advisor-recommendations'],
     queryFn: advisorRecommendations,
+    enabled: flags.advisor,
   })
   const { data: legacyCards } = useQuery({
     queryKey: ['decision-cards'],
     queryFn: decisionCards,
-    enabled: !advisorCards?.length,
+    enabled: !flags.advisor || !advisorCards?.length,
   })
 
   const income = Number(periodReport?.income ?? 0)
@@ -227,14 +230,20 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <AdvisorStrip
-            cards={advisorCards || []}
-            onDismiss={async (id) => {
-              await advisorFeedback(id, 'dismiss')
-              refetchAdvisor()
-            }}
-          />
-          {!advisorCards?.length && <DashboardInsightStrip cards={legacyCards || []} />}
+          {flags.advisor ? (
+            <>
+              <AdvisorStrip
+                cards={advisorCards || []}
+                onDismiss={async (id) => {
+                  await advisorFeedback(id, 'dismiss')
+                  refetchAdvisor()
+                }}
+              />
+              {!advisorCards?.length && <DashboardInsightStrip cards={legacyCards || []} />}
+            </>
+          ) : (
+            <DashboardInsightStrip cards={legacyCards || []} />
+          )}
 
           <Row gutter={[12, 12]}>
             <Col xs={24} lg={14}>

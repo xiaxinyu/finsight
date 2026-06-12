@@ -1,5 +1,6 @@
 package com.finsight.web.config;
 
+import com.finsight.application.config.FeatureDisabledException;
 import com.finsight.common.exception.AppException;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.web.api.dto.ApiResponse;
@@ -31,6 +32,12 @@ public class GlobalExceptionHandler {
     /**
      * Application-layer failures with an explicit message (preferred over generic {@link Exception}).
      */
+    @ExceptionHandler(FeatureDisabledException.class)
+    @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiResponse<?> handleFeatureDisabled(FeatureDisabledException ex) {
+        return ApiResponse.error(ex.getMessage());
+    }
+
     @ExceptionHandler(AppServiceException.class)
     @org.springframework.web.bind.annotation.ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<?> handleAppServiceException(AppServiceException ex) {

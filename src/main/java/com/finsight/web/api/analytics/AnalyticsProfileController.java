@@ -1,6 +1,7 @@
 package com.finsight.web.api.analytics;
 
 import com.finsight.application.analytics.FinancialProfileService;
+import com.finsight.application.config.FeatureFlagService;
 import com.finsight.web.api.dto.CommonResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,18 +13,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class AnalyticsProfileController {
 
     private final FinancialProfileService profileService;
+    private final FeatureFlagService featureFlags;
 
-    public AnalyticsProfileController(FinancialProfileService profileService) {
+    public AnalyticsProfileController(FinancialProfileService profileService,
+                                      FeatureFlagService featureFlags) {
         this.profileService = profileService;
+        this.featureFlags = featureFlags;
     }
 
     @GetMapping("/profile")
     public CommonResult profile() throws Exception {
+        featureFlags.requireProfile();
         return CommonResult.success(profileService.currentProfile());
     }
 
     @GetMapping("/profile/history")
     public CommonResult profileHistory(@RequestParam String from, @RequestParam String to) {
+        featureFlags.requireProfile();
         return CommonResult.success(profileService.history(from, to));
     }
 }

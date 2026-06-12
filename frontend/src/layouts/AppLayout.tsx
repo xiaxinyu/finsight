@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { verifySession } from '../api/client'
 import { Layout, Menu, Typography, Button, Breadcrumb, Popconfirm, theme, type MenuProps } from 'antd'
 import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { menuItems, type FsMenuItem } from '../config/menuConfig'
+import { useFeatureFlags } from '../hooks/useFeatureFlags'
+import { filterMenuByFeatures } from '../utils/featureFlags'
 import { BrandLogo } from '../components/BrandLogo'
 import { resolveRouteMeta } from '../config/routes'
 
@@ -53,6 +55,8 @@ export function AppLayout() {
   const navigate = useNavigate()
   const { token } = theme.useToken()
   const routeMeta = resolveRouteMeta(location.pathname)
+  const { flags } = useFeatureFlags()
+  const visibleMenu = useMemo(() => filterMenuByFeatures(menuItems, flags), [flags])
 
   useEffect(() => {
     verifySession().then((ok) => {
@@ -82,7 +86,7 @@ export function AppLayout() {
           selectedKeys={findSelectedKeys(location.pathname)}
           openKeys={openKeys}
           onOpenChange={setOpenKeys}
-          items={renderMenuItems(menuItems)}
+          items={renderMenuItems(visibleMenu)}
           style={{ borderRight: 0 }}
         />
       </Sider>
