@@ -1,6 +1,7 @@
 package com.finsight.web.api.encrypt;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +17,7 @@ import java.util.Map;
  * use environment variables or your platform secret store for sensitive config.
  */
 @Controller
+@Profile("!prod")
 @RequestMapping({"/encrypt"})
 public class EncryptEndpointController {
 
