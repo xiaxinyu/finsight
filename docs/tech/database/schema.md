@@ -3,7 +3,7 @@
 Schema changes are versioned in `src/main/resources/db/migration/` (Flyway).  
 Existing databases at Flyway **≤ V10** use `baseline-version: 10`; **V11+** applies forward migrations only.
 
-See also: [table-usage.md](table-usage.md), [legacy-mapping.md](legacy-mapping.md).
+See also: [FLYWAY.md](FLYWAY.md) (CI + `flyway:repair` / `flyway:migrate`), [table-usage.md](table-usage.md), [legacy-mapping.md](legacy-mapping.md).
 
 ## Naming checklist (executable)
 

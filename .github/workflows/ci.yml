@@ -20,7 +20,20 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - run: mvn -B test
+      - run: mvn -B test -Dtest=!FlywayMigrationIntegrationTest
+
+  backend-flyway:
+    name: backend-flyway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Flyway migration integration test (Testcontainers MySQL)
+        run: mvn -B test -Dtest=FlywayMigrationIntegrationTest
 
   backend-style:
     name: backend-style
