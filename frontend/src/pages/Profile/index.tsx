@@ -3,31 +3,23 @@ import { useQuery } from '@tanstack/react-query'
 import { Alert, Col, Progress, Row, Tag, Typography } from 'antd'
 import { UserOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
-import type { EChartsOption } from 'echarts'
 import { fetchProfile } from '../../api/analytics'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { FsChart } from '../../components/FsChart'
 import { PageSkeleton } from '../../components/PageSkeleton'
-
-const DIM_LABELS: Record<string, string> = {
-  income_stability: 'Income stability',
-  spending_control: 'Spending control',
-  savings_discipline: 'Savings discipline',
-  fixed_burden: 'Fixed burden',
-  liquidity_safety: 'Liquidity safety',
-  debt_pressure: 'Debt pressure',
-  lifestyle_inflation: 'Lifestyle inflation',
-  spending_concentration: 'Spending concentration',
-  seasonality_risk: 'Seasonality risk',
-  data_trust: 'Data trust',
-}
+import { buildProfileRadarOption, PROFILE_DIM_LABELS } from './profileRadar'
 
 export function ProfilePage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['financial-profile'],
     queryFn: fetchProfile,
   })
+
+  const radarOption = useMemo(
+    () => buildProfileRadarOption(data?.dimensions),
+    [data?.dimensions],
+  )
 
   if (isLoading) return <PageSkeleton />
   if (isError) {
@@ -38,19 +30,6 @@ export function ProfilePage() {
     )
   }
   if (!data) return null
-
-  const radarOption: EChartsOption = useMemo(() => ({
-    tooltip: {},
-    radar: {
-      indicator: data.dimensions.map((d) => ({ name: DIM_LABELS[d.id] || d.id, max: 100 })),
-      radius: '62%',
-    },
-    series: [{
-      type: 'radar' as const,
-      data: [{ value: data.dimensions.map((d) => d.score), name: 'Profile' }],
-      areaStyle: { opacity: 0.15 },
-    }],
-  }), [data.dimensions])
 
   return (
     <DataPageLayout
@@ -85,7 +64,7 @@ export function ProfilePage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         {data.dimensions.map((dim) => (
           <Col xs={24} md={12} lg={8} key={dim.id}>
-            <ContentCard title={DIM_LABELS[dim.id] || dim.id}>
+            <ContentCard title={PROFILE_DIM_LABELS[dim.id] || dim.id}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Tag>{dim.level}</Tag>
                 <strong>{dim.score}</strong>
