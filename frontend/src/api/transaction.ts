@@ -1,4 +1,5 @@
 import { ApiError, getJson, postCommon, postForm } from './client'
+import { parseJsonObject } from './normalize'
 import { isCollectionResult, normalizeResult, parseJsonArray, type CollectionResult } from './normalize'
 
 export interface TransactionRow {
@@ -113,13 +114,27 @@ export async function deleteTransaction(id: string) {
   return postCommon('/transaction/delete', { id })
 }
 
+export type ReclassifyPreviewRow = {
+  id: string
+  categoryCode?: string
+  categoryName?: string
+  action: string
+  source?: 'RULE' | 'WEAK_RULE' | 'SIMILAR' | 'HEURISTIC' | 'KEYWORDS'
+  confidence?: number
+  reason?: string
+  suggestedKeywords?: string[]
+  transactionDesc?: string
+  transactionDate?: string
+}
+
 export type ReclassifyResult = {
   requested: number
   classified: number
   skipped: number
   noMatch: number
+  suggested?: number
   dryRun: boolean
-  preview?: { id: string; categoryCode: string; categoryName: string; action: string }[]
+  preview?: ReclassifyPreviewRow[]
 }
 
 export async function classifyTransactions(ids: string, options?: { persist?: boolean; overrideExisting?: boolean }) {
@@ -133,23 +148,29 @@ export async function classifyTransactions(ids: string, options?: { persist?: bo
 }
 
 /** Auto-classify all unclassified rows matching the current list filters (max 5000). */
-export async function classifyUnclassifiedInFilter(filters: TransactionQuery) {
+export async function classifyUnclassifiedInFilter(filters: TransactionQuery & { persist?: boolean }) {
   const params = new URLSearchParams()
   params.set('scope', 'unclassified')
-  params.set('persist', 'true')
+  params.set('persist', String(filters.persist ?? true))
   for (const [key, value] of Object.entries(filters)) {
-    if (value != null && value !== '') {
-      params.set(key, String(value))
-    }
+    if (key === 'persist' || value == null || value === '') continue
+    params.set(key, String(value))
   }
   return postCommon(`/transaction/classify?${params.toString()}`, {})
 }
 
 export function parseReclassifyResult(raw: unknown): ReclassifyResult | null {
-  if (!raw || typeof raw !== 'object') return null
-  const outer = raw as { data?: string; success?: boolean }
-  const payload = typeof outer.data === 'string' ? JSON.parse(outer.data) : outer
-  return payload as ReclassifyResult
+  if (raw == null || raw === '') return null
+  const direct = parseJsonObject<ReclassifyResult>(raw)
+  if (direct && typeof direct.requested === 'number') return direct
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    const outer = raw as { data?: unknown }
+    if (outer.data != null && outer.data !== '') {
+      const nested = parseJsonObject<ReclassifyResult>(outer.data)
+      if (nested && typeof nested.requested === 'number') return nested
+    }
+  }
+  return null
 }
 
 export async function incomeToExpense(ids: string) {

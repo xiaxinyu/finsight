@@ -1,6 +1,8 @@
 package com.finsight.application.transaction;
 
 import com.finsight.application.card.BankCardService;
+import com.finsight.application.classification.CategoryRecommendation;
+import com.finsight.application.classification.ClassificationRecommendationService;
 import com.finsight.application.consume.ClassificationNarrationBuilder;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.query.TransactionQuery;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -33,15 +36,18 @@ public class TransactionReclassificationService {
     private final ClassificationService classificationService;
     private final BankCardService bankCardService;
     private final ITransactionService transactionService;
+    private final ClassificationRecommendationService recommendationService;
 
     public TransactionReclassificationService(TransactionRepository transactionRepository,
                                                 ClassificationService classificationService,
                                                 BankCardService bankCardService,
-                                                ITransactionService transactionService) {
+                                                ITransactionService transactionService,
+                                                ClassificationRecommendationService recommendationService) {
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
         this.bankCardService = bankCardService;
         this.transactionService = transactionService;
+        this.recommendationService = recommendationService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -74,21 +80,100 @@ public class TransactionReclassificationService {
                 continue;
             }
 
-            ClassificationService.Result match = resolveCategory(tx, useOtherFallback);
-            if (match == null || StringUtils.isBlank(match.id)) {
-                result.setNoMatch(result.getNoMatch() + 1);
+            MatchOutcome outcome = resolveMatchOrRecommend(tx, useOtherFallback);
+            if (outcome.match == null || StringUtils.isBlank(outcome.match.id)) {
+                if (outcome.keywordOnly != null) {
+                    result.addPreview(tx.getId(), null, null, persist ? "APPLY" : "SUGGEST",
+                            tx.getTransactionDesc(), tx.getTransactionDate(),
+                            outcome.keywordOnly.getSource().name(), outcome.keywordOnly.getConfidence(),
+                            outcome.keywordOnly.getReason(), outcome.keywordOnly.getSuggestedKeywords());
+                    result.setSuggested(result.getSuggested() + 1);
+                } else {
+                    result.setNoMatch(result.getNoMatch() + 1);
+                }
                 continue;
             }
 
-            result.addPreview(tx.getId(), match.id, match.name, persist ? "APPLY" : "PREVIEW");
+            String action = outcome.suggested
+                    ? (persist ? "APPLY" : "SUGGEST")
+                    : (persist ? "APPLY" : "PREVIEW");
+            result.addPreview(tx.getId(), outcome.match.id, outcome.match.name, action,
+                    tx.getTransactionDesc(), tx.getTransactionDate(),
+                    outcome.source, outcome.confidence, outcome.reason, outcome.suggestedKeywords);
             if (persist) {
-                applyCategory(tx, match, userName);
+                applyCategory(tx, outcome.match, userName);
                 result.setClassified(result.getClassified() + 1);
+                if (outcome.suggested) {
+                    result.setSuggested(result.getSuggested() + 1);
+                }
             } else {
                 result.setClassified(result.getClassified() + 1);
+                if (outcome.suggested) {
+                    result.setSuggested(result.getSuggested() + 1);
+                }
             }
         }
         return result;
+    }
+
+    private MatchOutcome resolveMatchOrRecommend(Transaction tx, boolean useOtherFallback) {
+        ClassificationService.Result match = resolveCategory(tx, useOtherFallback);
+        if (match != null && StringUtils.isNotBlank(match.id)) {
+            return MatchOutcome.rule(match);
+        }
+        BankCard card = resolveCard(tx);
+        String bankCode = card != null ? card.getBankCode() : "";
+        String cardTypeCode = card != null ? card.getCardTypeCode() : StringUtils.trimToEmpty(tx.getCardTypeName());
+        Optional<CategoryRecommendation> rec = recommendationService.recommend(tx, bankCode, cardTypeCode);
+        if (rec.isEmpty()) {
+            return MatchOutcome.none();
+        }
+        CategoryRecommendation r = rec.get();
+        if (!r.hasCategory()) {
+            return MatchOutcome.keywords(r);
+        }
+        ClassificationService.Result suggested = r.toMatchResult();
+        return MatchOutcome.suggested(suggested, r);
+    }
+
+    private static final class MatchOutcome {
+        private final ClassificationService.Result match;
+        private final boolean suggested;
+        private final String source;
+        private final Integer confidence;
+        private final String reason;
+        private final List<String> suggestedKeywords;
+        private final CategoryRecommendation keywordOnly;
+
+        private MatchOutcome(ClassificationService.Result match, boolean suggested, String source,
+                             Integer confidence, String reason, List<String> suggestedKeywords,
+                             CategoryRecommendation keywordOnly) {
+            this.match = match;
+            this.suggested = suggested;
+            this.source = source;
+            this.confidence = confidence;
+            this.reason = reason;
+            this.suggestedKeywords = suggestedKeywords;
+            this.keywordOnly = keywordOnly;
+        }
+
+        static MatchOutcome rule(ClassificationService.Result match) {
+            return new MatchOutcome(match, false, "RULE", null, null, null, null);
+        }
+
+        static MatchOutcome suggested(ClassificationService.Result match, CategoryRecommendation rec) {
+            return new MatchOutcome(match, true, rec.getSource().name(), rec.getConfidence(),
+                    rec.getReason(), rec.getSuggestedKeywords(), null);
+        }
+
+        static MatchOutcome keywords(CategoryRecommendation rec) {
+            return new MatchOutcome(null, true, rec.getSource().name(), rec.getConfidence(),
+                    rec.getReason(), rec.getSuggestedKeywords(), rec);
+        }
+
+        static MatchOutcome none() {
+            return new MatchOutcome(null, false, null, null, null, null, null);
+        }
     }
 
     /**

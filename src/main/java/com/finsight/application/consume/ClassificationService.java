@@ -118,6 +118,28 @@ public class ClassificationService {
         }
         return out;
     }
+
+    /** Relaxed token overlap — may return a category when strict {@link #classify} returns null. */
+    public java.util.List<Result> suggestRelaxed(String narration, String bankCode, String cardTypeCode,
+                                                 Double amount, java.util.Date txnDate, int topN) {
+        if (rules == null) reload();
+        java.util.List<DecisionTreeClassifier.Result> list = decisionTreeClassifier.suggestRelaxedTopN(
+                narration, bankCode, cardTypeCode, amount, txnDate, topN);
+        java.util.List<Result> out = new java.util.ArrayList<>();
+        if (list == null) {
+            return out;
+        }
+        for (DecisionTreeClassifier.Result r : list) {
+            if (r == null) {
+                continue;
+            }
+            Result res = new Result();
+            res.id = r.id;
+            res.name = r.name;
+            out.add(res);
+        }
+        return out;
+    }
  
     public java.util.List<String> tokens(String text){
         if (rules == null) reload();

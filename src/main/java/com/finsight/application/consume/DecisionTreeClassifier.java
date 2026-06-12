@@ -490,6 +490,16 @@ public class DecisionTreeClassifier {
     }
 
     public List<Result> classifyTopN(String narration, String bankCode, String cardTypeCode, Double amount, java.util.Date txnDate, int topN){
+        return rankCategories(narration, bankCode, cardTypeCode, amount, txnDate, topN, false);
+    }
+
+    public List<Result> suggestRelaxedTopN(String narration, String bankCode, String cardTypeCode,
+                                           Double amount, java.util.Date txnDate, int topN) {
+        return rankCategories(narration, bankCode, cardTypeCode, amount, txnDate, topN, true);
+    }
+
+    private List<Result> rankCategories(String narration, String bankCode, String cardTypeCode,
+                                        Double amount, java.util.Date txnDate, int topN, boolean relaxed) {
         if (rules == null) reload();
         String expanded = ClassificationTextNormalizer.expand(narration);
         String text = normalize(expanded);
@@ -581,7 +591,8 @@ public class DecisionTreeClassifier {
         for(String catId : aggScore.keySet()){
             int hc = hitCount.getOrDefault(catId, 0);
             int sh = strongHitCount.getOrDefault(catId, 0);
-            if(hc < 2 && sh < 1 && !strongCats.contains(catId)) continue;
+            if (!relaxed && hc < 2 && sh < 1 && !strongCats.contains(catId)) continue;
+            if (relaxed && aggScore.getOrDefault(catId, 0) <= 0 && !strongCats.contains(catId)) continue;
             ConsumeCategory cat = categoryMap.get(catId);
             if(cat == null) continue;
             Result r = new Result();

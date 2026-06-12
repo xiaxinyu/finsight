@@ -1267,6 +1267,187 @@
   margin-bottom: 8px;
 }
 
+/* ── Auto-classify confirm modal ── */
+.fs-classify-modal .ant-modal-content {
+  padding: 0;
+  overflow: hidden;
+}
+
+.fs-classify-modal .ant-modal-header {
+  margin: 0;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fs-classify-modal .ant-modal-body {
+  padding: 14px 20px 8px;
+}
+
+.fs-classify-modal .ant-modal-footer {
+  margin: 0;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fs-classify-modal__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.fs-classify-modal__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.fs-classify-modal__heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.fs-classify-modal__sub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.fs-classify-modal__alert {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.fs-classify-modal__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fs-classify-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.fs-classify-stat--suggest {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.fs-classify-stat--warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.fs-classify-stat--muted {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  opacity: 0.85;
+}
+
+.fs-classify-stat__n {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-classify-stat__l {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fs-classify-table .ant-table-thead > tr > th {
+  background: #fafbfc !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.fs-classify-table .ant-table-tbody > tr > td {
+  vertical-align: top;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.fs-classify-date {
+  font-size: 12px;
+  color: #475569;
+}
+
+.fs-classify-desc {
+  font-size: 13px;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.fs-classify-category-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fs-classify-category-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 0;
+}
+
+.fs-classify-tag {
+  margin: 0;
+  font-size: 10px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+.fs-classify-picker {
+  width: 100%;
+}
+
+.fs-classify-picker .ant-select-selector {
+  border-radius: 6px !important;
+}
+
+.fs-classify-why {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.fs-classify-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.fs-classify-modal__footer-meta {
+  font-size: 12px;
+}
+
 /* ── Import history ── */
 .fs-import-history-summary {
   display: flex;

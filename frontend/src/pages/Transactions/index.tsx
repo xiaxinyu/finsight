@@ -11,7 +11,8 @@ import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-comp
 import dayjs from 'dayjs'
 import {
   classifyTransactions, classifyUnclassifiedInFilter, parseReclassifyResult, deleteTransaction, expenseToIncome,
-  fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction, type TransactionRow,
+  fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction,
+  type ReclassifyPreviewRow, type ReclassifyResult, type TransactionQuery, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useCardTree } from '../../hooks/useCardTree'
@@ -24,6 +25,7 @@ import { TransactionKpiStrip } from '../../components/TransactionKpiStrip'
 import { TransactionActiveFilters, type ActiveFilterChip } from '../../components/TransactionActiveFilters'
 import { TransactionLedgerCell, TransactionTypeBadge } from '../../components/TransactionLedgerCell'
 import { TransactionSelectionBar } from '../../components/TransactionSelectionBar'
+import { ClassifyConfirmModal, type ClassifyEditRow } from '../../components/ClassifyConfirmModal'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
@@ -55,6 +57,22 @@ function findTreeTitle(nodes: { title: string; value: string; children?: typeof 
   return ''
 }
 
+type ClassifyPending =
+  | { mode: 'ids'; ids: string }
+  | { mode: 'unclassified'; filters: TransactionQuery }
+
+function enrichPreviewRows(preview: ReclassifyPreviewRow[], selected: TransactionRow[]): ReclassifyPreviewRow[] {
+  const byId = new Map(selected.map((r) => [r.id, r]))
+  return preview.map((p) => {
+    const row = byId.get(p.id)
+    return {
+      ...p,
+      transactionDesc: p.transactionDesc || row?.transactionDesc,
+      transactionDate: p.transactionDate || row?.transactionDate,
+    }
+  })
+}
+
 function findCardTitle(nodes: { id: string; text: string; children?: typeof nodes }[], id: string): string {
   for (const n of nodes) {
     if (n.id === id) return n.text
@@ -76,6 +94,9 @@ export function TransactionsPage() {
   const [editableKeys, setEditableKeys] = useState<React.Key[]>([])
   const [tableLoading, setTableLoading] = useState(false)
   const [transferOpen, setTransferOpen] = useState(false)
+  const [classifyPreviewOpen, setClassifyPreviewOpen] = useState(false)
+  const [classifyPreview, setClassifyPreview] = useState<ReclassifyResult | null>(null)
+  const [classifyBusy, setClassifyBusy] = useState(false)
   const tableHeight = useFillTableHeight(tablePanelRef)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
@@ -389,32 +410,67 @@ export function TransactionsPage() {
     }
   }
 
+  const openClassifyPreview = useCallback(async () => {
+    let pending: ClassifyPending | null = null
+    if (selectedRowKeys.length) {
+      pending = { mode: 'ids', ids: selectedRowKeys.join(',') }
+    } else if (applied.unclassified) {
+      pending = { mode: 'unclassified', filters: statsParams }
+    } else {
+      message.warning('Select rows, or filter Unclassified and click again')
+      return
+    }
+    setClassifyBusy(true)
+    try {
+      const raw = pending.mode === 'ids'
+        ? await classifyTransactions(pending.ids, { persist: false })
+        : await classifyUnclassifiedInFilter({ ...pending.filters, persist: false } as TransactionQuery & { persist?: boolean })
+      const r = parseReclassifyResult(raw)
+      if (!r) {
+        message.error('Could not preview classification')
+        return
+      }
+      setClassifyPreview(r)
+      setClassifyPreviewOpen(true)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Preview failed')
+    } finally {
+      setClassifyBusy(false)
+    }
+  }, [selectedRowKeys, applied.unclassified, statsParams])
+
+  const confirmClassify = useCallback(async (editRows: ClassifyEditRow[]) => {
+    if (!editRows.length) return
+    setClassifyBusy(true)
+    try {
+      await Promise.all(editRows.map((r) => updateTransaction({
+        id: r.id,
+        consumeCode: r.categoryCode,
+        consumeID: r.categoryCode,
+        consumeName: findTreeTitle(treeData, r.categoryCode) || r.categoryName,
+      })))
+      message.success(`Applied ${editRows.length} categor${editRows.length === 1 ? 'y' : 'ies'}`)
+      setClassifyPreviewOpen(false)
+      setClassifyPreview(null)
+      setSelectedRowKeys([])
+      await reload()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Apply failed')
+    } finally {
+      setClassifyBusy(false)
+    }
+  }, [treeData, reload])
+
+  const previewRows = useMemo(
+    () => enrichPreviewRows(classifyPreview?.preview ?? [], selectedRows),
+    [classifyPreview, selectedRows],
+  )
+
   const batchActions = (
     <Space size="small" wrap>
       <Button size="small" disabled={disabled || selectedRowKeys.length !== 2} icon={<SwapOutlined />} onClick={() => setTransferOpen(true)}>Mark transfer</Button>
       <Button size="small" danger disabled={disabled} icon={<DeleteOutlined />} onClick={() => runBatch(() => Promise.all(selectedRowKeys.map(deleteTransaction)), 'Deleted')}>Delete</Button>
-      <Button size="small" disabled={disabled} icon={<ThunderboltOutlined />} onClick={async () => {
-        try {
-          let raw
-          if (selectedRowKeys.length) {
-            raw = await classifyTransactions(selectedRowKeys.join(','), { persist: true })
-          } else if (applied.unclassified) {
-            raw = await classifyUnclassifiedInFilter(statsParams)
-          } else {
-            message.warning('Select rows, or filter Unclassified and click again')
-            return
-          }
-          const r = parseReclassifyResult(raw)
-          const detail = r
-            ? `Applied ${r.classified}, skipped ${r.skipped}${r.noMatch ? `, no match ${r.noMatch}` : ''}`
-            : 'Classified'
-          message.success(detail)
-          setSelectedRowKeys([])
-          await reload()
-        } catch (e) {
-          message.error(e instanceof Error ? e.message : 'Failed')
-        }
-      }}>Auto-classify</Button>
+      <Button size="small" disabled={disabled || classifyBusy} loading={classifyBusy} icon={<ThunderboltOutlined />} onClick={() => void openClassifyPreview()}>Auto-classify</Button>
       <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => incomeToExpense(selectedRowKeys.join(',')), 'Moved to expense')}>→ Expense</Button>
       <Button size="small" disabled={disabled} icon={<SwapOutlined />} onClick={() => runBatch(() => expenseToIncome(selectedRowKeys.join(',')), 'Moved to income')}>→ Income</Button>
     </Space>
@@ -593,6 +649,19 @@ export function TransactionsPage() {
           {batchActions}
         </TransactionSelectionBar>
       </div>
+      <ClassifyConfirmModal
+        open={classifyPreviewOpen}
+        busy={classifyBusy}
+        preview={classifyPreview}
+        rows={previewRows}
+        treeData={treeData}
+        onCancel={() => {
+          if (classifyBusy) return
+          setClassifyPreviewOpen(false)
+          setClassifyPreview(null)
+        }}
+        onConfirm={confirmClassify}
+      />
       <Modal title="Mark as transfer" open={transferOpen} onOk={markTransfer} onCancel={() => setTransferOpen(false)}>
         Pair two transactions as an internal transfer (excluded from income/expense reports).
         {selectedRows.length === 2 && (

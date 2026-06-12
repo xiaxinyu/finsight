@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aggregateTransactionRows, type TransactionRow } from './transaction'
+import { aggregateTransactionRows, parseReclassifyResult, type TransactionRow } from './transaction'
 
 describe('aggregateTransactionRows', () => {
   it('sums income and expense, skips transfers', () => {
@@ -16,6 +16,25 @@ describe('aggregateTransactionRows', () => {
       transfers: 1,
       unclassified: 3,
     })
+  })
+
+  it('parses reclassify JSON string from postCommon', () => {
+    const payload = {
+      requested: 2,
+      classified: 1,
+      skipped: 0,
+      noMatch: 1,
+      dryRun: true,
+      preview: [{ id: 'a', categoryCode: 'FOOD', categoryName: 'Food', action: 'PREVIEW' }],
+    }
+    const parsed = parseReclassifyResult(JSON.stringify(payload))
+    expect(parsed).toEqual(payload)
+  })
+
+  it('parses reclassify object nested in CommonResult.data', () => {
+    const inner = { requested: 1, classified: 1, skipped: 0, noMatch: 0, dryRun: true, preview: [] }
+    const parsed = parseReclassifyResult({ data: JSON.stringify(inner) })
+    expect(parsed).toEqual(inner)
   })
 
   it('counts classified rows only when category is set', () => {
