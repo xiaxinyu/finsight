@@ -31,3 +31,19 @@ CREATE TABLE IF NOT EXISTS transaction (
     txn_kind VARCHAR(16) NULL,
     transfer_group_id VARCHAR(64) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `statement` (
+    `version` int NOT NULL DEFAULT 0,
+    `created_by` varchar(255) DEFAULT NULL,
+    `created_at` datetime(6) DEFAULT NULL,
+    `updated_by` varchar(255) DEFAULT NULL,
+    `updated_at` datetime(6) DEFAULT NULL,
+    `id` varchar(255) NOT NULL,
+    `file_name` varchar(512) DEFAULT NULL,
+    `row_count` int DEFAULT NULL,
+    `content` longtext,
+    `status` varchar(32) DEFAULT NULL,
+    `source_bank_code` varchar(32) DEFAULT NULL,
+    `deleted` tinyint(1) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

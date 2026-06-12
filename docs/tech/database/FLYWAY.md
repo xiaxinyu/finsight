@@ -18,6 +18,17 @@ Without Docker, the test is skipped automatically (`@Testcontainers(disabledWith
 
 Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order.
 
+## Checksum mismatch after `git pull`
+
+If startup fails with `Migration checksum mismatch for migration version N`, a migration file changed after it was already applied locally. **Schema data is unchanged** — update Flyway metadata only:
+
+```bash
+mvn flyway:repair
+# then restart the app (or: mvn flyway:migrate)
+```
+
+Do not edit migration files that are already in production without a repair plan; prefer adding a new `V21__...sql` for forward changes.
+
 ## Recovery (local)
 
 If migration fails mid-way or `flyway_schema_history` is inconsistent:
