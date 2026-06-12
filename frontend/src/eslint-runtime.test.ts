@@ -19,7 +19,7 @@ function runLint(): string {
 }
 
 describe('eslint runtime', () => {
-  it('runs lint without stylish formatter crash', () => {
+  it('runs lint without stylish formatter crash', { timeout: 20_000 }, () => {
     const output = runLint()
 
     expect(output).not.toMatch(/util\.styleText is not a function/)

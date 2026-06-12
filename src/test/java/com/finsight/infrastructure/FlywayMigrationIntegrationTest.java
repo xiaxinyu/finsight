@@ -1,5 +1,6 @@
 package com.finsight.infrastructure;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Opt-in via {@code mvn test -Dgroups=docker-integration} (see issue P3-2). */
+@Tag("docker-integration")
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest
 class FlywayMigrationIntegrationTest {
@@ -27,6 +30,8 @@ class FlywayMigrationIntegrationTest {
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
         registry.add("spring.flyway.baseline-version", () -> "10");
     }
