@@ -16,7 +16,9 @@ Without Docker, the test is skipped automatically (`@Testcontainers(disabledWith
 
 ## Baseline
 
-Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order.
+Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order (`V5_1` bootstraps legacy `statement` before `V6` normalizes it).
+
+Never edit an already-applied `Vn__*.sql`; add a new version (e.g. `V21__...`) instead.
 
 ## Checksum mismatch after `git pull`
 

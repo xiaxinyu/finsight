@@ -40,6 +40,7 @@ class FlywayMigrationIntegrationTest {
     @Test
     void flywayCreatesCoreTables() {
         assertTrue(tableExists("transaction"));
+        assertTrue(tableExists("statement"));
         assertTrue(tableExists("cls_category"));
         assertTrue(tableExists("cls_rule"));
         assertTrue(tableExists("imp_staging_entry"));
