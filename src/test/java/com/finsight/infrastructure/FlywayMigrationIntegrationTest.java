@@ -32,6 +32,7 @@ class FlywayMigrationIntegrationTest {
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
         registry.add("spring.flyway.baseline-version", () -> "10");
+        registry.add("spring.flyway.out-of-order", () -> "true");
     }
 
     @Autowired
