@@ -1,9 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Col, Progress, Row, Tag, Typography } from 'antd'
 import { UserOutlined } from '@ant-design/icons'
-import { Link } from 'react-router-dom'
 import { fetchProfile } from '../../api/analytics'
+import type { ProfileDimension } from '../../api/analytics'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { FsChart } from '../../components/FsChart'
@@ -11,9 +11,12 @@ import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { buildProfileRadarOption, PROFILE_DIM_LABELS } from './profileRadar'
+import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
+import { profileActionLinks } from './profileActions'
 
 export function ProfilePage() {
   const { flags } = useFeatureFlags()
+  const [activeDimension, setActiveDimension] = useState<ProfileDimension | null>(null)
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['financial-profile'],
     queryFn: fetchProfile,
@@ -74,21 +77,53 @@ export function ProfilePage() {
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {data.dimensions.map((dim) => (
-          <Col xs={24} md={12} lg={8} key={dim.id}>
-            <ContentCard title={PROFILE_DIM_LABELS[dim.id] || dim.id}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Tag>{dim.level}</Tag>
-                <strong>{dim.score}</strong>
-              </div>
-              <Typography.Paragraph type="secondary" style={{ minHeight: 40 }}>{dim.summary}</Typography.Paragraph>
-              {dim.actions?.[0]?.payload?.path && (
-                <Link to={dim.actions[0].payload.path}>Drill down →</Link>
-              )}
-            </ContentCard>
-          </Col>
-        ))}
+        {data.dimensions.map((dim) => {
+          const primaryEvidence = dim.evidence?.[0]
+          const primaryAction = profileActionLinks(dim)[0]
+          return (
+            <Col xs={24} md={12} lg={8} key={dim.id}>
+              <ContentCard
+                title={PROFILE_DIM_LABELS[dim.id] || dim.id}
+                extra={<Typography.Link onClick={() => setActiveDimension(dim)}>Details</Typography.Link>}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setActiveDimension(dim)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveDimension(dim) }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Tag>{dim.level}</Tag>
+                    <strong>{dim.score}</strong>
+                  </div>
+                  <Typography.Paragraph type="secondary" style={{ minHeight: 40, marginBottom: 8 }}>
+                    {dim.summary}
+                  </Typography.Paragraph>
+                  {primaryEvidence && (
+                    <Typography.Paragraph style={{ marginBottom: 8, fontSize: 13 }}>
+                      <Typography.Text type="secondary">{primaryEvidence.label || primaryEvidence.ref}: </Typography.Text>
+                      {String(primaryEvidence.value ?? '—')}
+                    </Typography.Paragraph>
+                  )}
+                  {primaryAction && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {primaryAction.label} →
+                    </Typography.Text>
+                  )}
+                </div>
+              </ContentCard>
+            </Col>
+          )
+        })}
       </Row>
+
+      <ProfileDimensionDrawer
+        open={!!activeDimension}
+        dimension={activeDimension}
+        asOf={data.asOf}
+        onClose={() => setActiveDimension(null)}
+      />
     </DataPageLayout>
   )
 }

@@ -7,13 +7,29 @@ async function unwrap<T>(raw: unknown): Promise<T> {
   return n.data as T
 }
 
+export type ProfileEvidence = {
+  source: string
+  ref: string
+  label?: string
+  detail?: string
+  value?: unknown
+}
+
 export type ProfileDimension = {
   id: string
   score: number
   level: string
   summary: string
-  evidence: { source: string; ref: string; value?: unknown }[]
+  evidence: ProfileEvidence[]
   actions: { label: string; type: string; payload: Record<string, string> }[]
+}
+
+export type ProfileHistoryPoint = {
+  snapshotDate: string
+  dimension: string
+  score: number
+  level?: string
+  payload?: string
 }
 
 export type ProfileData = {
@@ -27,6 +43,12 @@ export type ProfileData = {
 
 export async function fetchProfile() {
   return unwrap<ProfileData>(await getJson('/api/v1/analytics/profile'))
+}
+
+export async function fetchProfileHistory(from: string, to: string, dimension?: string) {
+  const params = new URLSearchParams({ from, to })
+  if (dimension) params.set('dimension', dimension)
+  return unwrap<ProfileHistoryPoint[]>(await getJson(`/api/v1/analytics/profile/history?${params}`))
 }
 
 export async function fetchForecast(year: number, scenario = 'base') {

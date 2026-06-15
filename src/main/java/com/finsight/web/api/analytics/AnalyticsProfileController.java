@@ -28,8 +28,10 @@ public class AnalyticsProfileController {
     }
 
     @GetMapping("/profile/history")
-    public CommonResult profileHistory(@RequestParam String from, @RequestParam String to) {
+    public CommonResult profileHistory(@RequestParam String from,
+                                       @RequestParam String to,
+                                       @RequestParam(required = false) String dimension) {
         featureFlags.requireProfile();
-        return CommonResult.success(profileService.history(from, to));
+        return CommonResult.success(profileService.history(from, to, dimension));
     }
 }
