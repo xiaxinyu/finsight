@@ -221,6 +221,7 @@
                     </locations>
                     <baselineOnMigrate>true</baselineOnMigrate>
                     <baselineVersion>10</baselineVersion>
+                    <outOfOrder>true</outOfOrder>
                 </configuration>
             </plugin>
             <plugin>

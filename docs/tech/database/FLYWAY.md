@@ -4,7 +4,7 @@ SQL migrations live in `src/main/resources/db/migration/`. Flyway runs on applic
 
 ## CI validation
 
-GitHub Actions job **`backend-flyway`** runs `FlywayMigrationIntegrationTest` against a fresh MySQL 8 Testcontainers database. Any new migration script must pass this job before merge.
+GitHub Actions job **`backend-flyway`** runs `FlywayMigrationIntegrationTest` against a fresh MySQL 8 Testcontainers database. The test **baselines an empty schema at V10** (same as production legacy DBs) and applies **V11+** only. Any new migration script must pass this job before merge.
 
 Locally (requires Docker):
 
@@ -16,7 +16,22 @@ Without Docker, the test is skipped automatically (`@Testcontainers(disabledWith
 
 ## Baseline
 
-Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order.
+Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order. Retroactive bootstraps (`V5_1` for `statement`, `V7_1` for `house_rent`) run before the migrations that depend on those legacy tables.
+
+`out-of-order: true` allows those bootstraps to be recorded on databases already past V6/V8. Scripts are idempotent (`CREATE TABLE IF NOT EXISTS`); existing tables are unchanged.
+
+Never edit an already-applied `Vn__*.sql`; add a new version (e.g. `V21__...`) instead.
+
+## Checksum mismatch after `git pull`
+
+If startup fails with `Migration checksum mismatch for migration version N`, a migration file changed after it was already applied locally. **Schema data is unchanged** — update Flyway metadata only:
+
+```bash
+mvn flyway:repair
+# then restart the app (or: mvn flyway:migrate)
+```
+
+Do not edit migration files that are already in production without a repair plan; prefer adding a new `V21__...sql` for forward changes.
 
 ## Recovery (local)
 

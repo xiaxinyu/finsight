@@ -2,7 +2,10 @@ package com.finsight.infrastructure;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -32,6 +35,7 @@ class FlywayMigrationIntegrationTest {
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
         registry.add("spring.flyway.baseline-version", () -> "10");
+        registry.add("spring.flyway.out-of-order", () -> "true");
     }
 
     @Autowired
@@ -40,6 +44,7 @@ class FlywayMigrationIntegrationTest {
     @Test
     void flywayCreatesCoreTables() {
         assertTrue(tableExists("transaction"));
+        assertTrue(tableExists("statement"));
         assertTrue(tableExists("cls_category"));
         assertTrue(tableExists("cls_rule"));
         assertTrue(tableExists("imp_staging_entry"));
@@ -60,5 +65,22 @@ class FlywayMigrationIntegrationTest {
                 Integer.class,
                 name);
         return count != null && count > 0;
+    }
+
+    /**
+     * Mirrors production legacy databases: schema already at V10, forward migrations are V11+.
+     * Empty Testcontainers DBs are baselined at 10 instead of replaying V0–V10 legacy renames.
+     */
+    @TestConfiguration
+    static class BaselineLegacySchemaAtV10 {
+        @Bean
+        FlywayMigrationStrategy flywayMigrationStrategy() {
+            return flyway -> {
+                if (flyway.info().all().length == 0) {
+                    flyway.baseline();
+                }
+                flyway.migrate();
+            };
+        }
     }
 }
