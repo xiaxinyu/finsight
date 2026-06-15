@@ -16,9 +16,9 @@ Without Docker, the test is skipped automatically (`@Testcontainers(disabledWith
 
 ## Baseline
 
-Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order (`V5_1` bootstraps legacy `statement` before `V6` normalizes it).
+Existing databases created before Flyway use `baseline-version: 10` in `application.yml` / `pom.xml`. Fresh installs apply **V0–V20** in order. Retroactive bootstraps (`V5_1` for `statement`, `V7_1` for `house_rent`) run before the migrations that depend on those legacy tables.
 
-`out-of-order: true` allows `V5_1` to be recorded on databases already past V6 (e.g. at V20). The script is idempotent (`CREATE TABLE IF NOT EXISTS`); existing `statement` tables are unchanged.
+`out-of-order: true` allows those bootstraps to be recorded on databases already past V6/V8. Scripts are idempotent (`CREATE TABLE IF NOT EXISTS`); existing tables are unchanged.
 
 Never edit an already-applied `Vn__*.sql`; add a new version (e.g. `V21__...`) instead.
 
