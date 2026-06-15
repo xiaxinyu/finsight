@@ -2,7 +2,10 @@ package com.finsight.infrastructure;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -62,5 +65,22 @@ class FlywayMigrationIntegrationTest {
                 Integer.class,
                 name);
         return count != null && count > 0;
+    }
+
+    /**
+     * Mirrors production legacy databases: schema already at V10, forward migrations are V11+.
+     * Empty Testcontainers DBs are baselined at 10 instead of replaying V0–V10 legacy renames.
+     */
+    @TestConfiguration
+    static class BaselineLegacySchemaAtV10 {
+        @Bean
+        FlywayMigrationStrategy flywayMigrationStrategy() {
+            return flyway -> {
+                if (flyway.info().all().length == 0) {
+                    flyway.baseline();
+                }
+                flyway.migrate();
+            };
+        }
     }
 }

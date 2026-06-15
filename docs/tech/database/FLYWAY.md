@@ -4,7 +4,7 @@ SQL migrations live in `src/main/resources/db/migration/`. Flyway runs on applic
 
 ## CI validation
 
-GitHub Actions job **`backend-flyway`** runs `FlywayMigrationIntegrationTest` against a fresh MySQL 8 Testcontainers database. Any new migration script must pass this job before merge.
+GitHub Actions job **`backend-flyway`** runs `FlywayMigrationIntegrationTest` against a fresh MySQL 8 Testcontainers database. The test **baselines an empty schema at V10** (same as production legacy DBs) and applies **V11+** only. Any new migration script must pass this job before merge.
 
 Locally (requires Docker):
 
