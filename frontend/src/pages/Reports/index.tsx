@@ -25,12 +25,12 @@ import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRange
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
-import { fetchTrends } from '../../api/analytics'
 import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
 import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
 import { MerchantReport } from './MerchantReport'
+import { TrendChangesReport } from './TrendChangesReport'
 
 type ReportFilters = {
   period: [dayjs.Dayjs, dayjs.Dayjs]
@@ -74,8 +74,7 @@ export function ReportsPage() {
         return { calendar: await billCalendar() }
       }
       if (cfg.type === 'trendChanges') {
-        const toYear = applied.period[1].year()
-        return { trends: await fetchTrends(toYear - 1, toYear) }
+        return null
       }
       if (cfg.type === 'budgetVsActual') {
         const r = periodToStrings(applied.period)
@@ -255,6 +254,10 @@ export function ReportsPage() {
 
   if (cfg.type === 'merchantDrift') {
     return <MerchantReport title={cfg.title} subtitle={cfg.subtitle} mode="drift" />
+  }
+
+  if (cfg.type === 'trendChanges') {
+    return <TrendChangesReport title={cfg.title} subtitle={cfg.subtitle} />
   }
 
   if (cfg.type === 'billsCalendar') {

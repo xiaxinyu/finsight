@@ -46,9 +46,9 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
     if (open) {
       setLayer('insight')
       setCategoryFilter(context?.params.consumeName || null)
-      setMerchantFilter(null)
+      setMerchantFilter(context?.params.merchantLabel || null)
     }
-  }, [open, context?.title, context?.params.consumeName])
+  }, [open, context?.title, context?.params.consumeName, context?.params.merchantLabel])
 
   const queryParams = useMemo(() => {
     if (!context) return {}
