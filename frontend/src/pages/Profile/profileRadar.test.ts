@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ProfileDimension } from '../../api/analytics'
-import { buildProfileRadarOption } from './profileRadar'
+import { buildProfileRadarOption, profileUserTypeLabel } from './profileRadar'
 
 const sampleDimensions: ProfileDimension[] = [
   {
@@ -47,5 +47,10 @@ describe('buildProfileRadarOption', () => {
       radius: '62%',
     })
     expect(series[0].data[0]).toEqual({ value: [72, 58], name: 'Profile' })
+  })
+
+  it('labels known user types', () => {
+    expect(profileUserTypeLabel('disciplined_saver')).toBe('Disciplined saver')
+    expect(profileUserTypeLabel('custom_type')).toBe('custom type')
   })
 })

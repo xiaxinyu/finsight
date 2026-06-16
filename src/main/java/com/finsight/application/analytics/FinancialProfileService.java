@@ -23,6 +23,9 @@ import java.util.UUID;
 public class FinancialProfileService {
 
     private static final DateTimeFormatter YM = DateTimeFormatter.ofPattern("yyyy-MM");
+    private static final double SAVINGS_TARGET = 0.2;
+    private static final double FIXED_BURDEN_THRESHOLD = 35;
+    private static final double LIQUIDITY_TARGET_MONTHS = 6;
 
     private final MetricMonthlyRepository metricRepository;
     private final WealthService wealthService;
@@ -64,36 +67,93 @@ public class FinancialProfileService {
         Map<String, Object> wealth = wealthService.snapshot();
         Map<String, Object> cashflow = cashflowService.metrics();
         Map<String, Object> quality = dataQualityService.summary();
+        ProfileScoring.ConcentrationStats concentration = loadConcentrationStats(userId, start, end);
+
+        List<Double> incomes = metricValues(metrics, "INCOME_TOTAL");
+        List<Double> expenses = metricValues(metrics, "EXPENSE_TOTAL");
+        List<Double> nets = metricValues(metrics, "NET_CASHFLOW");
+        double incomeTotal = sumValues(incomes);
+        double expenseTotal = sumValues(expenses);
+        double savingsRate = ((Number) wealth.getOrDefault("savingsRate", 0)).doubleValue();
+        Map<String, Object> health = healthScore(wealth);
+        double fixedBurden = ((Number) health.getOrDefault("fixedBurden", 0)).doubleValue();
+        double debtPressure = ((Number) health.getOrDefault("debtPressure", 0)).doubleValue();
+        double runwayMonths = ((Number) cashflow.getOrDefault("runwayMonths", 0)).doubleValue();
+        int unclassified = ((Number) quality.getOrDefault("unclassifiedCount", 0)).intValue();
+        int totalRows = ((Number) quality.getOrDefault("totalCount", 0)).intValue();
 
         List<Map<String, Object>> dimensions = new ArrayList<>();
-        dimensions.add(dimension("income_stability", scoreIncomeStability(metrics), "Income consistency over 12 months",
-                incomeStabilityEvidence(metrics)));
-        dimensions.add(dimension("spending_control", scoreSpendingControl(metrics), "Expense vs income balance",
-                spendingControlEvidence(metrics)));
-        dimensions.add(dimension("savings_discipline", scoreFromRate(wealth, "savingsRate", 0.2),
-                "Year-to-date savings rate", savingsDisciplineEvidence(wealth)));
-        dimensions.add(dimension("fixed_burden", invertScore(wealth, "healthScore.fixedBurden", 35),
-                "Fixed costs as % of income", fixedBurdenEvidence(wealth)));
-        dimensions.add(dimension("liquidity_safety", scoreRunway(cashflow), "Emergency runway in months",
-                liquidityEvidence(cashflow)));
-        dimensions.add(dimension("debt_pressure", scoreDebt(wealth), "Debt payments vs income",
-                debtPressureEvidence(wealth)));
-        dimensions.add(dimension("lifestyle_inflation", scoreLifestyle(metrics), "Expense growth trend",
-                lifestyleEvidence(metrics)));
-        dimensions.add(dimension("spending_concentration", scoreConcentration(metrics),
-                "Top-category concentration", concentrationEvidence(metrics)));
-        dimensions.add(dimension("seasonality_risk", scoreSeasonality(metrics), "Month-to-month volatility",
-                seasonalityEvidence(metrics)));
-        dimensions.add(dimension("data_trust", scoreDataTrust(quality), "Classification completeness",
-                dataTrustEvidence(quality)));
+
+        double incomeScore = ProfileScoring.scoreIncomeStability(incomes);
+        dimensions.add(dimension("income_stability", incomeScore,
+                "Income consistency over 12 months",
+                ProfileScoring.incomeStabilityReason(incomeScore, incomes),
+                incomeStabilityEvidence(incomes)));
+
+        double spendingScore = ProfileScoring.scoreSpendingControl(incomeTotal, expenseTotal);
+        dimensions.add(dimension("spending_control", spendingScore,
+                "Expense vs income balance",
+                ProfileScoring.spendingControlReason(spendingScore, incomeTotal, expenseTotal),
+                spendingControlEvidence(incomeTotal, expenseTotal)));
+
+        double savingsScore = ProfileScoring.scoreSavingsDiscipline(savingsRate, SAVINGS_TARGET);
+        dimensions.add(dimension("savings_discipline", savingsScore,
+                "Year-to-date savings rate",
+                ProfileScoring.savingsDisciplineReason(savingsScore, savingsRate, SAVINGS_TARGET),
+                savingsDisciplineEvidence(savingsRate)));
+
+        double fixedScore = ProfileScoring.scoreFixedBurden(fixedBurden, FIXED_BURDEN_THRESHOLD);
+        dimensions.add(dimension("fixed_burden", fixedScore,
+                "Fixed costs as % of income",
+                ProfileScoring.fixedBurdenReason(fixedScore, fixedBurden, FIXED_BURDEN_THRESHOLD),
+                fixedBurdenEvidence(fixedBurden)));
+
+        double liquidityScore = ProfileScoring.scoreLiquidity(runwayMonths, LIQUIDITY_TARGET_MONTHS);
+        dimensions.add(dimension("liquidity_safety", liquidityScore,
+                "Emergency runway in months",
+                ProfileScoring.liquidityReason(liquidityScore, runwayMonths, LIQUIDITY_TARGET_MONTHS),
+                liquidityEvidence(runwayMonths)));
+
+        double debtScore = ProfileScoring.scoreDebtPressure(debtPressure);
+        dimensions.add(dimension("debt_pressure", debtScore,
+                "Debt payments vs income",
+                ProfileScoring.debtPressureReason(debtScore, debtPressure),
+                debtPressureEvidence(debtPressure)));
+
+        double lifestyleScore = ProfileScoring.scoreLifestyleInflation(expenses);
+        dimensions.add(dimension("lifestyle_inflation", lifestyleScore,
+                "Expense growth trend",
+                ProfileScoring.lifestyleInflationReason(lifestyleScore, expenses),
+                lifestyleEvidence(expenses)));
+
+        double concentrationScore = ProfileScoring.scoreSpendingConcentration(concentration.topSharePct());
+        dimensions.add(dimension("spending_concentration", concentrationScore,
+                "Top-category concentration",
+                ProfileScoring.spendingConcentrationReason(concentrationScore, concentration),
+                concentrationEvidence(concentration)));
+
+        double seasonalityScore = ProfileScoring.scoreSeasonality(nets);
+        dimensions.add(dimension("seasonality_risk", seasonalityScore,
+                "Month-to-month volatility",
+                ProfileScoring.seasonalityReason(seasonalityScore, nets),
+                seasonalityEvidence(nets)));
+
+        double dataScore = ProfileScoring.scoreDataTrust(unclassified);
+        dimensions.add(dimension("data_trust", dataScore,
+                "Classification completeness",
+                ProfileScoring.dataTrustReason(dataScore, unclassified, totalRows),
+                dataTrustEvidence(unclassified, totalRows)));
 
         double overall = dimensions.stream()
                 .mapToDouble(d -> ((Number) d.get("score")).doubleValue())
                 .average().orElse(0);
+        ProfileScoring.UserTypeResult userType = ProfileScoring.classifyUserType(
+                ProfileScoring.scoresFromDimensions(dimensions));
 
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("overallScore", round(overall));
-        out.put("userType", classifyUserType(dimensions));
+        out.put("overallScore", ProfileScoring.round(overall));
+        out.put("userType", userType.type());
+        out.put("userTypeExplanation", userType.explanation());
         out.put("dimensions", dimensions);
         out.put("asOf", LocalDate.now().toString());
         out.put("metricsGate", metricsGate);
@@ -117,6 +177,22 @@ public class FinancialProfileService {
                 userKey(), from, to);
     }
 
+    private ProfileScoring.ConcentrationStats loadConcentrationStats(String userId, YearMonth start, YearMonth end) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "select v.category_code, v.category_name, sum(v.amount) as amount "
+                        + "from v_transaction_analytics v "
+                        + "inner join transaction t on t.id = v.id "
+                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
+                        + "and v.category_code != '__UNCLASSIFIED__' "
+                        + "and date_format(v.txn_date, '%Y-%m') between ? and ? "
+                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
+                        + "group by v.category_code, v.category_name "
+                        + "order by amount desc",
+                start.format(YM), end.format(YM), userId, userId);
+        return ProfileScoring.concentrationFromRows(rows);
+    }
+
     private void persistSnapshot(String userId, List<Map<String, Object>> dimensions) {
         LocalDate today = LocalDate.now();
         for (Map<String, Object> dim : dimensions) {
@@ -128,12 +204,17 @@ public class FinancialProfileService {
         }
     }
 
-    private static Map<String, Object> dimension(String id, double score, String summary, List<Map<String, Object>> evidence) {
+    private static Map<String, Object> dimension(String id,
+                                                 double score,
+                                                 String summary,
+                                                 String reason,
+                                                 List<Map<String, Object>> evidence) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", id);
-        m.put("score", round(score));
-        m.put("level", levelLabel(score));
+        m.put("score", ProfileScoring.round(score));
+        m.put("level", ProfileScoring.levelLabel(score));
         m.put("summary", summary);
+        m.put("reason", reason);
         m.put("evidence", evidence);
         m.put("actions", defaultActions(id));
         return m;
@@ -193,63 +274,51 @@ public class FinancialProfileService {
         return e;
     }
 
-    private static List<Map<String, Object>> incomeStabilityEvidence(List<Map<String, Object>> metrics) {
-        List<Double> incomes = metricValues(metrics, "INCOME_TOTAL");
+    private static List<Map<String, Object>> incomeStabilityEvidence(List<Double> incomes) {
         if (incomes.isEmpty()) {
             return List.of(ev("metric", "INCOME_TOTAL", "Income history", "Not enough months to measure stability", "—"));
         }
         double avg = average(incomes);
         double cv = avg == 0 ? 0 : stdDev(incomes) / avg;
-        return List.of(ev("metric", "INCOME_TOTAL", "12-month income variability",
-                "Coefficient of variation — lower is more stable",
-                formatPct(cv * 100) + " · avg " + formatMoney(avg) + "/mo · " + incomes.size() + " months"));
+        return List.of(ev("metric", "INCOME_CV", "Income variability",
+                "Lower coefficient of variation means steadier pay",
+                formatPct(cv * 100) + " CV · avg " + formatMoney(avg) + "/mo"));
     }
 
-    private static List<Map<String, Object>> spendingControlEvidence(List<Map<String, Object>> metrics) {
-        double income = sumMetric(metrics, "INCOME_TOTAL");
-        double expense = sumMetric(metrics, "EXPENSE_TOTAL");
+    private static List<Map<String, Object>> spendingControlEvidence(double income, double expense) {
         double rate = income > 0 ? expense / income : 0;
         return List.of(ev("metric", "EXPENSE_RATIO", "Expense to income (12 mo)",
                 "Spending above income reduces this score",
-                formatPct(rate * 100) + " · income " + formatMoney(income) + " · expense " + formatMoney(expense)));
+                formatPct(rate * 100) + " · " + formatMoney(expense) + " spent vs " + formatMoney(income) + " earned"));
     }
 
-    private static List<Map<String, Object>> savingsDisciplineEvidence(Map<String, Object> wealth) {
-        double rate = ((Number) wealth.getOrDefault("savingsRate", 0)).doubleValue();
+    private static List<Map<String, Object>> savingsDisciplineEvidence(double rate) {
         return List.of(ev("wealth", "savingsRate", "Year-to-date savings rate",
-                "Target reference: 20%+",
+                "Reference target: 20%+",
                 formatPct(rate * 100)));
     }
 
-    @SuppressWarnings("unchecked")
-    private static List<Map<String, Object>> fixedBurdenEvidence(Map<String, Object> wealth) {
-        Map<String, Object> health = (Map<String, Object>) wealth.getOrDefault("healthScore", Map.of());
-        double burden = ((Number) health.getOrDefault("fixedBurden", 0)).doubleValue();
+    private static List<Map<String, Object>> fixedBurdenEvidence(double burden) {
         return List.of(ev("wealth", "fixedBurden", "Fixed costs share of income",
                 "Above 35% is considered high fixed burden",
                 formatPct(burden)));
     }
 
-    private static List<Map<String, Object>> liquidityEvidence(Map<String, Object> cashflow) {
-        double months = ((Number) cashflow.getOrDefault("runwayMonths", 0)).doubleValue();
+    private static List<Map<String, Object>> liquidityEvidence(double months) {
         return List.of(ev("cashflow", "runwayMonths", "Emergency runway",
-                "Months of expenses covered by liquid balance",
-                round(months) + " months"));
+                "Target: 6 months of expenses in liquid balance",
+                ProfileScoring.round(months) + " months"));
     }
 
-    @SuppressWarnings("unchecked")
-    private static List<Map<String, Object>> debtPressureEvidence(Map<String, Object> wealth) {
-        Map<String, Object> health = (Map<String, Object>) wealth.getOrDefault("healthScore", Map.of());
-        double pressure = ((Number) health.getOrDefault("debtPressure", 0)).doubleValue();
+    private static List<Map<String, Object>> debtPressureEvidence(double pressure) {
         return List.of(ev("wealth", "debtPressure", "Debt service pressure",
                 "Higher debt payments relative to income lower this score",
                 formatPct(pressure)));
     }
 
-    private static List<Map<String, Object>> lifestyleEvidence(List<Map<String, Object>> metrics) {
-        List<Double> expenses = metricValues(metrics, "EXPENSE_TOTAL");
+    private static List<Map<String, Object>> lifestyleEvidence(List<Double> expenses) {
         if (expenses.size() < 3) {
-            return List.of(ev("metric", "EXPENSE_TOTAL", "Expense trend", "Need more months to detect lifestyle drift", "—"));
+            return List.of(ev("metric", "EXPENSE_GROWTH", "Expense trend", "Need more months to detect lifestyle drift", "—"));
         }
         double first = average(expenses.subList(0, expenses.size() / 2));
         double second = average(expenses.subList(expenses.size() / 2, expenses.size()));
@@ -259,149 +328,48 @@ public class FinancialProfileService {
                 formatSignedPct(growth * 100) + " · recent " + formatMoney(second) + "/mo"));
     }
 
-    private static List<Map<String, Object>> concentrationEvidence(List<Map<String, Object>> metrics) {
-        return List.of(ev("report", "category_breakdown", "Category concentration",
-                "Open category breakdown to inspect top spend buckets",
-                metrics.isEmpty() ? "Limited metric history" : "See category breakdown report"));
+    private static List<Map<String, Object>> concentrationEvidence(ProfileScoring.ConcentrationStats stats) {
+        if (stats.totalExpense() <= 0) {
+            return List.of(ev("report", "category_breakdown", "Category concentration",
+                    "Classify expenses to measure concentration", "No categorized spend in window"));
+        }
+        return List.of(ev("report", stats.topCategoryCode(), "Top spend category",
+                "Share of total categorized expense in the last 12 months",
+                stats.topCategoryName() + " · " + formatPct(stats.topSharePct()) + " of spend"));
     }
 
-    private static List<Map<String, Object>> seasonalityEvidence(List<Map<String, Object>> metrics) {
-        List<Double> nets = metricValues(metrics, "NET_CASHFLOW");
+    private static List<Map<String, Object>> seasonalityEvidence(List<Double> nets) {
         if (nets.size() < 2) {
             return List.of(ev("metric", "NET_CASHFLOW", "Net cashflow volatility", "Not enough months", "—"));
         }
         double avg = average(nets);
         double vol = avg == 0 ? stdDev(nets) : stdDev(nets) / Math.abs(avg);
-        return List.of(ev("metric", "NET_CASHFLOW", "Net cashflow swing",
+        return List.of(ev("metric", "NET_VOLATILITY", "Net cashflow swing",
                 "Higher month-to-month swings increase seasonality risk",
-                "volatility index " + round(vol * 100) + " · avg net " + formatMoney(avg) + "/mo"));
+                "volatility index " + ProfileScoring.round(vol * 100) + " · avg net " + formatMoney(avg) + "/mo"));
     }
 
-    private static List<Map<String, Object>> dataTrustEvidence(Map<String, Object> quality) {
-        int uncls = ((Number) quality.getOrDefault("unclassifiedCount", 0)).intValue();
-        int total = ((Number) quality.getOrDefault("totalCount", 0)).intValue();
+    private static List<Map<String, Object>> dataTrustEvidence(int uncls, int total) {
         return List.of(ev("quality", "unclassifiedCount", "Unclassified transactions",
                 "Classify or rule-tag rows to improve profile accuracy",
                 uncls + " unclassified" + (total > 0 ? " of " + total + " rows" : "")));
     }
 
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> healthScore(Map<String, Object> wealth) {
+        return (Map<String, Object>) wealth.getOrDefault("healthScore", Map.of());
+    }
+
     private static String formatPct(double pct) {
-        return round(pct) + "%";
+        return ProfileScoring.round(pct) + "%";
     }
 
     private static String formatSignedPct(double pct) {
-        return (pct >= 0 ? "+" : "") + round(pct) + "%";
+        return (pct >= 0 ? "+" : "") + ProfileScoring.round(pct) + "%";
     }
 
     private static String formatMoney(double amount) {
         return "¥" + BigDecimal.valueOf(amount).setScale(0, RoundingMode.HALF_UP).toPlainString();
-    }
-
-    private static double scoreIncomeStability(List<Map<String, Object>> metrics) {
-        List<Double> incomes = metricValues(metrics, "INCOME_TOTAL");
-        if (incomes.size() < 2) {
-            return 50;
-        }
-        double avg = incomes.stream().mapToDouble(d -> d).average().orElse(0);
-        if (avg == 0) {
-            return 40;
-        }
-        double cv = stdDev(incomes) / avg;
-        return clamp(100 - cv * 100);
-    }
-
-    private static double scoreSpendingControl(List<Map<String, Object>> metrics) {
-        double income = sumMetric(metrics, "INCOME_TOTAL");
-        double expense = sumMetric(metrics, "EXPENSE_TOTAL");
-        if (income <= 0) {
-            return expense > 0 ? 30 : 60;
-        }
-        double rate = expense / income;
-        return clamp(100 - rate * 80);
-    }
-
-    private static double scoreFromRate(Map<String, Object> wealth, String key, double target) {
-        double rate = ((Number) wealth.getOrDefault(key, 0)).doubleValue();
-        return clamp(rate / target * 80);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static double invertScore(Map<String, Object> wealth, String path, double threshold) {
-        Map<String, Object> health = (Map<String, Object>) wealth.getOrDefault("healthScore", Map.of());
-        double burden = ((Number) health.getOrDefault("fixedBurden", 0)).doubleValue();
-        if (burden <= threshold) {
-            return 85;
-        }
-        return clamp(100 - (burden - threshold) * 2);
-    }
-
-    private static double scoreRunway(Map<String, Object> cashflow) {
-        double months = ((Number) cashflow.getOrDefault("runwayMonths", 0)).doubleValue();
-        return clamp(months / 6 * 100);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static double scoreDebt(Map<String, Object> wealth) {
-        Map<String, Object> health = (Map<String, Object>) wealth.getOrDefault("healthScore", Map.of());
-        double pressure = ((Number) health.getOrDefault("debtPressure", 0)).doubleValue();
-        return clamp(100 - pressure * 2);
-    }
-
-    private static double scoreLifestyle(List<Map<String, Object>> metrics) {
-        List<Double> expenses = metricValues(metrics, "EXPENSE_TOTAL");
-        if (expenses.size() < 3) {
-            return 60;
-        }
-        double first = average(expenses.subList(0, expenses.size() / 2));
-        double second = average(expenses.subList(expenses.size() / 2, expenses.size()));
-        if (first <= 0) {
-            return 60;
-        }
-        double growth = (second - first) / first;
-        return clamp(100 - growth * 120);
-    }
-
-    private static double scoreConcentration(List<Map<String, Object>> metrics) {
-        return metrics.isEmpty() ? 55 : 70;
-    }
-
-    private static double scoreSeasonality(List<Map<String, Object>> metrics) {
-        List<Double> nets = metricValues(metrics, "NET_CASHFLOW");
-        if (nets.size() < 2) {
-            return 55;
-        }
-        double avg = average(nets);
-        if (avg == 0) {
-            return 50;
-        }
-        return clamp(100 - (stdDev(nets) / Math.abs(avg)) * 50);
-    }
-
-    private static double scoreDataTrust(Map<String, Object> quality) {
-        int uncls = ((Number) quality.getOrDefault("unclassifiedCount", 0)).intValue();
-        return clamp(100 - Math.min(90, uncls / 5.0));
-    }
-
-    private static String classifyUserType(List<Map<String, Object>> dimensions) {
-        double savings = scoreOf(dimensions, "savings_discipline");
-        double fixed = scoreOf(dimensions, "fixed_burden");
-        if (savings >= 75 && fixed < 50) {
-            return "high_savings_high_fixed";
-        }
-        if (savings >= 75) {
-            return "disciplined_saver";
-        }
-        if (fixed < 45) {
-            return "high_fixed_burden";
-        }
-        return "balanced";
-    }
-
-    private static double scoreOf(List<Map<String, Object>> dimensions, String id) {
-        return dimensions.stream()
-                .filter(d -> id.equals(d.get("id")))
-                .mapToDouble(d -> ((Number) d.get("score")).doubleValue())
-                .findFirst().orElse(50);
     }
 
     private static List<Double> metricValues(List<Map<String, Object>> metrics, String code) {
@@ -414,36 +382,18 @@ public class FinancialProfileService {
         return out;
     }
 
-    private static double sumMetric(List<Map<String, Object>> metrics, String code) {
-        return metricValues(metrics, code).stream().mapToDouble(d -> d).sum();
+    private static double sumValues(List<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).sum();
     }
 
     private static double average(List<Double> values) {
-        return values.stream().mapToDouble(d -> d).average().orElse(0);
+        return values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
     }
 
     private static double stdDev(List<Double> values) {
         double avg = average(values);
         double var = values.stream().mapToDouble(v -> (v - avg) * (v - avg)).average().orElse(0);
         return Math.sqrt(var);
-    }
-
-    private static double clamp(double v) {
-        return Math.max(0, Math.min(100, v));
-    }
-
-    private static double round(double v) {
-        return BigDecimal.valueOf(v).setScale(1, RoundingMode.HALF_UP).doubleValue();
-    }
-
-    private static String levelLabel(double score) {
-        if (score >= 75) {
-            return "strong";
-        }
-        if (score >= 50) {
-            return "moderate";
-        }
-        return "needs_attention";
     }
 
     private String userKey() {
