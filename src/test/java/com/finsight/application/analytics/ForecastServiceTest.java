@@ -63,6 +63,8 @@ class ForecastServiceTest {
         when(metricGateService.useReportFallback()).thenReturn(false);
         when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
         when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
                 .thenReturn(1);
 
@@ -78,6 +80,13 @@ class ForecastServiceTest {
         assertTrue(((Number) jan.get("incomeUpper")).doubleValue()
                 >= ((Number) jan.get("incomeLower")).doubleValue());
 
+        assertNotNull(out.get("yearNetLower"));
+        assertNotNull(out.get("yearNetUpper"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> confidence = (Map<String, Object>) out.get("confidence");
+        assertEquals(15.0, ((Number) confidence.get("halfWidthPct")).doubleValue());
+
         @SuppressWarnings("unchecked")
         Map<String, Object> suggestion = (Map<String, Object>) out.get("budgetSuggestion");
         assertNotNull(suggestion.get("monthlyCap"));
@@ -86,12 +95,14 @@ class ForecastServiceTest {
     }
 
     @Test
-    void forecast_scenarioChangesYearNet() throws Exception {
+    void forecast_scenarioChangesYearNetAndConfidenceWidth() throws Exception {
         when(authenticationFacade.getUserName()).thenReturn("user1");
         when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
         when(metricGateService.useReportFallback()).thenReturn(false);
         when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
         when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
                 .thenReturn(0);
 
@@ -100,15 +111,72 @@ class ForecastServiceTest {
 
         assertTrue(((Number) stress.get("yearNet")).doubleValue()
                 < ((Number) base.get("yearNet")).doubleValue());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> baseConf = (Map<String, Object>) base.get("confidence");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> stressConf = (Map<String, Object>) stress.get("confidence");
+        assertTrue(((Number) stressConf.get("halfWidthPct")).doubleValue()
+                > ((Number) baseConf.get("halfWidthPct")).doubleValue());
     }
 
     @Test
-    void forecast_persistsThirtySixLinesPerRun() throws Exception {
+    void forecast_includesTopCategoryForecasts() throws Exception {
         when(authenticationFacade.getUserName()).thenReturn("user1");
         when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
         when(metricGateService.useReportFallback()).thenReturn(false);
         when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
         when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(sampleCategoryHistory());
+        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
+                .thenReturn(0);
+
+        Map<String, Object> out = service.forecast(2026, "base");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> categories = (List<Map<String, Object>>) out.get("categoryForecasts");
+        assertEquals(1, categories.size());
+        assertEquals("food", categories.get(0).get("categoryCode"));
+        assertEquals("Food", categories.get(0).get("categoryName"));
+        assertNotNull(categories.get(0).get("yearTotalLower"));
+        assertNotNull(categories.get(0).get("yearTotalUpper"));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> catMonths = (List<Map<String, Object>>) categories.get(0).get("months");
+        assertEquals(12, catMonths.size());
+        assertNotNull(catMonths.get(0).get("amountLower"));
+    }
+
+    @Test
+    void categoryForecasts_returnsDedicatedPayload() throws Exception {
+        when(authenticationFacade.getUserName()).thenReturn("user1");
+        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
+        when(metricGateService.useReportFallback()).thenReturn(false);
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
+        when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(sampleCategoryHistory());
+        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
+                .thenReturn(0);
+
+        Map<String, Object> out = service.categoryForecasts(2026, "optimistic");
+
+        assertEquals(2026, out.get("year"));
+        assertEquals("optimistic", out.get("scenario"));
+        assertNotNull(out.get("categories"));
+        assertNotNull(out.get("confidence"));
+    }
+
+    @Test
+    void forecast_persistsAggregateAndCategoryLines() throws Exception {
+        when(authenticationFacade.getUserName()).thenReturn("user1");
+        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
+        when(metricGateService.useReportFallback()).thenReturn(false);
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
+        when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(sampleCategoryHistory());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
                 .thenReturn(1);
 
@@ -122,12 +190,12 @@ class ForecastServiceTest {
         verify(jdbcTemplate).update(
                 contains("insert into fin_forecast_run"),
                 any(), eq("user1"), eq("base"), eq(2026), anyString());
-        verify(jdbcTemplate, times(36)).update(
+        verify(jdbcTemplate, times(48)).update(
                 argThat((String sql) -> sql.contains("insert into fin_forecast_line")),
                 any(), any(), any(), any(), any(), any(), any());
 
         ArgumentCaptor<String> metricCodes = ArgumentCaptor.forClass(String.class);
-        verify(jdbcTemplate, times(36)).update(
+        verify(jdbcTemplate, times(48)).update(
                 anyString(),
                 any(),
                 any(),
@@ -140,6 +208,9 @@ class ForecastServiceTest {
         assertEquals(12, codes.stream().filter(ForecastService.METRIC_INCOME_FORECAST::equals).count());
         assertEquals(12, codes.stream().filter(ForecastService.METRIC_EXPENSE_FORECAST::equals).count());
         assertEquals(12, codes.stream().filter(ForecastService.METRIC_NET_FORECAST::equals).count());
+        assertEquals(12, codes.stream()
+                .filter(c -> c.startsWith(ForecastService.METRIC_CATEGORY_EXPENSE_PREFIX))
+                .count());
     }
 
     @Test
@@ -179,11 +250,27 @@ class ForecastServiceTest {
         );
     }
 
+    private static List<Map<String, Object>> sampleCategoryHistory() {
+        return List.of(
+                categoryRow("food", "Food", "2025-06", 1200),
+                categoryRow("food", "Food", "2025-07", 1300)
+        );
+    }
+
     private static Map<String, Object> metricRow(String month, String code, double value) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("monthKey", month);
         row.put("metricCode", code);
         row.put("metricValue", value);
+        return row;
+    }
+
+    private static Map<String, Object> categoryRow(String code, String name, String month, double amount) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("category_code", code);
+        row.put("category_name", name);
+        row.put("month_key", month);
+        row.put("amount", amount);
         return row;
     }
 

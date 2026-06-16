@@ -57,10 +57,6 @@ export async function fetchProfileHistory(from: string, to: string, dimension?: 
   return unwrap<ProfileHistoryPoint[]>(await getJson(`/api/v1/analytics/profile/history?${params}`))
 }
 
-export async function fetchForecast(year: number, scenario = 'base') {
-  return unwrap<ForecastData>(await getJson(`/api/v1/analytics/forecast?year=${year}&scenario=${scenario}`))
-}
-
 export type ForecastMonth = {
   yearMonth: string
   income: number
@@ -82,6 +78,28 @@ export type BudgetSuggestion = {
   note: string
 }
 
+export type ForecastCategoryMonth = {
+  yearMonth: string
+  amount: number
+  amountLower?: number
+  amountUpper?: number
+}
+
+export type ForecastCategory = {
+  categoryCode: string
+  categoryName: string
+  yearTotal: number
+  yearTotalLower?: number
+  yearTotalUpper?: number
+  sharePct: number
+  months: ForecastCategoryMonth[]
+}
+
+export type ForecastConfidence = {
+  halfWidthPct: number
+  method: string
+}
+
 export type ForecastData = {
   year: number
   scenario: string
@@ -89,11 +107,37 @@ export type ForecastData = {
   yearIncome: number
   yearExpense: number
   yearNet: number
+  yearIncomeLower?: number
+  yearIncomeUpper?: number
+  yearExpenseLower?: number
+  yearExpenseUpper?: number
+  yearNetLower?: number
+  yearNetUpper?: number
   deficitMonths: string[]
   months: ForecastMonth[]
+  categoryForecasts?: ForecastCategory[]
+  confidence?: ForecastConfidence
   budgetSuggestion?: BudgetSuggestion
   metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }
   metricsSource?: string
+}
+
+export type ForecastCategoryResponse = {
+  year: number
+  scenario: string
+  runId: string
+  confidence?: ForecastConfidence
+  categories: ForecastCategory[]
+}
+
+export async function fetchForecast(year: number, scenario = 'base') {
+  return unwrap<ForecastData>(await getJson(`/api/v1/analytics/forecast?year=${year}&scenario=${scenario}`))
+}
+
+export async function fetchForecastCategories(year: number, scenario = 'base') {
+  return unwrap<ForecastCategoryResponse>(
+    await getJson(`/api/v1/analytics/forecast/categories?year=${year}&scenario=${scenario}`),
+  )
 }
 
 export type CashRiskCalendarResponse = {

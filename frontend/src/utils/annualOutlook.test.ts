@@ -4,6 +4,7 @@ import {
   buildAnnualOutlookChartOption,
   buildAnnualOutlookInsights,
   buildAnnualOutlookKpis,
+  buildCategoryForecastChartOption,
   deficitRowClassName,
   isDeficitMonth,
   scenarioLabel,
@@ -16,7 +17,24 @@ const sampleForecast: ForecastData = {
   yearIncome: 96000,
   yearExpense: 102000,
   yearNet: -6000,
+  yearNetLower: -6900,
+  yearNetUpper: -5100,
   deficitMonths: ['2026-03', '2026-08'],
+  confidence: { halfWidthPct: 15, method: 'scenario_scaled_rolling_mean' },
+  categoryForecasts: [
+    {
+      categoryCode: 'food',
+      categoryName: 'Food',
+      yearTotal: 18000,
+      yearTotalLower: 15300,
+      yearTotalUpper: 20700,
+      sharePct: 17.6,
+      months: [
+        { yearMonth: '2026-01', amount: 1500, amountLower: 1275, amountUpper: 1725 },
+        { yearMonth: '2026-03', amount: 1600, amountLower: 1360, amountUpper: 1840 },
+      ],
+    },
+  ],
   months: [
     {
       yearMonth: '2026-01',
@@ -60,20 +78,32 @@ describe('annualOutlook utils', () => {
     expect(insights[1].text).toContain('Budget suggestion')
   })
 
-  it('builds KPI strip including scenario', () => {
+  it('builds KPI strip including scenario and confidence', () => {
     const kpis = buildAnnualOutlookKpis(sampleForecast)
     expect(kpis.find((k) => k.key === 'scenario')?.value).toBe('Stress')
+    expect(kpis.find((k) => k.key === 'conf')?.value).toBe('±15%')
     expect(kpis.find((k) => k.key === 'def')?.value).toBe('2')
   })
 
-  it('builds chart with confidence band and deficit markers', () => {
+  it('builds chart with scenario-scaled confidence band label', () => {
     const option = buildAnnualOutlookChartOption(sampleForecast)
     const series = option.series as { name?: string; data?: unknown[]; markPoint?: { data?: unknown[] } }[]
     expect(series.some((s) => s.name === 'Net band')).toBe(true)
+    expect(option.legend).toMatchObject({ data: expect.arrayContaining(['Net ±15%']) })
     const net = series.find((s) => s.name === 'Net')
     expect(net?.markPoint?.data?.length).toBe(2)
     const xAxis = option.xAxis as { axisLabel?: { formatter?: (v: string) => string } }
     expect(xAxis.axisLabel?.formatter?.('2026-03')).toContain('2026-03')
+  })
+
+  it('builds category forecast chart for top categories', () => {
+    const option = buildCategoryForecastChartOption(
+      sampleForecast.categoryForecasts ?? [],
+      ['2026-01', '2026-03'],
+    )
+    const series = option.series as { name?: string }[]
+    expect(series.some((s) => s.name === 'Food')).toBe(true)
+    expect(series.some((s) => s.name === 'Food band')).toBe(true)
   })
 
   it('applies deficit row class', () => {

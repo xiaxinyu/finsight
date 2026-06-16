@@ -43,9 +43,10 @@ public class AnalyticsForecastController {
     }
 
     @GetMapping("/forecast/categories")
-    public CommonResult forecastCategories(@RequestParam int year) throws Exception {
+    public CommonResult forecastCategories(@RequestParam int year,
+                                           @RequestParam(defaultValue = "base") String scenario) throws Exception {
         featureFlags.requireForecast();
-        return CommonResult.success(forecastService.forecast(year, "base"));
+        return CommonResult.success(forecastService.categoryForecasts(year, scenario));
     }
 
     @GetMapping("/forecast/lines")

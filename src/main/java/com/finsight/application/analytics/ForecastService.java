@@ -24,6 +24,9 @@ public class ForecastService {
     public static final String METRIC_INCOME_FORECAST = "INCOME_FORECAST";
     public static final String METRIC_EXPENSE_FORECAST = "EXPENSE_FORECAST";
     public static final String METRIC_NET_FORECAST = "NET_FORECAST";
+    public static final String METRIC_CATEGORY_EXPENSE_PREFIX = "EXPENSE_FORECAST_CAT:";
+
+    private static final int TOP_CATEGORY_FORECASTS = 5;
 
     private static final DateTimeFormatter YM = DateTimeFormatter.ofPattern("yyyy-MM");
 
@@ -61,6 +64,7 @@ public class ForecastService {
         double avgIncome = rollingAvg(history, MetricCode.INCOME_TOTAL.name());
         double avgExpense = rollingAvg(history, MetricCode.EXPENSE_TOTAL.name());
         double factor = scenarioFactor(scenario);
+        ForecastConfidence.Spread spread = ForecastConfidence.forScenario(scenario);
 
         List<Map<String, Object>> months = new ArrayList<>();
         double yearIncome = 0;
@@ -84,22 +88,21 @@ public class ForecastService {
             row.put("income", round(income));
             row.put("expense", round(expense));
             row.put("net", round(net));
-            row.put("incomeLower", round(income * 0.9));
-            row.put("incomeUpper", round(income * 1.1));
-            row.put("expenseLower", round(expense * 0.9));
-            row.put("expenseUpper", round(expense * 1.1));
-            row.put("netLower", round(net * 0.9));
-            row.put("netUpper", round(net * 1.1));
+            putBounds(row, "income", income, spread);
+            putBounds(row, "expense", expense, spread);
+            putBounds(row, "net", net, spread);
             row.put("deficit", net < 0);
             row.put("forecast", true);
             months.add(row);
         }
 
         String runId = UUID.randomUUID().toString();
+        List<Map<String, Object>> categoryForecasts = buildCategoryForecasts(
+                year, factor, spread, userId, start.format(YM), end.format(YM), yearExpense);
         jdbcTemplate.update("insert into fin_forecast_run (id, user_id, scenario, target_year, params_json, created_at) "
                         + "values (?, ?, ?, ?, ?, now(3))",
                 runId, userId, scenario, year, "{\"method\":\"rolling_mean_seasonal\"}");
-        persistForecastLines(runId, months);
+        persistForecastLines(runId, months, categoryForecasts, spread);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("year", year);
@@ -108,11 +111,29 @@ public class ForecastService {
         out.put("yearIncome", round(yearIncome));
         out.put("yearExpense", round(yearExpense));
         out.put("yearNet", round(yearIncome - yearExpense));
+        putBounds(out, "yearIncome", yearIncome, spread);
+        putBounds(out, "yearExpense", yearExpense, spread);
+        putBounds(out, "yearNet", yearIncome - yearExpense, spread);
         out.put("deficitMonths", deficitMonths);
         out.put("months", months);
+        out.put("categoryForecasts", categoryForecasts);
+        out.put("confidence", Map.of(
+                "halfWidthPct", spread.halfWidthPct(),
+                "method", "scenario_scaled_rolling_mean"));
         out.put("budgetSuggestion", buildBudgetSuggestion(yearExpense, scenario, deficitMonths.size()));
         out.put("metricsGate", metricsGate);
         out.put("metricsSource", reportFallback ? "report_sql" : "fin_metric_monthly");
+        return out;
+    }
+
+    public Map<String, Object> categoryForecasts(int year, String scenario) throws Exception {
+        Map<String, Object> forecast = forecast(year, scenario);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("year", forecast.get("year"));
+        out.put("scenario", forecast.get("scenario"));
+        out.put("runId", forecast.get("runId"));
+        out.put("confidence", forecast.get("confidence"));
+        out.put("categories", forecast.get("categoryForecasts"));
         return out;
     }
 
@@ -224,26 +245,110 @@ public class ForecastService {
         return "Suggested monthly cap from average projected expense under the " + scen + " scenario.";
     }
 
-    private static double round(double v) {
-        return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    private List<Map<String, Object>> buildCategoryForecasts(int year,
+                                                             double factor,
+                                                             ForecastConfidence.Spread spread,
+                                                             String userId,
+                                                             String historyStart,
+                                                             String historyEnd,
+                                                             double yearExpenseTotal) {
+        Map<String, CategoryHistory> histories = loadCategoryHistory(userId, historyStart, historyEnd);
+        List<CategoryHistory> ranked = histories.values().stream()
+                .sorted((a, b) -> Double.compare(b.total(), a.total()))
+                .limit(TOP_CATEGORY_FORECASTS)
+                .toList();
+
+        List<Map<String, Object>> forecasts = new ArrayList<>();
+        for (CategoryHistory history : ranked) {
+            double catYearTotal = 0;
+            List<Map<String, Object>> months = new ArrayList<>();
+            for (int m = 1; m <= 12; m++) {
+                YearMonth ym = YearMonth.of(year, m);
+                double seasonal = seasonalIndex(m);
+                double amount = history.monthlyAvg() * seasonal * (2 - factor * 0.5);
+                catYearTotal += amount;
+                Map<String, Object> month = new LinkedHashMap<>();
+                month.put("yearMonth", ym.format(YM));
+                month.put("amount", round(amount));
+                putBounds(month, "amount", amount, spread);
+                months.add(month);
+            }
+            Map<String, Object> cat = new LinkedHashMap<>();
+            cat.put("categoryCode", history.code());
+            cat.put("categoryName", history.name());
+            cat.put("yearTotal", round(catYearTotal));
+            putBounds(cat, "yearTotal", catYearTotal, spread);
+            cat.put("sharePct", yearExpenseTotal > 0 ? round(catYearTotal / yearExpenseTotal * 100) : 0);
+            cat.put("months", months);
+            forecasts.add(cat);
+        }
+        return forecasts;
     }
 
-    private void persistForecastLines(String runId, List<Map<String, Object>> months) {
+    private Map<String, CategoryHistory> loadCategoryHistory(String userId, String start, String end) {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "select v.category_code, v.category_name, date_format(v.txn_date, '%Y-%m') as month_key, "
+                        + "sum(v.amount) as amount "
+                        + "from v_transaction_analytics v "
+                        + "inner join transaction t on t.id = v.id "
+                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
+                        + "and v.category_code != '__UNCLASSIFIED__' "
+                        + "and date_format(v.txn_date, '%Y-%m') between ? and ? "
+                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
+                        + "group by v.category_code, v.category_name, month_key",
+                start, end, userId, userId);
+
+        Map<String, CategoryHistory> out = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            String code = String.valueOf(row.get("category_code"));
+            String name = String.valueOf(row.get("category_name"));
+            double amount = ((Number) row.get("amount")).doubleValue();
+            out.computeIfAbsent(code, k -> new CategoryHistory(code, name))
+                    .addMonth(amount);
+        }
+        return out;
+    }
+
+    private static void putBounds(Map<String, Object> target, String prefix, double value, ForecastConfidence.Spread spread) {
+        target.put(prefix + "Lower", ForecastConfidence.lower(value, spread));
+        target.put(prefix + "Upper", ForecastConfidence.upper(value, spread));
+    }
+
+    private void persistForecastLines(String runId,
+                                      List<Map<String, Object>> months,
+                                      List<Map<String, Object>> categoryForecasts,
+                                      ForecastConfidence.Spread spread) {
         if (!tableExists("fin_forecast_line")) {
             return;
         }
         for (Map<String, Object> month : months) {
             String monthKey = String.valueOf(month.get("yearMonth"));
-            insertForecastLine(runId, monthKey, METRIC_INCOME_FORECAST, ((Number) month.get("income")).doubleValue());
-            insertForecastLine(runId, monthKey, METRIC_EXPENSE_FORECAST, ((Number) month.get("expense")).doubleValue());
-            insertForecastLine(runId, monthKey, METRIC_NET_FORECAST, ((Number) month.get("net")).doubleValue());
+            insertForecastLine(runId, monthKey, METRIC_INCOME_FORECAST,
+                    ((Number) month.get("income")).doubleValue(), spread);
+            insertForecastLine(runId, monthKey, METRIC_EXPENSE_FORECAST,
+                    ((Number) month.get("expense")).doubleValue(), spread);
+            insertForecastLine(runId, monthKey, METRIC_NET_FORECAST,
+                    ((Number) month.get("net")).doubleValue(), spread);
+        }
+        for (Map<String, Object> category : categoryForecasts) {
+            String metricCode = METRIC_CATEGORY_EXPENSE_PREFIX + category.get("categoryCode");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> catMonths = (List<Map<String, Object>>) category.get("months");
+            for (Map<String, Object> month : catMonths) {
+                insertForecastLine(runId, String.valueOf(month.get("yearMonth")), metricCode,
+                        ((Number) month.get("amount")).doubleValue(), spread);
+            }
         }
     }
 
-    private void insertForecastLine(String runId, String monthKey, String metricCode, double value) {
+    private void insertForecastLine(String runId, String monthKey, String metricCode, double value,
+                                    ForecastConfidence.Spread spread) {
         BigDecimal metricValue = BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP);
-        BigDecimal lower = metricValue.multiply(BigDecimal.valueOf(0.9)).setScale(4, RoundingMode.HALF_UP);
-        BigDecimal upper = metricValue.multiply(BigDecimal.valueOf(1.1)).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal lower = metricValue.multiply(BigDecimal.valueOf(spread.lowerFactor()))
+                .setScale(4, RoundingMode.HALF_UP);
+        BigDecimal upper = metricValue.multiply(BigDecimal.valueOf(spread.upperFactor()))
+                .setScale(4, RoundingMode.HALF_UP);
         jdbcTemplate.update(
                 "insert into fin_forecast_line (id, run_id, month_key, metric_code, metric_value, lower_bound, upper_bound) "
                         + "values (?, ?, ?, ?, ?, ?, ?)",
@@ -254,6 +359,35 @@ public class ForecastService {
                 metricValue,
                 lower,
                 upper);
+    }
+
+    private record CategoryHistory(String code, String name, List<Double> monthlyTotals) {
+        CategoryHistory(String code, String name) {
+            this(code, name, new ArrayList<>());
+        }
+
+        void addMonth(double amount) {
+            monthlyTotals.add(amount);
+        }
+
+        double total() {
+            return monthlyTotals.stream().mapToDouble(Double::doubleValue).sum();
+        }
+
+        double monthlyAvg() {
+            if (monthlyTotals.isEmpty()) {
+                return 0;
+            }
+            int window = Math.min(6, monthlyTotals.size());
+            return monthlyTotals.subList(monthlyTotals.size() - window, monthlyTotals.size()).stream()
+                    .mapToDouble(Double::doubleValue)
+                    .average()
+                    .orElse(0);
+        }
+    }
+
+    private static double round(double v) {
+        return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
 
     private boolean tableExists(String table) {
