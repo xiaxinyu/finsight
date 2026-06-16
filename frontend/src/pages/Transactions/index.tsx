@@ -29,12 +29,14 @@ import { TransactionSelectionBar } from '../../components/TransactionSelectionBa
 import { ClassifyConfirmModal, type ClassifyEditRow } from '../../components/ClassifyConfirmModal'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
-import { MoneyText, moneyTypeFromRow } from '../../components/MoneyText'
+import { MoneyText } from '../../components/MoneyText'
+import { moneyTypeFromRow } from '../../utils/moneyType'
 import { TransactionCardCell } from '../../components/TransactionCardCell'
 import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
-import { PeriodRangePicker, periodFromStrings, periodToStrings } from '../../components/PeriodRangePicker'
+import { PeriodRangePicker } from '../../components/PeriodRangePicker'
+import { periodFromStrings, periodToStrings } from '../../utils/periodStrings'
 import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPresets'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 
@@ -105,17 +107,15 @@ export function TransactionsPage() {
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
   const cardFromUrl = searchParams.get('cardId') || ''
 
-  const initial: TxFilters = {
+  const initial: TxFilters = useMemo(() => ({
     ...defaultPeriodStrings(),
     card: cardFromUrl,
     consume: '',
     keyword: '',
     unclassified: unclassifiedFromUrl,
-  }
+  }), [cardFromUrl, unclassifiedFromUrl])
 
   const { draft, setDraft, applied, applying, isDirty, applySync, patchBoth, resetBoth } = useFilterApply(initial)
-  const appliedRef = useRef(applied)
-  appliedRef.current = applied
 
   useEffect(() => {
     if (unclassifiedFromUrl) {
@@ -142,8 +142,6 @@ export function TransactionsPage() {
   }, [applySync, qc])
 
   const applyFilterPatch = useCallback((patch: Partial<TxFilters>) => {
-    const next = { ...appliedRef.current, ...patch }
-    appliedRef.current = next
     patchBoth(patch)
     void reload()
   }, [patchBoth, reload])
@@ -193,11 +191,10 @@ export function TransactionsPage() {
   }, [applied, cardTree, treeData, applyFilterPatch])
 
   const toggleUnclassifiedFilter = useCallback(() => {
-    applyFilterPatch({ unclassified: !appliedRef.current.unclassified })
-  }, [applyFilterPatch])
+    applyFilterPatch({ unclassified: !applied.unclassified })
+  }, [applied.unclassified, applyFilterPatch])
 
   const clearAllFilters = useCallback(() => {
-    appliedRef.current = initial
     resetBoth(initial)
     void reload()
   }, [initial, resetBoth, reload])
@@ -406,7 +403,7 @@ export function TransactionsPage() {
   }
 
   const openClassifyPreview = useCallback(async () => {
-    let pending: ClassifyPending | null = null
+    let pending: ClassifyPending
     if (selectedRowKeys.length) {
       pending = { mode: 'ids', ids: selectedRowKeys.join(',') }
     } else if (applied.unclassified) {
@@ -582,7 +579,7 @@ export function TransactionsPage() {
             emptyText: <EmptyState compact title="No transactions" description="Try widening the date range or clearing filters." />,
           }}
           request={async (params) => {
-            const filters = appliedRef.current
+            const filters = applied
             try {
               const res = await listTransactions({
                 page: params.current || 1,

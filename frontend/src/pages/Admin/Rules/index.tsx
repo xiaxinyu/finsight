@@ -295,7 +295,7 @@ export function RulesAdminPage() {
     }
   }
 
-  const useSuggestedKeyword = (keyword: string) => {
+  const applySuggestedKeyword = (keyword: string) => {
     setSuggestOpen(false)
     openCreate(keyword)
   }
@@ -543,7 +543,7 @@ export function RulesAdminPage() {
         ) : suggestedKeywords.length ? (
           <Space size={[8, 8]} wrap>
             {suggestedKeywords.map((kw) => (
-              <Button key={kw} size="small" onClick={() => useSuggestedKeyword(kw)}>{kw}</Button>
+              <Button key={kw} size="small" onClick={() => applySuggestedKeyword(kw)}>{kw}</Button>
             ))}
           </Space>
         ) : (

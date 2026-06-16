@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ThunderboltOutlined } from '@ant-design/icons'
 import { Alert, Button, Modal, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { CategoryPicker } from './CategoryPicker'
@@ -65,17 +65,40 @@ export function ClassifyConfirmModal({
   onCancel,
   onConfirm,
 }: Props) {
-  const [rows, setRows] = useState<ClassifyEditRow[]>([])
-  const [originalCodes, setOriginalCodes] = useState<Record<string, string>>({})
+  const sessionKey = useMemo(
+    () => (open ? `open:${previewRows.map((r) => r.id).join(',')}` : 'closed'),
+    [open, previewRows],
+  )
+  return (
+    <ClassifyConfirmModalInner
+      key={sessionKey}
+      open={open}
+      busy={busy}
+      preview={preview}
+      rows={previewRows}
+      treeData={treeData}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
+  )
+}
 
-  useEffect(() => {
-    if (!open) return
-    const next = toEditRows(previewRows)
-    setRows(next)
+function ClassifyConfirmModalInner({
+  open,
+  busy,
+  preview,
+  rows: previewRows,
+  treeData,
+  onCancel,
+  onConfirm,
+}: Props) {
+  const originalCodes = useMemo(() => {
     const orig: Record<string, string> = {}
-    for (const r of next) orig[r.id] = r.categoryCode
-    setOriginalCodes(orig)
-  }, [open, previewRows])
+    for (const r of previewRows) orig[r.id] = r.categoryCode || ''
+    return orig
+  }, [previewRows])
+
+  const [rows, setRows] = useState<ClassifyEditRow[]>(() => toEditRows(previewRows))
 
   const applyCount = useMemo(
     () => rows.filter((r) => r.enabled && r.categoryCode).length,

@@ -11,10 +11,11 @@ import {
 } from '../../../api/statement'
 import { listBankCards, type BankCardRow } from '../../../api/transaction'
 import { DataPageLayout } from '../../../components/DataPageLayout'
-import { MoneyText, moneyTypeFromRow } from '../../../components/MoneyText'
+import { MoneyText } from '../../../components/MoneyText'
 import { TransactionSummaryBar } from '../../../components/TransactionSummaryBar'
 import { cellText, formatTableDate } from '../../../utils/cell'
 import { formatNumber } from '../../../utils/format'
+import { moneyTypeFromRow } from '../../../utils/moneyType'
 
 const { Dragger } = Upload
 
@@ -151,13 +152,17 @@ export function StatementUploadPage() {
     [bankCards, bankCode],
   )
 
-  useEffect(() => {
-    if (matchingCards.length === 1) {
-      setBankCardId(matchingCards[0].id)
-    } else if (bankCardId && !matchingCards.some((c) => c.id === bankCardId)) {
-      setBankCardId('')
-    }
-  }, [matchingCards, bankCardId])
+  const normalizedBankCardId = useMemo(() => {
+    if (!bankCardId) return ''
+    return matchingCards.some((c) => c.id === bankCardId) ? bankCardId : ''
+  }, [bankCardId, matchingCards])
+
+  const effectiveBankCardId = useMemo(() => {
+    if (normalizedBankCardId) return normalizedBankCardId
+    return matchingCards.length === 1 ? matchingCards[0].id : ''
+  }, [normalizedBankCardId, matchingCards])
+
+  const [previewView, setPreviewView] = useState<'parsed' | 'skipped'>('parsed')
 
   const resumeHandled = useRef('')
 
@@ -196,8 +201,6 @@ export function StatementUploadPage() {
     return () => { cancelled = true }
   }, [resumeId, step])
 
-  const [previewView, setPreviewView] = useState<'parsed' | 'skipped'>('parsed')
-
   const { data: skippedRows = [], isFetching: skippedLoading } = useQuery({
     queryKey: ['statement-skipped', statementId, cardTypeCode],
     queryFn: () => skippedStatementLines(statementId, cardTypeCode),
@@ -217,7 +220,7 @@ export function StatementUploadPage() {
         setBankCode(guessed)
         message.info(`Detected ${BANK_OPTIONS.find((b) => b.value === guessed)?.label || guessed} from filename`)
       }
-      const result = await uploadStatement(file, effectiveBank, cardTypeCode, undefined, bankCardId || undefined)
+      const result = await uploadStatement(file, effectiveBank, cardTypeCode, undefined, effectiveBankCardId || undefined)
       setStatementId(result.statementId)
       setBoundCardName(result.bankCardName || '')
       setUploadMeta({
@@ -264,7 +267,7 @@ export function StatementUploadPage() {
       qc.invalidateQueries({ queryKey: ['budget-vs-actual'] })
       qc.invalidateQueries({ queryKey: ['dash-totals'] })
       qc.invalidateQueries({ queryKey: ['tx-stats'] })
-      setCommittedCardId(bankCardId)
+      setCommittedCardId(effectiveBankCardId)
       setStep(2)
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Commit failed')
@@ -325,7 +328,7 @@ export function StatementUploadPage() {
                 size="small"
                 allowClear
                 placeholder={matchingCards.length ? 'Select card (recommended)' : 'No card for this bank'}
-                value={bankCardId || undefined}
+                value={effectiveBankCardId || undefined}
                 onChange={(v) => setBankCardId(v || '')}
                 style={{ minWidth: 240 }}
                 options={matchingCards.map((c) => ({ value: c.id, label: cardLabel(c) }))}

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Button, DatePicker, Popover, Segmented, Space } from 'antd'
 import { CalendarOutlined, DownOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
-import dayjs, { type Dayjs } from 'dayjs'
+import type { Dayjs } from 'dayjs'
 import {
   PERIOD_SECTION_LABELS,
   detectPresetId,
@@ -37,26 +37,13 @@ export function PeriodRangePicker({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState<PanelMode>('presets')
-  const [presetId, setPresetId] = useState<PeriodPresetId>(() => detectPresetId(value))
-  const [draftStart, setDraftStart] = useState<Dayjs | null>(value[0])
-  const [draftEnd, setDraftEnd] = useState<Dayjs | null>(value[1])
+  const presetId = useMemo(() => detectPresetId(value), [value])
+  const [mode, setMode] = useState<PanelMode>(() => (presetId === 'custom' ? 'custom' : 'presets'))
+  const [draftStart, setDraftStart] = useState<Dayjs | null>(() => value[0])
+  const [draftEnd, setDraftEnd] = useState<Dayjs | null>(() => value[1])
   const [startPickerOpen, setStartPickerOpen] = useState(false)
   const [endPickerOpen, setEndPickerOpen] = useState(false)
   const childPickerOpen = startPickerOpen || endPickerOpen
-
-  useEffect(() => {
-    setPresetId(detectPresetId(value))
-  }, [value])
-
-  useEffect(() => {
-    if (open) {
-      setDraftStart(value[0])
-      setDraftEnd(value[1])
-      setPresetId(detectPresetId(value))
-      setMode(detectPresetId(value) === 'custom' ? 'custom' : 'presets')
-    }
-  }, [open, value])
 
   const triggerLabel = useMemo(
     () => periodTriggerLabel(value, presetId) || placeholder,
@@ -72,7 +59,6 @@ export function PeriodRangePicker({
   }, [draftStart, draftEnd])
 
   const applyPreset = (id: PeriodPresetId, range: PeriodRange) => {
-    setPresetId(id)
     onChange(range, id)
     setOpen(false)
   }
@@ -80,7 +66,6 @@ export function PeriodRangePicker({
   const applyCustom = () => {
     if (!draftStart || !draftEnd || draftEnd.isBefore(draftStart, 'day')) return
     const range: PeriodRange = [draftStart.startOf('day'), draftEnd.endOf('day')]
-    setPresetId('custom')
     onChange(range, 'custom')
     setOpen(false)
   }
@@ -88,7 +73,6 @@ export function PeriodRangePicker({
   const navigate = (dir: -1 | 1) => {
     const next = shiftPeriod(value, presetId, dir)
     const nextId = detectPresetId(next)
-    setPresetId(nextId)
     onChange(next, nextId)
   }
 
@@ -211,6 +195,12 @@ export function PeriodRangePicker({
       open={open}
       onOpenChange={(next) => {
         if (!next && childPickerOpen) return
+        if (next) {
+          const detected = detectPresetId(value)
+          setDraftStart(value[0])
+          setDraftEnd(value[1])
+          setMode(detected === 'custom' ? 'custom' : 'presets')
+        }
         setOpen(next)
         if (!next) {
           setStartPickerOpen(false)
@@ -234,22 +224,4 @@ export function PeriodRangePicker({
       </Button>
     </Popover>
   )
-}
-
-export function periodFromStrings(start: string, end: string): PeriodRange {
-  if (!start?.trim() && !end?.trim()) {
-    return presetRange('allTime')
-  }
-  return [dayjs(start, 'MM/DD/YYYY'), dayjs(end, 'MM/DD/YYYY')]
-}
-
-export function periodToStrings(range: PeriodRange, presetId?: PeriodPresetId): { start: string; end: string } {
-  const id = presetId ?? detectPresetId(range)
-  if (id === 'allTime' || isAllTimePeriod(range)) {
-    return { start: '', end: '' }
-  }
-  return {
-    start: range[0].format('MM/DD/YYYY'),
-    end: range[1].format('MM/DD/YYYY'),
-  }
 }
