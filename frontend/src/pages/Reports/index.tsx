@@ -30,6 +30,7 @@ import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
 import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
+import { MerchantReport } from './MerchantReport'
 
 type ReportFilters = {
   period: [dayjs.Dayjs, dayjs.Dayjs]
@@ -242,6 +243,18 @@ export function ReportsPage() {
         subtitle={cfg.subtitle}
       />
     )
+  }
+
+  if (cfg.type === 'merchantSubscriptions') {
+    return <MerchantReport title={cfg.title} subtitle={cfg.subtitle} mode="subscriptions" />
+  }
+
+  if (cfg.type === 'merchantConcentration') {
+    return <MerchantReport title={cfg.title} subtitle={cfg.subtitle} mode="concentration" />
+  }
+
+  if (cfg.type === 'merchantDrift') {
+    return <MerchantReport title={cfg.title} subtitle={cfg.subtitle} mode="drift" />
   }
 
   if (cfg.type === 'billsCalendar') {

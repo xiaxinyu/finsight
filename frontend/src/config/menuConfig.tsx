@@ -63,6 +63,9 @@ export const menuItems: FsMenuItem[] = [
       { key: '/reports/annual-outlook', icon: <ThunderboltOutlined />, label: 'Annual Outlook', path: '/reports/annual-outlook' },
       { key: '/reports/trend-changes', icon: <RiseOutlined />, label: 'Trend Changes', path: '/reports/trend-changes' },
       { key: '/reports/cash-risk', icon: <FundOutlined />, label: 'Cash Risk', path: '/reports/cash-risk' },
+      { key: '/reports/subscriptions', icon: <ClusterOutlined />, label: 'Subscriptions', path: '/reports/subscriptions' },
+      { key: '/reports/merchant-concentration', icon: <PieChartOutlined />, label: 'Merchant Concentration', path: '/reports/merchant-concentration' },
+      { key: '/reports/merchant-drift', icon: <RiseOutlined />, label: 'Merchant Drift', path: '/reports/merchant-drift' },
     ],
   },
   {

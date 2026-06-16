@@ -1,5 +1,10 @@
 import { getJson, postJson } from './client'
 import { normalizeResult } from './normalize'
+import type {
+  MerchantConcentrationReport,
+  MerchantDriftReport,
+  SubscriptionReport,
+} from '../utils/merchantReports'
 
 async function unwrap<T>(raw: unknown): Promise<T> {
   const n = normalizeResult(raw)
@@ -156,4 +161,22 @@ export async function runForecastScenario(params: {
     lumpSumExpense: params.lumpSumExpense,
     newMonthlyBill: params.newMonthlyBill,
   }))
+}
+
+export async function refreshMerchantProfiles() {
+  return unwrap<{ upserted: number; subscriptions: number }>(
+    await postJson('/api/v1/advisor/merchants/refresh', {}),
+  )
+}
+
+export async function fetchSubscriptionReport() {
+  return unwrap<SubscriptionReport>(await getJson('/api/v1/advisor/merchants/subscriptions'))
+}
+
+export async function fetchMerchantConcentration() {
+  return unwrap<MerchantConcentrationReport>(await getJson('/api/v1/advisor/merchants/concentration'))
+}
+
+export async function fetchMerchantDrift(year: number) {
+  return unwrap<MerchantDriftReport>(await getJson(`/api/v1/advisor/merchants/drift?year=${year}`))
 }
