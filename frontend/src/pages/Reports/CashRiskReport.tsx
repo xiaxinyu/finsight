@@ -10,6 +10,9 @@ import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { FsChart } from '../../components/FsChart'
+import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
+import { buildReportDrillContext, drillParamsForYearMonth } from '../../components/drilldown/buildDrillContext'
+import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import type { EChartsOption } from 'echarts'
 import { formatMoney } from '../../utils/format'
@@ -35,6 +38,7 @@ type CashRiskReportProps = {
 
 export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
   const { flags } = useFeatureFlags()
+  const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
   const [year, setYear] = useState(dayjs().year())
   const [scenario, setScenario] = useState('stress')
   const [selectedDay, setSelectedDay] = useState<Dayjs>(dayjs())
@@ -72,6 +76,29 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
       }],
     }
   }, [data?.months])
+
+  const openMonthDrill = (yearMonth: string) => {
+    const month = data?.months?.find((m) => m.yearMonth === yearMonth)
+    const isDeficit = (data?.deficitMonths || []).includes(yearMonth)
+    openDrill(buildReportDrillContext({
+      title: `Cash risk · ${yearMonth}`,
+      metricLabel: `Projected net · ${scenario}`,
+      params: drillParamsForYearMonth(yearMonth),
+      explanation: [
+        month
+          ? `Forecast net ${formatMoney(month.net)} (${month.riskLevel} risk).`
+          : `Forecast month ${yearMonth} under ${scenario} scenario.`,
+        isDeficit
+          ? 'This month is projected to run a deficit — review bills and discretionary spend.'
+          : 'Liquidity looks manageable in this month under the selected scenario.',
+      ],
+      actions: [
+        { label: 'Open planning', type: 'planning', path: '/planning' },
+        { label: 'Cashflow report', type: 'report', path: '/reports/cashflow' },
+      ],
+      source: 'cash-risk',
+    }))
+  }
 
   const kpis = [
     { key: 'year', label: 'Year', value: String(year) },
@@ -205,12 +232,19 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
               loading={loading}
               option={chartOption}
               empty={<EmptyState compact title="No forecast data" />}
+              onEvents={{
+                click: (p) => {
+                  const ym = (p as { name?: string }).name
+                  if (ym) openMonthDrill(ym)
+                },
+              }}
             />
           </ContentCard>
         </Col>
       </Row>
         </>
       )}
+      <UnifiedDrillDrawer open={drillOpen} context={drillContext} onClose={closeDrill} />
     </DataPageLayout>
   )
 }
