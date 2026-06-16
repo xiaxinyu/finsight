@@ -1,7 +1,7 @@
 export type ReportConfig = {
   title: string
   subtitle?: string
-  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'cashRisk'
+  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'cashRisk' | 'merchantSubscriptions' | 'merchantConcentration' | 'merchantDrift'
   endpoint?: string
   txnType?: 'income' | 'expense'
   chartKind?: 'bar' | 'donut'
@@ -71,6 +71,21 @@ export const reportConfigs: Record<string, ReportConfig> = {
     title: 'Cash Risk',
     subtitle: 'Projected deficit months and liquidity pressure',
     type: 'cashRisk',
+  },
+  subscriptions: {
+    title: 'Subscriptions',
+    subtitle: 'Recurring charges and optimizable spend',
+    type: 'merchantSubscriptions',
+  },
+  'merchant-concentration': {
+    title: 'Merchant Concentration',
+    subtitle: 'Where spending clusters across merchants',
+    type: 'merchantConcentration',
+  },
+  'merchant-drift': {
+    title: 'Merchant Drift',
+    subtitle: 'Year-over-year merchant spend movers',
+    type: 'merchantDrift',
   },
 }
 

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -64,7 +65,20 @@ public class AdvisorApiController {
     @GetMapping("/merchants/subscriptions")
     public CommonResult subscriptions() {
         featureFlags.requireMerchantMining();
-        return CommonResult.success(merchantMiningService.subscriptions());
+        return CommonResult.success(merchantMiningService.subscriptionReport());
+    }
+
+    @GetMapping("/merchants/concentration")
+    public CommonResult merchantConcentration() {
+        featureFlags.requireMerchantMining();
+        return CommonResult.success(merchantMiningService.concentration());
+    }
+
+    @GetMapping("/merchants/drift")
+    public CommonResult merchantDrift(@RequestParam(defaultValue = "0") int year) {
+        featureFlags.requireMerchantMining();
+        int targetYear = year > 0 ? year : java.time.Year.now().getValue();
+        return CommonResult.success(merchantMiningService.drift(targetYear));
     }
 
     private String userKey() {

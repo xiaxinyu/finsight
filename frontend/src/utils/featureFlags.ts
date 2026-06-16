@@ -7,6 +7,12 @@ const FORECAST_REPORT_PATHS = new Set([
   '/reports/cash-risk',
 ])
 
+const MERCHANT_REPORT_PATHS = new Set([
+  '/reports/subscriptions',
+  '/reports/merchant-concentration',
+  '/reports/merchant-drift',
+])
+
 function isMenuItemVisible(item: FsMenuItem, flags: FeatureFlags): boolean {
   if (!item.path) {
     return true
@@ -16,6 +22,9 @@ function isMenuItemVisible(item: FsMenuItem, flags: FeatureFlags): boolean {
   }
   if (FORECAST_REPORT_PATHS.has(item.path)) {
     return flags.forecast
+  }
+  if (MERCHANT_REPORT_PATHS.has(item.path)) {
+    return flags.merchantMining
   }
   return true
 }
