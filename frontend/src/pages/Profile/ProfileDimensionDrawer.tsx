@@ -52,8 +52,15 @@ export function ProfileDimensionDrawer({ open, dimension, asOf, onClose }: Props
           </div>
 
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            {dimension.summary}
+            {dimension.reason || dimension.summary}
           </Typography.Paragraph>
+
+          <div>
+            <Typography.Text strong>Why this score</Typography.Text>
+            <Typography.Paragraph style={{ marginTop: 4, marginBottom: 0 }}>
+              {dimension.summary}
+            </Typography.Paragraph>
+          </div>
 
           <div>
             <Typography.Text strong>Score history</Typography.Text>

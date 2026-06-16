@@ -26,6 +26,7 @@ export type ProfileDimension = {
   score: number
   level: string
   summary: string
+  reason?: string
   evidence: ProfileEvidence[]
   actions: { label: string; type: string; payload: Record<string, string> }[]
 }
@@ -41,6 +42,7 @@ export type ProfileHistoryPoint = {
 export type ProfileData = {
   overallScore: number
   userType: string
+  userTypeExplanation?: string
   asOf: string
   dimensions: ProfileDimension[]
   metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }

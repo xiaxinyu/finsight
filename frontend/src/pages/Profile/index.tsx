@@ -10,7 +10,7 @@ import { FsChart } from '../../components/FsChart'
 import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
-import { buildProfileRadarOption, PROFILE_DIM_LABELS } from './profileRadar'
+import { buildProfileRadarOption, PROFILE_DIM_LABELS, profileUserTypeLabel } from './profileRadar'
 
 function dimensionIdFromRadarName(name: string): string | undefined {
   const entry = Object.entries(PROFILE_DIM_LABELS).find(([, label]) => label === name)
@@ -70,7 +70,12 @@ export function ProfilePage() {
         <Col xs={24} md={8}>
           <ContentCard title="Overall">
             <Typography.Title level={2} style={{ margin: 0 }}>{data.overallScore}</Typography.Title>
-            <Tag color="blue">{data.userType.replace(/_/g, ' ')}</Tag>
+            <Tag color="blue">{profileUserTypeLabel(data.userType)}</Tag>
+            {data.userTypeExplanation && (
+              <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 8 }}>
+                {data.userTypeExplanation}
+              </Typography.Paragraph>
+            )}
             <Progress percent={data.overallScore} showInfo={false} strokeColor="#2563eb" />
           </ContentCard>
         </Col>
@@ -115,7 +120,7 @@ export function ProfilePage() {
                     <strong>{dim.score}</strong>
                   </div>
                   <Typography.Paragraph type="secondary" style={{ minHeight: 40, marginBottom: 8 }}>
-                    {dim.summary}
+                    {dim.reason || dim.summary}
                   </Typography.Paragraph>
                   {primaryEvidence && (
                     <Typography.Paragraph style={{ marginBottom: 8, fontSize: 13 }}>

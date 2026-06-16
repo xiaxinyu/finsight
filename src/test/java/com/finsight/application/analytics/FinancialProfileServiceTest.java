@@ -52,22 +52,21 @@ class FinancialProfileServiceTest {
 
     @Test
     void currentProfile_includesReadableEvidenceAndActionPaths() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("alice");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true, "gateEnabled", false));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleMetrics());
-        when(wealthService.snapshot()).thenReturn(sampleWealth());
-        when(cashflowService.metrics()).thenReturn(Map.of("runwayMonths", 4.5));
-        when(dataQualityService.summary()).thenReturn(Map.of("unclassifiedCount", 12, "totalCount", 400));
+        stubProfileDeps();
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of(categoryRow("food", "Food", 3000)));
 
         Map<String, Object> profile = service.currentProfile();
 
         assertEquals(10, ((List<?>) profile.get("dimensions")).size());
+        assertNotNull(profile.get("userTypeExplanation"));
         @SuppressWarnings("unchecked")
         Map<String, Object> dataTrust = ((List<Map<String, Object>>) profile.get("dimensions")).stream()
                 .filter(d -> "data_trust".equals(d.get("id")))
                 .findFirst()
                 .orElseThrow();
+        assertNotNull(dataTrust.get("reason"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> evidence = (List<Map<String, Object>>) dataTrust.get("evidence");
         assertEquals("Unclassified transactions", evidence.get(0).get("label"));
@@ -78,6 +77,29 @@ class FinancialProfileServiceTest {
         assertEquals("/transactions?unclassified=1",
                 ((Map<?, ?>) actions.get(0).get("payload")).get("path"));
         assertEquals("/admin/rules", ((Map<?, ?>) actions.get(1).get("payload")).get("path"));
+    }
+
+    @Test
+    void currentProfile_spendingConcentrationUsesCategoryShare() throws Exception {
+        stubProfileDeps();
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of(
+                        categoryRow("food", "Food", 8000),
+                        categoryRow("travel", "Travel", 2000)));
+
+        Map<String, Object> profile = service.currentProfile();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> concentration = ((List<Map<String, Object>>) profile.get("dimensions")).stream()
+                .filter(d -> "spending_concentration".equals(d.get("id")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(0.0, ((Number) concentration.get("score")).doubleValue());
+        assertTrue(String.valueOf(concentration.get("reason")).contains("Food"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> ev = ((List<Map<String, Object>>) concentration.get("evidence")).get(0);
+        assertTrue(String.valueOf(ev.get("value")).contains("Food"));
+        assertEquals("Top spend category", ev.get("label"));
     }
 
     @Test
@@ -97,13 +119,10 @@ class FinancialProfileServiceTest {
 
     @Test
     void currentProfile_spendingControlEvidenceShowsExpenseRatio() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("alice");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true, "gateEnabled", false));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleMetrics());
-        when(wealthService.snapshot()).thenReturn(sampleWealth());
-        when(cashflowService.metrics()).thenReturn(Map.of("runwayMonths", 2));
-        when(dataQualityService.summary()).thenReturn(Map.of("unclassifiedCount", 0, "totalCount", 10));
+        stubProfileDeps();
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of());
 
         Map<String, Object> profile = service.currentProfile();
         @SuppressWarnings("unchecked")
@@ -116,6 +135,25 @@ class FinancialProfileServiceTest {
         assertNotNull(ev.get("label"));
         assertNotNull(ev.get("detail"));
         assertFalse(String.valueOf(ev.get("value")).isBlank());
+        assertNotNull(spending.get("reason"));
+    }
+
+    private void stubProfileDeps() throws Exception {
+        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(metricGateService.status(3)).thenReturn(Map.of("ok", true, "gateEnabled", false));
+        when(metricGateService.useReportFallback()).thenReturn(false);
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleMetrics());
+        when(wealthService.snapshot()).thenReturn(sampleWealth());
+        when(cashflowService.metrics()).thenReturn(Map.of("runwayMonths", 4.5));
+        when(dataQualityService.summary()).thenReturn(Map.of("unclassifiedCount", 12, "totalCount", 400));
+    }
+
+    private static Map<String, Object> categoryRow(String code, String name, double amount) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("category_code", code);
+        row.put("category_name", name);
+        row.put("amount", amount);
+        return row;
     }
 
     private static List<Map<String, Object>> sampleMetrics() {

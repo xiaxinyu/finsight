@@ -14,6 +14,21 @@ export const PROFILE_DIM_LABELS: Record<string, string> = {
   data_trust: 'Data trust',
 }
 
+export const PROFILE_USER_TYPE_LABELS: Record<string, string> = {
+  disciplined_saver: 'Disciplined saver',
+  high_fixed_burden: 'High fixed burden',
+  cashflow_stressed: 'Cashflow stressed',
+  volatile_income: 'Volatile income',
+  lifestyle_inflation: 'Lifestyle inflation',
+  debt_pressure: 'Debt pressure',
+  data_quality_risk: 'Data quality risk',
+  balanced: 'Balanced',
+}
+
+export function profileUserTypeLabel(userType: string): string {
+  return PROFILE_USER_TYPE_LABELS[userType] ?? userType.replace(/_/g, ' ')
+}
+
 const EMPTY_RADAR_OPTION: EChartsOption = {
   tooltip: {},
   radar: { indicator: [], radius: '62%' },
