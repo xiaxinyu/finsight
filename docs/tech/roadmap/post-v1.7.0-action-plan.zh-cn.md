@@ -1,500 +1,510 @@
-# FinSight v1.7.0 发布后行动计划
+# FinSight v1.7.0 后续完善执行计划
 
-日期：2026-06-12  
-目标版本：v1.8.0 / v1.9.0  
-定位：把 v1.7.0 的顾问式能力 MVP 打磨成可解释、可预测、可行动的专业个人金融分析系统。
+日期：2026-06-16
+目标版本：v1.7.x / v1.8.0
+定位：不继续堆新模块，集中把现有报表、数据 insight、个人画像、预测、Transactions / Detail 打磨成专业金融分析级体验。
 
-## 1. 当前状态
+## 1. 当前基线
 
-v1.7.0 已经完成从“交易与报表工具”到“顾问式财务工作台雏形”的第一步：
+v1.7.0 之后，项目已经具备完整的顾问式个人金融分析雏形：
 
-- 已发布 v1.7.0 Release。
-- 已有交易导入、预览、提交、重复检测、跳过行诊断。
-- 已有交易分类、批量重分类、未分类处理、转账标记。
-- 已有 Dashboard、Cashflow、Budget vs Actual、Fund Flow、Fixed vs Variable、Spending Drift、Bills Calendar。
-- 已新增 Advisor 方向能力：Financial Profile、Annual Outlook、Trend Changes、Cash Risk、Advisor Recommendations。
-- 已新增持久化基础表：budget、budget line、bill、goal、account snapshot、monthly metrics、profile snapshot、forecast、insight card、recommendation feedback、merchant profile。
-- 已新增 `v_transaction_analytics` v2，提供方向、金额、分类、商户、退款、固定支出等语义字段。
+- Transactions / Detail：交易明细、筛选、KPI、未分类入口、内联编辑、批量删除、批量转收入/支出、转账配对、自动分类预览。
+- Reports：Cashflow、Budget vs Actual、Fund Flow、Fixed vs Variable、Spending Drift、Bills Calendar、Annual Outlook、Trend Changes、Cash Risk、Subscriptions、Merchant Concentration、Merchant Drift。
+- Profile：10 维个人财务画像、画像历史、证据、动作入口、用户类型。
+- Forecast / Insight：年度收支预测、场景参数、置信区间、分类预测、现金风险日历、趋势分解、商户挖掘、Advisor recommendations。
+- Data foundation：`v_transaction_analytics`、monthly metrics、forecast run/line、profile snapshot、merchant profile、insight/recommendation tables。
 
-验证结果：
+本轮验证结果：
 
-- `cd frontend && npm test`：通过，13 个测试文件，49 个测试。
-- `mvn test`：通过，56 个测试，1 个 Flyway/Testcontainers 集成测试因本机 Docker 不可用被跳过。
-- `mvn checkstyle:check`：失败，6 个 unused import。
-- `cd frontend && npm run lint`：失败，ESLint 10 的 stylish formatter 调用 `util.styleText`，当前 Node 运行时不兼容。
+- `mvn -q test`：通过。
+- `mvn -q checkstyle:check`：通过。
+- `cd frontend && npm test`：通过，25 个测试文件，91 个测试。
+- `cd frontend && npm run lint`：失败，18 个 error、5 个 warning。主要集中在 React 19 lint 规则、Transactions refs、Statements Upload state 顺序、Rules hook 调用、若干 Fast Refresh 导出问题。
 
-## 2. 关键判断
+结论：后端质量已经回到可发布状态；前端测试通过，但 lint 发现的问题需要作为发布前 P0 处理。产品层面不应再扩大功能面，而应把“看见数据”升级为“理解变化、定位原因、验证证据、执行动作”。
 
-项目现在不是“缺少方向”，而是处在一个典型的 MVP 之后阶段：
+## 2. 世界级金融 insight 标准
 
-1. 数据层已经开始补齐，但指标、画像、预测的准确性还需要校准。
-2. 后端已经有 Profile / Forecast / Recommendations，但模型仍偏启发式，需要增强金融语义和证据链。
-3. 前端已经有 Profile 页面和预测报表，但交互深度不足，还没有完整的“问题 -> 结论 -> 证据 -> 下钻 -> 行动 -> 反馈”闭环。
-4. 工程质量需要在继续扩功能前先拉齐：checkstyle、lint、测试、迁移校验、Feature Flag、错误处理。
+每一个重要报表和表格都应该满足 6 个标准：
 
-## 3. P0 Bug / 发布阻塞项
+1. 准确：金额方向、转账排除、退款排除、分类口径、日期范围必须一致。
+2. 可解释：每个结论要告诉用户“为什么”，并显示关键证据。
+3. 可下钻：KPI、图表点、表格行必须能进入分类、商户、交易明细。
+4. 可比较：当前期、上期、预算、预测、置信区间要能在同一语境里比较。
+5. 可行动：每个 insight 要有下一步动作，例如调预算、修分类、查看交易、处理订阅、更新账单。
+6. 可校准：预测和画像要留下历史，用实际结果反向评估模型质量。
 
-这些问题应优先修复，目标是在继续开发新功能前让 main 保持可发布状态。
+当前项目已经有这些能力的基础，但还没有完全统一成闭环。
 
-### P0-1. 修复 Checkstyle 失败
+## 3. 关键不足
 
-现象：
+### 3.1 报表和 insight
 
-- `mvn checkstyle:check` 失败。
+现状：
 
-已确认文件：
+- 各报表都有 KPI、图表、表格或 insight。
+- Annual Outlook 已经区分 actual / forecast，支持置信区间和分类预测。
+- Trend Changes 已经输出收入、支出、储蓄率、固定成本、分类 movers、商户 movers、生活方式膨胀。
+- Cash Risk 已经有日历和月度净现金流。
+- Merchant reports 已经识别订阅、集中度、商户漂移。
 
-- `src/main/java/com/finsight/web/api/analytics/AdvisorApiController.java`
-- `src/main/java/com/finsight/application/query/TransactionQuerySupport.java`
-- `src/main/java/com/finsight/application/analytics/ForecastService.java`
-- `src/main/java/com/finsight/application/analytics/LocalAiAdvisorService.java`
-- `src/main/java/com/finsight/application/analytics/FinancialProfileService.java`
-- `src/main/java/com/finsight/application/analytics/TrendAnalysisService.java`
+不足：
+
+- 报表之间的交互模型不完全一致。有些表格可点击下钻，有些只能看。
+- 表格缺少金融分析常用的视觉编码：进度条、热力底色、贡献占比、风险标签、actual/forecast 分段、delta 正负色。
+- Trend Changes 的分类贡献和商户贡献都以总支出变化为分母，图上并列展示时容易被用户误解为可相加贡献。
+- Annual Outlook 只有 year/scenario 选择，后端已有 `incomeChangePct`、`newMonthlyBill`、`lumpSumExpense`、`targetMonthlyPayment` 场景参数，但 UI 没有让用户细化现有场景。
+- Category forecast 表格没有下钻，用户不能从预测分类直接回到历史交易证据。
+- Merchant reports 没有统一下钻抽屉，无法从订阅/集中度/漂移直接查看底层交易。
+- Insight 文案有结论，但缺少统一的“影响金额、置信度、证据来源、建议动作、预期效果”结构。
+
+### 3.2 Transactions / Detail
+
+现状：
+
+- 页面信息密度高，适合处理大量交易。
+- 筛选、KPI、active chips、内联编辑、批量动作已经成型。
+- 未分类交易可以一键过滤，自动分类有确认弹窗。
+
+不足：
+
+- 表格是操作型明细表，还不是分析型明细表。用户很难一眼看出哪些交易是异常、重复、订阅、固定支出、转账候选、分类低置信度。
+- `ProTable` 列上声明了 `sorter: true`，但 request 没有消费 sorter 参数，用户以为能排序，实际服务端排序没有生效。
+- KPI strip 只能看总额，无法一键切换收入/支出/转账/异常等分析视角。
+- 交易行缺少视觉层次：金额、商户、分类、账户、memo 的主次关系可以更清楚。
+- 批量动作安全性还可以提高：危险动作需要显示影响范围和金额汇总。
+- 搜索仍复用 `demoArea`，只能搜 memo/description；商户下钻也靠关键词近似，和 merchant profile 的标准化商户不是同一套口径。
+
+### 3.3 统一下钻
+
+现状：
+
+- `UnifiedDrillDrawer` 已经支持 insight -> breakdown -> transactions -> actions。
+- 报表、Annual Outlook、Trend Changes、Cash Risk 可以打开下钻抽屉。
+
+不足：
+
+- 下钻明细一次最多拉 200 行，breakdown 和 merchant totals 在大数据量下会失真。
+- 分类下钻有时使用 `consumeName`，而不是稳定的 `consumeID/consumeCode`，重名分类或改名后可能不准。
+- 商户下钻使用 `merchantLabel` + `demoArea` 模糊搜索，不能保证覆盖同一标准化商户的所有交易。
+- actions 比较通用，没有根据当前 insight 动态生成最贴近的下一步。
+
+### 3.4 个人画像
+
+现状：
+
+- 画像已经有 10 维分数、level、reason、evidence、actions、userType。
+- spending concentration 已经从交易分析视图计算，不再是占位。
+
+不足：
+
+- 部分 action 仍指向旧报表路径，例如 `/reports/income-curve`、`/reports/category-breakdown`，虽然前端有 redirect，但会让产品语义不统一。
+- `fin_profile_snapshot` 每次刷新会新增当天同一维度记录，应该按 user/date/dimension upsert，避免历史图被重复刷新污染。
+- 画像和 Annual Outlook / Trend Changes 没有组合成一句真正的用户指导，例如“你是高固定负担型，明年 3 月现金流承压，主要由房租和订阅增加导致”。
+
+### 3.5 数据质量和模型校准
+
+现状：
+
+- 有 metrics gate、report fallback、forecast run/line、profile history。
+
+不足：
+
+- 报表页面没有统一显示数据可信度，例如未分类比例、转账未标记风险、最近导入覆盖范围。
+- Forecast run/line 已持久化，但还没有“预测 vs 实际”的回测视图和误差指标。
+- Merchant mining、classification、profile、forecast 各自有证据，但没有统一 evidence schema 展示给用户。
+
+## 4. P0 Bug 修复计划
+
+目标：先让当前版本达到干净可发布状态，不改产品范围。
+
+### P0-1. 修复前端 lint
+
+范围：
+
+- `frontend/src/components/ClassifyConfirmModal.tsx`
+- `frontend/src/components/MoneyText.tsx`
+- `frontend/src/components/PeriodRangePicker.tsx`
+- `frontend/src/components/drilldown/UnifiedDrillDrawer.tsx`
+- `frontend/src/layouts/AppLayout.tsx`
+- `frontend/src/pages/Admin/Rules/index.tsx`
+- `frontend/src/pages/Planning/index.tsx`
+- `frontend/src/pages/Statements/Upload/index.tsx`
+- `frontend/src/pages/Transactions/index.tsx`
+
+重点：
+
+- 避免在 effect 中同步 setState 的 React 19 lint 问题。
+- 修复 `Statements/Upload` 中 `setPreviewView` 在声明前访问的问题。
+- 修复 Rules 页在 callback 内调用 hook 的问题。
+- 拆分 `MoneyText`、`PeriodRangePicker` 中非组件导出，满足 Fast Refresh。
+- 修复 Transactions 中 render 阶段写 ref 的问题。
+
+验收：
+
+- `cd frontend && npm run lint` 通过。
+- `cd frontend && npm test` 通过。
+
+### P0-2. Transactions 服务端排序
+
+问题：
+
+- Transactions Detail 的列声明了可排序，但 `request` 没有把 sorter 传给后端。
 
 修复：
 
-- 删除 unused imports。
-- CI 中加入 `mvn checkstyle:check`。
+- 明确支持 Date、Amount、Card、Type 等可排序字段。
+- 前端将 ProTable sorter 转成白名单参数。
+- 后端只允许白名单字段，避免 SQL 注入。
 
 验收：
 
-- `mvn test` 通过。
-- `mvn checkstyle:check` 通过。
+- 点击 Date / Amount 排序后，跨分页顺序正确。
+- 前端测试覆盖 sorter 参数映射。
+- 后端测试覆盖非法 sort 字段被拒绝或忽略。
 
-### P0-2. 修复前端 lint 运行环境
+### P0-3. Cash Risk 年份切换选中日错误
 
-现象：
+问题：
 
-- `npm run lint` 因 `util.styleText is not a function` 失败。
-
-可能原因：
-
-- 当前 Node 运行时与 ESLint 10 formatter API 不兼容。
-- Maven 配置中使用 Node 22.14.0，但本地 shell 实际运行 Node 20.x。
-
-修复方案：
-
-- 优先统一前端开发 Node 版本到 `v22.14.0`。
-- 增加 `.nvmrc` 或 Volta/packageManager 声明。
-- 或临时将 lint formatter 改为兼容格式，例如 `eslint . --format unix`。
-
-验收：
-
-- `cd frontend && npm run lint` 可执行，并能真实报告代码问题。
-
-### P0-3. 修复 ProfilePage Hooks 顺序风险
-
-现象：
-
-- `frontend/src/pages/Profile/index.tsx` 在条件 return 后调用 `useMemo`。
-- React Hook 必须在每次 render 中以相同顺序调用，否则加载态切换后可能触发 hooks order 错误。
+- `calendarValue` 会把 selected day 显示年份调整到当前 year，但 `selectedKey` 仍使用原始 `selectedDay.format('YYYY-MM-DD')`。
+- 切换年份后，右侧 day detail 可能查旧年份。
 
 修复：
 
-- 将 `useMemo` 移到所有条件 return 之前。
-- 当 `data` 为空时返回默认空图表配置。
+- `selectedKey` 应基于 `calendarValue`。
+- 年份切换时将 selected day 同步到目标年份。
 
 验收：
 
-- Profile 页面刷新、加载、失败、成功状态均无 React hooks 警告。
-- 增加最小组件测试或静态 lint 覆盖。
+- 切换 2025 / 2026 / 2027，右侧 day detail 和日历选中日期一致。
 
-### P0-4. ForecastService 预测结果未持久化明细
+### P0-4. 下钻数据 200 行截断失真
 
-现象：
+问题：
 
-- `fin_forecast_run` 已写入，但 `fin_forecast_line` 没有写入。
-
-影响：
-
-- 无法审计历史预测。
-- 无法对比“当时预测 vs 后来实际”。
-- 预测模型质量无法评估。
+- `UnifiedDrillDrawer` 使用 `rows: 200` 拉明细后在前端聚合分类/商户，数据量大时 breakdown 不准确。
 
 修复：
 
-- 每次 forecast run 写入 12 个月 `fin_forecast_line`。
-- 存储 `INCOME_FORECAST`、`EXPENSE_FORECAST`、`NET_FORECAST`，并预留 lower/upper bounds。
+- 第一阶段：如果 `total > rows.length`，显示“partial data”提示，避免误导。
+- 第二阶段：增加后端 drill breakdown endpoint，直接返回分类/商户聚合和前 200 条交易样本。
 
 验收：
 
-- 一次 forecast 生成 36 条 line。
-- 可查询任意 run 的预测明细。
+- 大数据量下用户能看到是否被截断。
+- 报表 breakdown 金额和对应报表总额一致。
 
-### P0-5. RecommendationService 可能重复插入 insight card
+### P0-5. Profile action 路径统一
 
-现象：
+问题：
 
-- 推荐卡片 id 使用稳定业务 id，例如 `cashflow_risk`、profile dimension id。
-- `persistCards` 每次插入 `fin_insight_card`，如果重复 id 存在可能失败，或者产生不一致行为。
+- 画像动作仍含旧报表路径。
 
 修复：
 
-- 使用 `insert ... on duplicate key update`。
-- 或 card id 改为 `userId + type + date`，并定义唯一键。
-- 推荐服务应区分“当前活跃建议”和“历史建议日志”。
+- `/reports/income-curve` -> `/reports/cashflow`
+- `/reports/income-vs-expense` -> `/reports/cashflow`
+- `/reports/category-breakdown` -> `/reports/budget-vs-actual`
+- `/reports/category-comparison` -> `/reports/spending-drift`
+- `/reports/monthly-comparison` -> `/reports/cashflow`
 
 验收：
 
-- 多次刷新 Dashboard 不产生异常。
-- 推荐历史可追踪，当前建议不重复污染。
+- Profile 页面所有 action 都指向当前菜单中可见的目标。
+- routes 测试覆盖这些 path。
 
-## 4. P1 功能优化需求
+### P0-6. Profile snapshot 去重
 
-### P1-1. 个人财务画像升级
+问题：
 
-当前状态：
+- 刷新画像会重复插入当天同一维度 snapshot。
 
-- 已有 10 维画像：收入稳定性、支出控制、储蓄纪律、固定成本、流动性、债务压力、生活方式通胀、消费集中度、季节性风险、数据可信度。
+修复：
 
-不足：
-
-- 部分维度仍是占位或粗略算法，例如 spending concentration 固定返回默认分。
-- evidence 过大，直接塞入 metrics 列表，不够用户友好。
-- userType 只有少量类型，不能准确表达用户画像。
-
-需求：
-
-- 为每个画像维度定义明确公式、阈值、证据、行动。
-- 增加画像类型：
-  - disciplined_saver
-  - high_fixed_burden
-  - cashflow_stressed
-  - volatile_income
-  - lifestyle_inflation
-  - debt_pressure
-  - data_quality_risk
-  - balanced
-- 为每个画像输出一句用户可理解的说明。
+- 为 `user_id + snapshot_date + dimension` 建唯一约束。
+- insert 改成 upsert。
 
 验收：
 
-- Profile 页面每个维度都有：分数、状态、原因、关键证据、可执行动作。
-- 用户能理解“为什么我被归为这个类型”。
+- 同一天多次刷新，历史图每个维度只保留一个点。
 
-### P1-2. 年度预测增强
+## 5. P1 报表体验完善计划
 
-当前状态：
+目标：不增加新报表，而是把现有报表统一成专业分析工作流。
 
-- `ForecastService` 使用 rolling average + 简单季节系数。
-- 支持 base / conservative / optimistic / stress 场景。
+### P1-1. 建立统一报表骨架
 
-不足：
+每个报表统一为：
 
-- 预测未区分历史实际、预算目标、账单、目标月供。
-- 没有置信区间。
-- 没有分类级预测。
-- `lumpSumExpense` 等输入参数尚未真正作用到结果。
-
-需求：
-
-- 预测输入：
-  - 最近 12/24 个月实际收支。
-  - 已知账单。
-  - 预算线。
-  - 目标月供。
-  - 一次性支出。
-  - 收入变化百分比。
-- 预测输出：
-  - 年收入、年支出、年净结余。
-  - 月度收入、支出、结余。
-  - 赤字月份。
-  - 置信区间。
-  - 分类支出预测。
-  - 预测解释。
+- Decision KPI：当前最重要的 3-6 个指标。
+- Narrative Insight：一句 headline + 2-4 条证据。
+- Primary Chart：趋势、贡献或分布。
+- Evidence Table：可排序、可下钻、带视觉编码。
+- Drill Drawer：分类、商户、交易、动作。
+- Data Quality：未分类比例、数据来源、是否 fallback、是否 partial。
 
 验收：
 
-- `/api/v1/analytics/scenarios` 中的 `incomeChangePct`、`newMonthlyBill`、`lumpSumExpense` 都会改变预测结果。
-- Annual Outlook 能展示实际值、预测值、预算目标。
+- Cashflow、Budget vs Actual、Spending Drift、Annual Outlook、Trend Changes、Cash Risk、Merchant reports 结构一致。
+- 用户点击任何 KPI / 图表点 / 表格行，都能进入相同交互模型。
 
-### P1-3. 趋势变化解释
+### P1-2. 升级报表表格视觉化
 
-当前状态：
+对 `FsDataTable` 增加可复用的金融表格能力：
 
-- Trend Changes 能展示类别增长。
-
-不足：
-
-- 趋势解释偏少。
-- 没有商户层、固定/可变层、收入稳定性层。
-
-需求：
-
-- 增加趋势类型：
-  - YoY 收入变化。
-  - YoY 支出变化。
-  - 储蓄率变化。
-  - 固定成本变化。
-  - Top category movers。
-  - Top merchant movers。
-  - 生活方式通胀检测。
-- 每条趋势必须输出：
-  - delta amount
-  - delta percent
-  - contribution to total change
-  - related transactions drill-down params
+- 金额列：正负色、千分位、对齐、单位一致。
+- Delta 列：红/绿方向、箭头、百分比和金额同时显示。
+- Contribution 列：横向进度条或热力底色。
+- Risk 列：low / medium / high tag。
+- Forecast 列：actual / forecast / budget / confidence band 标识。
+- Row explanation：hover 或展开显示该行为什么重要。
 
 验收：
 
-- 用户能看到“今年支出多了多少，主要是谁造成的”。
-- 趋势结果可下钻到分类、商户、交易。
+- Trend Changes movers 表能看出最大驱动项。
+- Annual Outlook monthly breakdown 能看出 actual/forecast/deficit/budget gap。
+- Merchant Concentration 表能看出 top merchant share 和 subscription 标识。
 
-### P1-4. Advisor 推荐闭环
+### P1-3. Annual Outlook 细化
 
-当前状态：
+范围：
 
-- Dashboard 已接入 advisor recommendations。
-- 支持 feedback dismiss。
-
-不足：
-
-- accept/snooze 的行为语义不完整。
-- 推荐证据没有在 UI 展开。
-- impactAmount 大多为 0。
-- 推荐卡片没有明确紧急程度。
-
-需求：
-
-- 推荐字段标准化：
-  - priority
-  - urgency
-  - impactAmount
-  - confidence
-  - reason
-  - evidenceRefs
-  - actions
-  - expiresAt
-- UI 支持：
-  - 查看证据。
-  - 接受建议。
-  - 暂缓提醒。
-  - 忽略 7 天。
-  - 跳转到相关报表或交易。
+- 保留现有 year/scenario，不新增独立模块。
+- 把已有后端场景参数做成折叠的 scenario inputs：收入变化、一次性支出、新月度账单、目标月供。
+- 增加 actual vs forecast vs budget gap 的表格列。
+- 分类预测表支持点击下钻到历史分类交易。
+- 解释中显示：历史窗口、实际月份数、置信区间方法、使用了哪些用户输入。
 
 验收：
 
-- 首页 3 张卡片均能说明“为什么重要、影响多少钱、下一步做什么”。
+- 调整 `incomeChangePct`、`newMonthlyBill`、`lumpSumExpense` 后，图表和 KPI 明显变化。
+- 每个赤字月份能说明主要原因和可执行动作。
 
-### P1-5. 商户和订阅挖掘
+### P1-4. Trend Changes 细化
 
-当前状态：
+范围：
 
-- 已有 `MerchantMiningService` 和 `fin_merchant_profile`。
-
-不足：
-
-- 订阅识别规则偏粗，只看交易次数。
-- 商户归一化还依赖原始 token。
-
-需求：
-
-- 商户归一化：
-  - 去除订单号、门店号、支付通道噪声。
-  - 合并同一商户的不同描述。
-- 订阅识别：
-  - 固定周期。
-  - 金额稳定。
-  - 商户重复。
-  - 自动标记 suspected_subscription。
-- 新增报表：
-  - Subscriptions
-  - Merchant Concentration
-  - Merchant Drift
+- 分类 movers 和商户 movers 分区展示，不在同一贡献图里暗示可相加。
+- 每条 trend 显示 `from`、`to`、`delta amount`、`delta %`、`contribution %`。
+- 生活方式膨胀显示收入增速、支出增速、gap。
+- 商户下钻改用标准化 merchant token，而不是 label 关键词。
 
 验收：
 
-- 能识别每月/每季度重复扣费。
-- 能展示订阅总额和可优化金额。
+- 用户能回答：“今年多花/少花多少钱，主要由哪些分类和商户造成，各自贡献多少。”
 
-## 5. P2 交互和体验优化
+### P1-5. Cash Risk 细化
 
-### P2-1. Profile 页面增强
+范围：
 
-- 增加画像历史趋势。
-- 增加维度详情抽屉。
-- 展示 evidence 而不是只给 summary。
-- 将 action 链接指向精确页面和过滤条件。
+- 日历风险色和右侧明细完全同步。
+- 月度净现金流图加入赤字 threshold line。
+- 日 detail 中区分 bill / income / goal / forecast event。
+- 高风险日直接给出动作：打开 Planning、调整账单、查看该月交易。
 
-### P2-2. Annual Outlook 页面增强
+验收：
 
-- 支持 scenario 切换。
-- 显示置信区间。
-- 显示赤字月份高亮。
-- 支持“把预测转成预算建议”。
+- 用户能回答：“哪几天危险、为什么危险、我应该做什么。”
 
-### P2-3. Cash Risk 页面增强
+### P1-6. Merchant reports 细化
 
-- 以月历形式展示现金压力。
-- 展示账单日、收入日、目标扣款日。
-- 支持调整参数立即重算。
+范围：
 
-### P2-4. Drill-down 统一
+- Subscriptions：显示可优化金额、最近扣款日、频率稳定性、置信度解释。
+- Concentration：显示 top 1 / top 5 share，避免只看金额。
+- Drift：分为新增商户、增长商户、下降商户。
+- 所有 merchant 行支持统一下钻到交易明细。
 
-- 所有图表点击都进入统一的 drill-down drawer。
-- 第一层：指标解释。
-- 第二层：分类 / 商户贡献。
-- 第三层：交易明细。
-- 第四层：行动按钮，例如调整预算、创建规则、标记转账、忽略建议。
+验收：
 
-## 6. P3 工程和质量优化
+- 用户能从商户报表直接定位底层交易，并决定保留、取消、重分类或加入预算。
 
-### P3-1. CI/CD
+## 6. P2 Transactions / Detail 完善计划
 
-新增 GitHub Actions：
+目标：把交易明细从“数据表”打磨成“交易分析工作台”。
 
-- backend-test：`mvn test`
-- backend-style：`mvn checkstyle:check`
-- frontend-test：`cd frontend && npm test`
-- frontend-lint：`cd frontend && npm run lint`
-- frontend-build：`cd frontend && npm run build`
+### P2-1. 表格布局
 
-### P3-2. 数据迁移验证
+改进：
 
-- Flyway migration 必须能在 CI 中通过。
-- 如果没有 Docker，提供 H2 或 MySQL service container。
-- 保留 `/api/v1/maintenance/verify-schema-migration` 作为运行时检查。
+- 固定 Date / Transaction / Amount / Actions，减少横向滚动迷失。
+- Transaction 单元格分三层：商户/描述主文本、memo 次文本、分类/规则/来源 tag。
+- Card 单元格显示银行、账户尾号、卡类型，长文本使用 tooltip。
+- Amount 单元格统一显示收入/支出/转账方向和颜色。
 
-### P3-3. Feature Flag
+验收：
 
-- Advisor、Profile、Forecast、Local AI、Merchant Mining 都需要 feature flag。
-- 默认开启稳定功能，实验功能可关闭。
+- 1366px 宽度下无需频繁横向滚动即可完成分类和编辑。
+- 交易行主信息在 2 秒内可扫读。
 
-### P3-4. 安全和生产配置
+### P2-2. 表格数据可视化
 
-- 检查 CSRF 策略。
-- 限制 `/actuator/**` 暴露。
-- 限制 `/encrypt/**` 仅管理员或本地初始化使用。
-- 生产环境禁止默认密钥和默认数据库密码。
+改进：
 
-## 7. GitHub Issues 拆分建议
+- 金额列增加条形强度或异常标记。
+- 分类列显示未分类、规则命中、低置信度状态。
+- 固定支出、订阅、转账候选、退款候选用 tag 标识。
+- Active filters 区显示当前筛选影响：交易数、收入、支出、净额。
 
-建议创建以下 labels：
+验收：
 
-- `type:bug`
-- `type:feature`
-- `type:tech-debt`
-- `area:advisor`
-- `area:analytics`
-- `area:frontend`
-- `area:backend`
-- `area:data`
-- `priority:p0`
-- `priority:p1`
-- `priority:p2`
+- 用户不用打开报表，也能在 Detail 页面发现异常支出、未分类、订阅和转账问题。
 
-建议创建 issues：
+### P2-3. 交互细化
 
-1. `[P0][Backend] Fix Checkstyle unused imports`
-2. `[P0][Frontend] Fix ESLint runtime compatibility`
-3. `[P0][Frontend] Fix ProfilePage hook order`
-4. `[P0][Analytics] Persist forecast lines for every forecast run`
-5. `[P0][Advisor] Make insight card persistence idempotent`
-6. `[P1][Profile] Define formulas and evidence for all profile dimensions`
-7. `[P1][Forecast] Apply scenario input parameters to forecast output`
-8. `[P1][Forecast] Add confidence intervals and category forecasts`
-9. `[P1][Trends] Add merchant and fixed-cost trend decomposition`
-10. `[P1][Advisor] Add evidence drawer and accept/snooze feedback`
-11. `[P1][Merchant] Improve merchant normalization and subscription detection`
-12. `[P2][Reports] Add scenario switcher to Annual Outlook`
-13. `[P2][Reports] Add cash-risk calendar view`
-14. `[P2][UX] Standardize drill-down flow across reports`
-15. `[P3][CI] Add GitHub Actions for backend/frontend validation`
-16. `[P3][Security] Harden production security defaults`
+改进：
 
-## 8. 建议开发顺序
+- 批量动作前显示选中行数量、收入/支出总额、最早/最晚日期。
+- Auto-classify 弹窗显示变更前后分类、置信度、原因和可编辑建议。
+- Apply filter / dirty 状态更清楚，避免用户误以为筛选已经生效。
+- 双击编辑、保存、取消、错误提示保持一致。
 
-### Sprint 1：恢复工程健康
+验收：
 
-目标：main 分支可验证、可持续发布。
+- 批量改分类和批量转收入/支出的误操作率降低。
+- 用户能理解每一次自动分类为什么这样建议。
 
-- 修复 Checkstyle。
-- 修复 lint 运行环境。
-- 修复 ProfilePage hook 顺序。
-- 增加 GitHub Actions。
-- 补 Profile / Forecast / Advisor 关键单测。
+### P2-4. 与报表下钻打通
 
-完成标准：
+改进：
 
-- `mvn test`
-- `mvn checkstyle:check`
-- `cd frontend && npm test`
-- `cd frontend && npm run lint`
-- `cd frontend && npm run build`
+- Transactions 支持从 URL 接收 stable params：`consumeID`、`merchantToken`、`txnTypes`、date range。
+- 报表跳转到 Transactions 时保留筛选 chip，并显示“来自哪个 insight”。
+- Detail 页面可返回来源报表。
 
-### Sprint 2：让预测可信
+验收：
 
-目标：Annual Outlook 可以指导用户看全年现金流。
+- 从 Trend Changes 的某个商户 -> Drill -> Transactions，金额和交易集合一致。
 
-- forecast lines 持久化。
-- scenario 参数真正生效。
-- 加入预算、账单、目标月供。
-- 加入 deficit month 解释。
-- Annual Outlook 支持 scenario 切换。
+## 7. P3 数据挖掘和用户指导完善
 
-完成标准：
+目标：把 Profile、Forecast、Trend、Merchant、Transactions 串成一条用户能执行的建议链。
 
-- 用户能看到全年预计收入、支出、结余。
-- 用户能知道哪些月份可能现金流为负。
-- 用户能调整场景并看到变化。
+### P3-1. 组合型 insight
 
-### Sprint 3：让画像可解释
+输出模板：
 
-目标：Profile 不只是分数，而是用户能理解的财务画像。
+- 用户画像：例如 high fixed burden / volatile income / disciplined saver。
+- 变化趋势：今年相对去年增加/减少的关键项。
+- 未来影响：年度预测中的赤字月份或预算压力。
+- 证据：分类、商户、交易样本。
+- 动作：调预算、减少订阅、修分类、设置账单/目标。
 
-- 完善 10 维画像公式。
-- 增加 user type 分类。
-- 增加证据摘要。
-- Profile UI 增加详情抽屉。
-- 画像历史趋势。
+示例：
 
-完成标准：
+> 你当前属于 high fixed burden 型。2026 年固定支出同比增加 ¥X，其中房租和订阅贡献最高；在 stress 场景下 2026-03、2026-04 可能出现赤字。建议先处理 Top 3 recurring charges，并把月度预算上限调整到 ¥Y。
 
-- 每个维度都有公式、状态、证据、行动。
-- 用户知道自己的核心财务问题是什么。
+验收：
 
-### Sprint 4：让建议可行动
+- Dashboard / Profile / Annual Outlook 至少能出现 3 类组合型建议。
+- 每条建议都能下钻到证据。
 
-目标：首页成为“今日财务任务台”。
+### P3-2. 预测回测
 
-- 推荐卡片加 urgency、confidence、impactAmount。
-- Evidence drawer。
-- accept / snooze / dismiss 行为完整化。
-- 建议跳转到精确 drill-down。
-- 根据用户反馈降低重复打扰。
+改进：
 
-完成标准：
+- 每个月实际数据完成后，对上一轮 forecast line 做误差计算。
+- 输出 MAPE / MAE / bias，按收入、支出、净额、分类预测分开。
+- 在 Annual Outlook 显示“本模型过去 3 个月平均误差”。
 
-- 用户打开 Dashboard 能看到 3 个最重要的行动。
-- 每个行动都可解释、可执行、可反馈。
+验收：
 
-### Sprint 5：商户和订阅挖掘
+- 用户能判断预测是否可信。
+- 模型调整有数据依据。
 
-目标：从分类分析进入商户级数据挖掘。
+### P3-3. 数据质量贯穿
 
-- 商户归一化。
-- 周期性扣费识别。
-- 订阅报告。
-- 商户支出漂移。
-- 推荐取消或审查异常订阅。
+改进：
 
-完成标准：
+- 每个核心报表显示数据质量条：未分类比例、转账候选数、最近导入日期、fallback source。
+- 高未分类比例时，报表 insight 降低置信度并引导用户先修分类。
 
-- 用户能看到每月订阅总额。
-- 用户能发现重复扣费和异常商户增长。
+验收：
 
-## 9. v1.8.0 建议范围
+- 用户知道什么时候应该先清理数据，再相信结论。
 
-建议 v1.8.0 不要追求“大而全 AI”，而是聚焦三件事：
+## 8. 实施节奏
 
-1. 工程健康：测试、lint、checkstyle、CI 全绿。
-2. 可信预测：Annual Outlook / Cash Risk 可用。
-3. 可解释画像：Profile 能真正说明用户财务类型和风险。
+### Sprint 1：发布卫生和关键 bug
 
-建议 v1.9.0 再重点做：
+周期：1-2 天
+范围：P0-1 到 P0-6
+输出：
 
-1. Advisor 推荐闭环。
-2. 商户和订阅挖掘。
-3. 本地 AI 问答。
-4. 更完整的 Scenario Lab。
+- 前端 lint 通过。
+- Cash Risk 年份 bug 修复。
+- Transactions 排序修复。
+- Profile action 和 snapshot 修复。
+- 下钻 partial data 提示。
 
+### Sprint 2：报表表格和下钻统一
+
+周期：3-5 天
+范围：P1-1、P1-2、P1-4、P1-6
+输出：
+
+- `FsDataTable` 支持金融视觉编码。
+- Trend / Merchant / Generic reports 下钻一致。
+- 商户下钻从关键词升级为 stable token。
+
+### Sprint 3：Annual Outlook 和 Cash Risk 精修
+
+周期：3-4 天
+范围：P1-3、P1-5
+输出：
+
+- 场景输入可调。
+- 预测解释更完整。
+- 赤字月份和风险日能直接指导行动。
+
+### Sprint 4：Transactions Detail 专业化
+
+周期：4-6 天
+范围：P2 全部
+输出：
+
+- 表格布局、视觉编码、批量动作、下钻跳转全部升级。
+- Detail 成为分析和修复交易数据的主工作台。
+
+### Sprint 5：组合 insight 和模型校准
+
+周期：5-8 天
+范围：P3 全部
+输出：
+
+- Profile + Forecast + Trend + Merchant 的组合建议。
+- 预测回测和数据质量贯穿。
+
+## 9. 验收清单
+
+发布前必须满足：
+
+- `mvn -q test` 通过。
+- `mvn -q checkstyle:check` 通过。
+- `cd frontend && npm test` 通过。
+- `cd frontend && npm run lint` 通过。
+- 主要页面桌面端和移动端无重叠、无不可读文本、无空白图表。
+- Reports 所有表格行的点击行为一致。
+- Transactions Detail 排序、筛选、分页、批量动作一致。
+- Annual Outlook 调整场景参数后，KPI、图表、表格同步变化。
+- Trend Changes 的分类/商户贡献说明不误导用户。
+- Cash Risk 年份切换和 selected day detail 一致。
+- Profile 历史同一天不重复污染。
+
+## 10. GitHub 拆分建议
+
+建议拆成以下 issue / PR：
+
+1. `fix(frontend): resolve React 19 lint blockers`
+2. `fix(transactions): implement stable server-side table sorting`
+3. `fix(reports): correct cash risk selected date when switching year`
+4. `fix(profile): normalize action paths and upsert daily snapshots`
+5. `feat(reports): add partial-data warning and stable drilldown contract`
+6. `feat(ui): add financial visual encoding to report tables`
+7. `feat(reports): refine trend and merchant report drilldowns`
+8. `feat(reports): expose annual outlook scenario inputs`
+9. `feat(transactions): polish detail table layout and risk indicators`
+10. `feat(insights): connect profile, trend, forecast, and merchant evidence`
+
+注意：这里的 `feat` 是工程语义，不代表扩展产品范围；实际目标是完善现有功能的表达、交互和可执行性。
