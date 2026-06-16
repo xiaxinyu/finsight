@@ -68,7 +68,9 @@ export type ForecastMonth = {
   expenseUpper?: number
   netLower?: number
   netUpper?: number
+  budgetTarget?: number
   deficit?: boolean
+  actual?: boolean
   forecast?: boolean
 }
 
@@ -100,6 +102,12 @@ export type ForecastConfidence = {
   method: string
 }
 
+export type BudgetTarget = {
+  monthlyCap: number
+  annualCap: number
+  source: string
+}
+
 export type ForecastData = {
   year: number
   scenario: string
@@ -117,6 +125,8 @@ export type ForecastData = {
   months: ForecastMonth[]
   categoryForecasts?: ForecastCategory[]
   confidence?: ForecastConfidence
+  budgetTarget?: BudgetTarget
+  explanation?: string[]
   budgetSuggestion?: BudgetSuggestion
   metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }
   metricsSource?: string
@@ -202,6 +212,7 @@ export async function runForecastScenario(params: {
   incomeChangePct?: number
   lumpSumExpense?: number
   newMonthlyBill?: number
+  targetMonthlyPayment?: number
 }) {
   const scenario = params.scenario
     ?? (params.incomeChangePct != null && params.incomeChangePct < -5 ? 'stress' : 'base')
@@ -211,6 +222,7 @@ export async function runForecastScenario(params: {
     incomeChangePct: params.incomeChangePct,
     lumpSumExpense: params.lumpSumExpense,
     newMonthlyBill: params.newMonthlyBill,
+    targetMonthlyPayment: params.targetMonthlyPayment,
   }))
 }
 
