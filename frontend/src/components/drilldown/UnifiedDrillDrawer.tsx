@@ -62,10 +62,10 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
   )
 }
 
-function UnifiedDrillDrawerInner({ open, context, onClose }: Props) {
+function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; context: DrillDownContext; onClose: () => void }) {
   const [layer, setLayer] = useState<DrillDownLayer>('insight')
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(() => context?.params.consumeName || null)
-  const [merchantFilter, setMerchantFilter] = useState<string | null>(() => context?.params.merchantLabel || null)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(() => context.params.consumeName || null)
+  const [merchantFilter, setMerchantFilter] = useState<string | null>(() => context.params.merchantLabel || null)
 
   const queryParams = useMemo(() => {
     if (!context) return {}
@@ -119,8 +119,8 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: Props) {
     return (data?.rows || []).filter((r) => merchantLabel(r).toLowerCase() === merchantFilter.toLowerCase())
   }, [data?.rows, merchantFilter])
 
-  const actions = mergeDrillActions(context?.actions)
-  const showCategories = !context?.params.consumeName && !categoryFilter
+  const actions = mergeDrillActions(context.actions)
+  const showCategories = !context.params.consumeName && !categoryFilter
 
   const handleClose = () => {
     setLayer('insight')
