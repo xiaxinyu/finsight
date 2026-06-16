@@ -3405,3 +3405,24 @@
 .fs-cash-risk-event strong {
   margin-left: auto;
 }
+
+.fs-annual-outlook-row--deficit td {
+  background: rgba(220, 38, 38, 0.06) !important;
+}
+
+.fs-annual-outlook-net--deficit {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.fs-annual-outlook-budget {
+  margin-bottom: 12px;
+}
+
+.fs-annual-outlook-budget-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
