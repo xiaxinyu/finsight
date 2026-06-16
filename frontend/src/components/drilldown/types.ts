@@ -12,5 +12,5 @@ export type DrillDownContext = {
   explanation: string[]
   params: Record<string, string>
   actions?: DrillDownAction[]
-  source?: 'dashboard' | 'report' | 'profile' | 'cash-risk'
+  source?: 'dashboard' | 'report' | 'profile' | 'cash-risk' | 'annual-outlook'
 }

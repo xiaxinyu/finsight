@@ -57,6 +57,52 @@ class ForecastServiceTest {
     private ForecastService service;
 
     @Test
+    void forecast_includesConfidenceBoundsAndBudgetSuggestion() throws Exception {
+        when(authenticationFacade.getUserName()).thenReturn("user1");
+        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
+        when(metricGateService.useReportFallback()).thenReturn(false);
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
+        when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
+                .thenReturn(1);
+
+        Map<String, Object> out = service.forecast(2026, "stress");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> months = (List<Map<String, Object>>) out.get("months");
+        Map<String, Object> jan = months.get(0);
+        assertNotNull(jan.get("netLower"));
+        assertNotNull(jan.get("netUpper"));
+        assertNotNull(jan.get("incomeLower"));
+        assertNotNull(jan.get("expenseUpper"));
+        assertTrue(((Number) jan.get("incomeUpper")).doubleValue()
+                >= ((Number) jan.get("incomeLower")).doubleValue());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> suggestion = (Map<String, Object>) out.get("budgetSuggestion");
+        assertNotNull(suggestion.get("monthlyCap"));
+        assertNotNull(suggestion.get("annualCap"));
+        assertNotNull(suggestion.get("note"));
+    }
+
+    @Test
+    void forecast_scenarioChangesYearNet() throws Exception {
+        when(authenticationFacade.getUserName()).thenReturn("user1");
+        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
+        when(metricGateService.useReportFallback()).thenReturn(false);
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
+        when(billService.listEnabled()).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
+                .thenReturn(0);
+
+        Map<String, Object> base = service.forecast(2026, "base");
+        Map<String, Object> stress = service.forecast(2026, "stress");
+
+        assertTrue(((Number) stress.get("yearNet")).doubleValue()
+                < ((Number) base.get("yearNet")).doubleValue());
+    }
+
+    @Test
     void forecast_persistsThirtySixLinesPerRun() throws Exception {
         when(authenticationFacade.getUserName()).thenReturn("user1");
         when(metricGateService.status(3)).thenReturn(Map.of("ok", true));

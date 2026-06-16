@@ -25,9 +25,10 @@ import { PeriodRangePicker, periodToStrings } from '../../components/PeriodRange
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
-import { fetchForecast, fetchTrends } from '../../api/analytics'
+import { fetchTrends } from '../../api/analytics'
 import { homeSummary } from '../../api/report'
 import { buildReportView } from './buildReportView'
+import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
 
 type ReportFilters = {
@@ -70,10 +71,6 @@ export function ReportsPage() {
       if (!cfg) return null
       if (cfg.type === 'billsCalendar') {
         return { calendar: await billCalendar() }
-      }
-      if (cfg.type === 'annualOutlook') {
-        const year = applied.period[1].year()
-        return { forecast: await fetchForecast(year, 'base') }
       }
       if (cfg.type === 'trendChanges') {
         const toYear = applied.period[1].year()
@@ -232,6 +229,15 @@ export function ReportsPage() {
   if (cfg.type === 'cashRisk') {
     return (
       <CashRiskReport
+        title={cfg.title}
+        subtitle={cfg.subtitle}
+      />
+    )
+  }
+
+  if (cfg.type === 'annualOutlook') {
+    return (
+      <AnnualOutlookReport
         title={cfg.title}
         subtitle={cfg.subtitle}
       />

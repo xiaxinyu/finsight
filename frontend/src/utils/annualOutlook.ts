@@ -1,0 +1,173 @@
+import type { EChartsOption } from 'echarts'
+import type { ForecastData, ForecastMonth } from '../api/analytics'
+import { formatMoney } from './format'
+
+export const FORECAST_SCENARIOS = [
+  { value: 'base', label: 'Base' },
+  { value: 'conservative', label: 'Conservative' },
+  { value: 'optimistic', label: 'Optimistic' },
+  { value: 'stress', label: 'Stress' },
+] as const
+
+export type ForecastScenario = (typeof FORECAST_SCENARIOS)[number]['value']
+
+export function scenarioLabel(scenario: string): string {
+  return FORECAST_SCENARIOS.find((s) => s.value === scenario)?.label ?? scenario
+}
+
+export function isDeficitMonth(forecast: Pick<ForecastData, 'deficitMonths'>, yearMonth: string): boolean {
+  return (forecast.deficitMonths || []).includes(yearMonth)
+}
+
+export function buildAnnualOutlookInsights(forecast: ForecastData): { text: string; warn?: boolean }[] {
+  const scenario = scenarioLabel(forecast.scenario)
+  const deficits = forecast.deficitMonths || []
+  const bullets: { text: string; warn?: boolean }[] = [
+    {
+      text: deficits.length
+        ? `${scenario} scenario projects deficit in ${deficits.length} month(s): ${deficits.join(', ')}.`
+        : `No projected deficit months under the ${scenario} scenario.`,
+      warn: deficits.length > 0,
+    },
+  ]
+  if (forecast.budgetSuggestion) {
+    bullets.push({
+      text: `Budget suggestion: ${formatMoney(forecast.budgetSuggestion.monthlyCap)}/month (${forecast.budgetSuggestion.note})`,
+    })
+  }
+  return bullets
+}
+
+export function buildAnnualOutlookKpis(forecast: ForecastData) {
+  const net = Number(forecast.yearNet ?? forecast.yearIncome - forecast.yearExpense)
+  const deficits = forecast.deficitMonths || []
+  return [
+    { key: 'year', label: 'Year', value: String(forecast.year) },
+    { key: 'scenario', label: 'Scenario', value: scenarioLabel(forecast.scenario) },
+    { key: 'inc', label: 'Forecast income', value: formatMoney(forecast.yearIncome), tone: 'income' as const },
+    { key: 'exp', label: 'Forecast expense', value: formatMoney(forecast.yearExpense), tone: 'expense' as const },
+    { key: 'net', label: 'Forecast net', value: formatMoney(net), tone: net >= 0 ? 'income' as const : 'expense' as const },
+    {
+      key: 'def',
+      label: 'Deficit months',
+      value: String(deficits.length),
+      tone: deficits.length ? 'warn' as const : 'neutral' as const,
+    },
+  ]
+}
+
+function netBandSeries(months: ForecastMonth[]) {
+  const upper = months.map((m) => Number(m.netUpper ?? m.net * 1.1))
+  const lower = months.map((m) => Number(m.netLower ?? m.net * 0.9))
+  return [
+    {
+      name: 'Net upper',
+      type: 'line' as const,
+      data: upper,
+      lineStyle: { opacity: 0 },
+      stack: 'net-confidence',
+      symbol: 'none',
+      silent: true,
+    },
+    {
+      name: 'Net band',
+      type: 'line' as const,
+      data: lower.map((l, i) => upper[i] - l),
+      lineStyle: { opacity: 0 },
+      areaStyle: { color: 'rgba(37, 99, 235, 0.14)' },
+      stack: 'net-confidence',
+      symbol: 'none',
+      silent: true,
+      tooltip: { show: false },
+    },
+  ]
+}
+
+export function buildAnnualOutlookChartOption(forecast: ForecastData): EChartsOption {
+  const months = forecast.months || []
+  const labels = months.map((m) => m.yearMonth)
+  const deficitSet = new Set(forecast.deficitMonths || [])
+
+  return {
+    grid: { left: 48, right: 16, top: 48, bottom: 28 },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const items = Array.isArray(params) ? params : [params]
+        const ym = String(items[0]?.name ?? '')
+        const month = months.find((m) => m.yearMonth === ym)
+        if (!month) return ym
+        const band = month.netLower != null && month.netUpper != null
+          ? `<br/>Net range: ${formatMoney(month.netLower)} – ${formatMoney(month.netUpper)}`
+          : ''
+        const deficit = deficitSet.has(ym) ? '<br/><span style="color:#dc2626">Deficit month</span>' : ''
+        return [
+          ym + deficit,
+          `Income: ${formatMoney(month.income)}`,
+          `Expense: ${formatMoney(month.expense)}`,
+          `Net: ${formatMoney(month.net)}`,
+          band,
+        ].join('<br/>')
+      },
+    },
+    legend: { data: ['Income', 'Expense', 'Net', 'Net ±10%'], top: 4 },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLabel: {
+        fontSize: 10,
+        formatter: (value: string) => (deficitSet.has(value) ? `{def|${value}}` : value),
+        rich: { def: { color: '#dc2626', fontWeight: 'bold' } },
+      },
+    },
+    yAxis: { type: 'value' },
+    series: [
+      {
+        name: 'Income',
+        type: 'line',
+        smooth: true,
+        data: months.map((m) => m.income),
+        lineStyle: { type: 'dashed' },
+        itemStyle: { color: '#16a34a' },
+      },
+      {
+        name: 'Expense',
+        type: 'line',
+        smooth: true,
+        data: months.map((m) => m.expense),
+        lineStyle: { type: 'dashed' },
+        itemStyle: { color: '#ea580c' },
+      },
+      ...netBandSeries(months),
+      {
+        name: 'Net',
+        type: 'line',
+        smooth: true,
+        data: months.map((m) => m.net),
+        lineStyle: { type: 'dashed', width: 2 },
+        itemStyle: { color: '#2563eb' },
+        markPoint: {
+          symbol: 'pin',
+          symbolSize: 36,
+          data: (forecast.deficitMonths || []).map((ym) => ({
+            name: 'Deficit',
+            coord: [ym, months.find((m) => m.yearMonth === ym)?.net ?? 0],
+            itemStyle: { color: '#dc2626' },
+          })),
+        },
+      },
+      {
+        name: 'Net ±10%',
+        type: 'line',
+        data: [],
+        lineStyle: { type: 'dotted', color: '#93c5fd' },
+        itemStyle: { color: '#93c5fd' },
+      },
+    ],
+  }
+}
+
+export function deficitRowClassName(record: Record<string, unknown>, deficitMonths: string[]): string {
+  const ym = String(record.yearMonth ?? '')
+  return isDeficitMonth({ deficitMonths }, ym) ? 'fs-table-row fs-annual-outlook-row--deficit' : 'fs-table-row'
+}

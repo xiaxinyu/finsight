@@ -52,7 +52,42 @@ export async function fetchProfileHistory(from: string, to: string, dimension?: 
 }
 
 export async function fetchForecast(year: number, scenario = 'base') {
-  return unwrap<Record<string, unknown>>(await getJson(`/api/v1/analytics/forecast?year=${year}&scenario=${scenario}`))
+  return unwrap<ForecastData>(await getJson(`/api/v1/analytics/forecast?year=${year}&scenario=${scenario}`))
+}
+
+export type ForecastMonth = {
+  yearMonth: string
+  income: number
+  expense: number
+  net: number
+  incomeLower?: number
+  incomeUpper?: number
+  expenseLower?: number
+  expenseUpper?: number
+  netLower?: number
+  netUpper?: number
+  deficit?: boolean
+  forecast?: boolean
+}
+
+export type BudgetSuggestion = {
+  monthlyCap: number
+  annualCap: number
+  note: string
+}
+
+export type ForecastData = {
+  year: number
+  scenario: string
+  runId: string
+  yearIncome: number
+  yearExpense: number
+  yearNet: number
+  deficitMonths: string[]
+  months: ForecastMonth[]
+  budgetSuggestion?: BudgetSuggestion
+  metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }
+  metricsSource?: string
 }
 
 export type CashRiskCalendarResponse = {

@@ -84,6 +84,13 @@ public class ForecastService {
             row.put("income", round(income));
             row.put("expense", round(expense));
             row.put("net", round(net));
+            row.put("incomeLower", round(income * 0.9));
+            row.put("incomeUpper", round(income * 1.1));
+            row.put("expenseLower", round(expense * 0.9));
+            row.put("expenseUpper", round(expense * 1.1));
+            row.put("netLower", round(net * 0.9));
+            row.put("netUpper", round(net * 1.1));
+            row.put("deficit", net < 0);
             row.put("forecast", true);
             months.add(row);
         }
@@ -103,6 +110,7 @@ public class ForecastService {
         out.put("yearNet", round(yearIncome - yearExpense));
         out.put("deficitMonths", deficitMonths);
         out.put("months", months);
+        out.put("budgetSuggestion", buildBudgetSuggestion(yearExpense, scenario, deficitMonths.size()));
         out.put("metricsGate", metricsGate);
         out.put("metricsSource", reportFallback ? "report_sql" : "fin_metric_monthly");
         return out;
@@ -181,6 +189,39 @@ public class ForecastService {
             case "stress" -> 0.85;
             default -> 1.0;
         };
+    }
+
+    private static Map<String, Object> buildBudgetSuggestion(double yearExpense, String scenario, int deficitCount) {
+        double monthlyAvg = yearExpense / 12;
+        double buffer = budgetBuffer(scenario, deficitCount);
+        double monthlyCap = Math.ceil(monthlyAvg * buffer);
+        Map<String, Object> suggestion = new LinkedHashMap<>();
+        suggestion.put("monthlyCap", round(monthlyCap));
+        suggestion.put("annualCap", round(monthlyCap * 12));
+        suggestion.put("note", budgetNote(scenario, deficitCount));
+        return suggestion;
+    }
+
+    private static double budgetBuffer(String scenario, int deficitCount) {
+        double base = switch (scenario == null ? "base" : scenario) {
+            case "conservative" -> 1.05;
+            case "optimistic" -> 0.98;
+            case "stress" -> 1.10;
+            default -> 1.0;
+        };
+        if (deficitCount > 0) {
+            base += 0.03;
+        }
+        return base;
+    }
+
+    private static String budgetNote(String scenario, int deficitCount) {
+        String scen = scenario == null ? "base" : scenario;
+        if (deficitCount > 0) {
+            return "Suggested cap from " + scen + " forecast with a small cushion for "
+                    + deficitCount + " projected deficit month(s).";
+        }
+        return "Suggested monthly cap from average projected expense under the " + scen + " scenario.";
     }
 
     private static double round(double v) {
