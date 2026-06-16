@@ -71,6 +71,13 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
           : ym
       ),
     },
+    {
+      title: 'Type',
+      key: 'kind',
+      render: (_: unknown, row: { actual?: boolean }) => (
+        row.actual ? <Tag>Actual</Tag> : <Tag color="blue">Forecast</Tag>
+      ),
+    },
     { title: 'Income', dataIndex: 'income', unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
     { title: 'Expense', dataIndex: 'expense', unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
     {
@@ -89,11 +96,18 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
       title: 'Net range',
       key: 'netRange',
       align: 'right' as const,
-      render: (_: unknown, row: { netLower?: number; netUpper?: number }) => (
-        row.netLower != null && row.netUpper != null
+      render: (_: unknown, row: { netLower?: number; netUpper?: number; forecast?: boolean }) => (
+        row.forecast && row.netLower != null && row.netUpper != null
           ? `${formatMoney(row.netLower)} – ${formatMoney(row.netUpper)}`
           : '—'
       ),
+    },
+    {
+      title: 'Budget',
+      dataIndex: 'budgetTarget',
+      unit: 'CNY',
+      align: 'right' as const,
+      sortType: 'number' as const,
     },
   ], [deficitMonths])
 
@@ -204,7 +218,7 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
 
           <Row gutter={[12, 12]} className="fs-report-body">
             <Col xs={24} lg={14}>
-              <ContentCard title={`Forecast cash flow (dashed = projected, shaded = net ±${confidencePct}%)`} size="small" styles={{ body: { padding: 8 } }}>
+              <ContentCard title={`Cash flow: solid = actual, dashed = forecast, dotted = budget (±${confidencePct}% net band)`} size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
                   profile="timeSeries"
                   height={360}

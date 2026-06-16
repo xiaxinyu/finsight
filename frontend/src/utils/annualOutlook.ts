@@ -22,14 +22,21 @@ export function isDeficitMonth(forecast: Pick<ForecastData, 'deficitMonths'>, ye
 export function buildAnnualOutlookInsights(forecast: ForecastData): { text: string; warn?: boolean }[] {
   const scenario = scenarioLabel(forecast.scenario)
   const deficits = forecast.deficitMonths || []
-  const bullets: { text: string; warn?: boolean }[] = [
-    {
-      text: deficits.length
-        ? `${scenario} scenario projects deficit in ${deficits.length} month(s): ${deficits.join(', ')}.`
-        : `No projected deficit months under the ${scenario} scenario.`,
-      warn: deficits.length > 0,
-    },
-  ]
+  const bullets: { text: string; warn?: boolean }[] = []
+  for (const line of forecast.explanation || []) {
+    bullets.push({ text: line })
+  }
+  bullets.push({
+    text: deficits.length
+      ? `${scenario} scenario projects deficit in ${deficits.length} month(s): ${deficits.join(', ')}.`
+      : `No projected deficit months under the ${scenario} scenario.`,
+    warn: deficits.length > 0,
+  })
+  if (forecast.budgetTarget?.monthlyCap) {
+    bullets.push({
+      text: `Budget target: ${formatMoney(forecast.budgetTarget.monthlyCap)}/month (${forecast.budgetTarget.source}).`,
+    })
+  }
   if (forecast.budgetSuggestion) {
     bullets.push({
       text: `Budget suggestion: ${formatMoney(forecast.budgetSuggestion.monthlyCap)}/month (${forecast.budgetSuggestion.note})`,
@@ -71,8 +78,8 @@ export function buildAnnualOutlookKpis(forecast: ForecastData) {
 }
 
 function netBandSeries(months: ForecastMonth[]) {
-  const upper = months.map((m) => Number(m.netUpper ?? m.net * 1.1))
-  const lower = months.map((m) => Number(m.netLower ?? m.net * 0.9))
+  const upper = months.map((m) => (m.forecast ? Number(m.netUpper ?? m.net * 1.1) : null))
+  const lower = months.map((m) => (m.forecast ? Number(m.netLower ?? m.net * 0.9) : null))
   return [
     {
       name: 'Net upper',
@@ -86,7 +93,7 @@ function netBandSeries(months: ForecastMonth[]) {
     {
       name: 'Net band',
       type: 'line' as const,
-      data: lower.map((l, i) => upper[i] - l),
+      data: lower.map((l, i) => (l == null || upper[i] == null ? null : upper[i]! - l)),
       lineStyle: { opacity: 0 },
       areaStyle: { color: 'rgba(37, 99, 235, 0.14)' },
       stack: 'net-confidence',
@@ -97,12 +104,23 @@ function netBandSeries(months: ForecastMonth[]) {
   ]
 }
 
+function splitActualForecast(months: ForecastMonth[], pick: (m: ForecastMonth) => number) {
+  return {
+    actual: months.map((m) => (m.actual ? pick(m) : null)),
+    forecast: months.map((m) => (m.forecast ? pick(m) : null)),
+  }
+}
+
 export function buildAnnualOutlookChartOption(forecast: ForecastData): EChartsOption {
   const months = forecast.months || []
   const labels = months.map((m) => m.yearMonth)
   const deficitSet = new Set(forecast.deficitMonths || [])
   const halfWidth = forecast.confidence?.halfWidthPct ?? 10
   const bandLabel = `Net ±${halfWidth}%`
+  const incomeSeries = splitActualForecast(months, (m) => m.income)
+  const expenseSeries = splitActualForecast(months, (m) => m.expense)
+  const netSeries = splitActualForecast(months, (m) => m.net)
+  const budgetTarget = forecast.budgetTarget?.monthlyCap ?? months[0]?.budgetTarget ?? null
 
   return {
     grid: { left: 48, right: 16, top: 48, bottom: 28 },
@@ -117,16 +135,30 @@ export function buildAnnualOutlookChartOption(forecast: ForecastData): EChartsOp
           ? `<br/>Net range: ${formatMoney(month.netLower)} – ${formatMoney(month.netUpper)}`
           : ''
         const deficit = deficitSet.has(ym) ? '<br/><span style="color:#dc2626">Deficit month</span>' : ''
+        const kind = month.actual ? '<br/><span style="color:#64748b">Actual</span>' : '<br/><span style="color:#64748b">Forecast</span>'
         return [
-          ym + deficit,
+          ym + deficit + kind,
           `Income: ${formatMoney(month.income)}`,
           `Expense: ${formatMoney(month.expense)}`,
           `Net: ${formatMoney(month.net)}`,
+          month.budgetTarget != null ? `Budget target: ${formatMoney(month.budgetTarget)}` : '',
           band,
-        ].join('<br/>')
+        ].filter(Boolean).join('<br/>')
       },
     },
-    legend: { data: ['Income', 'Expense', 'Net', bandLabel], top: 4 },
+    legend: {
+      data: [
+        'Income (actual)',
+        'Income (forecast)',
+        'Expense (actual)',
+        'Expense (forecast)',
+        'Net (actual)',
+        'Net (forecast)',
+        'Budget target',
+        bandLabel,
+      ],
+      top: 4,
+    },
     xAxis: {
       type: 'category',
       data: labels,
@@ -139,27 +171,49 @@ export function buildAnnualOutlookChartOption(forecast: ForecastData): EChartsOp
     yAxis: { type: 'value' },
     series: [
       {
-        name: 'Income',
+        name: 'Income (actual)',
         type: 'line',
         smooth: true,
-        data: months.map((m) => m.income),
+        data: incomeSeries.actual,
+        itemStyle: { color: '#16a34a' },
+      },
+      {
+        name: 'Income (forecast)',
+        type: 'line',
+        smooth: true,
+        data: incomeSeries.forecast,
         lineStyle: { type: 'dashed' },
         itemStyle: { color: '#16a34a' },
       },
       {
-        name: 'Expense',
+        name: 'Expense (actual)',
         type: 'line',
         smooth: true,
-        data: months.map((m) => m.expense),
+        data: expenseSeries.actual,
+        itemStyle: { color: '#ea580c' },
+      },
+      {
+        name: 'Expense (forecast)',
+        type: 'line',
+        smooth: true,
+        data: expenseSeries.forecast,
         lineStyle: { type: 'dashed' },
         itemStyle: { color: '#ea580c' },
       },
       ...netBandSeries(months),
       {
-        name: 'Net',
+        name: 'Net (actual)',
         type: 'line',
         smooth: true,
-        data: months.map((m) => m.net),
+        data: netSeries.actual,
+        lineStyle: { width: 2 },
+        itemStyle: { color: '#2563eb' },
+      },
+      {
+        name: 'Net (forecast)',
+        type: 'line',
+        smooth: true,
+        data: netSeries.forecast,
         lineStyle: { type: 'dashed', width: 2 },
         itemStyle: { color: '#2563eb' },
         markPoint: {
@@ -172,6 +226,14 @@ export function buildAnnualOutlookChartOption(forecast: ForecastData): EChartsOp
           })),
         },
       },
+      ...(budgetTarget != null ? [{
+        name: 'Budget target',
+        type: 'line' as const,
+        data: months.map(() => budgetTarget),
+        lineStyle: { type: 'dotted' as const, color: '#94a3b8' },
+        itemStyle: { color: '#94a3b8' },
+        symbol: 'none' as const,
+      }] : []),
       {
         name: bandLabel,
         type: 'line',

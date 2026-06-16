@@ -2,7 +2,10 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.finance.BillService;
+import com.finsight.application.finance.BudgetService;
 import com.finsight.common.exception.AppServiceException;
+import com.finsight.domain.model.Budget;
+import com.finsight.domain.model.BudgetLine;
 import com.finsight.domain.model.MetricCode;
 import com.finsight.domain.port.MetricMonthlyRepository;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +47,9 @@ class ForecastServiceTest {
     private BillService billService;
 
     @Mock
+    private BudgetService budgetService;
+
+    @Mock
     private AuthenticationFacade authenticationFacade;
 
     @Mock
@@ -58,13 +66,8 @@ class ForecastServiceTest {
 
     @Test
     void forecast_includesConfidenceBoundsAndBudgetSuggestion() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
-        when(billService.listEnabled()).thenReturn(List.of());
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(List.of());
+        stubCommon();
+        stubCategoryHistoryEmpty();
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
                 .thenReturn(1);
 
@@ -92,17 +95,89 @@ class ForecastServiceTest {
         assertNotNull(suggestion.get("monthlyCap"));
         assertNotNull(suggestion.get("annualCap"));
         assertNotNull(suggestion.get("note"));
+        assertNotNull(out.get("budgetTarget"));
+        assertNotNull(out.get("explanation"));
+    }
+
+    @Test
+    void simulateScenario_incomeChangePctReducesYearIncome() throws Exception {
+        stubCommon();
+        stubCategoryHistoryEmpty();
+        Map<String, Object> base = service.simulateScenario(Map.of("year", 2026, "scenario", "base"));
+        Map<String, Object> reduced = service.simulateScenario(Map.of(
+                "year", 2026,
+                "scenario", "base",
+                "incomeChangePct", -10
+        ));
+        assertTrue(((Number) reduced.get("yearIncome")).doubleValue()
+                < ((Number) base.get("yearIncome")).doubleValue());
+        @SuppressWarnings("unchecked")
+        List<String> explanation = (List<String>) reduced.get("explanation");
+        assertTrue(explanation.stream().anyMatch(s -> s.contains("-10.0%")));
+    }
+
+    @Test
+    void simulateScenario_newMonthlyBillIncreasesYearExpense() throws Exception {
+        stubCommon();
+        stubCategoryHistoryEmpty();
+        Map<String, Object> base = service.simulateScenario(Map.of("year", 2026, "scenario", "base"));
+        Map<String, Object> withBill = service.simulateScenario(Map.of(
+                "year", 2026,
+                "scenario", "base",
+                "newMonthlyBill", 500
+        ));
+        assertEquals(
+                ((Number) base.get("yearExpense")).doubleValue() + 6000,
+                ((Number) withBill.get("yearExpense")).doubleValue(),
+                0.01);
+    }
+
+    @Test
+    void simulateScenario_lumpSumExpenseAddsToJanuary() throws Exception {
+        stubCommon();
+        stubCategoryHistoryEmpty();
+        Map<String, Object> base = service.simulateScenario(Map.of("year", 2026, "scenario", "base"));
+        Map<String, Object> withLump = service.simulateScenario(Map.of(
+                "year", 2026,
+                "scenario", "base",
+                "lumpSumExpense", 10000
+        ));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> baseMonths = (List<Map<String, Object>>) base.get("months");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> lumpMonths = (List<Map<String, Object>>) withLump.get("months");
+        double janBase = ((Number) baseMonths.get(0).get("expense")).doubleValue();
+        double janLump = ((Number) lumpMonths.get(0).get("expense")).doubleValue();
+        assertEquals(janBase + 10000, janLump, 0.01);
+        assertEquals(
+                ((Number) base.get("yearExpense")).doubleValue() + 10000,
+                ((Number) withLump.get("yearExpense")).doubleValue(),
+                0.01);
+    }
+
+    @Test
+    void forecast_marksCompletedMonthsAsActual() throws Exception {
+        stubCommon();
+        stubCategoryHistoryEmpty();
+        List<Map<String, Object>> history = new ArrayList<>(sampleHistory());
+        history.add(metricRow("2026-01", MetricCode.INCOME_TOTAL.name(), 9000));
+        history.add(metricRow("2026-01", MetricCode.EXPENSE_TOTAL.name(), 4800));
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(history);
+
+        Map<String, Object> out = service.forecast(2026, "base");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> months = (List<Map<String, Object>>) out.get("months");
+        Map<String, Object> jan = months.get(0);
+        if (YearMonth.of(2026, 1).isBefore(YearMonth.now())) {
+            assertEquals(true, jan.get("actual"));
+            assertEquals(9000.0, ((Number) jan.get("income")).doubleValue());
+        }
     }
 
     @Test
     void forecast_scenarioChangesYearNetAndConfidenceWidth() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
-        when(billService.listEnabled()).thenReturn(List.of());
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(List.of());
+        stubCommon();
+        stubCategoryHistoryEmpty();
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
                 .thenReturn(0);
 
@@ -122,11 +197,7 @@ class ForecastServiceTest {
 
     @Test
     void forecast_includesTopCategoryForecasts() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
-        when(billService.listEnabled()).thenReturn(List.of());
+        stubCommon();
         when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
@@ -150,11 +221,7 @@ class ForecastServiceTest {
 
     @Test
     void categoryForecasts_returnsDedicatedPayload() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
-        when(billService.listEnabled()).thenReturn(List.of());
+        stubCommon();
         when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
@@ -170,11 +237,7 @@ class ForecastServiceTest {
 
     @Test
     void forecast_persistsAggregateAndCategoryLines() throws Exception {
-        when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
-        when(metricGateService.useReportFallback()).thenReturn(false);
-        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
-        when(billService.listEnabled()).thenReturn(List.of());
+        stubCommon();
         when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
@@ -239,6 +302,34 @@ class ForecastServiceTest {
                 .thenReturn(0);
 
         assertThrows(AppServiceException.class, () -> service.forecastLines("missing"));
+    }
+
+    private void stubCommon() throws Exception {
+        when(authenticationFacade.getUserName()).thenReturn("user1");
+        when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
+        when(metricGateService.useReportFallback()).thenReturn(false);
+        when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
+        when(billService.listEnabled()).thenReturn(List.of());
+        stubBudget(8000);
+    }
+
+    private void stubCategoryHistoryEmpty() {
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of());
+    }
+
+    private void stubBudget(double monthlyCap) {
+        Budget budget = new Budget();
+        budget.setId("monthly-budget");
+        when(budgetService.currentMonthlyBudget()).thenReturn(budget);
+        if (monthlyCap > 0) {
+            BudgetLine line = new BudgetLine();
+            line.setBucketKey("all");
+            line.setLimitAmount(BigDecimal.valueOf(monthlyCap));
+            when(budgetService.linesForBudget(anyString())).thenReturn(List.of(line));
+        } else {
+            when(budgetService.linesForBudget(anyString())).thenReturn(List.of());
+        }
     }
 
     private static List<Map<String, Object>> sampleHistory() {

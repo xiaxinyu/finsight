@@ -2,7 +2,9 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.finance.BillService;
+import com.finsight.application.finance.BudgetService;
 import com.finsight.common.exception.AppServiceException;
+import com.finsight.domain.model.BudgetLine;
 import com.finsight.domain.model.MetricCode;
 import com.finsight.domain.port.MetricMonthlyRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -32,6 +35,7 @@ public class ForecastService {
 
     private final MetricMonthlyRepository metricRepository;
     private final BillService billService;
+    private final BudgetService budgetService;
     private final AuthenticationFacade authenticationFacade;
     private final JdbcTemplate jdbcTemplate;
     private final MetricGateService metricGateService;
@@ -39,12 +43,14 @@ public class ForecastService {
 
     public ForecastService(MetricMonthlyRepository metricRepository,
                            BillService billService,
+                           BudgetService budgetService,
                            AuthenticationFacade authenticationFacade,
                            JdbcTemplate jdbcTemplate,
                            MetricGateService metricGateService,
                            MetricMonthlyService metricMonthlyService) {
         this.metricRepository = metricRepository;
         this.billService = billService;
+        this.budgetService = budgetService;
         this.authenticationFacade = authenticationFacade;
         this.jdbcTemplate = jdbcTemplate;
         this.metricGateService = metricGateService;
@@ -52,6 +58,10 @@ public class ForecastService {
     }
 
     public Map<String, Object> forecast(int year, String scenario) throws Exception {
+        return forecast(year, scenario, ForecastScenarioParams.empty());
+    }
+
+    public Map<String, Object> forecast(int year, String scenario, ForecastScenarioParams adjustments) throws Exception {
         String userId = userKey();
         YearMonth end = YearMonth.now().minusMonths(1);
         YearMonth start = end.minusMonths(23);
@@ -61,38 +71,59 @@ public class ForecastService {
                 ? metricMonthlyService.historyFromReports(start.format(YM), end.format(YM))
                 : metricRepository.listForUser(userId, start.format(YM), end.format(YM));
 
+        Map<String, Double> actualIncomeByMonth = monthlyMetricMap(history, MetricCode.INCOME_TOTAL.name());
+        Map<String, Double> actualExpenseByMonth = monthlyMetricMap(history, MetricCode.EXPENSE_TOTAL.name());
         double avgIncome = rollingAvg(history, MetricCode.INCOME_TOTAL.name());
         double avgExpense = rollingAvg(history, MetricCode.EXPENSE_TOTAL.name());
         double factor = scenarioFactor(scenario);
         ForecastConfidence.Spread spread = ForecastConfidence.forScenario(scenario);
+        double monthlyBudgetTarget = resolveMonthlyBudgetTarget(adjustments);
 
         List<Map<String, Object>> months = new ArrayList<>();
         double yearIncome = 0;
         double yearExpense = 0;
         List<String> deficitMonths = new ArrayList<>();
+        int actualMonthCount = 0;
 
         for (int m = 1; m <= 12; m++) {
             YearMonth ym = YearMonth.of(year, m);
-            double seasonal = seasonalIndex(m);
-            double income = avgIncome * seasonal * factor;
-            double expense = avgExpense * seasonal * (2 - factor * 0.5);
-            expense += billsForMonth(m);
+            String monthKey = ym.format(YM);
+            boolean useActual = isCompletedMonth(ym) && actualIncomeByMonth.containsKey(monthKey);
+            double income;
+            double expense;
+            if (useActual) {
+                income = actualIncomeByMonth.getOrDefault(monthKey, 0.0);
+                expense = actualExpenseByMonth.getOrDefault(monthKey, 0.0);
+                actualMonthCount++;
+            } else {
+                double seasonal = seasonalIndex(m);
+                income = avgIncome * seasonal * factor;
+                expense = avgExpense * seasonal * (2 - factor * 0.5);
+                expense += billsForMonth(m);
+                double[] adjusted = applyScenarioAdjustments(income, expense, m, adjustments);
+                income = adjusted[0];
+                expense = adjusted[1];
+            }
             double net = income - expense;
             yearIncome += income;
             yearExpense += expense;
             if (net < 0) {
-                deficitMonths.add(ym.format(YM));
+                deficitMonths.add(monthKey);
             }
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("yearMonth", ym.format(YM));
+            row.put("yearMonth", monthKey);
             row.put("income", round(income));
             row.put("expense", round(expense));
             row.put("net", round(net));
-            putBounds(row, "income", income, spread);
-            putBounds(row, "expense", expense, spread);
-            putBounds(row, "net", net, spread);
+            if (!useActual) {
+                putBounds(row, "income", income, spread);
+                putBounds(row, "expense", expense, spread);
+                putBounds(row, "net", net, spread);
+            }
+            row.put("budgetTarget", round(monthlyBudgetTarget));
             row.put("deficit", net < 0);
-            row.put("forecast", true);
+            row.put("actual", useActual);
+            row.put("forecast", !useActual);
             months.add(row);
         }
 
@@ -120,6 +151,8 @@ public class ForecastService {
         out.put("confidence", Map.of(
                 "halfWidthPct", spread.halfWidthPct(),
                 "method", "scenario_scaled_rolling_mean"));
+        out.put("budgetTarget", buildBudgetTarget(monthlyBudgetTarget, adjustments));
+        out.put("explanation", buildExplanation(adjustments, actualMonthCount));
         out.put("budgetSuggestion", buildBudgetSuggestion(yearExpense, scenario, deficitMonths.size()));
         out.put("metricsGate", metricsGate);
         out.put("metricsSource", reportFallback ? "report_sql" : "fin_metric_monthly");
@@ -168,14 +201,84 @@ public class ForecastService {
     public Map<String, Object> simulateScenario(Map<String, Object> params) throws Exception {
         int year = ((Number) params.getOrDefault("year", YearMonth.now().getYear())).intValue();
         String scenario = String.valueOf(params.getOrDefault("scenario", "base"));
-        if (params.get("incomeChangePct") instanceof Number pct && ((Number) params.get("incomeChangePct")).doubleValue() < -5) {
-            scenario = "stress";
-        } else if (params.get("newMonthlyBill") instanceof Number bill && ((Number) params.get("newMonthlyBill")).doubleValue() > 0) {
-            scenario = "conservative";
+        if (!params.containsKey("scenario")) {
+            if (params.get("incomeChangePct") instanceof Number pct
+                    && ((Number) params.get("incomeChangePct")).doubleValue() < -5) {
+                scenario = "stress";
+            } else if (params.get("newMonthlyBill") instanceof Number bill
+                    && ((Number) params.get("newMonthlyBill")).doubleValue() > 0) {
+                scenario = "conservative";
+            }
         }
-        Map<String, Object> out = forecast(year, scenario);
+        ForecastScenarioParams adjustments = ForecastScenarioParams.fromMap(params);
+        Map<String, Object> out = forecast(year, scenario, adjustments);
         out.put("inputParams", params);
+        out.put("adjustments", adjustments.toMap());
         return out;
+    }
+
+    private static double[] applyScenarioAdjustments(double income,
+                                                       double expense,
+                                                       int month,
+                                                       ForecastScenarioParams adjustments) {
+        double incomeAdj = income;
+        double expenseAdj = expense;
+        if (adjustments.incomeChangePct() != null && adjustments.incomeChangePct() != 0) {
+            incomeAdj *= 1 + adjustments.incomeChangePct() / 100.0;
+        }
+        if (adjustments.newMonthlyBill() != null && adjustments.newMonthlyBill() > 0) {
+            expenseAdj += adjustments.newMonthlyBill();
+        }
+        if (adjustments.lumpSumExpense() != null && adjustments.lumpSumExpense() > 0 && month == 1) {
+            expenseAdj += adjustments.lumpSumExpense();
+        }
+        return new double[] {incomeAdj, expenseAdj};
+    }
+
+    private double resolveMonthlyBudgetTarget(ForecastScenarioParams adjustments) {
+        if (adjustments.targetMonthlyPayment() != null && adjustments.targetMonthlyPayment() > 0) {
+            return adjustments.targetMonthlyPayment();
+        }
+        return budgetService.linesForBudget(budgetService.currentMonthlyBudget().getId()).stream()
+                .map(BudgetLine::getLimitAmount)
+                .filter(Objects::nonNull)
+                .mapToDouble(BigDecimal::doubleValue)
+                .sum();
+    }
+
+    private static Map<String, Object> buildBudgetTarget(double monthlyCap, ForecastScenarioParams adjustments) {
+        Map<String, Object> target = new LinkedHashMap<>();
+        target.put("monthlyCap", round(monthlyCap));
+        target.put("annualCap", round(monthlyCap * 12));
+        target.put("source", adjustments.targetMonthlyPayment() != null && adjustments.targetMonthlyPayment() > 0
+                ? "targetMonthlyPayment"
+                : "budget_lines");
+        return target;
+    }
+
+    private static List<String> buildExplanation(ForecastScenarioParams adjustments, int actualMonthCount) {
+        List<String> explanation = new ArrayList<>();
+        explanation.add("Rolling 6-month average with seasonal index over the last 24 months of history.");
+        explanation.addAll(adjustments.explanationLines());
+        if (actualMonthCount > 0) {
+            explanation.add(actualMonthCount + " completed month(s) use observed actuals; remainder are projections.");
+        }
+        return explanation;
+    }
+
+    private static Map<String, Double> monthlyMetricMap(List<Map<String, Object>> history, String code) {
+        Map<String, Double> out = new LinkedHashMap<>();
+        for (Map<String, Object> row : history) {
+            if (code.equals(String.valueOf(row.get("metricCode")))) {
+                String monthKey = String.valueOf(row.get("monthKey"));
+                out.put(monthKey, ((Number) row.get("metricValue")).doubleValue());
+            }
+        }
+        return out;
+    }
+
+    private static boolean isCompletedMonth(YearMonth ym) {
+        return !ym.isAfter(YearMonth.now().minusMonths(1));
     }
 
     private double billsForMonth(int month) {

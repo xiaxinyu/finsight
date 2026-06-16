@@ -21,6 +21,8 @@ const sampleForecast: ForecastData = {
   yearNetUpper: -5100,
   deficitMonths: ['2026-03', '2026-08'],
   confidence: { halfWidthPct: 15, method: 'scenario_scaled_rolling_mean' },
+  budgetTarget: { monthlyCap: 8000, annualCap: 96000, source: 'budget_lines' },
+  explanation: ['Rolling 6-month average with seasonal index over the last 24 months of history.'],
   categoryForecasts: [
     {
       categoryCode: 'food',
@@ -43,6 +45,9 @@ const sampleForecast: ForecastData = {
       net: 500,
       netLower: 450,
       netUpper: 550,
+      actual: true,
+      forecast: false,
+      budgetTarget: 8000,
     },
     {
       yearMonth: '2026-03',
@@ -51,6 +56,9 @@ const sampleForecast: ForecastData = {
       net: -2000,
       netLower: -2200,
       netUpper: -1800,
+      actual: false,
+      forecast: true,
+      budgetTarget: 8000,
     },
   ],
   budgetSuggestion: {
@@ -71,11 +79,11 @@ describe('annualOutlook utils', () => {
     expect(isDeficitMonth(sampleForecast, '2026-01')).toBe(false)
   })
 
-  it('builds insights with deficit warning and budget note', () => {
+  it('builds insights with explanation, deficit warning and budget target', () => {
     const insights = buildAnnualOutlookInsights(sampleForecast)
-    expect(insights[0].warn).toBe(true)
-    expect(insights[0].text).toContain('2026-03')
-    expect(insights[1].text).toContain('Budget suggestion')
+    expect(insights.some((i) => i.text.includes('Rolling 6-month average'))).toBe(true)
+    expect(insights.some((i) => i.warn)).toBe(true)
+    expect(insights.some((i) => i.text.includes('Budget target'))).toBe(true)
   })
 
   it('builds KPI strip including scenario and confidence', () => {
@@ -85,15 +93,16 @@ describe('annualOutlook utils', () => {
     expect(kpis.find((k) => k.key === 'def')?.value).toBe('2')
   })
 
-  it('builds chart with scenario-scaled confidence band label', () => {
+  it('builds chart with actual/forecast split and budget target', () => {
     const option = buildAnnualOutlookChartOption(sampleForecast)
     const series = option.series as { name?: string; data?: unknown[]; markPoint?: { data?: unknown[] } }[]
     expect(series.some((s) => s.name === 'Net band')).toBe(true)
+    expect(series.some((s) => s.name === 'Income (actual)')).toBe(true)
+    expect(series.some((s) => s.name === 'Net (forecast)')).toBe(true)
+    expect(series.some((s) => s.name === 'Budget target')).toBe(true)
     expect(option.legend).toMatchObject({ data: expect.arrayContaining(['Net ±15%']) })
-    const net = series.find((s) => s.name === 'Net')
+    const net = series.find((s) => s.name === 'Net (forecast)')
     expect(net?.markPoint?.data?.length).toBe(2)
-    const xAxis = option.xAxis as { axisLabel?: { formatter?: (v: string) => string } }
-    expect(xAxis.axisLabel?.formatter?.('2026-03')).toContain('2026-03')
   })
 
   it('builds category forecast chart for top categories', () => {
