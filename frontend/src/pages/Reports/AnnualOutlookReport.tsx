@@ -23,6 +23,7 @@ import {
   buildAnnualOutlookChartOption,
   buildAnnualOutlookInsights,
   buildAnnualOutlookKpis,
+  buildCategoryForecastChartOption,
   isDeficitMonth,
   scenarioLabel,
   type ForecastScenario,
@@ -51,6 +52,12 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
   const insights = useMemo(() => (data ? buildAnnualOutlookInsights(data) : []), [data])
   const kpis = useMemo(() => (data ? buildAnnualOutlookKpis(data) : []), [data])
   const chartOption = useMemo(() => (data ? buildAnnualOutlookChartOption(data) : {}), [data])
+  const categoryChartOption = useMemo(() => {
+    if (!data?.categoryForecasts?.length) return {}
+    const yearMonths = (data.months || []).map((m) => m.yearMonth)
+    return buildCategoryForecastChartOption(data.categoryForecasts, yearMonths)
+  }, [data])
+  const confidencePct = data?.confidence?.halfWidthPct ?? 10
   const deficitMonths = data?.deficitMonths || []
 
   const tableCols = useMemo(() => [
@@ -102,8 +109,8 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
           ? `Projected net ${formatMoney(month.net)} (income ${formatMoney(month.income)}, expense ${formatMoney(month.expense)}).`
           : `Forecast month ${yearMonth}.`,
         month?.netLower != null && month?.netUpper != null
-          ? `90% confidence band: ${formatMoney(month.netLower)} – ${formatMoney(month.netUpper)}.`
-          : 'Confidence band ±10% around projected net.',
+          ? `Confidence band (±${confidencePct}%): ${formatMoney(month.netLower)} – ${formatMoney(month.netUpper)}.`
+          : `Confidence band ±${confidencePct}% around projected net.`,
         deficit
           ? 'This month runs a projected deficit — review bills and discretionary spend.'
           : 'Cash flow looks positive under the selected scenario.',
@@ -197,7 +204,7 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
 
           <Row gutter={[12, 12]} className="fs-report-body">
             <Col xs={24} lg={14}>
-              <ContentCard title="Forecast cash flow (dashed = projected, shaded = net ±10%)" size="small" styles={{ body: { padding: 8 } }}>
+              <ContentCard title={`Forecast cash flow (dashed = projected, shaded = net ±${confidencePct}%)`} size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
                   profile="timeSeries"
                   height={360}
@@ -239,6 +246,62 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
               />
             </Col>
           </Row>
+
+          {data.categoryForecasts && data.categoryForecasts.length > 0 && (
+            <Row gutter={[12, 12]} className="fs-report-body">
+              <Col xs={24} lg={14}>
+                <ContentCard
+                  title={`Top category expense forecasts (±${confidencePct}% band)`}
+                  size="small"
+                  styles={{ body: { padding: 8 } }}
+                >
+                  <FsChart
+                    profile="timeSeries"
+                    height={320}
+                    loading={loading}
+                    option={categoryChartOption}
+                    empty={<EmptyState compact title="No category forecasts" />}
+                  />
+                </ContentCard>
+              </Col>
+              <Col xs={24} lg={10}>
+                <FsDataTable
+                  title="Category totals"
+                  columns={[
+                    { title: 'Category', dataIndex: 'categoryName', sortType: 'text' as const },
+                    {
+                      title: 'Year total',
+                      dataIndex: 'yearTotal',
+                      unit: 'CNY',
+                      align: 'right' as const,
+                      sortType: 'number' as const,
+                    },
+                    {
+                      title: 'Range',
+                      key: 'range',
+                      align: 'right' as const,
+                      render: (_: unknown, row: { yearTotalLower?: number; yearTotalUpper?: number }) => (
+                        row.yearTotalLower != null && row.yearTotalUpper != null
+                          ? `${formatMoney(row.yearTotalLower)} – ${formatMoney(row.yearTotalUpper)}`
+                          : '—'
+                      ),
+                    },
+                    {
+                      title: 'Share',
+                      dataIndex: 'sharePct',
+                      align: 'right' as const,
+                      sortType: 'number' as const,
+                      render: (v: number) => `${v}%`,
+                    },
+                  ]}
+                  dataSource={data.categoryForecasts}
+                  rowKey="categoryCode"
+                  loading={loading}
+                  scroll={{ y: 280 }}
+                />
+              </Col>
+            </Row>
+          )}
         </>
       )}
 
