@@ -123,12 +123,16 @@ export type AdvisorCard = {
   id?: string
   type: string
   priority?: number
+  urgency?: 'high' | 'medium' | 'low' | string
+  confidence?: number
   title: string
   reason?: string
   detail?: string
   impactAmount?: number
+  evidence?: ProfileEvidence[]
   evidenceRefs?: { source: string; ref: string }[]
   actions?: { label: string; type: string; payload: Record<string, string> }[]
+  expiresAt?: string
   actionPath?: string
   actionLabel?: string
 }

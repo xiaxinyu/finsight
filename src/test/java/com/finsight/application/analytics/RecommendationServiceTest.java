@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -58,8 +59,18 @@ class RecommendationServiceTest {
                 .thenReturn(List.of("data_trust"));
         when(profileService.currentProfile()).thenReturn(Map.of(
                 "dimensions", List.of(
-                        Map.of("id", "data_trust", "score", 40, "summary", "classify more"),
-                        Map.of("id", "liquidity_safety", "score", 50, "summary", "low runway")
+                        Map.of(
+                                "id", "data_trust",
+                                "score", 40,
+                                "summary", "classify more",
+                                "evidence", List.of(Map.of(
+                                        "source", "quality",
+                                        "ref", "unclassifiedCount",
+                                        "label", "Unclassified",
+                                        "detail", "Needs review",
+                                        "value", "12 unclassified")),
+                                "actions", List.of()),
+                        Map.of("id", "liquidity_safety", "score", 50, "summary", "low runway", "evidence", List.of(), "actions", List.of())
                 )
         ));
         when(forecastService.forecast(any(Integer.class), anyString())).thenReturn(Map.of("deficitMonths", List.of()));
@@ -67,6 +78,11 @@ class RecommendationServiceTest {
         List<Map<String, Object>> cards = service.topRecommendations("user1");
 
         assertTrue(cards.stream().noneMatch(c -> "data_trust".equals(c.get("id"))));
+        Map<String, Object> card = cards.get(0);
+        assertNotNull(card.get("urgency"));
+        assertNotNull(card.get("confidence"));
+        assertNotNull(card.get("expiresAt"));
+        assertTrue(((Number) card.get("impactAmount")).doubleValue() > 0);
         verify(profileService).currentProfile();
         verify(jdbcTemplate, atLeastOnce()).update(
                 argThat((String sql) -> sql.contains("on duplicate key update")),
@@ -85,6 +101,22 @@ class RecommendationServiceTest {
     void storageId_scopesCardKeyPerUser() {
         assertEquals("alice:income_stability", RecommendationService.storageId("alice", "income_stability"));
         assertEquals("bob:income_stability", RecommendationService.storageId("bob", "income_stability"));
+    }
+
+    @Test
+    void feedback_snoozeSetsShortSnoozeWindow() {
+        service.feedback("user1", "liquidity_safety", "snooze");
+        verify(jdbcTemplate).update(
+                argThat((String sql) -> sql.contains("fin_recommendation_feedback")),
+                any(), eq("user1"), eq("liquidity_safety"), eq("snooze"), any());
+    }
+
+    @Test
+    void feedback_acceptRecordsWithoutSnoozeExpiry() {
+        service.feedback("user1", "cashflow_risk", "accept");
+        verify(jdbcTemplate).update(
+                argThat((String sql) -> sql.contains("fin_recommendation_feedback")),
+                any(), eq("user1"), eq("cashflow_risk"), eq("accept"), eq(null));
     }
 
     @Test
