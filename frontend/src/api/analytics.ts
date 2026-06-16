@@ -1,3 +1,4 @@
+import type { TrendChangesReport } from '../utils/trendChanges'
 import { getJson, postJson } from './client'
 import { normalizeResult } from './normalize'
 import type {
@@ -116,7 +117,9 @@ export async function fetchCashRiskCalendar(year: number, scenario = 'stress') {
 }
 
 export async function fetchTrends(fromYear: number, toYear: number) {
-  return unwrap<Record<string, unknown>>(await getJson(`/api/v1/analytics/trends?fromYear=${fromYear}&toYear=${toYear}`))
+  return unwrap<TrendChangesReport>(
+    await getJson(`/api/v1/analytics/trends?fromYear=${fromYear}&toYear=${toYear}`),
+  )
 }
 
 export type AdvisorCard = {
