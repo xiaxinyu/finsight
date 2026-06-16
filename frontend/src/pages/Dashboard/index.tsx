@@ -13,6 +13,7 @@ import {
 import { homeSummary, fetchReport } from '../../api/report'
 import { cashflowMetrics, decisionCards, financialPulse } from '../../api/finance'
 import { advisorFeedback, advisorRecommendations } from '../../api/analytics'
+import type { AdvisorCard } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildDashboardDrillContext, drillParamsForCategory, drillParamsForMonth } from '../../components/drilldown/buildDrillContext'
@@ -22,6 +23,7 @@ import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
 import { AdvisorStrip } from '../../components/AdvisorStrip'
+import { AdvisorEvidenceDrawer } from '../../components/AdvisorEvidenceDrawer'
 import { DashboardInsightStrip } from '../../components/DashboardInsightStrip'
 import { DashboardQualityStrip } from '../../components/DashboardQualityStrip'
 import { AccountBalancePanel } from '../../components/AccountBalancePanel'
@@ -47,6 +49,7 @@ export function DashboardPage() {
   const { flags } = useFeatureFlags()
   const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
   const [period, setPeriod] = useState<PeriodRange>(() => defaultPeriodRange())
+  const [evidenceCard, setEvidenceCard] = useState<AdvisorCard | null>(null)
   const periodKey = periodToStrings(period)
   const chartHeight = Math.min(useViewportTableHeight(280), 360)
 
@@ -278,6 +281,15 @@ export function DashboardPage() {
             <>
               <AdvisorStrip
                 cards={advisorCards || []}
+                onOpenEvidence={setEvidenceCard}
+                onAccept={async (id) => {
+                  await advisorFeedback(id, 'accept')
+                  refetchAdvisor()
+                }}
+                onSnooze={async (id) => {
+                  await advisorFeedback(id, 'snooze')
+                  refetchAdvisor()
+                }}
                 onDismiss={async (id) => {
                   await advisorFeedback(id, 'dismiss')
                   refetchAdvisor()
@@ -399,6 +411,11 @@ export function DashboardPage() {
         </>
       )}
       <UnifiedDrillDrawer open={drillOpen} context={drillContext} onClose={closeDrill} />
+      <AdvisorEvidenceDrawer
+        open={!!evidenceCard}
+        card={evidenceCard}
+        onClose={() => setEvidenceCard(null)}
+      />
     </DataPageLayout>
   )
 }

@@ -3296,6 +3296,44 @@
   font-size: 14px;
 }
 
+.fs-advisor-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fs-advisor-urgency {
+  margin: 0;
+  font-size: 11px;
+}
+
+.fs-advisor-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--fs-text-secondary, #64748b);
+}
+
+.fs-advisor-card-meta strong {
+  color: var(--fs-text, #0f172a);
+}
+
+.fs-advisor-link-btn {
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fs-advisor-link-btn:hover {
+  text-decoration: underline;
+}
+
 .fs-advisor-card-reason {
   font-size: 12px;
   color: var(--fs-text-secondary, #64748b);
