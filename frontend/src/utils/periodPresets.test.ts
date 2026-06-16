@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { describe, expect, it } from 'vitest'
-import { periodToStrings } from '../components/PeriodRangePicker'
+import { periodToStrings } from './periodStrings'
 import { defaultPeriodRange, defaultPeriodStrings, detectPresetId, formatPeriodPreview, presetRange } from './periodPresets'
 
 describe('periodPresets', () => {

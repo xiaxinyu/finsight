@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Col, Form, Input, InputNumber, Row, Table, Tabs, Tag, message } from 'antd'
@@ -22,7 +22,8 @@ function invalidateFinance(qc: ReturnType<typeof useQueryClient>) {
 export function PlanningPage() {
   const qc = useQueryClient()
   const [billForm] = Form.useForm()
-  const [budgetLimit, setBudgetLimit] = useState<number>(5000)
+  const [budgetLimitDraft, setBudgetLimitDraft] = useState<number>(5000)
+  const [budgetDirty, setBudgetDirty] = useState(false)
 
   const { data: cashflow, isError: cfErr, error: cfError } = useQuery({ queryKey: ['cashflow'], queryFn: cashflowMetrics })
   const { data: bva, isError: bvaErr, error: bvaError } = useQuery({ queryKey: ['budget-vs-actual'], queryFn: () => budgetVsActual() })
@@ -32,11 +33,8 @@ export function PlanningPage() {
 
   const tableHeight = useViewportTableHeight(320)
   const bvaMeta = bva?.[0]
-
-  useEffect(() => {
-    const limit = Number(bvaMeta?.limitTotal || 0)
-    if (limit > 0) setBudgetLimit(limit)
-  }, [bvaMeta?.limitTotal])
+  const budgetLimitFromData = useMemo(() => Number(bvaMeta?.limitTotal || 0), [bvaMeta?.limitTotal])
+  const budgetLimit = !budgetDirty && budgetLimitFromData > 0 ? budgetLimitFromData : budgetLimitDraft
 
   const safe = Number(cashflow?.safeToSpend || 0)
   const runway = Number(cashflow?.runwayMonths || 0)
@@ -54,6 +52,7 @@ export function PlanningPage() {
   const onSaveBudget = async () => {
     try {
       await saveBudgetLine({ bucketKey: 'all', limitAmount: budgetLimit })
+      setBudgetDirty(false)
       invalidateFinance(qc)
       message.success('Budget limit saved')
     } catch (e) {
@@ -95,7 +94,10 @@ export function PlanningPage() {
               size="small"
               style={{ width: 160, marginRight: 8 }}
               value={budgetLimit}
-              onChange={(v) => setBudgetLimit(Number(v || 0))}
+              onChange={(v) => {
+                setBudgetDirty(true)
+                setBudgetLimitDraft(Number(v || 0))
+              }}
             />
             <Button size="small" type="primary" onClick={onSaveBudget}>Save limit</Button>
             {bvaMeta && Number(bvaMeta.limitTotal) > 0 && Number(bvaMeta.actualTotal) / Number(bvaMeta.limitTotal) > 0.8 && (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Breadcrumb, Button, Drawer, List, Space, Spin, Typography } from 'antd'
 import { RightOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
@@ -6,9 +6,10 @@ import { useQuery } from '@tanstack/react-query'
 import { listTransactions, type TransactionRow } from '../../api/transaction'
 import { FsDataTable } from '../FsDataTable'
 import { EmptyState } from '../EmptyState'
-import { MoneyText, moneyTypeFromRow } from '../MoneyText'
+import { MoneyText } from '../MoneyText'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { formatMoney } from '../../utils/format'
+import { moneyTypeFromRow } from '../../utils/moneyType'
 import type { DrillDownContext, DrillDownLayer } from './types'
 import { drillBreadcrumbs, previousLayer } from './layerNav'
 import { mergeDrillActions } from './buildDrillContext'
@@ -38,17 +39,33 @@ function categoryLabel(row: TransactionRow): string {
 }
 
 export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
-  const [layer, setLayer] = useState<DrillDownLayer>('insight')
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
-  const [merchantFilter, setMerchantFilter] = useState<string | null>(null)
+  const sessionKey = useMemo(() => {
+    if (!open || !context) return 'closed'
+    return [
+      context.title,
+      context.params.transactionDateStartStr,
+      context.params.transactionDateEndStr,
+      context.params.consumeName,
+      context.params.merchantLabel,
+    ].filter(Boolean).join('|')
+  }, [open, context])
 
-  useEffect(() => {
-    if (open) {
-      setLayer('insight')
-      setCategoryFilter(context?.params.consumeName || null)
-      setMerchantFilter(context?.params.merchantLabel || null)
-    }
-  }, [open, context?.title, context?.params.consumeName, context?.params.merchantLabel])
+  if (!context) return null
+
+  return (
+    <UnifiedDrillDrawerInner
+      key={sessionKey}
+      open={open}
+      context={context}
+      onClose={onClose}
+    />
+  )
+}
+
+function UnifiedDrillDrawerInner({ open, context, onClose }: Props) {
+  const [layer, setLayer] = useState<DrillDownLayer>('insight')
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(() => context?.params.consumeName || null)
+  const [merchantFilter, setMerchantFilter] = useState<string | null>(() => context?.params.merchantLabel || null)
 
   const queryParams = useMemo(() => {
     if (!context) return {}
@@ -124,8 +141,6 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
     if (crumbLayer !== 'transactions') setMerchantFilter(null)
     else setMerchantFilter(merchant || null)
   }
-
-  if (!context) return null
 
   return (
     <Drawer

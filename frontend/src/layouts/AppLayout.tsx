@@ -50,7 +50,6 @@ function renderMenuItems(items: FsMenuItem[]): MenuProps['items'] {
 
 export function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
-  const [openKeys, setOpenKeys] = useState<string[]>([])
   const location = useLocation()
   const navigate = useNavigate()
   const { token } = theme.useToken()
@@ -64,10 +63,6 @@ export function AppLayout() {
     })
   }, [navigate])
 
-  useEffect(() => {
-    setOpenKeys(findOpenKeys(location.pathname))
-  }, [location.pathname])
-
   const breadcrumbItems = routeMeta.breadcrumb.map((label, i) => ({
     key: String(i),
     title: i === routeMeta.breadcrumb.length - 1
@@ -80,12 +75,12 @@ export function AppLayout() {
       <Sider collapsible collapsed={collapsed} trigger={null} width={200} theme="dark">
         <BrandLogo collapsed={collapsed} variant="dark" />
         <Menu
+          key={location.pathname}
           className="fs-sider-menu"
           theme="dark"
           mode="inline"
           selectedKeys={findSelectedKeys(location.pathname)}
-          openKeys={openKeys}
-          onOpenChange={setOpenKeys}
+          defaultOpenKeys={findOpenKeys(location.pathname)}
           items={renderMenuItems(visibleMenu)}
           style={{ borderRight: 0 }}
         />
