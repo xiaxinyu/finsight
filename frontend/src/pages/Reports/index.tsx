@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Col, Row } from 'antd'
@@ -14,7 +14,9 @@ import { FsChart } from '../../components/FsChart'
 import { InsightPanel } from '../../components/InsightPanel'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
-import { ReportDrillDrawer } from '../../components/ReportDrillDrawer'
+import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
+import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
+import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -56,9 +58,7 @@ export function ReportsPage() {
   }
 
   const { draft, setDraft, applied, applying, isDirty, apply } = useFilterApply(initialFilters)
-  const [drillOpen, setDrillOpen] = useState(false)
-  const [drillParams, setDrillParams] = useState<Record<string, string>>({})
-  const [drillTitle, setDrillTitle] = useState('Transaction drill-down')
+  const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
 
   const baseParams = useMemo(() => (cfg ? buildParams(cfg, applied) : {}), [cfg, applied])
   const periodLabel = formatPeriodPreview(applied.period[0], applied.period[1])
@@ -159,9 +159,19 @@ export function ReportsPage() {
     }
     if (categoryName) next.consumeName = categoryName
     if (applied.card) next.cardId = applied.card
-    setDrillTitle(categoryName ? `${categoryName} · ${formatPeriodPreview(range[0], range[1])}` : 'Transaction drill-down')
-    setDrillParams(next)
-    setDrillOpen(true)
+    const periodLabel = formatPeriodPreview(range[0], range[1])
+    const title = categoryName ? `${categoryName} · ${periodLabel}` : `${cfg.title} · ${periodLabel}`
+    const insights = view?.insights.map((b) => b.text) || []
+    const explanation = categoryName
+      ? insights.filter((t) => t.toLowerCase().includes(categoryName.toLowerCase()))
+      : insights
+    openDrill(buildReportDrillContext({
+      title,
+      metricLabel: categoryName || cfg.title,
+      params: next,
+      explanation: explanation.length ? explanation : undefined,
+      source: 'report',
+    }))
   }
 
   const onChartClick = (params: unknown) => {
@@ -348,11 +358,10 @@ export function ReportsPage() {
         </>
       )}
 
-      <ReportDrillDrawer
+      <UnifiedDrillDrawer
         open={drillOpen}
-        params={drillParams}
-        title={drillTitle}
-        onClose={() => setDrillOpen(false)}
+        context={drillContext}
+        onClose={closeDrill}
       />
     </DataPageLayout>
   )

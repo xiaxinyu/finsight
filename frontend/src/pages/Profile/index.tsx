@@ -11,6 +11,11 @@ import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { buildProfileRadarOption, PROFILE_DIM_LABELS } from './profileRadar'
+
+function dimensionIdFromRadarName(name: string): string | undefined {
+  const entry = Object.entries(PROFILE_DIM_LABELS).find(([, label]) => label === name)
+  return entry?.[0]
+}
 import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
 import { profileActionLinks } from './profileActions'
 
@@ -71,7 +76,19 @@ export function ProfilePage() {
         </Col>
         <Col xs={24} md={16}>
           <ContentCard title="Dimension radar">
-            <FsChart option={radarOption} height={320} />
+            <FsChart
+              option={radarOption}
+              height={320}
+              onEvents={{
+                click: (p) => {
+                  const name = (p as { name?: string }).name
+                  if (!name) return
+                  const dimId = dimensionIdFromRadarName(name)
+                  const dim = data.dimensions.find((d) => d.id === dimId)
+                  if (dim) setActiveDimension(dim)
+                },
+              }}
+            />
           </ContentCard>
         </Col>
       </Row>

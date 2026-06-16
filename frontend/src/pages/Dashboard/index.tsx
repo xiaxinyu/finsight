@@ -14,6 +14,9 @@ import { homeSummary, fetchReport } from '../../api/report'
 import { cashflowMetrics, decisionCards, financialPulse } from '../../api/finance'
 import { advisorFeedback, advisorRecommendations } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
+import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
+import { buildDashboardDrillContext, drillParamsForCategory, drillParamsForMonth } from '../../components/drilldown/buildDrillContext'
+import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -42,6 +45,7 @@ function dataTrustScore(unclassified: number): number {
 
 export function DashboardPage() {
   const { flags } = useFeatureFlags()
+  const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
   const [period, setPeriod] = useState<PeriodRange>(() => defaultPeriodRange())
   const periodKey = periodToStrings(period)
   const chartHeight = Math.min(useViewportTableHeight(280), 360)
@@ -140,6 +144,46 @@ export function DashboardPage() {
   const loading = isLoading || totalsLoading
   const periodLabel = formatPeriodPreview(period[0], period[1])
   const needsOnboarding = income === 0 && expense === 0 && Number(pulse?.liquidAssets || 0) === 0
+
+  const openCashflowDrill = (monthName?: string) => {
+    const year = period[1].year()
+    const params = monthName
+      ? drillParamsForMonth(monthName, year, 'expense')
+      : {
+          transactionDateStartStr: periodKey.start,
+          transactionDateEndStr: periodKey.end,
+          txnTypes: 'expense',
+        }
+    if (!params.transactionDateStartStr) return
+    openDrill(buildDashboardDrillContext({
+      title: monthName ? `Cash flow · ${monthName} ${year}` : `Cash flow · ${periodLabel}`,
+      metricLabel: monthName ? `${monthName} net cash flow` : 'Period cash flow',
+      params,
+      explanation: monthName
+        ? [`Net cash flow for ${monthName} ${year} within your selected period.`]
+        : [
+            `Income ${formatMoney(income)} vs expense ${formatMoney(expense)} (${periodLabel}).`,
+            net >= 0
+              ? `Net surplus ${formatMoney(net)} — savings rate ${savingsLabel}.`
+              : `Net deficit ${formatMoney(Math.abs(net))} — review expense concentration.`,
+          ],
+    }))
+  }
+
+  const openCategoryDrill = (categoryName: string) => {
+    if (!periodKey.start || !periodKey.end) return
+    openDrill(buildDashboardDrillContext({
+      title: `${categoryName} · ${periodLabel}`,
+      metricLabel: categoryName,
+      params: drillParamsForCategory(categoryName, periodKey.start, periodKey.end),
+      explanation: [
+        `${categoryName} is among your top expense categories this period.`,
+        (periodReport?.top3Share ?? 0) >= 50
+          ? `Top-3 categories account for ${(periodReport?.top3Share ?? 0).toFixed(1)}% of spend — high concentration.`
+          : 'Spending is relatively diversified across categories.',
+      ],
+    }))
+  }
 
   return (
     <DataPageLayout
@@ -254,6 +298,12 @@ export function DashboardPage() {
                   loading={loading}
                   empty={<EmptyState compact title="No cash flow data" description={`No transactions in ${periodLabel}.`} />}
                   option={cashflowOption}
+                  onEvents={{
+                    click: (p) => {
+                      const name = (p as { name?: string }).name
+                      if (name) openCashflowDrill(name)
+                    },
+                  }}
                 />
               </ContentCard>
             </Col>
@@ -272,6 +322,12 @@ export function DashboardPage() {
                       data: pieData,
                       label: { fontSize: 11, formatter: '{b}\n{d}%' },
                     }],
+                  }}
+                  onEvents={{
+                    click: (p) => {
+                      const name = (p as { name?: string }).name
+                      if (name) openCategoryDrill(name)
+                    },
                   }}
                 />
                 {periodReport && periodReport.expenseTotal > 0 && (
@@ -342,6 +398,7 @@ export function DashboardPage() {
           </Row>
         </>
       )}
+      <UnifiedDrillDrawer open={drillOpen} context={drillContext} onClose={closeDrill} />
     </DataPageLayout>
   )
 }
