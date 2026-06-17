@@ -172,8 +172,8 @@ function ClassifyConfirmModalInner({
     [rows],
   )
 
-  const footerLabel = bulkMode && bulkCategoryName
-    ? `Apply “${bulkCategoryName}” to ${readyRows.length} transaction${readyRows.length === 1 ? '' : 's'}`
+  const footerLabel = bulkMode
+    ? `Apply to ${readyRows.length} transaction${readyRows.length === 1 ? '' : 's'}`
     : `Apply ${applyCount} categor${applyCount === 1 ? 'y' : 'ies'}`
 
   const useRowPickers = !bulkMode || showRowPickers
@@ -199,7 +199,7 @@ function ClassifyConfirmModalInner({
         </div>
       )}
       open={open}
-      width={bulkMode ? 920 : 1080}
+      width={bulkMode ? 840 : 1080}
       centered
       destroyOnClose
       maskClosable={!busy}
@@ -208,7 +208,9 @@ function ClassifyConfirmModalInner({
         <div className="fs-classify-modal__footer">
           <Typography.Text type="secondary" className="fs-classify-modal__footer-meta">
             {applyCount > 0
-              ? `${applyCount} of ${checkedCount} checked ready to save`
+              ? bulkMode && bulkCategoryName
+                ? `${applyCount} of ${checkedCount} → ${bulkCategoryName}`
+                : `${applyCount} of ${checkedCount} checked ready to save`
               : `${checkedCount} checked · pick a category above`}
           </Typography.Text>
           <Space>
@@ -226,35 +228,29 @@ function ClassifyConfirmModalInner({
       )}
     >
       {bulkMode ? (
-        <div className="fs-classify-modal__bulk fs-classify-modal__bulk--hero">
-          <div className="fs-classify-modal__bulk-head">
+        <div className="fs-classify-modal__bulk-bar">
+          <div className="fs-classify-modal__bulk-bar-main">
             <Typography.Text strong className="fs-classify-modal__bulk-label">
-              Category for all checked rows
+              Category
             </Typography.Text>
-            <Space size={4} className="fs-classify-modal__bulk-actions">
-              <Button type="link" size="small" onClick={selectAll}>Select all</Button>
-              <Button type="link" size="small" onClick={selectNone}>Clear</Button>
-              {!showRowPickers && (
-                <Button type="link" size="small" onClick={() => setShowRowPickers(true)}>
-                  Customize per row
-                </Button>
-              )}
-            </Space>
+            <CategoryPicker
+              treeData={treeData}
+              size="middle"
+              className="fs-classify-picker fs-classify-picker--bulk-bar"
+              placeholder="Search or pick a category…"
+              value={bulkCategory}
+              onChange={(v) => syncBulkCategory(v || undefined)}
+            />
           </div>
-          <CategoryPicker
-            treeData={treeData}
-            size="large"
-            className="fs-classify-picker fs-classify-picker--bulk fs-classify-picker--hero"
-            placeholder="Search or pick a category…"
-            value={bulkCategory}
-            onChange={(v) => syncBulkCategory(v || undefined)}
-          />
-          {bulkCategoryName && (
-            <Typography.Text type="secondary" className="fs-classify-modal__bulk-hint">
-              Preview below — {readyRows.length} transaction{readyRows.length === 1 ? '' : 's'} will update to{' '}
-              <strong>{bulkCategoryName}</strong>
-            </Typography.Text>
-          )}
+          <Space size={4} className="fs-classify-modal__bulk-actions">
+            <Button type="link" size="small" onClick={selectAll}>Select all</Button>
+            <Button type="link" size="small" onClick={selectNone}>Clear</Button>
+            {!showRowPickers && (
+              <Button type="link" size="small" onClick={() => setShowRowPickers(true)}>
+                Customize per row
+              </Button>
+            )}
+          </Space>
         </div>
       ) : (
         <>
@@ -320,7 +316,7 @@ function ClassifyConfirmModalInner({
         rowKey="id"
         dataSource={rows}
         pagination={rows.length > 25 ? { pageSize: 25, size: 'small', showTotal: (t) => `${t} rows` } : false}
-        scroll={{ y: bulkMode ? 320 : 360 }}
+        scroll={{ y: bulkMode ? Math.min(280, Math.max(88, rows.length * 44 + 48)) : 360 }}
         rowSelection={{
           selectedRowKeys: selectedKeys,
           onChange: (keys) => {
@@ -362,7 +358,7 @@ function ClassifyConfirmModalInner({
           },
           ...(bulkMode && !useRowPickers ? [{
             title: 'Change',
-            width: 280,
+            width: 300,
             render: (_: unknown, r: ClassifyEditRow) => (
               <div className="fs-classify-change-cell">
                 <Tag bordered={false} className="fs-classify-before-tag">{beforeLabel(r)}</Tag>

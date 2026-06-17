@@ -25,6 +25,24 @@
         )
     </sql>
 
+    <!-- imp_staging_entry has no txn_kind; infer from amounts only -->
+    <sql id="inferredTxnKindStaging">
+        case
+            when coalesce(tt.income_money,0) &gt; 0 or coalesce(tt.balance_money,0) &lt; 0 then 'income'
+            when coalesce(tt.balance_money,0) &gt; 0 then 'expense'
+            else ''
+        end
+    </sql>
+
+    <sql id="inferredTxnKindLedger">
+        case
+            when coalesce(t.txn_kind,'') in ('income','expense') then t.txn_kind
+            when coalesce(t.income_money,0) &gt; 0 or coalesce(t.balance_money,0) &lt; 0 then 'income'
+            when coalesce(t.balance_money,0) &gt; 0 then 'expense'
+            else ''
+        end
+    </sql>
+
     <update id="markTransactionsTransfer">
         update transaction
         set txn_kind = 'transfer',
@@ -244,17 +262,7 @@
                 = round(abs(coalesce(t.balance_money,0) + coalesce(t.income_money,0)), 2)
             and coalesce(tt.transaction_desc,'') = coalesce(t.transaction_desc,'')
             and coalesce(tt.bank_card_id,'') = coalesce(t.bank_card_id,'')
-            and case
-                when coalesce(tt.txn_kind,'') in ('income','expense') then tt.txn_kind
-                when coalesce(tt.income_money,0) &gt; 0 or coalesce(tt.balance_money,0) &lt; 0 then 'income'
-                when coalesce(tt.balance_money,0) &gt; 0 then 'expense'
-                else ''
-            end = case
-                when coalesce(t.txn_kind,'') in ('income','expense') then t.txn_kind
-                when coalesce(t.income_money,0) &gt; 0 or coalesce(t.balance_money,0) &lt; 0 then 'income'
-                when coalesce(t.balance_money,0) &gt; 0 then 'expense'
-                else ''
-            end
+            and <include refid="inferredTxnKindStaging"/> = <include refid="inferredTxnKindLedger"/>
         where tt.statement_id = #{statementId,jdbcType=VARCHAR}
           and coalesce(tt.deleted, 0) = 0
           and (t.deleted is null or t.deleted = 0)

@@ -1405,16 +1405,40 @@
   border: 1px solid #e2e8f0;
 }
 
-.fs-classify-modal--bulk .fs-classify-modal__bulk--hero {
+.fs-classify-modal__bulk-bar {
+  display: flex;
   flex-direction: column;
   align-items: stretch;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.fs-classify-modal__bulk-bar-main {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
-  padding: 16px 18px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-  border: 1px solid #bfdbfe;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+}
+
+.fs-classify-modal__bulk-bar-main .fs-classify-modal__bulk-label {
+  flex: 0 0 auto;
+  min-width: 64px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.fs-classify-picker--bulk-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fs-classify-modal__bulk-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .fs-classify-modal__bulk-head {
@@ -1434,16 +1458,6 @@
   padding: 0 4px;
   font-size: 12px;
   height: auto;
-}
-
-.fs-classify-modal__bulk-hint {
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.fs-classify-picker--hero .ant-select-selector {
-  min-height: 42px !important;
-  font-size: 15px !important;
 }
 
 .fs-classify-modal__stats--compact {
@@ -1467,9 +1481,10 @@
 
 .fs-classify-before-tag {
   margin: 0;
-  max-width: 120px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   background: #f1f5f9;
   color: #475569;
   font-size: 11px;
@@ -1477,9 +1492,10 @@
 
 .fs-classify-new-tag {
   margin: 0;
-  max-width: 140px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 11px;
 }
 
@@ -1808,7 +1824,17 @@
 }
 
 .fs-classify-modal__footer-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 55%;
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-classify-modal--bulk .ant-modal-body {
+  padding: 12px 20px 10px;
 }
 
 /* ── Import history ── */
