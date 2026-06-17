@@ -215,8 +215,11 @@ public class TrendAnalysisService {
             Map<String, Object> g = new LinkedHashMap<>();
             g.put("categoryCode", code);
             g.put("categoryName", names.getOrDefault(code, code));
+            g.put("fromAmount", round(start));
+            g.put("toAmount", round(end));
             g.put("pctChange", Math.round(pct));
             g.put("deltaAmount", round(delta));
+            g.put("deltaPercent", round(pct));
             g.put("contributionPct", round(TrendDecomposition.contributionPct(delta, expenseDelta)));
             g.put("drillDown", drillCategory(toYear, code, names.getOrDefault(code, code)));
             movers.add(g);
@@ -232,7 +235,7 @@ public class TrendAnalysisService {
             String token = String.valueOf(mover.get("key"));
             String label = String.valueOf(mover.get("label"));
             mover.put("merchantToken", token);
-            mover.put("drillDown", drillMerchant(toYear, label));
+            mover.put("drillDown", drillMerchant(toYear, token, label));
         }
         return movers;
     }
@@ -354,10 +357,10 @@ public class TrendAnalysisService {
         return drill;
     }
 
-    private static Map<String, String> drillMerchant(int year, String merchantLabel) {
+    private static Map<String, String> drillMerchant(int year, String merchantToken, String merchantLabel) {
         Map<String, String> drill = new LinkedHashMap<>(drillYear(year, "expense"));
+        drill.put("merchantToken", merchantToken);
         drill.put("merchantLabel", merchantLabel);
-        drill.put("demoArea", merchantLabel);
         return drill;
     }
 

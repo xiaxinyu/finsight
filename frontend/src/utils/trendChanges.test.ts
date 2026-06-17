@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildContributorChart,
+  buildCategoryContributorChart,
+  buildMerchantContributorChart,
   buildTrendInsights,
   buildTrendKpis,
   type TrendChangesReport,
@@ -17,10 +18,10 @@ const sample: TrendChangesReport = {
     headline: 'Spending is up ¥15,000 YoY — mainly Food and Uber.',
   },
   topCategoryGrowth: [
-    { categoryCode: 'FOOD', categoryName: 'Food', deltaAmount: 8000, pctChange: 40, contributionPct: 53.3, drillDown: {} },
+    { categoryCode: 'FOOD', categoryName: 'Food', fromAmount: 20000, toAmount: 28000, deltaAmount: 8000, pctChange: 40, deltaPercent: 40, contributionPct: 53.3, drillDown: {} },
   ],
   topMerchantMovers: [
-    { merchantToken: 'uber', label: 'Uber', deltaAmount: 3000, deltaPercent: 50, contributionPct: 20, drillDown: {} },
+    { merchantToken: 'uber', label: 'Uber', fromAmount: 6000, toAmount: 9000, deltaAmount: 3000, deltaPercent: 50, contributionPct: 20, drillDown: {} },
   ],
   lifestyleInflation: {
     detected: true,
@@ -33,20 +34,26 @@ const sample: TrendChangesReport = {
 }
 
 describe('trendChanges utils', () => {
-  it('builds KPI strip', () => {
+  it('builds KPI strip with lifestyle growth metrics', () => {
     const kpis = buildTrendKpis(sample)
     expect(kpis.find((k) => k.key === 'exp')?.value).toContain('15,000')
+    expect(kpis.find((k) => k.key === 'incGrowth')?.value).toContain('10.0%')
+    expect(kpis.find((k) => k.key === 'lifeGap')?.value).toContain('8.8')
   })
 
-  it('builds insights with headline and lifestyle warning', () => {
+  it('builds insights with separate category and merchant drivers', () => {
     const insights = buildTrendInsights(sample)
     expect(insights[0].text).toContain('Spending is up')
-    expect(insights.some((b) => b.warn)).toBe(true)
+    expect(insights.some((b) => b.text.includes('Top category'))).toBe(true)
+    expect(insights.some((b) => b.text.includes('Top merchant'))).toBe(true)
   })
 
-  it('builds contributor chart', () => {
-    const option = buildContributorChart(sample)
-    const series = option.series as { data?: number[] }[]
-    expect(series[0].data?.length).toBe(2)
+  it('builds separate category and merchant charts', () => {
+    const cat = buildCategoryContributorChart(sample)
+    const mer = buildMerchantContributorChart(sample)
+    const catSeries = cat.series as { data?: number[] }[]
+    const merSeries = mer.series as { data?: number[] }[]
+    expect(catSeries[0].data?.length).toBe(1)
+    expect(merSeries[0].data?.length).toBe(1)
   })
 })

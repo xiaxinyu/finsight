@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -94,6 +95,10 @@ class TrendAnalysisServiceTest {
         List<Map<String, Object>> merchants = (List<Map<String, Object>>) out.get("topMerchantMovers");
         assertEquals(1, merchants.size());
         assertNotNull(merchants.get(0).get("drillDown"));
+        @SuppressWarnings("unchecked")
+        Map<String, String> drill = (Map<String, String>) merchants.get(0).get("drillDown");
+        assertNotNull(drill.get("merchantToken"));
+        assertNull(drill.get("demoArea"));
     }
 
     private static KeyValue kv(double value) {

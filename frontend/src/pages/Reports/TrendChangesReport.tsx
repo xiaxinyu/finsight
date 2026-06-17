@@ -19,9 +19,11 @@ import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { formatMoney } from '../../utils/format'
 import { DeltaPercentCell } from '../../components/FsTableCellViews'
 import {
-  buildContributorChart,
+  buildCategoryContributorChart,
+  buildMerchantContributorChart,
   buildTrendInsights,
   buildTrendKpis,
+  moverFromTo,
   trendTypeLabel,
 } from '../../utils/trendChanges'
 
@@ -45,22 +47,51 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
   const loading = isLoading || isFetching
   const kpis = useMemo(() => (data ? buildTrendKpis(data) : []), [data])
   const insights = useMemo(() => (data ? buildTrendInsights(data) : []), [data])
-  const chartOption = useMemo(() => (data ? buildContributorChart(data) : {}), [data])
+  const categoryChart = useMemo(() => (data ? buildCategoryContributorChart(data) : {}), [data])
+  const merchantChart = useMemo(() => (data ? buildMerchantContributorChart(data) : {}), [data])
 
   const openTrendDrill = (label: string, item: TrendItem | TrendMover, explanation: string[]) => {
-    const drillDown = item.drillDown || {}
     openDrill(buildReportDrillContext({
       title: `${label} · ${fromYear}→${toYear}`,
       metricLabel: label,
-      params: drillDown,
+      params: item.drillDown || {},
       explanation,
       source: 'report',
     }))
   }
 
+  const fromToCols = [
+    {
+      title: 'From',
+      key: 'fromAmount',
+      align: 'right' as const,
+      sortType: 'number' as const,
+      render: (_: unknown, row: TrendMover) => {
+        const { from } = moverFromTo(row)
+        return from == null ? '—' : formatMoney(from)
+      },
+    },
+    {
+      title: 'To',
+      key: 'toAmount',
+      align: 'right' as const,
+      sortType: 'number' as const,
+      render: (_: unknown, row: TrendMover) => {
+        const { to } = moverFromTo(row)
+        return to == null ? '—' : formatMoney(to)
+      },
+    },
+  ]
+
   const moverCols = [
-    { title: 'Name', dataIndex: 'label', sortType: 'text' as const, ellipsis: true,
-      render: (_: unknown, row: TrendMover) => row.label || row.categoryName || row.categoryCode },
+    {
+      title: 'Name',
+      dataIndex: 'label',
+      sortType: 'text' as const,
+      ellipsis: true,
+      render: (_: unknown, row: TrendMover) => row.label || row.categoryName || row.categoryCode,
+    },
+    ...fromToCols,
     {
       title: 'Delta',
       dataIndex: 'deltaAmount',
@@ -91,8 +122,23 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
   ]
 
   const moverExplanation = (row: TrendMover) => {
+    const { from, to } = moverFromTo(row)
     const pct = Number(row.deltaPercent ?? row.pctChange ?? 0)
-    return `${row.label || row.categoryName || 'Mover'} changed ${formatMoney(row.deltaAmount)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%) · ${Number(row.contributionPct).toFixed(1)}% of total expense shift`
+    const name = row.label || row.categoryName || 'Mover'
+    const parts = [
+      from != null && to != null ? `${name}: ${formatMoney(from)} → ${formatMoney(to)}` : name,
+      `Δ ${formatMoney(row.deltaAmount)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`,
+      `${Number(row.contributionPct).toFixed(1)}% of expense shift`,
+    ]
+    return parts.join(' · ')
+  }
+
+  const openMoverDrill = (row: TrendMover, kind: 'category' | 'merchant') => {
+    const name = String(row.label || row.categoryName || row.categoryCode)
+    openTrendDrill(name, row, [
+      `${kind === 'category' ? 'Category' : 'Merchant'} ${name} moved ${formatMoney(row.deltaAmount)} YoY.`,
+      moverExplanation(row),
+    ])
   }
 
   return (
@@ -125,40 +171,52 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
           <InsightPanel bullets={insights} title="What changed" />
 
           <Row gutter={[12, 12]} className="fs-report-body">
-            <Col xs={24} lg={14}>
-              <ContentCard title="Contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
+            <Col xs={24} lg={12}>
+              <ContentCard title="Category contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
                   profile="categoryBar"
-                  height={320}
+                  height={280}
                   loading={loading}
-                  option={chartOption}
-                  empty={<EmptyState compact title="No movers" />}
+                  option={categoryChart}
+                  empty={<EmptyState compact title="No category movers" />}
                   onEvents={{
                     click: (p) => {
                       const name = (p as { name?: string }).name
                       const cat = data.topCategoryGrowth.find((c) => c.categoryName === name)
-                      const merchant = data.topMerchantMovers.find((m) => m.label === name)
-                      if (cat) {
-                        openTrendDrill(String(cat.categoryName), cat, [
-                          `Category ${cat.categoryName} changed ${formatMoney(cat.deltaAmount)} YoY.`,
-                          `Represents ${cat.contributionPct}% of total expense change.`,
-                        ])
-                      } else if (merchant) {
-                        openTrendDrill(String(merchant.label), merchant, [
-                          `Merchant ${merchant.label} changed ${formatMoney(merchant.deltaAmount)} YoY.`,
-                          `Represents ${merchant.contributionPct}% of total expense change.`,
-                        ])
-                      }
+                      if (cat) openMoverDrill(cat, 'category')
                     },
                   }}
                 />
               </ContentCard>
+            </Col>
+            <Col xs={24} lg={12}>
+              <ContentCard title="Merchant contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
+                <FsChart
+                  profile="categoryBar"
+                  height={280}
+                  loading={loading}
+                  option={merchantChart}
+                  empty={<EmptyState compact title="No merchant movers" />}
+                  onEvents={{
+                    click: (p) => {
+                      const name = (p as { name?: string }).name
+                      const merchant = data.topMerchantMovers.find((m) => m.label === name)
+                      if (merchant) openMoverDrill(merchant, 'merchant')
+                    },
+                  }}
+                />
+              </ContentCard>
+            </Col>
+          </Row>
 
+          <Row gutter={[12, 12]} className="fs-report-body">
+            <Col xs={24} lg={14}>
               <FsDataTable
                 title="Trend summary"
                 columns={[
                   { title: 'Type', dataIndex: 'type', width: 130, render: (t: string) => trendTypeLabel(t) },
                   { title: 'Label', dataIndex: 'label', sortType: 'text' },
+                  ...fromToCols,
                   {
                     title: 'Delta',
                     dataIndex: 'deltaAmount',
@@ -186,11 +244,19 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                 dataSource={data.trends}
                 rowKey={(r) => `${r.type}-${r.label}`}
                 loading={loading}
-                rowExplanation={(record) => (
-                  record.contributionPct
-                    ? `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change) · ${record.contributionPct.toFixed(1)}% of total expense shift`
-                    : `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change)`
-                )}
+                rowExplanation={(record) => {
+                  const { from, to } = moverFromTo(record, data.summary.expense)
+                  const parts = [
+                    from != null && to != null
+                      ? `${record.label}: ${formatMoney(from)} → ${formatMoney(to)}`
+                      : record.label,
+                    `${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change)`,
+                  ]
+                  if (record.contributionPct) {
+                    parts.push(`${record.contributionPct.toFixed(1)}% of expense shift`)
+                  }
+                  return parts.join(' · ')
+                }}
                 onRow={(record) => ({
                   onClick: () => openTrendDrill(record.label, record, [
                     `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change).`,
@@ -213,9 +279,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                 loading={loading}
                 rowExplanation={moverExplanation}
                 onRow={(record) => ({
-                  onClick: () => openTrendDrill(String(record.categoryName), record, [
-                    `Category ${record.categoryName} moved ${formatMoney(record.deltaAmount)}.`,
-                  ]),
+                  onClick: () => openMoverDrill(record, 'category'),
                   style: { cursor: 'pointer' },
                 })}
                 scroll={{ y: 150 }}
@@ -228,9 +292,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                 loading={loading}
                 rowExplanation={moverExplanation}
                 onRow={(record) => ({
-                  onClick: () => openTrendDrill(String(record.label), record, [
-                    `Merchant ${record.label} moved ${formatMoney(record.deltaAmount)}.`,
-                  ]),
+                  onClick: () => openMoverDrill(record, 'merchant'),
                   style: { cursor: 'pointer' },
                 })}
                 scroll={{ y: 150 }}
