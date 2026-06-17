@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -100,6 +101,38 @@ class FinancialProfileServiceTest {
         Map<String, Object> ev = ((List<Map<String, Object>>) concentration.get("evidence")).get(0);
         assertTrue(String.valueOf(ev.get("value")).contains("Food"));
         assertEquals("Top spend category", ev.get("label"));
+    }
+
+    @Test
+    void currentProfile_usesCanonicalReportActionPaths() throws Exception {
+        stubProfileDeps();
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of());
+
+        Map<String, Object> profile = service.currentProfile();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> dimensions = (List<Map<String, Object>>) profile.get("dimensions");
+
+        assertActionPath(dimensions, "income_stability", "View income curve", "/reports/cashflow");
+        assertActionPath(dimensions, "spending_control", "Income vs expense", "/reports/cashflow");
+        assertActionPath(dimensions, "spending_concentration", "Category breakdown", "/reports/budget-vs-actual");
+        assertActionPath(dimensions, "spending_concentration", "Category comparison", "/reports/spending-drift");
+        assertActionPath(dimensions, "seasonality_risk", "Monthly comparison", "/reports/cashflow");
+    }
+
+    @Test
+    void currentProfile_persistsSnapshotsWithUpsert() throws Exception {
+        stubProfileDeps();
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+                anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(List.of());
+
+        service.currentProfile();
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate, times(10)).update(sql.capture(), any(), any(), any(), any(), any(), any(), any());
+        assertTrue(sql.getAllValues().stream().allMatch(s -> s.toLowerCase().contains("on duplicate key update")));
     }
 
     @Test
@@ -186,5 +219,23 @@ class FinancialProfileServiceTest {
         wealth.put("savingsRate", 0.18);
         wealth.put("healthScore", health);
         return wealth;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void assertActionPath(List<Map<String, Object>> dimensions,
+                                         String dimensionId,
+                                         String label,
+                                         String expectedPath) {
+        Map<String, Object> dimension = dimensions.stream()
+                .filter(d -> dimensionId.equals(d.get("id")))
+                .findFirst()
+                .orElseThrow();
+        List<Map<String, Object>> actions = (List<Map<String, Object>>) dimension.get("actions");
+        String path = actions.stream()
+                .filter(a -> label.equals(a.get("label")))
+                .map(a -> String.valueOf(((Map<?, ?>) a.get("payload")).get("path")))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(expectedPath, path);
     }
 }

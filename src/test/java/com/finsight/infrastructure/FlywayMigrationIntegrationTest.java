@@ -49,7 +49,7 @@ class FlywayMigrationIntegrationTest {
         assertTrue(tableExists("cls_rule"));
         assertTrue(tableExists("imp_staging_entry"));
         assertTrue(tableExists("fin_bank_account"));
-        assertTrue(migrationAtLeast(20));
+        assertTrue(migrationAtLeast(21));
     }
 
     private boolean migrationAtLeast(int version) {
