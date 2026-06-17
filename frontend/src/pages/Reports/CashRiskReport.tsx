@@ -17,10 +17,12 @@ import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import type { EChartsOption } from 'echarts'
 import { formatMoney } from '../../utils/format'
 import {
+  calendarSelectedKey,
   eventTypeLabel,
   indexCashRiskDays,
   monthRiskLevel,
   riskLevelClass,
+  syncSelectedDayToYear,
   type CashRiskDay,
 } from '../../utils/cashRiskCalendar'
 
@@ -52,11 +54,16 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
   const dayIndex = useMemo(() => indexCashRiskDays(data?.days), [data?.days])
   const loading = isLoading || isFetching
   const calendarValue = useMemo(
-    () => selectedDay.year(year),
+    () => syncSelectedDayToYear(selectedDay, year),
     [selectedDay, year],
   )
-  const selectedKey = selectedDay.format('YYYY-MM-DD')
+  const selectedKey = calendarSelectedKey(selectedDay, year)
   const selectedDetail: CashRiskDay | undefined = dayIndex.get(selectedKey)
+
+  const handleYearChange = (nextYear: number) => {
+    setYear(nextYear)
+    setSelectedDay((day) => syncSelectedDayToYear(day, nextYear))
+  }
 
   const chartOption = useMemo((): EChartsOption => {
     const months = data?.months || []
@@ -130,7 +137,7 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
             value={year}
             style={{ width: 110 }}
             options={[year - 1, year, year + 1].map((y) => ({ value: y, label: String(y) }))}
-            onChange={setYear}
+            onChange={handleYearChange}
           />
           <Select
             size="small"
@@ -166,7 +173,7 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
               fullscreen={false}
               value={calendarValue}
               onSelect={setSelectedDay}
-              onPanelChange={(value) => setYear(value.year())}
+              onPanelChange={(value) => handleYearChange(value.year())}
               cellRender={(current, info) => {
                 if (info.type !== 'date') return info.originNode
                 const key = current.format('YYYY-MM-DD')
