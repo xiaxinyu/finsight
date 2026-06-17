@@ -39,6 +39,7 @@ import { PeriodRangePicker } from '../../components/PeriodRangePicker'
 import { periodFromStrings, periodToStrings } from '../../utils/periodStrings'
 import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPresets'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
+import { mapTransactionTableSort } from '../../utils/transactionTableSort'
 
 type TxFilters = {
   start: string
@@ -303,6 +304,7 @@ export function TransactionsPage() {
         dataIndex: 'transactionDate',
         width: 88,
         sorter: true,
+        defaultSortOrder: 'descend',
         render: (_, r) => <span className="fs-tx-date">{formatTableDate(r.transactionDate)}</span>,
       },
       {
@@ -316,6 +318,7 @@ export function TransactionsPage() {
         title: <TableHeader name="Type" />,
         dataIndex: 'txnKind',
         width: 76,
+        sorter: true,
         render: (_, r) => <TransactionTypeBadge kind={r.txnKind || rowTxnKind(r)} />,
       },
       {
@@ -334,6 +337,7 @@ export function TransactionsPage() {
         width: 100,
         ellipsis: true,
         editable: false,
+        sorter: true,
         render: (_, r) => <TransactionCardCell row={r} />,
       },
       {
@@ -578,8 +582,9 @@ export function TransactionsPage() {
           locale={{
             emptyText: <EmptyState compact title="No transactions" description="Try widening the date range or clearing filters." />,
           }}
-          request={async (params) => {
+          request={async (params, sort) => {
             const filters = applied
+            const { sortField, sortOrder } = mapTransactionTableSort(sort)
             try {
               const res = await listTransactions({
                 page: params.current || 1,
@@ -590,6 +595,8 @@ export function TransactionsPage() {
                 consumeID: filters.consume,
                 demoArea: filters.keyword,
                 emptyConsume: filters.unclassified ? '1' : undefined,
+                sortField,
+                sortOrder,
               })
               const rows = res.rows.map((r) => ({
                 ...r,

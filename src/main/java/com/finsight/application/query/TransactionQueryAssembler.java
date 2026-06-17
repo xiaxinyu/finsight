@@ -57,6 +57,7 @@ public final class TransactionQueryAssembler {
                 q.setEmptyConsume(Boolean.TRUE);
             }
         }
+        TransactionSort.apply(param, q);
         return q;
     }
 }
