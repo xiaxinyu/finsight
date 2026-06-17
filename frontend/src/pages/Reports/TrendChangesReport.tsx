@@ -17,6 +17,7 @@ import { buildReportDrillContext } from '../../components/drilldown/buildDrillCo
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { formatMoney } from '../../utils/format'
+import { DeltaPercentCell } from '../../components/FsTableCellViews'
 import {
   buildContributorChart,
   buildTrendInsights,
@@ -60,22 +61,39 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
   const moverCols = [
     { title: 'Name', dataIndex: 'label', sortType: 'text' as const, ellipsis: true,
       render: (_: unknown, row: TrendMover) => row.label || row.categoryName || row.categoryCode },
-    { title: 'Delta', dataIndex: 'deltaAmount', unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    {
+      title: 'Delta',
+      dataIndex: 'deltaAmount',
+      cellType: 'deltaMoney' as const,
+      unit: 'CNY',
+      align: 'right' as const,
+      sortType: 'number' as const,
+    },
     {
       title: 'Change %',
       dataIndex: 'deltaPercent',
       align: 'right' as const,
       sortType: 'number' as const,
-      render: (_: unknown, row: TrendMover) => `${Number(row.deltaPercent ?? row.pctChange ?? 0).toFixed(0)}%`,
+      render: (_: unknown, row: TrendMover) => (
+        <DeltaPercentCell
+          value={Number(row.deltaPercent ?? row.pctChange ?? 0)}
+          amount={row.deltaAmount}
+        />
+      ),
     },
     {
       title: 'Contribution',
       dataIndex: 'contributionPct',
+      cellType: 'contribution' as const,
       align: 'right' as const,
       sortType: 'number' as const,
-      render: (v: number) => `${Number(v).toFixed(1)}%`,
     },
   ]
+
+  const moverExplanation = (row: TrendMover) => {
+    const pct = Number(row.deltaPercent ?? row.pctChange ?? 0)
+    return `${row.label || row.categoryName || 'Mover'} changed ${formatMoney(row.deltaAmount)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%) · ${Number(row.contributionPct).toFixed(1)}% of total expense shift`
+  }
 
   return (
     <DataPageLayout
@@ -141,15 +159,38 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                 columns={[
                   { title: 'Type', dataIndex: 'type', width: 130, render: (t: string) => trendTypeLabel(t) },
                   { title: 'Label', dataIndex: 'label', sortType: 'text' },
-                  { title: 'Delta', dataIndex: 'deltaAmount', unit: 'CNY', align: 'right', sortType: 'number' },
-                  { title: 'Change %', dataIndex: 'deltaPercent', align: 'right', sortType: 'number',
-                    render: (v: number) => `${v.toFixed(1)}%` },
-                  { title: 'Contribution', dataIndex: 'contributionPct', align: 'right', sortType: 'number',
-                    render: (v: number) => v ? `${v.toFixed(1)}%` : '—' },
+                  {
+                    title: 'Delta',
+                    dataIndex: 'deltaAmount',
+                    cellType: 'deltaMoney',
+                    unit: 'CNY',
+                    align: 'right',
+                    sortType: 'number',
+                  },
+                  {
+                    title: 'Change %',
+                    dataIndex: 'deltaPercent',
+                    cellType: 'deltaPercent',
+                    deltaAmountKey: 'deltaAmount',
+                    align: 'right',
+                    sortType: 'number',
+                  },
+                  {
+                    title: 'Contribution',
+                    dataIndex: 'contributionPct',
+                    cellType: 'contribution',
+                    align: 'right',
+                    sortType: 'number',
+                  },
                 ]}
                 dataSource={data.trends}
                 rowKey={(r) => `${r.type}-${r.label}`}
                 loading={loading}
+                rowExplanation={(record) => (
+                  record.contributionPct
+                    ? `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change) · ${record.contributionPct.toFixed(1)}% of total expense shift`
+                    : `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change)`
+                )}
                 onRow={(record) => ({
                   onClick: () => openTrendDrill(record.label, record, [
                     `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change).`,
@@ -170,6 +211,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                 dataSource={data.topCategoryGrowth}
                 rowKey={(r) => String(r.categoryCode)}
                 loading={loading}
+                rowExplanation={moverExplanation}
                 onRow={(record) => ({
                   onClick: () => openTrendDrill(String(record.categoryName), record, [
                     `Category ${record.categoryName} moved ${formatMoney(record.deltaAmount)}.`,
@@ -184,6 +226,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                 dataSource={data.topMerchantMovers}
                 rowKey={(r) => String(r.merchantToken || r.key)}
                 loading={loading}
+                rowExplanation={moverExplanation}
                 onRow={(record) => ({
                   onClick: () => openTrendDrill(String(record.label), record, [
                     `Merchant ${record.label} moved ${formatMoney(record.deltaAmount)}.`,
