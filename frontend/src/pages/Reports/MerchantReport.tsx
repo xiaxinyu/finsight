@@ -17,13 +17,13 @@ import { FsChart } from '../../components/FsChart'
 import { FsDataTable } from '../../components/FsDataTable'
 import { InsightPanel } from '../../components/InsightPanel'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
-import { formatMoney } from '../../utils/format'
 import {
   buildConcentrationChart,
   buildConcentrationKpis,
   buildDriftChart,
   buildSubscriptionInsights,
   buildSubscriptionKpis,
+  type MerchantConcentrationRow,
 } from '../../utils/merchantReports'
 
 export type MerchantReportMode = 'subscriptions' | 'concentration' | 'drift'
@@ -191,17 +191,17 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
               </ContentCard>
             </Col>
             <Col xs={24} lg={10}>
-              <FsDataTable
+              <FsDataTable<MerchantConcentrationRow>
                 title="Top merchants"
                 columns={[
                   { title: 'Merchant', dataIndex: 'displayName', sortType: 'text', ellipsis: true },
-                  { title: 'Spend', dataIndex: 'totalSpend', unit: 'CNY', align: 'right', sortType: 'number' },
+                  { title: 'Spend', dataIndex: 'totalSpend', cellType: 'money' as const, unit: 'CNY', align: 'right', sortType: 'number' },
                   {
                     title: 'Share',
                     dataIndex: 'sharePct',
+                    cellType: 'contribution' as const,
                     align: 'right',
                     sortType: 'number',
-                    render: (v: number) => `${v.toFixed(1)}%`,
                   },
                   {
                     title: 'Type',
@@ -215,6 +215,11 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
                 dataSource={concentrationQuery.data.merchants}
                 rowKey="merchantToken"
                 loading={loading}
+                rowExplanation={(row: MerchantConcentrationRow) => {
+                  const parts = [`${row.displayName} · ${Number(row.sharePct).toFixed(1)}% of tracked spend`]
+                  if (row.suspectedSubscription) parts.push('Flagged as recurring subscription')
+                  return parts.join(' · ')
+                }}
                 scroll={{ y: 320 }}
               />
             </Col>
@@ -246,19 +251,15 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
                 title="Top movers"
                 columns={[
                   { title: 'Merchant', dataIndex: 'displayName', sortType: 'text', ellipsis: true },
-                  { title: 'Prior', dataIndex: 'priorSpend', unit: 'CNY', align: 'right', sortType: 'number' },
-                  { title: 'Current', dataIndex: 'currentSpend', unit: 'CNY', align: 'right', sortType: 'number' },
+                  { title: 'Prior', dataIndex: 'priorSpend', cellType: 'money' as const, unit: 'CNY', align: 'right', sortType: 'number' },
+                  { title: 'Current', dataIndex: 'currentSpend', cellType: 'money' as const, unit: 'CNY', align: 'right', sortType: 'number' },
                   {
                     title: 'Change',
                     dataIndex: 'deltaAmount',
+                    cellType: 'deltaMoney' as const,
                     unit: 'CNY',
                     align: 'right',
                     sortType: 'number',
-                    render: (v: number) => (
-                      <span style={{ color: v > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                        {v > 0 ? '+' : ''}{formatMoney(v)}
-                      </span>
-                    ),
                   },
                 ]}
                 dataSource={driftQuery.data.movers}

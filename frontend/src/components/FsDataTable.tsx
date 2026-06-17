@@ -1,16 +1,41 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Table, type TableProps } from 'antd'
 import type { ColumnsType, ColumnType } from 'antd/es/table'
 import { CaretDownOutlined, CaretUpOutlined } from '@ant-design/icons'
 import { formatNumber } from '../utils/format'
 import { formatTableDate } from '../utils/cell'
+import { resolveForecastKind } from '../utils/fsTableCells'
+import {
+  ContributionBar,
+  DeltaMoneyCell,
+  DeltaPercentCell,
+  ForecastTag,
+  MoneyCell,
+  RiskTag,
+  RowExplanationHint,
+} from './FsTableCellViews'
 import { ContentCard } from './ContentCard'
 import { EmptyState } from './EmptyState'
+
+export type FsCellType =
+  | 'money'
+  | 'moneySigned'
+  | 'deltaPercent'
+  | 'deltaMoney'
+  | 'contribution'
+  | 'risk'
+  | 'forecast'
+  | 'percent'
 
 export type FsColumn<T> = ColumnType<T> & {
   unit?: string
   sortType?: 'text' | 'number' | 'date' | 'percent'
+  cellType?: FsCellType
+  /** @deprecated use cellType: 'deltaPercent' */
   isDelta?: boolean
+  deltaAmountKey?: string
+  contributionMax?: number
+  expenseContext?: boolean
   mono?: boolean
   ellipsis?: boolean
 }
@@ -27,6 +52,7 @@ type Props<T> = {
   scroll?: TableProps<T>['scroll']
   onRow?: TableProps<T>['onRow']
   locale?: TableProps<T>['locale']
+  rowExplanation?: (record: T) => string | undefined
 }
 
 function TwoLineTitle({ name, unit }: { name: string; unit?: string }) {
@@ -48,6 +74,64 @@ function compareValues(a: unknown, b: unknown, type: FsColumn<unknown>['sortType
   return String(a ?? '').localeCompare(String(b ?? ''), undefined, { sensitivity: 'base' })
 }
 
+function readField<T extends Record<string, unknown>>(record: T, key?: string): unknown {
+  if (!key) return undefined
+  return record[key]
+}
+
+function defaultCellRender<T extends Record<string, unknown>>(
+  col: FsColumn<T>,
+  value: unknown,
+  record: T,
+): ReactNode {
+  const expenseContext = col.expenseContext !== false
+  const cellType = col.cellType ?? (col.isDelta ? 'deltaPercent' : undefined)
+
+  switch (cellType) {
+    case 'money':
+      return <MoneyCell value={Number(value)} unit={col.unit} />
+    case 'moneySigned':
+      return <MoneyCell value={Number(value)} signed unit={col.unit} />
+    case 'deltaPercent':
+      return (
+        <DeltaPercentCell
+          value={Number(value)}
+          amount={Number(readField(record, col.deltaAmountKey))}
+          expenseContext={expenseContext}
+        />
+      )
+    case 'deltaMoney':
+      return <DeltaMoneyCell value={Number(value)} expenseContext={expenseContext} />
+    case 'contribution':
+      return <ContributionBar value={Number(value)} max={col.contributionMax ?? 100} />
+    case 'risk':
+      return <RiskTag level={String(value ?? readField(record, col.dataIndex as string) ?? 'low')} />
+    case 'forecast': {
+      const kind = resolveForecastKind(record as Record<string, unknown>)
+      return kind ? <ForecastTag kind={kind} /> : '—'
+    }
+    case 'percent':
+      return <span className="fs-table-cell-percent">{`${Number(value || 0).toFixed(1)}%`}</span>
+    default:
+      break
+  }
+
+  if (col.sortType === 'date') {
+    return <span className="fs-mono">{formatTableDate(value)}</span>
+  }
+  if (col.unit === 'CNY' || col.unit === 'USD') {
+    return <MoneyCell value={Number(value)} unit={col.unit} />
+  }
+  if (col.mono) {
+    return <code className="fs-mono" title={String(value ?? '')}>{String(value ?? '')}</code>
+  }
+  const text = String(value ?? '')
+  if (col.ellipsis) {
+    return <span title={text}>{text}</span>
+  }
+  return text
+}
+
 export function FsDataTable<T extends Record<string, unknown>>({
   title,
   columns,
@@ -60,6 +144,7 @@ export function FsDataTable<T extends Record<string, unknown>>({
   scroll,
   onRow,
   locale,
+  rowExplanation,
 }: Props<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -78,10 +163,11 @@ export function FsDataTable<T extends Record<string, unknown>>({
     return copy
   }, [columns, dataSource, sortDir, sortKey])
 
-  const antColumns: ColumnsType<T> = columns.map((col) => {
+  const antColumns: ColumnsType<T> = columns.map((col, colIdx) => {
     const key = String(col.dataIndex ?? col.key ?? '')
     const sortable = col.sortType != null
     const active = sortKey === key
+    const showHint = Boolean(rowExplanation) && colIdx === 0
     return {
       ...col,
       title: (
@@ -104,34 +190,32 @@ export function FsDataTable<T extends Record<string, unknown>>({
       ),
       className: active ? 'fs-col-sorted' : undefined,
       render: (value, record, index) => {
-        if (col.render) return col.render(value, record, index)
-        if (col.isDelta) {
-          const n = Number(value) || 0
-          const cls = n < 0 ? 'fs-delta-negative' : n > 0 ? 'fs-delta-positive' : 'fs-delta-neutral'
-          return <span className={cls}>{n >= 0 ? '+' : ''}{Number(n).toFixed(1)}%</span>
-        }
-        if (col.sortType === 'date') {
-          return <span className="fs-mono">{formatTableDate(value)}</span>
-        }
-        if (col.unit === 'CNY' || col.unit === 'USD') {
-          return <span className="fs-money">{formatNumber(Number(value))}</span>
-        }
-        if (col.mono) {
-          return <code className="fs-mono" title={String(value ?? '')}>{String(value ?? '')}</code>
-        }
-        const text = String(value ?? '')
-        if (col.ellipsis) {
-          return <span title={text}>{text}</span>
-        }
-        return text
+        const content: ReactNode = col.render
+          ? (col.render(value, record, index) as ReactNode)
+          : defaultCellRender(col, value, record)
+        if (!showHint) return content
+        const hint = rowExplanation?.(record)
+        if (!hint) return content
+        return (
+          <span className="fs-table-cell-with-hint">
+            {content}
+            <RowExplanationHint text={hint} />
+          </span>
+        )
       },
     }
   })
 
+  const mergedOnRow: TableProps<T>['onRow'] = (record, index) => {
+    const base = onRow?.(record, index) ?? {}
+    const hint = rowExplanation?.(record)
+    return hint ? { ...base, title: hint } : base
+  }
+
   return (
     <ContentCard title={title} className="fs-table-card" size="small">
       <Table<T>
-        className="fs-data-table"
+        className="fs-data-table fs-data-table--encoded"
         size={size}
         loading={loading}
         rowKey={rowKey}
@@ -140,7 +224,7 @@ export function FsDataTable<T extends Record<string, unknown>>({
         pagination={false}
         scroll={scroll ?? { y: 360 }}
         rowClassName={() => 'fs-table-row'}
-        onRow={onRow}
+        onRow={mergedOnRow}
         locale={locale ?? {
           emptyText: <EmptyState compact title="No rows" description="Adjust filters or date range." />,
         }}

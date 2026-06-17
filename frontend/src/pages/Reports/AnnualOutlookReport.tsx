@@ -18,6 +18,8 @@ import { buildReportDrillContext, drillParamsForYearMonth } from '../../componen
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { formatMoney } from '../../utils/format'
+import { budgetGap } from '../../utils/fsTableCells'
+import { DeltaMoneyCell, ForecastTag } from '../../components/FsTableCellViews'
 import {
   FORECAST_SCENARIOS,
   buildAnnualOutlookChartOption,
@@ -74,23 +76,18 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
     {
       title: 'Type',
       key: 'kind',
-      render: (_: unknown, row: { actual?: boolean }) => (
-        row.actual ? <Tag>Actual</Tag> : <Tag color="blue">Forecast</Tag>
-      ),
+      width: 92,
+      cellType: 'forecast' as const,
     },
-    { title: 'Income', dataIndex: 'income', unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
-    { title: 'Expense', dataIndex: 'expense', unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    { title: 'Income', dataIndex: 'income', cellType: 'money' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    { title: 'Expense', dataIndex: 'expense', cellType: 'money' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
     {
       title: 'Net',
       dataIndex: 'net',
+      cellType: 'moneySigned' as const,
       unit: 'CNY',
       align: 'right' as const,
       sortType: 'number' as const,
-      render: (v: number, row: { yearMonth: string }) => (
-        <span className={isDeficitMonth({ deficitMonths }, row.yearMonth) ? 'fs-annual-outlook-net--deficit' : undefined}>
-          {formatMoney(v)}
-        </span>
-      ),
     },
     {
       title: 'Net range',
@@ -98,16 +95,34 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
       align: 'right' as const,
       render: (_: unknown, row: { netLower?: number; netUpper?: number; forecast?: boolean }) => (
         row.forecast && row.netLower != null && row.netUpper != null
-          ? `${formatMoney(row.netLower)} – ${formatMoney(row.netUpper)}`
+          ? (
+            <span className="fs-table-cell-with-hint">
+              <ForecastTag kind="band" />
+              <span className="fs-money">{formatMoney(row.netLower)} – {formatMoney(row.netUpper)}</span>
+            </span>
+          )
           : '—'
       ),
     },
     {
       title: 'Budget',
       dataIndex: 'budgetTarget',
+      cellType: 'money' as const,
       unit: 'CNY',
       align: 'right' as const,
       sortType: 'number' as const,
+    },
+    {
+      title: 'Budget gap',
+      key: 'budgetGap',
+      unit: 'CNY',
+      align: 'right' as const,
+      sortType: 'number' as const,
+      render: (_: unknown, row: { expense: number; budgetTarget?: number }) => {
+        const gap = budgetGap(row.expense, row.budgetTarget)
+        if (gap == null) return '—'
+        return <DeltaMoneyCell value={gap} expenseContext={false} />
+      },
     },
   ], [deficitMonths])
 
@@ -247,6 +262,24 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
                   expense: data.yearExpense,
                   net: data.yearNet,
                 }}
+                rowExplanation={(row) => {
+                  const parts: string[] = []
+                  if (row.actual) parts.push('Actual month in the forecast window')
+                  else if (row.forecast) parts.push('Projected month — dashed series in chart')
+                  if (isDeficitMonth({ deficitMonths }, String(row.yearMonth))) {
+                    parts.push('Projected deficit — review bills and discretionary spend')
+                  }
+                  const gap = budgetGap(row.expense, row.budgetTarget)
+                  if (gap != null) {
+                    parts.push(gap >= 0
+                      ? `Under budget by ${formatMoney(gap)}`
+                      : `Over budget by ${formatMoney(-gap)}`)
+                  }
+                  if (row.netLower != null && row.netUpper != null && row.forecast) {
+                    parts.push(`Confidence band ${formatMoney(row.netLower)} – ${formatMoney(row.netUpper)}`)
+                  }
+                  return parts.length ? parts.join(' · ') : undefined
+                }}
                 onRow={(record) => ({
                   onClick: () => openMonthDrill(String(record.yearMonth)),
                   style: {
@@ -286,6 +319,7 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
                     {
                       title: 'Year total',
                       dataIndex: 'yearTotal',
+                      cellType: 'money' as const,
                       unit: 'CNY',
                       align: 'right' as const,
                       sortType: 'number' as const,
@@ -296,16 +330,21 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
                       align: 'right' as const,
                       render: (_: unknown, row: { yearTotalLower?: number; yearTotalUpper?: number }) => (
                         row.yearTotalLower != null && row.yearTotalUpper != null
-                          ? `${formatMoney(row.yearTotalLower)} – ${formatMoney(row.yearTotalUpper)}`
+                          ? (
+                            <span className="fs-table-cell-with-hint">
+                              <ForecastTag kind="band" />
+                              <span className="fs-money">{formatMoney(row.yearTotalLower)} – {formatMoney(row.yearTotalUpper)}</span>
+                            </span>
+                          )
                           : '—'
                       ),
                     },
                     {
                       title: 'Share',
                       dataIndex: 'sharePct',
+                      cellType: 'contribution' as const,
                       align: 'right' as const,
                       sortType: 'number' as const,
-                      render: (v: number) => `${v}%`,
                     },
                   ]}
                   dataSource={data.categoryForecasts}
