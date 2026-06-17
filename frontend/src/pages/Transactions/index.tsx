@@ -24,7 +24,9 @@ import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { TransactionKpiStrip } from '../../components/TransactionKpiStrip'
 import { TransactionActiveFilters, type ActiveFilterChip } from '../../components/TransactionActiveFilters'
-import { TransactionLedgerCell, TransactionTypeBadge } from '../../components/TransactionLedgerCell'
+import { TransactionLedgerCell } from '../../components/TransactionLedgerCell'
+import { TransactionAmountCell } from '../../components/TransactionAmountCell'
+import { TransactionCategoryCell } from '../../components/TransactionCategoryCell'
 import { TransactionSelectionBar } from '../../components/TransactionSelectionBar'
 import { ClassifyConfirmModal, type ClassifyEditRow } from '../../components/ClassifyConfirmModal'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -40,6 +42,7 @@ import { periodFromStrings, periodToStrings } from '../../utils/periodStrings'
 import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPresets'
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { mapTransactionTableSort } from '../../utils/transactionTableSort'
+import { summarizeSelection } from '../../utils/transactionSelection'
 
 type TxFilters = {
   start: string
@@ -69,10 +72,14 @@ function enrichPreviewRows(preview: ReclassifyPreviewRow[], selected: Transactio
   const byId = new Map(selected.map((r) => [r.id, r]))
   return preview.map((p) => {
     const row = byId.get(p.id)
+    const beforeCode = row?.consumeCode || row?.consumeID || ''
+    const beforeName = row?.consumeName || ''
     return {
       ...p,
       transactionDesc: p.transactionDesc || row?.transactionDesc,
       transactionDate: p.transactionDate || row?.transactionDate,
+      beforeCategoryCode: beforeCode || p.beforeCategoryCode,
+      beforeCategoryName: beforeName || p.beforeCategoryName,
     }
   })
 }
@@ -103,6 +110,7 @@ export function TransactionsPage() {
   const [classifyPreviewOpen, setClassifyPreviewOpen] = useState(false)
   const [classifyPreview, setClassifyPreview] = useState<ReclassifyResult | null>(null)
   const [classifyBusy, setClassifyBusy] = useState(false)
+  const [pageMaxAmount, setPageMaxAmount] = useState(0)
   const tableHeight = useFillTableHeight(tablePanelRef)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
@@ -297,12 +305,15 @@ export function TransactionsPage() {
     }
   }, [editingId, editDraft, onSaveRow])
 
+  const selectionSummary = useMemo(() => summarizeSelection(selectedRows), [selectedRows])
+
   const columns: ProColumns<TransactionRow>[] = useMemo(() => {
     const base: ProColumns<TransactionRow>[] = [
       {
         title: <TableHeader name="Date" />,
         dataIndex: 'transactionDate',
-        width: 88,
+        width: 84,
+        fixed: 'left',
         sorter: true,
         defaultSortOrder: 'descend',
         render: (_, r) => <span className="fs-tx-date">{formatTableDate(r.transactionDate)}</span>,
@@ -311,30 +322,31 @@ export function TransactionsPage() {
         title: <TableHeader name="Transaction" />,
         dataIndex: 'transactionDesc',
         className: 'fs-col-tx-desc',
+        width: 280,
+        fixed: 'left',
         ellipsis: true,
-        render: (_, r) => <TransactionLedgerCell row={r} />,
+        render: (_, r) => <TransactionLedgerCell row={r} pageMaxAmount={pageMaxAmount} />,
       },
       {
-        title: <TableHeader name="Type" />,
-        dataIndex: 'txnKind',
-        width: 76,
-        sorter: true,
-        render: (_, r) => <TransactionTypeBadge kind={r.txnKind || rowTxnKind(r)} />,
+        title: <TableHeader name="Category" />,
+        dataIndex: 'consumeName',
+        width: 148,
+        ellipsis: true,
+        render: (_, r) => <TransactionCategoryCell row={r} pageMaxAmount={pageMaxAmount} />,
       },
       {
         title: <TableHeader name="Amount" unit="CNY" />,
         dataIndex: 'editAmount',
-        width: 108,
+        width: 112,
+        fixed: 'left',
         align: 'right',
         sorter: true,
-        render: (_, r) => (
-          <MoneyText value={rowAmount(r)} type={moneyTypeFromRow(rowTxnKind(r), r.balanceMoney)} />
-        ),
+        render: (_, r) => <TransactionAmountCell row={r} pageMaxAmount={pageMaxAmount} />,
       },
       {
         title: <TableHeader name="Card" />,
         dataIndex: 'bankCode',
-        width: 100,
+        width: 108,
         ellipsis: true,
         editable: false,
         sorter: true,
@@ -376,7 +388,7 @@ export function TransactionsPage() {
       },
     ]
     return base
-  }, [editingId, startEdit])
+  }, [editingId, startEdit, pageMaxAmount])
 
   const runBatch = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
@@ -528,7 +540,17 @@ export function TransactionsPage() {
         unclassifiedActive={applied.unclassified}
         onUnclassifiedClick={toggleUnclassifiedFilter}
       />
-      <TransactionActiveFilters chips={activeFilterChips} onClearAll={clearAllFilters} />
+      <TransactionActiveFilters
+        chips={activeFilterChips}
+        impact={{
+          total: stats?.total,
+          income: stats?.income,
+          expense: stats?.expense,
+          net: stats?.net,
+          loading: statsBusy,
+        }}
+        onClearAll={clearAllFilters}
+      />
       <div
         ref={tablePanelRef}
         className={`fs-table-panel fs-table-panel--editable fs-table-panel--transactions fs-table-panel--tx-overlay${selectedRowKeys.length > 0 ? ' fs-table-panel--has-selection' : ''}`}
@@ -538,7 +560,7 @@ export function TransactionsPage() {
           actionRef={actionRef}
           rowKey="id"
           size="small"
-          scroll={{ x: 'max-content', y: tableHeight }}
+          scroll={{ x: 920, y: tableHeight }}
           search={false}
           loading={tableLoading}
           options={{ density: true, reload: () => reload(), setting: true, fullScreen: false }}
@@ -604,6 +626,8 @@ export function TransactionsPage() {
                 editAmount: rowAmount(r),
                 consumeCode: r.consumeCode || r.consumeID,
               }))
+              const maxAmt = rows.reduce((m, r) => Math.max(m, rowAmount(r)), 0)
+              setPageMaxAmount(maxAmt)
               return { data: rows, total: res.total, success: true }
             } catch (e) {
               message.error(e instanceof Error ? e.message : 'Failed to load transactions')
@@ -619,7 +643,12 @@ export function TransactionsPage() {
             showTotal: (t) => `${t.toLocaleString()} txns`,
           }}
         />
-        <TransactionSelectionBar count={selectedRowKeys.length} disabled={disabled} onClear={clearSelection}>
+        <TransactionSelectionBar
+          count={selectedRowKeys.length}
+          summary={selectionSummary}
+          disabled={disabled}
+          onClear={clearSelection}
+        >
           {batchActions}
         </TransactionSelectionBar>
       </div>

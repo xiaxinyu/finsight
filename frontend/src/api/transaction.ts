@@ -143,6 +143,8 @@ export type ReclassifyPreviewRow = {
   id: string
   categoryCode?: string
   categoryName?: string
+  beforeCategoryCode?: string
+  beforeCategoryName?: string
   action: string
   source?: 'RULE' | 'WEAK_RULE' | 'SIMILAR' | 'HEURISTIC' | 'KEYWORDS'
   confidence?: number
