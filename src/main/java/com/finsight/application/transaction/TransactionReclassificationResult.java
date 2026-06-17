@@ -1,5 +1,8 @@
 package com.finsight.application.transaction;
 
+import com.finsight.domain.model.Transaction;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -102,6 +105,30 @@ public class TransactionReclassificationResult {
         if (suggestedKeywords != null && !suggestedKeywords.isEmpty()) {
             row.put("suggestedKeywords", suggestedKeywords);
         }
+        preview.add(row);
+    }
+
+    public void addManualPreview(Transaction tx, String reason) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", tx.getId());
+        row.put("action", "MANUAL");
+        if (tx.getTransactionDesc() != null) {
+            row.put("transactionDesc", tx.getTransactionDesc());
+        }
+        if (tx.getTransactionDate() != null) {
+            row.put("transactionDate", tx.getTransactionDate());
+        }
+        String beforeCode = StringUtils.defaultIfBlank(
+                tx.getConsumeCode(), StringUtils.defaultString(tx.getCategoryCode()));
+        String beforeName = StringUtils.defaultIfBlank(
+                tx.getConsumeName(), StringUtils.defaultString(tx.getCategoryName()));
+        if (StringUtils.isNotBlank(beforeCode)) {
+            row.put("beforeCategoryCode", beforeCode);
+        }
+        if (StringUtils.isNotBlank(beforeName)) {
+            row.put("beforeCategoryName", beforeName);
+        }
+        row.put("reason", reason);
         preview.add(row);
     }
 }

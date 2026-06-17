@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ThunderboltOutlined } from '@ant-design/icons'
+import { ArrowRightOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { Alert, Button, Modal, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { CategoryPicker } from './CategoryPicker'
 import type { TreeSelectNode } from '../hooks/useConsumeTree'
 import type { ReclassifyPreviewRow, ReclassifyResult } from '../api/transaction'
+import { isBulkManualMode } from '../utils/classifyPreview'
 import { cellText, formatTableDate } from '../utils/cell'
 
 export type ClassifyEditRow = ReclassifyPreviewRow & {
@@ -35,6 +36,7 @@ function findTreeTitle(nodes: TreeSelectNode[], value: string): string {
 }
 
 function sourceMeta(source?: ReclassifyPreviewRow['source'], action?: string) {
+  if (action === 'MANUAL') return { label: 'Manual', color: 'default' as const }
   if (action === 'SUGGEST' || (source && source !== 'RULE')) {
     if (source === 'SIMILAR') return { label: 'Similar', color: 'geekblue' as const }
     if (source === 'HEURISTIC') return { label: 'Heuristic', color: 'cyan' as const }
@@ -60,7 +62,7 @@ function beforeLabel(row: ClassifyEditRow): string {
 function toEditRows(rows: ReclassifyPreviewRow[]): ClassifyEditRow[] {
   return rows.map((p) => ({
     ...p,
-    enabled: Boolean(p.categoryCode),
+    enabled: true,
     userEdited: false,
     categoryCode: p.categoryCode || '',
     categoryName: p.categoryName || '',
@@ -109,13 +111,41 @@ function ClassifyConfirmModalInner({
     return orig
   }, [previewRows])
 
-  const [rows, setRows] = useState<ClassifyEditRow[]>(() => toEditRows(previewRows))
+  const bulkMode = useMemo(() => isBulkManualMode(previewRows, preview), [previewRows, preview])
 
+  const [rows, setRows] = useState<ClassifyEditRow[]>(() => toEditRows(previewRows))
+  const [bulkCategory, setBulkCategory] = useState<string | undefined>()
+  const [showRowPickers, setShowRowPickers] = useState(false)
+
+  const checkedCount = useMemo(() => rows.filter((r) => r.enabled).length, [rows])
   const applyCount = useMemo(
     () => rows.filter((r) => r.enabled && r.categoryCode).length,
     [rows],
   )
-  const editedCount = useMemo(() => rows.filter((r) => r.userEdited).length, [rows])
+  const bulkCategoryName = bulkCategory ? findTreeTitle(treeData, bulkCategory) : ''
+
+  const syncBulkCategory = useCallback((code: string | undefined) => {
+    setBulkCategory(code)
+    if (!code) {
+      setRows((prev) => prev.map((r) => ({
+        ...r,
+        categoryCode: '',
+        categoryName: '',
+        userEdited: false,
+      })))
+      return
+    }
+    const name = findTreeTitle(treeData, code)
+    setRows((prev) => prev.map((r) => {
+      if (!r.enabled) return r
+      return {
+        ...r,
+        categoryCode: code,
+        categoryName: name || r.categoryName,
+        userEdited: code !== (originalCodes[r.id] ?? ''),
+      }
+    }))
+  }, [originalCodes, treeData])
 
   const updateCategory = useCallback((id: string, code: string | undefined) => {
     const value = code || ''
@@ -126,7 +156,7 @@ function ClassifyConfirmModalInner({
         ...r,
         categoryCode: value,
         categoryName: name || r.categoryName,
-        enabled: value ? true : r.enabled,
+        enabled: true,
         userEdited: value !== (originalCodes[id] ?? ''),
       }
     }))
@@ -134,22 +164,42 @@ function ClassifyConfirmModalInner({
 
   const selectedKeys = useMemo(() => rows.filter((r) => r.enabled).map((r) => r.id), [rows])
 
+  const selectAll = () => setRows((prev) => prev.map((r) => ({ ...r, enabled: true })))
+  const selectNone = () => setRows((prev) => prev.map((r) => ({ ...r, enabled: false })))
+
+  const readyRows = useMemo(
+    () => rows.filter((r) => r.enabled && r.categoryCode),
+    [rows],
+  )
+
+  const footerLabel = bulkMode && bulkCategoryName
+    ? `Apply “${bulkCategoryName}” to ${readyRows.length} transaction${readyRows.length === 1 ? '' : 's'}`
+    : `Apply ${applyCount} categor${applyCount === 1 ? 'y' : 'ies'}`
+
+  const useRowPickers = !bulkMode || showRowPickers
+
   return (
     <Modal
-      className="fs-classify-modal"
+      className={`fs-classify-modal${bulkMode ? ' fs-classify-modal--bulk' : ''}`}
       title={(
         <div className="fs-classify-modal__title">
           <span className="fs-classify-modal__icon" aria-hidden>
             <ThunderboltOutlined />
           </span>
           <div>
-            <div className="fs-classify-modal__heading">Review auto-classify</div>
-            <div className="fs-classify-modal__sub">Adjust categories before saving — only checked rows are updated.</div>
+            <div className="fs-classify-modal__heading">
+              {bulkMode ? 'Assign category' : 'Review auto-classify'}
+            </div>
+            <div className="fs-classify-modal__sub">
+              {bulkMode
+                ? `No rule matches — pick one category for ${checkedCount} selected transaction${checkedCount === 1 ? '' : 's'}.`
+                : 'Adjust categories before saving — only checked rows are updated.'}
+            </div>
           </div>
         </div>
       )}
       open={open}
-      width={1080}
+      width={bulkMode ? 920 : 1080}
       centered
       destroyOnClose
       maskClosable={!busy}
@@ -157,8 +207,9 @@ function ClassifyConfirmModalInner({
       footer={(
         <div className="fs-classify-modal__footer">
           <Typography.Text type="secondary" className="fs-classify-modal__footer-meta">
-            {applyCount} row{applyCount === 1 ? '' : 's'} ready
-            {editedCount > 0 && <> · {editedCount} edited</>}
+            {applyCount > 0
+              ? `${applyCount} of ${checkedCount} checked ready to save`
+              : `${checkedCount} checked · pick a category above`}
           </Typography.Text>
           <Space>
             <Button onClick={onCancel} disabled={busy}>Cancel</Button>
@@ -166,22 +217,71 @@ function ClassifyConfirmModalInner({
               type="primary"
               loading={busy}
               disabled={applyCount === 0}
-              onClick={() => void onConfirm(rows.filter((r) => r.enabled && r.categoryCode))}
+              onClick={() => void onConfirm(readyRows)}
             >
-              Apply {applyCount} categor{applyCount === 1 ? 'y' : 'ies'}
+              {footerLabel}
             </Button>
           </Space>
         </div>
       )}
     >
-      <Alert
-        type="info"
-        showIcon
-        className="fs-classify-modal__alert"
-        message="Rule matches are exact; blue tags are recommendations. Change any category via the dropdown."
-      />
+      {bulkMode ? (
+        <div className="fs-classify-modal__bulk fs-classify-modal__bulk--hero">
+          <div className="fs-classify-modal__bulk-head">
+            <Typography.Text strong className="fs-classify-modal__bulk-label">
+              Category for all checked rows
+            </Typography.Text>
+            <Space size={4} className="fs-classify-modal__bulk-actions">
+              <Button type="link" size="small" onClick={selectAll}>Select all</Button>
+              <Button type="link" size="small" onClick={selectNone}>Clear</Button>
+              {!showRowPickers && (
+                <Button type="link" size="small" onClick={() => setShowRowPickers(true)}>
+                  Customize per row
+                </Button>
+              )}
+            </Space>
+          </div>
+          <CategoryPicker
+            treeData={treeData}
+            size="large"
+            className="fs-classify-picker fs-classify-picker--bulk fs-classify-picker--hero"
+            placeholder="Search or pick a category…"
+            value={bulkCategory}
+            onChange={(v) => syncBulkCategory(v || undefined)}
+          />
+          {bulkCategoryName && (
+            <Typography.Text type="secondary" className="fs-classify-modal__bulk-hint">
+              Preview below — {readyRows.length} transaction{readyRows.length === 1 ? '' : 's'} will update to{' '}
+              <strong>{bulkCategoryName}</strong>
+            </Typography.Text>
+          )}
+        </div>
+      ) : (
+        <>
+          <Alert
+            type="info"
+            showIcon
+            className="fs-classify-modal__alert"
+            message="Rule matches are exact; blue tags are recommendations. Use the bulk picker or change any row."
+          />
+          <div className="fs-classify-modal__bulk">
+            <CategoryPicker
+              treeData={treeData}
+              size="middle"
+              className="fs-classify-picker fs-classify-picker--bulk"
+              placeholder="Bulk category for checked rows"
+              value={bulkCategory}
+              onChange={(v) => syncBulkCategory(v || undefined)}
+            />
+            <Space size={4}>
+              <Button type="link" size="small" onClick={selectAll}>All</Button>
+              <Button type="link" size="small" onClick={selectNone}>None</Button>
+            </Space>
+          </div>
+        </>
+      )}
 
-      {preview && (
+      {preview && !bulkMode && (
         <div className="fs-classify-modal__stats">
           <div className="fs-classify-stat">
             <span className="fs-classify-stat__n">{preview.classified}</span>
@@ -208,96 +308,143 @@ function ClassifyConfirmModalInner({
         </div>
       )}
 
+      {bulkMode && preview && preview.skipped > 0 && (
+        <div className="fs-classify-modal__stats fs-classify-modal__stats--compact">
+          <Tag bordered={false} className="fs-classify-stat-pill">{preview.skipped} need manual category</Tag>
+        </div>
+      )}
+
       <Table<ClassifyEditRow>
         className="fs-classify-table"
         size="small"
         rowKey="id"
         dataSource={rows}
-        pagination={rows.length > 8 ? { pageSize: 8, size: 'small', showTotal: (t) => `${t} rows` } : false}
-        scroll={{ y: 360 }}
+        pagination={rows.length > 25 ? { pageSize: 25, size: 'small', showTotal: (t) => `${t} rows` } : false}
+        scroll={{ y: bulkMode ? 320 : 360 }}
         rowSelection={{
           selectedRowKeys: selectedKeys,
           onChange: (keys) => {
             const set = new Set(keys.map(String))
-            setRows((prev) => prev.map((r) => ({ ...r, enabled: set.has(r.id) })))
+            setRows((prev) => prev.map((r) => {
+              const enabled = set.has(r.id)
+              if (!enabled) return { ...r, enabled: false }
+              if (bulkCategory && !r.categoryCode) {
+                const name = findTreeTitle(treeData, bulkCategory)
+                return {
+                  ...r,
+                  enabled: true,
+                  categoryCode: bulkCategory,
+                  categoryName: name,
+                  userEdited: bulkCategory !== (originalCodes[r.id] ?? ''),
+                }
+              }
+              return { ...r, enabled: true }
+            }))
           },
         }}
-        locale={{ emptyText: 'No rows to classify — try different filters or add rules.' }}
+        locale={{ emptyText: 'No rows to classify — select transactions and try again.' }}
         columns={[
           {
             title: 'Date',
             dataIndex: 'transactionDate',
-            width: 96,
+            width: 92,
             render: (v) => <span className="fs-mono fs-classify-date">{formatTableDate(v)}</span>,
           },
           {
             title: 'Transaction',
             dataIndex: 'transactionDesc',
             ellipsis: true,
-            render: (v) => (
-              <span className="fs-classify-desc" title={cellText(v)}>{cellText(v) || '—'}</span>
+            render: (v, r) => (
+              <Tooltip title={cellText(r.reason) || undefined}>
+                <span className="fs-classify-desc" title={cellText(v)}>{cellText(v) || '—'}</span>
+              </Tooltip>
             ),
           },
-          {
-            title: 'Before',
-            width: 120,
-            render: (_, r) => (
-              <span className="fs-classify-before">{beforeLabel(r)}</span>
+          ...(bulkMode && !useRowPickers ? [{
+            title: 'Change',
+            width: 280,
+            render: (_: unknown, r: ClassifyEditRow) => (
+              <div className="fs-classify-change-cell">
+                <Tag bordered={false} className="fs-classify-before-tag">{beforeLabel(r)}</Tag>
+                <ArrowRightOutlined className="fs-classify-change-arrow" />
+                {r.categoryCode ? (
+                  <Tag color="processing" bordered={false} className="fs-classify-new-tag">
+                    {r.categoryName || r.categoryCode}
+                  </Tag>
+                ) : (
+                  <Typography.Text type="secondary" className="fs-classify-new-empty">Pick above</Typography.Text>
+                )}
+              </div>
             ),
-          },
-          {
-            title: 'Suggested',
-            width: 300,
-            render: (_, r) => {
-              const meta = sourceMeta(r.source, r.action)
-              return (
-                <div className="fs-classify-category-cell">
-                  <div className="fs-classify-category-meta">
-                    {meta && <Tag bordered={false} color={meta.color} className="fs-classify-tag">{meta.label}</Tag>}
-                    {r.userEdited && <Tag bordered={false} color="orange" className="fs-classify-tag">Edited</Tag>}
+          }] : [
+            {
+              title: 'Before',
+              width: 110,
+              render: (_: unknown, r: ClassifyEditRow) => (
+                <span className="fs-classify-before">{beforeLabel(r)}</span>
+              ),
+            },
+            {
+              title: useRowPickers ? 'Category' : 'Suggested',
+              width: useRowPickers ? 280 : 300,
+              render: (_: unknown, r: ClassifyEditRow) => {
+                if (!useRowPickers) {
+                  return r.categoryName ? (
+                    <Tag color="blue" bordered={false}>{r.categoryName}</Tag>
+                  ) : '—'
+                }
+                const meta = sourceMeta(r.source, r.action)
+                return (
+                  <div className="fs-classify-category-cell">
+                    <div className="fs-classify-category-meta">
+                      {meta && <Tag bordered={false} color={meta.color} className="fs-classify-tag">{meta.label}</Tag>}
+                      {r.userEdited && <Tag bordered={false} color="orange" className="fs-classify-tag">Edited</Tag>}
+                    </div>
+                    <CategoryPicker
+                      treeData={treeData}
+                      size="middle"
+                      className="fs-classify-picker"
+                      placeholder={r.suggestedKeywords?.length ? `Search: ${r.suggestedKeywords.slice(0, 2).join(', ')}` : 'Search or pick category'}
+                      value={r.categoryCode}
+                      onChange={(v) => updateCategory(r.id, v || undefined)}
+                    />
                   </div>
-                  <CategoryPicker
-                    treeData={treeData}
-                    size="middle"
-                    className="fs-classify-picker"
-                    placeholder={r.suggestedKeywords?.length ? `Search: ${r.suggestedKeywords.slice(0, 2).join(', ')}` : 'Search or pick category'}
-                    value={r.categoryCode}
-                    onChange={(v) => updateCategory(r.id, v || undefined)}
-                  />
-                </div>
-              )
+                )
+              },
             },
-          },
-          {
-            title: 'Confidence',
-            dataIndex: 'confidence',
-            width: 88,
-            render: (v, r) => {
-              const text = formatConfidence(v)
-              const low = Number(v) > 0 && Number(v) < 0.6
-              return (
-                <Tooltip title={cellText(r.reason) || undefined}>
-                  <Tag bordered={false} color={low ? 'orange' : 'green'} className="fs-classify-tag">{text}</Tag>
-                </Tooltip>
-              )
+          ]),
+          ...(!bulkMode ? [
+            {
+              title: 'Confidence',
+              dataIndex: 'confidence',
+              width: 80,
+              render: (v: number | undefined, r: ClassifyEditRow) => {
+                const text = formatConfidence(v)
+                const low = Number(v) > 0 && Number(v) < 0.6
+                return (
+                  <Tooltip title={cellText(r.reason) || undefined}>
+                    <Tag bordered={false} color={low ? 'orange' : 'green'} className="fs-classify-tag">{text}</Tag>
+                  </Tooltip>
+                )
+              },
             },
-          },
-          {
-            title: 'Why',
-            dataIndex: 'reason',
-            width: 168,
-            ellipsis: true,
-            render: (v, r) => {
-              const tip = cellText(v) || (r.suggestedKeywords?.length
-                ? `Suggested keywords: ${r.suggestedKeywords.join(', ')}`
-                : '')
-              return (
-                <Tooltip title={tip}>
-                  <span className="fs-classify-why">{cellText(v) || (r.suggestedKeywords?.length ? `Keywords: ${r.suggestedKeywords.slice(0, 2).join(', ')}` : '—')}</span>
-                </Tooltip>
-              )
+            {
+              title: 'Why',
+              dataIndex: 'reason',
+              width: 140,
+              ellipsis: true,
+              render: (v: string | undefined, r: ClassifyEditRow) => {
+                const tip = cellText(v) || (r.suggestedKeywords?.length
+                  ? `Suggested keywords: ${r.suggestedKeywords.join(', ')}`
+                  : '')
+                return (
+                  <Tooltip title={tip}>
+                    <span className="fs-classify-why">{cellText(v) || '—'}</span>
+                  </Tooltip>
+                )
+              },
             },
-          },
+          ] : []),
         ]}
       />
     </Modal>

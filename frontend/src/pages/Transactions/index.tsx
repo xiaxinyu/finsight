@@ -12,7 +12,7 @@ import dayjs from 'dayjs'
 import {
   classifyTransactions, classifyUnclassifiedInFilter, parseReclassifyResult, deleteTransaction, expenseToIncome,
   fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction,
-  type ReclassifyPreviewRow, type ReclassifyResult, type TransactionQuery, type TransactionRow,
+  type ReclassifyResult, type TransactionQuery, type TransactionRow,
 } from '../../api/transaction'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useCardTree } from '../../hooks/useCardTree'
@@ -29,6 +29,7 @@ import { TransactionAmountCell } from '../../components/TransactionAmountCell'
 import { TransactionCategoryCell } from '../../components/TransactionCategoryCell'
 import { TransactionSelectionBar } from '../../components/TransactionSelectionBar'
 import { ClassifyConfirmModal, type ClassifyEditRow } from '../../components/ClassifyConfirmModal'
+import { buildClassifyPreviewRows } from '../../utils/classifyPreview'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { MoneyText } from '../../components/MoneyText'
@@ -67,22 +68,6 @@ function findTreeTitle(nodes: { title: string; value: string; children?: typeof 
 type ClassifyPending =
   | { mode: 'ids'; ids: string }
   | { mode: 'unclassified'; filters: TransactionQuery }
-
-function enrichPreviewRows(preview: ReclassifyPreviewRow[], selected: TransactionRow[]): ReclassifyPreviewRow[] {
-  const byId = new Map(selected.map((r) => [r.id, r]))
-  return preview.map((p) => {
-    const row = byId.get(p.id)
-    const beforeCode = row?.consumeCode || row?.consumeID || ''
-    const beforeName = row?.consumeName || ''
-    return {
-      ...p,
-      transactionDesc: p.transactionDesc || row?.transactionDesc,
-      transactionDate: p.transactionDate || row?.transactionDate,
-      beforeCategoryCode: beforeCode || p.beforeCategoryCode,
-      beforeCategoryName: beforeName || p.beforeCategoryName,
-    }
-  })
-}
 
 function findCardTitle(nodes: { id: string; text: string; children?: typeof nodes }[], id: string): string {
   for (const n of nodes) {
@@ -470,7 +455,7 @@ export function TransactionsPage() {
   }, [treeData, reload])
 
   const previewRows = useMemo(
-    () => enrichPreviewRows(classifyPreview?.preview ?? [], selectedRows),
+    () => buildClassifyPreviewRows(classifyPreview?.preview ?? [], selectedRows),
     [classifyPreview, selectedRows],
   )
 

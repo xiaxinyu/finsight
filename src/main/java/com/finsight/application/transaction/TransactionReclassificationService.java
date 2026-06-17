@@ -83,6 +83,9 @@ public class TransactionReclassificationService {
             }
             if (!overrideExisting && !isUnclassified(tx)) {
                 result.setSkipped(result.getSkipped() + 1);
+                if (!persist) {
+                    result.addManualPreview(tx, "Already classified — pick a category to override");
+                }
                 continue;
             }
 
@@ -96,6 +99,9 @@ public class TransactionReclassificationService {
                     result.setSuggested(result.getSuggested() + 1);
                 } else {
                     result.setNoMatch(result.getNoMatch() + 1);
+                    if (!persist) {
+                        result.addManualPreview(tx, "No rule match — pick a category manually");
+                    }
                 }
                 continue;
             }
