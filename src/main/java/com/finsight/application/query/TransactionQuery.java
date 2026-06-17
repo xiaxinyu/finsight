@@ -18,6 +18,8 @@ public class TransactionQuery {
     private String weekName;
     private String year;
     private String month;
+    private String sortField;
+    private String sortOrder;
 
     public String getTxnTypes() { return txnTypes; }
     public void setTxnTypes(String txnTypes) { this.txnTypes = txnTypes; }
@@ -49,5 +51,9 @@ public class TransactionQuery {
     public void setYear(String year) { this.year = year; }
     public String getMonth() { return month; }
     public void setMonth(String month) { this.month = month; }
+    public String getSortField() { return sortField; }
+    public void setSortField(String sortField) { this.sortField = sortField; }
+    public String getSortOrder() { return sortOrder; }
+    public void setSortOrder(String sortOrder) { this.sortOrder = sortOrder; }
 }
 

@@ -11,6 +11,25 @@
     <sql id="rowExpenseAmountT">
         case when coalesce(t.balance_money,0) &gt; 0 then t.balance_money else 0 end
     </sql>
+    <!-- Display amount aligned with UI rowAmount() -->
+    <sql id="rowDisplayAmountT">
+        case
+            when coalesce(t.income_money,0) &gt; 0 then t.income_money
+            when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
+            else abs(coalesce(t.balance_money,0))
+        end
+    </sql>
+    <!-- Derived txn kind for stable type sorting -->
+    <sql id="rowTxnKindSortT">
+        case
+            when t.txn_kind in ('income', 'expense') then t.txn_kind
+            when coalesce(t.income_money,0) &gt; 0 or coalesce(t.balance_money,0) &lt; 0 then 'income'
+            else 'expense'
+        end
+    </sql>
+    <sql id="rowBankCodeT">
+        coalesce(nullif(trim(bc.bank_code), ''), nullif(trim(st.source_bank_code), ''))
+    </sql>
     <!-- Canonical row amounts (alias c) -->
     <sql id="rowIncomeAmountC">
         case when coalesce(c.income_money,0) &gt; 0 then c.income_money
@@ -131,6 +150,39 @@
             cat.txn_types like '%expense%'
             or (cat.code is null and coalesce(c.balance_money,0) &gt; 0)
         )
+    </sql>
+    <sql id="transactionListOrderBy">
+        order by
+        <choose>
+            <when test="q != null and q.sortField == 'amount' and q.sortOrder == 'asc'">
+                <include refid="rowDisplayAmountT"/> asc
+            </when>
+            <when test="q != null and q.sortField == 'amount'">
+                <include refid="rowDisplayAmountT"/> desc
+            </when>
+            <when test="q != null and q.sortField == 'card' and q.sortOrder == 'asc'">
+                <include refid="rowBankCodeT"/> asc
+            </when>
+            <when test="q != null and q.sortField == 'card'">
+                <include refid="rowBankCodeT"/> desc
+            </when>
+            <when test="q != null and q.sortField == 'type' and q.sortOrder == 'asc'">
+                <include refid="rowTxnKindSortT"/> asc
+            </when>
+            <when test="q != null and q.sortField == 'type'">
+                <include refid="rowTxnKindSortT"/> desc
+            </when>
+            <when test="q != null and q.sortField == 'transactionDate' and q.sortOrder == 'asc'">
+                t.transaction_date asc
+            </when>
+            <when test="q != null and q.sortField == 'transactionDate'">
+                t.transaction_date desc
+            </when>
+            <otherwise>
+                t.transaction_date desc
+            </otherwise>
+        </choose>
+        , t.id desc
     </sql>
 
     <insert id="addTransactionList">
@@ -416,7 +468,7 @@
                 and month(t.transaction_date) = #{q.month,jdbcType=VARCHAR}
             </if>
         </if>
-        order by t.transaction_date desc
+        <include refid="transactionListOrderBy"/>
         ) t limit #{page.recordBegin,jdbcType=NUMERIC}, #{page.pageSize,jdbcType=NUMERIC}
     </select>
 

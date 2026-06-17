@@ -17,6 +17,8 @@ public class TransactionParam extends PageParam {
     private String month;
     private String txnTypes;
     private String emptyConsume; // '1' means query where consume is empty
+    private String sortField;
+    private String sortOrder;
 
 	public String getTransactionDateStartStr() {
 		return transactionDateStartStr;
@@ -120,5 +122,21 @@ public class TransactionParam extends PageParam {
 
     public void setEmptyConsume(String emptyConsume) {
         this.emptyConsume = emptyConsume;
+    }
+
+    public String getSortField() {
+        return sortField;
+    }
+
+    public void setSortField(String sortField) {
+        this.sortField = sortField;
+    }
+
+    public String getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(String sortOrder) {
+        this.sortOrder = sortOrder;
     }
 }

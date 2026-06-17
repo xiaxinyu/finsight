@@ -35,6 +35,8 @@ export interface TransactionQuery {
   txnTypes?: string
   demoArea?: string
   emptyConsume?: string
+  sortField?: 'transactionDate' | 'amount' | 'card' | 'type'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export async function listTransactions(params: TransactionQuery) {
