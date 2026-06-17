@@ -1,3 +1,5 @@
+import dayjs, { type Dayjs } from 'dayjs'
+
 export type CashRiskEvent = {
   type: 'bill' | 'income' | 'goal' | string
   label: string
@@ -32,6 +34,19 @@ export function indexCashRiskDays(days: CashRiskDay[] | undefined): Map<string, 
     map.set(day.date, day)
   }
   return map
+}
+
+/** Keep month/day but move selection into the calendar's active year. */
+export function syncSelectedDayToYear(day: Dayjs, year: number): Dayjs {
+  const month = day.month()
+  const maxDay = dayjs().year(year).month(month).daysInMonth()
+  const date = Math.min(day.date(), maxDay)
+  return day.year(year).month(month).date(date)
+}
+
+/** Selected day key aligned with the calendar panel year. */
+export function calendarSelectedKey(day: Dayjs, year: number): string {
+  return syncSelectedDayToYear(day, year).format('YYYY-MM-DD')
 }
 
 export function monthRiskLevel(
