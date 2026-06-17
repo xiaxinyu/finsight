@@ -3654,3 +3654,29 @@
   justify-content: space-between;
   gap: 8px;
 }
+
+.fs-annual-outlook-scenario {
+  margin-bottom: 12px;
+}
+
+.fs-annual-outlook-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+@media (max-width: 1100px) {
+  .fs-annual-outlook-scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .fs-annual-outlook-scenario-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fs-annual-outlook-scenario-field {
+  margin-bottom: 0 !important;
+}

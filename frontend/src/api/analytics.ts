@@ -132,6 +132,13 @@ export type ForecastData = {
   budgetSuggestion?: BudgetSuggestion
   metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }
   metricsSource?: string
+  adjustments?: {
+    incomeChangePct?: number
+    newMonthlyBill?: number
+    lumpSumExpense?: number
+    targetMonthlyPayment?: number
+  }
+  inputParams?: Record<string, unknown>
 }
 
 export type ForecastCategoryResponse = {
@@ -217,10 +224,10 @@ export async function runForecastScenario(params: {
   lumpSumExpense?: number
   newMonthlyBill?: number
   targetMonthlyPayment?: number
-}) {
+}): Promise<ForecastData> {
   const scenario = params.scenario
     ?? (params.incomeChangePct != null && params.incomeChangePct < -5 ? 'stress' : 'base')
-  return unwrap<Record<string, unknown>>(await postJson('/api/v1/analytics/scenarios', {
+  return unwrap<ForecastData>(await postJson('/api/v1/analytics/scenarios', {
     year: params.year ?? new Date().getFullYear(),
     scenario,
     incomeChangePct: params.incomeChangePct,

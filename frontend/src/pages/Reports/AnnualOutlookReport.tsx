@@ -4,9 +4,12 @@ import { Alert, Button, Col, Row, Select, Tag, Typography, message } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
-import { fetchForecast } from '../../api/analytics'
+import { runForecastScenario } from '../../api/analytics'
+import type { ForecastCategory, ForecastMonth } from '../../api/analytics'
 import { saveBudgetLine } from '../../api/finance'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
+import { useFilterApply } from '../../hooks/useFilterApply'
+import { AnnualOutlookScenarioInputs } from '../../components/AnnualOutlookScenarioInputs'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -15,7 +18,7 @@ import { FsDataTable } from '../../components/FsDataTable'
 import { InsightPanel } from '../../components/InsightPanel'
 import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
-import { buildReportDrillContext, drillParamsForYearMonth } from '../../components/drilldown/buildDrillContext'
+import { buildReportDrillContext, drillParamsForCategory, drillParamsForYearMonth } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { formatMoney } from '../../utils/format'
@@ -31,6 +34,15 @@ import {
   scenarioLabel,
   type ForecastScenario,
 } from '../../utils/annualOutlook'
+import {
+  EMPTY_SCENARIO_INPUTS,
+  buildDeficitMonthGuidance,
+  buildMethodologyBullets,
+  monthActualNet,
+  monthForecastNet,
+  scenarioInputsToApi,
+  type ScenarioInputsState,
+} from '../../utils/annualOutlookScenario'
 
 type AnnualOutlookReportProps = {
   title: string
@@ -44,14 +56,28 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
   const [year, setYear] = useState(dayjs().year())
   const [scenario, setScenario] = useState<ForecastScenario>('base')
   const [applyingBudget, setApplyingBudget] = useState(false)
+  const {
+    draft: inputDraft,
+    setDraft: setInputDraft,
+    applied: appliedInputs,
+    applying: inputsApplying,
+    isDirty: inputsDirty,
+    apply: applyScenarioInputsHook,
+  } = useFilterApply<ScenarioInputsState>(EMPTY_SCENARIO_INPUTS)
 
-  const { data, isLoading, isFetching, isError, error } = useQuery({
-    queryKey: ['annual-outlook', year, scenario],
-    queryFn: () => fetchForecast(year, scenario),
+  const scenarioPayload = useMemo(
+    () => scenarioInputsToApi(appliedInputs),
+    [appliedInputs],
+  )
+
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: ['annual-outlook', year, scenario, scenarioPayload],
+    queryFn: () => runForecastScenario({ year, scenario, ...scenarioPayload }),
     enabled: flags.forecast,
   })
 
-  const loading = isLoading || isFetching
+  const loading = isLoading || isFetching || inputsApplying
+  const methodology = useMemo(() => (data ? buildMethodologyBullets(data) : []), [data])
   const insights = useMemo(() => (data ? buildAnnualOutlookInsights(data) : []), [data])
   const kpis = useMemo(() => (data ? buildAnnualOutlookKpis(data) : []), [data])
   const chartOption = useMemo(() => (data ? buildAnnualOutlookChartOption(data) : {}), [data])
@@ -82,6 +108,26 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
     },
     { title: 'Income', dataIndex: 'income', cellType: 'money' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
     { title: 'Expense', dataIndex: 'expense', cellType: 'money' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    {
+      title: 'Actual net',
+      key: 'actualNet',
+      align: 'right' as const,
+      sortType: 'number' as const,
+      render: (_: unknown, row: ForecastMonth) => {
+        const v = monthActualNet(row)
+        return v == null ? '—' : <DeltaMoneyCell value={v} expenseContext={false} />
+      },
+    },
+    {
+      title: 'Forecast net',
+      key: 'forecastNet',
+      align: 'right' as const,
+      sortType: 'number' as const,
+      render: (_: unknown, row: ForecastMonth) => {
+        const v = monthForecastNet(row)
+        return v == null ? '—' : <DeltaMoneyCell value={v} expenseContext={false} />
+      },
+    },
     {
       title: 'Net',
       dataIndex: 'net',
@@ -130,27 +176,55 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
   const openMonthDrill = (yearMonth: string) => {
     const month = data?.months?.find((m) => m.yearMonth === yearMonth)
     const deficit = isDeficitMonth({ deficitMonths }, yearMonth)
+    const guidance = month && data ? buildDeficitMonthGuidance(month, data) : null
     openDrill(buildReportDrillContext({
       title: `Annual outlook · ${yearMonth}`,
       metricLabel: `Forecast · ${scenarioLabel(scenario)}`,
       params: drillParamsForYearMonth(yearMonth),
       explanation: [
-        month
-          ? `Projected net ${formatMoney(month.net)} (income ${formatMoney(month.income)}, expense ${formatMoney(month.expense)}).`
-          : `Forecast month ${yearMonth}.`,
+        ...(guidance?.reasons ?? []),
         month?.netLower != null && month?.netUpper != null
           ? `Confidence band (±${confidencePct}%): ${formatMoney(month.netLower)} – ${formatMoney(month.netUpper)}.`
           : `Confidence band ±${confidencePct}% around projected net.`,
         deficit
-          ? 'This month runs a projected deficit — review bills and discretionary spend.'
+          ? 'Next: trim discretionary spend, review bills, or shift income earlier in the month.'
           : 'Cash flow looks positive under the selected scenario.',
       ],
-      actions: [
+      actions: guidance?.actions ?? [
         { label: 'Open planning', type: 'planning', path: '/planning' },
         { label: 'Cash risk', type: 'report', path: '/reports/cash-risk' },
       ],
       source: 'annual-outlook',
     }))
+  }
+
+  const openCategoryDrill = (category: ForecastCategory) => {
+    openDrill(buildReportDrillContext({
+      title: `${category.categoryName} · ${year}`,
+      metricLabel: `Category forecast · ${scenarioLabel(scenario)}`,
+      params: drillParamsForCategory(
+        category.categoryName,
+        `${year}-01-01`,
+        `${year}-12-31`,
+        'expense',
+      ),
+      explanation: [
+        `Projected ${formatMoney(category.yearTotal)} for ${year} (${category.sharePct.toFixed(1)}% of forecast expense).`,
+        category.yearTotalLower != null && category.yearTotalUpper != null
+          ? `Confidence band: ${formatMoney(category.yearTotalLower)} – ${formatMoney(category.yearTotalUpper)}.`
+          : `Confidence band ±${confidencePct}% on category totals.`,
+        'Drill into historical transactions for this category to validate the forecast baseline.',
+      ],
+      actions: [
+        { label: 'Review transactions', type: 'transactions', path: '/transactions' },
+        { label: 'Adjust budget', type: 'planning', path: '/planning' },
+      ],
+      source: 'annual-outlook',
+    }))
+  }
+
+  const applyScenarioInputs = () => {
+    void applyScenarioInputsHook(() => refetch())
   }
 
   const applyBudgetSuggestion = async () => {
@@ -209,6 +283,14 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
       {flags.forecast && data && (
         <>
           <ReportKpiStrip items={kpis} />
+          <AnnualOutlookScenarioInputs
+            draft={inputDraft}
+            dirty={inputsDirty}
+            disabled={loading}
+            onChange={setInputDraft}
+            onApply={applyScenarioInputs}
+          />
+          <InsightPanel bullets={methodology} title="Methodology" />
           <InsightPanel bullets={insights} title="Outlook" />
           <div style={{ marginTop: 16 }}>
             <CombinedInsightPanel
@@ -270,11 +352,13 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
                   net: data.yearNet,
                 }}
                 rowExplanation={(row) => {
+                  const month = data.months?.find((m) => m.yearMonth === row.yearMonth)
                   const parts: string[] = []
                   if (row.actual) parts.push('Actual month in the forecast window')
                   else if (row.forecast) parts.push('Projected month — dashed series in chart')
-                  if (isDeficitMonth({ deficitMonths }, String(row.yearMonth))) {
-                    parts.push('Projected deficit — review bills and discretionary spend')
+                  if (month && isDeficitMonth({ deficitMonths }, String(row.yearMonth))) {
+                    parts.push(...buildDeficitMonthGuidance(month, data).reasons)
+                    parts.push('Next: trim discretionary spend or review bills before this month.')
                   }
                   const gap = budgetGap(row.expense, row.budgetTarget)
                   if (gap != null) {
@@ -358,6 +442,14 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
                   rowKey="categoryCode"
                   loading={loading}
                   scroll={{ y: 280 }}
+                  onRow={(record) => ({
+                    onClick: () => openCategoryDrill(record as ForecastCategory),
+                    style: { cursor: 'pointer' },
+                  })}
+                  rowExplanation={(row) => {
+                    const cat = row as ForecastCategory
+                    return `Projected ${formatMoney(cat.yearTotal)} (${Number(cat.sharePct).toFixed(1)}% of expense). Click to review historical ${cat.categoryName} transactions.`
+                  }}
                 />
               </Col>
             </Row>
