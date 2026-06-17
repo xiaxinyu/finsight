@@ -3,6 +3,7 @@ import {
   buildDashboardDrillContext,
   buildReportDrillContext,
   drillParamsForCategory,
+  drillParamsForMerchant,
   drillParamsForMonth,
   drillParamsForYearMonth,
   mergeDrillActions,
@@ -40,6 +41,16 @@ describe('buildDrillContext', () => {
     expect(drillParamsForYearMonth('2026-05')).toMatchObject({
       transactionDateStartStr: '2026-05-01',
       transactionDateEndStr: '2026-05-31',
+    })
+  })
+
+  it('drillParamsForMerchant includes stable token', () => {
+    expect(drillParamsForMerchant('netflix', 'Netflix', '2025-01-01', '2026-12-31')).toEqual({
+      transactionDateStartStr: '2025-01-01',
+      transactionDateEndStr: '2026-12-31',
+      txnTypes: 'expense',
+      merchantToken: 'netflix',
+      merchantLabel: 'Netflix',
     })
   })
 

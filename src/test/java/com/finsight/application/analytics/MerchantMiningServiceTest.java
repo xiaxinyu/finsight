@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -97,6 +98,51 @@ class MerchantMiningServiceTest {
         List<Map<String, Object>> merchants = (List<Map<String, Object>>) out.get("merchants");
         assertEquals(2, merchants.size());
         assertNotNull(out.get("top3SharePct"));
+        assertNotNull(out.get("top1SharePct"));
+        assertNotNull(out.get("top5SharePct"));
+        assertNotNull(merchants.get(0).get("drillDown"));
+    }
+
+    @Test
+    void subscriptionReport_exposesEvidenceAndDrillDown() {
+        when(jdbcTemplate.queryForList(contains("is_subscription = 1"), eq("user1")))
+                .thenReturn(List.of(profileRowWithEvidence()));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> subs = (List<Map<String, Object>>) service.subscriptionReport().get("subscriptions");
+        assertEquals(1, subs.size());
+        assertNotNull(subs.get(0).get("evidence"));
+        assertNotNull(subs.get(0).get("avgIntervalDays"));
+        assertNotNull(subs.get(0).get("drillDown"));
+    }
+
+    @Test
+    void drift_splitsMerchantBuckets() {
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq(2026), eq("user1"), eq("user1")))
+                .thenReturn(List.of(
+                        txnRow("2026-01-05", 100, "NewShop"),
+                        txnRow("2026-02-04", 100, "NewShop"),
+                        txnRow("2026-03-05", 150, "GrowingCo"),
+                        txnRow("2026-04-04", 150, "GrowingCo")));
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq(2025), eq("user1"), eq("user1")))
+                .thenReturn(List.of(
+                        txnRow("2025-01-05", 50, "GrowingCo"),
+                        txnRow("2025-06-04", 50, "GrowingCo"),
+                        txnRow("2025-01-05", 200, "DecliningCo"),
+                        txnRow("2025-06-04", 200, "DecliningCo")));
+
+        Map<String, Object> out = service.drift(2026);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> newMerchants = (List<Map<String, Object>>) out.get("newMerchants");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> growing = (List<Map<String, Object>>) out.get("growingMerchants");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> declining = (List<Map<String, Object>>) out.get("decliningMerchants");
+        assertFalse(newMerchants.isEmpty());
+        assertFalse(growing.isEmpty());
+        assertFalse(declining.isEmpty());
+        assertNotNull(newMerchants.get(0).get("drillDown"));
     }
 
     private static List<Map<String, Object>> netflixRows() {
@@ -116,6 +162,10 @@ class MerchantMiningServiceTest {
     }
 
     private static Map<String, Object> profileRow() {
+        return profileRowWithEvidence();
+    }
+
+    private static Map<String, Object> profileRowWithEvidence() {
         return Map.of(
                 "merchant_token", "netflix",
                 "display_name", "Netflix",
@@ -123,6 +173,6 @@ class MerchantMiningServiceTest {
                 "txn_count", 4,
                 "last_seen", Date.valueOf(LocalDate.of(2026, 4, 4)),
                 "is_subscription", 1,
-                "payload_json", "{\"cadence\":\"monthly\",\"confidence\":0.92}");
+                "payload_json", "{\"cadence\":\"monthly\",\"confidence\":0.92,\"avgIntervalDays\":30,\"amountCv\":0.02,\"evidence\":\"4 charges every ~30 days\"}");
     }
 }

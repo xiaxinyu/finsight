@@ -13,6 +13,7 @@ import { moneyTypeFromRow } from '../../utils/moneyType'
 import type { DrillDownContext, DrillDownLayer } from './types'
 import { drillBreadcrumbs, previousLayer } from './layerNav'
 import { mergeDrillActions } from './buildDrillContext'
+import { rowMatchesMerchantToken } from '../../utils/merchantNormalize'
 
 type Props = {
   open: boolean
@@ -47,6 +48,7 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
       context.params.transactionDateEndStr,
       context.params.consumeName,
       context.params.merchantLabel,
+      context.params.merchantToken,
     ].filter(Boolean).join('|')
   }, [open, context])
 
@@ -64,13 +66,19 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
 
 function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; context: DrillDownContext; onClose: () => void }) {
   const [layer, setLayer] = useState<DrillDownLayer>('insight')
+  const merchantToken = context.params.merchantToken || null
   const [categoryFilter, setCategoryFilter] = useState<string | null>(() => context.params.consumeName || null)
-  const [merchantFilter, setMerchantFilter] = useState<string | null>(() => context.params.merchantLabel || null)
+  const [merchantFilter, setMerchantFilter] = useState<string | null>(() => (
+    merchantToken ? merchantToken : (context.params.merchantLabel || null)
+  ))
 
   const queryParams = useMemo(() => {
     if (!context) return {}
     const next = { ...context.params }
     if (categoryFilter && !next.consumeName) next.consumeName = categoryFilter
+    if (next.merchantToken) {
+      delete next.demoArea
+    }
     return next
   }, [context, categoryFilter])
 
@@ -116,8 +124,15 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
 
   const filteredRows = useMemo(() => {
     if (!merchantFilter) return data?.rows || []
+    if (merchantToken) {
+      return (data?.rows || []).filter((r) => rowMatchesMerchantToken(
+        (r as { opponentName?: string }).opponentName,
+        r.transactionDesc,
+        merchantToken,
+      ))
+    }
     return (data?.rows || []).filter((r) => merchantLabel(r).toLowerCase() === merchantFilter.toLowerCase())
-  }, [data?.rows, merchantFilter])
+  }, [data?.rows, merchantFilter, merchantToken])
 
   const actions = mergeDrillActions(context.actions)
   const showCategories = !context.params.consumeName && !categoryFilter

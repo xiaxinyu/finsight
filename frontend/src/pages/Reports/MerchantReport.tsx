@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Col, Row, Select, Tag, message } from 'antd'
+import { Alert, Button, Col, Row, Select, Tag, Typography, message } from 'antd'
 import { BarChartOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {
@@ -16,14 +16,21 @@ import { EmptyState } from '../../components/EmptyState'
 import { FsChart } from '../../components/FsChart'
 import { FsDataTable } from '../../components/FsDataTable'
 import { InsightPanel } from '../../components/InsightPanel'
+import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
+import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
+import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
+import { formatMoney } from '../../utils/format'
 import {
   buildConcentrationChart,
   buildConcentrationKpis,
   buildDriftChart,
   buildSubscriptionInsights,
   buildSubscriptionKpis,
+  formatStability,
   type MerchantConcentrationRow,
+  type MerchantDriftRow,
+  type MerchantSubscription,
 } from '../../utils/merchantReports'
 
 export type MerchantReportMode = 'subscriptions' | 'concentration' | 'drift'
@@ -34,9 +41,15 @@ type MerchantReportProps = {
   mode: MerchantReportMode
 }
 
+type DrillableRow = {
+  displayName: string
+  drillDown?: Record<string, string>
+}
+
 export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
   const { flags } = useFeatureFlags()
   const qc = useQueryClient()
+  const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
   const [year, setYear] = useState(dayjs().year())
   const [refreshing, setRefreshing] = useState(false)
 
@@ -66,6 +79,22 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
 
   const error = subscriptionsQuery.error || concentrationQuery.error || driftQuery.error
   const isError = subscriptionsQuery.isError || concentrationQuery.isError || driftQuery.isError
+
+  const openMerchantDrill = (row: DrillableRow, explanation: string[]) => {
+    if (!row.drillDown) return
+    openDrill(buildReportDrillContext({
+      title: `${row.displayName} · transactions`,
+      metricLabel: row.displayName,
+      params: row.drillDown,
+      explanation,
+      source: 'report',
+    }))
+  }
+
+  const drillRowProps = (row: DrillableRow, explanation: string[]) => ({
+    onClick: () => openMerchantDrill(row, explanation),
+    style: { cursor: row.drillDown ? 'pointer' : undefined },
+  })
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -101,6 +130,24 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
   const driftChart = useMemo(
     () => (driftQuery.data ? buildDriftChart(driftQuery.data) : {}),
     [driftQuery.data],
+  )
+
+  const driftCols = [
+    { title: 'Merchant', dataIndex: 'displayName', sortType: 'text' as const, ellipsis: true },
+    { title: 'Prior', dataIndex: 'priorSpend', cellType: 'money' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    { title: 'Current', dataIndex: 'currentSpend', cellType: 'money' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    { title: 'Change', dataIndex: 'deltaAmount', cellType: 'deltaMoney' as const, unit: 'CNY', align: 'right' as const, sortType: 'number' as const },
+    {
+      title: 'Change %',
+      dataIndex: 'pctChange',
+      align: 'right' as const,
+      sortType: 'number' as const,
+      render: (v: number | null) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`),
+    },
+  ]
+
+  const driftRowExplanation = (row: MerchantDriftRow) => (
+    `${row.displayName}: ${formatMoney(row.priorSpend)} → ${formatMoney(row.currentSpend)} (Δ ${formatMoney(row.deltaAmount)}). Click to review underlying transactions.`
   )
 
   const toolbar = (
@@ -158,18 +205,47 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
                 sortType: 'number',
               },
               { title: 'Avg charge', dataIndex: 'avgAmount', unit: 'CNY', align: 'right', sortType: 'number' },
-              { title: 'Count', dataIndex: 'txnCount', align: 'right', sortType: 'number', width: 80 },
+              {
+                title: 'Last charge',
+                dataIndex: 'lastSeen',
+                width: 110,
+                render: (v: string) => (v ? String(v).slice(0, 10) : '—'),
+              },
+              {
+                title: 'Stability',
+                key: 'stability',
+                width: 140,
+                render: (_: unknown, row: MerchantSubscription) => (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {formatStability(row)}
+                  </Typography.Text>
+                ),
+              },
+              { title: 'Count', dataIndex: 'txnCount', align: 'right', sortType: 'number', width: 72 },
               {
                 title: 'Confidence',
                 dataIndex: 'confidence',
                 align: 'right',
-                width: 100,
+                width: 88,
                 render: (v: number) => `${Math.round(v * 100)}%`,
               },
             ]}
             dataSource={subscriptionsQuery.data.subscriptions}
             rowKey="merchantToken"
             loading={loading}
+            rowExplanation={(row) => {
+              const sub = row as MerchantSubscription
+              const parts = [
+                `${sub.displayName} · ${formatMoney(sub.monthlyEquivalent)}/mo (${sub.cadence})`,
+                sub.evidence || `Confidence ${Math.round(sub.confidence * 100)}%`,
+              ]
+              if (sub.lastSeen) parts.push(`Last charge ${String(sub.lastSeen).slice(0, 10)}`)
+              return parts.join(' · ')
+            }}
+            onRow={(record) => drillRowProps(record as MerchantSubscription, [
+              `${record.displayName}: ${formatMoney(record.monthlyEquivalent)}/month (${record.cadence}).`,
+              record.evidence || 'Review recurring charge pattern and underlying transactions.',
+            ])}
             locale={{ emptyText: <EmptyState compact title="No subscriptions" description="Refresh merchants after importing expense transactions." /> }}
           />
         </>
@@ -215,11 +291,12 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
                 dataSource={concentrationQuery.data.merchants}
                 rowKey="merchantToken"
                 loading={loading}
-                rowExplanation={(row: MerchantConcentrationRow) => {
-                  const parts = [`${row.displayName} · ${Number(row.sharePct).toFixed(1)}% of tracked spend`]
-                  if (row.suspectedSubscription) parts.push('Flagged as recurring subscription')
-                  return parts.join(' · ')
-                }}
+                rowExplanation={(row: MerchantConcentrationRow) => (
+                  `${row.displayName} · ${Number(row.sharePct).toFixed(1)}% of tracked spend. Click to drill into transactions.`
+                )}
+                onRow={(record) => drillRowProps(record, [
+                  `${record.displayName} accounts for ${Number(record.sharePct).toFixed(1)}% of spend (${formatMoney(record.totalSpend)}).`,
+                ])}
                 scroll={{ y: 320 }}
               />
             </Col>
@@ -232,7 +309,9 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
           <ReportKpiStrip items={[
             { key: 'year', label: 'Year', value: String(driftQuery.data.year) },
             { key: 'prior', label: 'Compare', value: String(driftQuery.data.priorYear) },
-            { key: 'movers', label: 'Movers', value: String(driftQuery.data.movers.length) },
+            { key: 'new', label: 'New', value: String(driftQuery.data.newMerchants?.length ?? 0) },
+            { key: 'growing', label: 'Growing', value: String(driftQuery.data.growingMerchants?.length ?? 0) },
+            { key: 'declining', label: 'Declining', value: String(driftQuery.data.decliningMerchants?.length ?? 0) },
           ]} />
           <Row gutter={[12, 12]} className="fs-report-body">
             <Col xs={24} lg={14}>
@@ -248,29 +327,59 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
             </Col>
             <Col xs={24} lg={10}>
               <FsDataTable
-                title="Top movers"
-                columns={[
-                  { title: 'Merchant', dataIndex: 'displayName', sortType: 'text', ellipsis: true },
-                  { title: 'Prior', dataIndex: 'priorSpend', cellType: 'money' as const, unit: 'CNY', align: 'right', sortType: 'number' },
-                  { title: 'Current', dataIndex: 'currentSpend', cellType: 'money' as const, unit: 'CNY', align: 'right', sortType: 'number' },
-                  {
-                    title: 'Change',
-                    dataIndex: 'deltaAmount',
-                    cellType: 'deltaMoney' as const,
-                    unit: 'CNY',
-                    align: 'right',
-                    sortType: 'number',
-                  },
-                ]}
+                title="All movers"
+                columns={driftCols}
                 dataSource={driftQuery.data.movers}
                 rowKey="merchantToken"
                 loading={loading}
-                scroll={{ y: 320 }}
+                rowExplanation={driftRowExplanation}
+                onRow={(record) => drillRowProps(record, [driftRowExplanation(record as MerchantDriftRow)])}
+                scroll={{ y: 200 }}
+              />
+            </Col>
+          </Row>
+          <Row gutter={[12, 12]} className="fs-report-body">
+            <Col xs={24} lg={8}>
+              <FsDataTable
+                title="New merchants"
+                columns={driftCols}
+                dataSource={driftQuery.data.newMerchants ?? []}
+                rowKey="merchantToken"
+                loading={loading}
+                rowExplanation={driftRowExplanation}
+                onRow={(record) => drillRowProps(record, [driftRowExplanation(record as MerchantDriftRow)])}
+                scroll={{ y: 180 }}
+              />
+            </Col>
+            <Col xs={24} lg={8}>
+              <FsDataTable
+                title="Growing merchants"
+                columns={driftCols}
+                dataSource={driftQuery.data.growingMerchants ?? []}
+                rowKey="merchantToken"
+                loading={loading}
+                rowExplanation={driftRowExplanation}
+                onRow={(record) => drillRowProps(record, [driftRowExplanation(record as MerchantDriftRow)])}
+                scroll={{ y: 180 }}
+              />
+            </Col>
+            <Col xs={24} lg={8}>
+              <FsDataTable
+                title="Declining merchants"
+                columns={driftCols}
+                dataSource={driftQuery.data.decliningMerchants ?? []}
+                rowKey="merchantToken"
+                loading={loading}
+                rowExplanation={driftRowExplanation}
+                onRow={(record) => drillRowProps(record, [driftRowExplanation(record as MerchantDriftRow)])}
+                scroll={{ y: 180 }}
               />
             </Col>
           </Row>
         </>
       )}
+
+      <UnifiedDrillDrawer open={drillOpen} context={drillContext} onClose={closeDrill} />
     </DataPageLayout>
   )
 }

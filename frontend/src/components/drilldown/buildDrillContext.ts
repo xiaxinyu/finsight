@@ -103,3 +103,19 @@ export function drillParamsForYearMonth(
     txnTypes,
   }
 }
+
+export function drillParamsForMerchant(
+  merchantToken: string,
+  displayName: string,
+  periodStart: string,
+  periodEnd: string,
+  txnTypes: 'income' | 'expense' = 'expense',
+): Record<string, string> {
+  return {
+    transactionDateStartStr: periodStart,
+    transactionDateEndStr: periodEnd,
+    txnTypes,
+    merchantToken,
+    merchantLabel: displayName,
+  }
+}

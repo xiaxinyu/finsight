@@ -136,27 +136,39 @@ public class MerchantMiningService {
                 .mapToDouble(r -> totalSpend(r))
                 .sum();
         List<Map<String, Object>> merchants = new ArrayList<>();
+        double top1 = 0;
         double top3 = 0;
+        double top5 = 0;
         for (int i = 0; i < rows.size(); i++) {
             Map<String, Object> row = rows.get(i);
             double spend = totalSpend(row);
             double share = totalSpend > 0 ? spend / totalSpend * 100 : 0;
+            if (i == 0) {
+                top1 = share;
+            }
             if (i < 3) {
                 top3 += share;
             }
+            if (i < 5) {
+                top5 += share;
+            }
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("merchantToken", row.get("merchant_token"));
+            String token = String.valueOf(row.get("merchant_token"));
+            item.put("merchantToken", token);
             item.put("displayName", row.get("display_name"));
             item.put("totalSpend", round(spend));
             item.put("sharePct", round(share));
             item.put("txnCount", row.get("txn_count"));
             item.put("suspectedSubscription", asBool(row.get("is_subscription")));
+            item.put("drillDown", drillMerchantYear(token, String.valueOf(row.get("display_name"))));
             merchants.add(item);
         }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("totalSpend", round(totalSpend));
         out.put("merchantCount", merchants.size());
+        out.put("top1SharePct", round(top1));
+        out.put("top5SharePct", round(top5));
         out.put("top3SharePct", round(top3));
         out.put("merchants", merchants);
         return out;
@@ -168,32 +180,50 @@ public class MerchantMiningService {
         Map<String, YearSpend> current = spendByMerchantForYear(userId, year);
         Map<String, YearSpend> prior = spendByMerchantForYear(userId, priorYear);
 
+        List<Map<String, Object>> newMerchants = new ArrayList<>();
+        List<Map<String, Object>> growingMerchants = new ArrayList<>();
+        List<Map<String, Object>> decliningMerchants = new ArrayList<>();
         List<Map<String, Object>> movers = new ArrayList<>();
-        for (Map.Entry<String, YearSpend> entry : current.entrySet()) {
-            String token = entry.getKey();
-            double currentSpend = entry.getValue().spend();
+
+        java.util.Set<String> allTokens = new java.util.LinkedHashSet<>();
+        allTokens.addAll(current.keySet());
+        allTokens.addAll(prior.keySet());
+
+        for (String token : allTokens) {
+            double currentSpend = current.getOrDefault(token, YearSpend.empty()).spend();
             double priorSpend = prior.getOrDefault(token, YearSpend.empty()).spend();
             double delta = currentSpend - priorSpend;
-            if (Math.abs(delta) < 1) {
+            if (Math.abs(delta) < 1 && priorSpend > 0 && currentSpend > 0) {
                 continue;
             }
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("merchantToken", token);
-            row.put("displayName", entry.getValue().displayName());
-            row.put("currentSpend", round(currentSpend));
-            row.put("priorSpend", round(priorSpend));
-            row.put("deltaAmount", round(delta));
-            row.put("pctChange", priorSpend > 0 ? round(delta / priorSpend * 100) : null);
+            String displayName = current.containsKey(token)
+                    ? current.get(token).displayName()
+                    : prior.get(token).displayName();
+            Map<String, Object> row = buildDriftRow(token, displayName, currentSpend, priorSpend, delta, year, priorYear);
             movers.add(row);
+            if (priorSpend <= 0 && currentSpend > 0) {
+                newMerchants.add(row);
+            } else if (delta > 0) {
+                growingMerchants.add(row);
+            } else if (delta < 0) {
+                decliningMerchants.add(row);
+            }
         }
 
-        movers.sort(Comparator.comparingDouble((Map<String, Object> r) -> Math.abs(((Number) r.get("deltaAmount")).doubleValue()))
-                .reversed());
+        Comparator<Map<String, Object>> byAbsDelta = Comparator.comparingDouble(
+                (Map<String, Object> r) -> Math.abs(((Number) r.get("deltaAmount")).doubleValue())).reversed();
+        movers.sort(byAbsDelta);
+        newMerchants.sort(byAbsDelta);
+        growingMerchants.sort(byAbsDelta);
+        decliningMerchants.sort(byAbsDelta);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("year", year);
         out.put("priorYear", priorYear);
         out.put("movers", movers.stream().limit(20).toList());
+        out.put("newMerchants", newMerchants.stream().limit(15).toList());
+        out.put("growingMerchants", growingMerchants.stream().limit(15).toList());
+        out.put("decliningMerchants", decliningMerchants.stream().limit(15).toList());
         return out;
     }
 
@@ -241,16 +271,58 @@ public class MerchantMiningService {
     private Map<String, Object> mapSubscription(Map<String, Object> row) {
         Map<String, Object> payload = parsePayload(row.get("payload_json"));
         Map<String, Object> item = new LinkedHashMap<>();
-        item.put("merchantToken", row.get("merchant_token"));
-        item.put("displayName", row.get("display_name"));
+        String token = String.valueOf(row.get("merchant_token"));
+        String displayName = String.valueOf(row.get("display_name"));
+        item.put("merchantToken", token);
+        item.put("displayName", displayName);
         item.put("avgAmount", row.get("avg_amount"));
         item.put("txnCount", row.get("txn_count"));
         item.put("lastSeen", row.get("last_seen"));
         item.put("suspectedSubscription", asBool(row.get("is_subscription")));
         item.put("cadence", payload.getOrDefault("cadence", "monthly"));
         item.put("confidence", payload.getOrDefault("confidence", 0.8));
+        item.put("avgIntervalDays", payload.getOrDefault("avgIntervalDays", 0));
+        item.put("amountCv", payload.getOrDefault("amountCv", 0));
+        item.put("evidence", payload.getOrDefault("evidence", ""));
         item.put("monthlyEquivalent", round(monthlyEquivalentFromRow(row, payload)));
+        item.put("drillDown", drillMerchantYear(token, displayName));
         return item;
+    }
+
+    private Map<String, Object> buildDriftRow(String token,
+                                              String displayName,
+                                              double currentSpend,
+                                              double priorSpend,
+                                              double delta,
+                                              int year,
+                                              int priorYear) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("merchantToken", token);
+        row.put("displayName", displayName);
+        row.put("currentSpend", round(currentSpend));
+        row.put("priorSpend", round(priorSpend));
+        row.put("deltaAmount", round(delta));
+        row.put("pctChange", priorSpend > 0 ? round(delta / priorSpend * 100) : null);
+        row.put("drillDown", drillMerchantRange(token, displayName, priorYear, year));
+        return row;
+    }
+
+    private static Map<String, String> drillMerchantYear(String token, String displayName) {
+        int year = LocalDate.now().getYear();
+        return drillMerchantRange(token, displayName, year, year);
+    }
+
+    private static Map<String, String> drillMerchantRange(String token,
+                                                          String displayName,
+                                                          int fromYear,
+                                                          int toYear) {
+        Map<String, String> drill = new LinkedHashMap<>();
+        drill.put("transactionDateStartStr", "01/01/" + fromYear);
+        drill.put("transactionDateEndStr", "12/31/" + toYear);
+        drill.put("txnTypes", "expense");
+        drill.put("merchantToken", token);
+        drill.put("merchantLabel", displayName);
+        return drill;
     }
 
     private double monthlyEquivalent(Map<String, Object> item) {
