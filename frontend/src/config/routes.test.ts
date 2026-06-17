@@ -8,6 +8,15 @@ describe('resolveRouteMeta', () => {
     expect(meta.breadcrumb).toEqual(['Dashboard'])
   })
 
+  it('resolves canonical report routes used by profile actions', () => {
+    expect(resolveRouteMeta('/reports/cashflow').title).toBe('Cashflow')
+    expect(resolveRouteMeta('/reports/budget-vs-actual').title).toBe('Budget vs Actual')
+    expect(resolveRouteMeta('/reports/spending-drift').title).toBe('Spending Drift')
+    expect(resolveRouteMeta('/reports/cashflow').breadcrumb).toEqual(['Reports', 'Cashflow'])
+    expect(resolveRouteMeta('/reports/budget-vs-actual').breadcrumb).toEqual(['Reports', 'Budget vs Actual'])
+    expect(resolveRouteMeta('/reports/spending-drift').breadcrumb).toEqual(['Reports', 'Spending Drift'])
+  })
+
   it('resolves report route with group', () => {
     const meta = resolveRouteMeta('/reports/income-vs-expense')
     expect(meta.title).toBe('Income vs Expense')

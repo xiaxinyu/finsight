@@ -198,7 +198,9 @@ public class FinancialProfileService {
         for (Map<String, Object> dim : dimensions) {
             jdbcTemplate.update(
                     "insert into fin_profile_snapshot (id, user_id, snapshot_date, dimension, score, level_label, payload_json, created_at) "
-                            + "values (?, ?, ?, ?, ?, ?, ?, now(3))",
+                            + "values (?, ?, ?, ?, ?, ?, ?, now(3)) "
+                            + "on duplicate key update score = values(score), level_label = values(level_label), "
+                            + "payload_json = values(payload_json), created_at = now(3)",
                     UUID.randomUUID().toString(), userId, today, dim.get("id"), dim.get("score"),
                     dim.get("level"), com.alibaba.fastjson.JSON.toJSONString(dim));
         }
@@ -226,11 +228,11 @@ public class FinancialProfileService {
                     action("Review unclassified transactions", "open_transactions", "/transactions?unclassified=1"),
                     action("Tune classification rules", "open_rules", "/admin/rules"));
             case "income_stability" -> List.of(
-                    action("View income curve", "open_report", "/reports/income-curve"),
+                    action("View income curve", "open_report", "/reports/cashflow"),
                     action("Open income ledger", "open_ledger", "/ledgers/salary"));
             case "spending_control" -> List.of(
                     action("Budget vs actual", "open_report", "/reports/budget-vs-actual"),
-                    action("Income vs expense", "open_report", "/reports/income-vs-expense"));
+                    action("Income vs expense", "open_report", "/reports/cashflow"));
             case "savings_discipline" -> List.of(
                     action("Set a savings goal", "open_goals", "/goals"),
                     action("Wealth overview", "open_wealth", "/wealth"));
@@ -247,11 +249,11 @@ public class FinancialProfileService {
                     action("Spending drift", "open_report", "/reports/spending-drift"),
                     action("Adjust budget", "open_planning", "/planning"));
             case "spending_concentration" -> List.of(
-                    action("Category breakdown", "open_report", "/reports/category-breakdown"),
-                    action("Category comparison", "open_report", "/reports/category-comparison"));
+                    action("Category breakdown", "open_report", "/reports/budget-vs-actual"),
+                    action("Category comparison", "open_report", "/reports/spending-drift"));
             case "seasonality_risk" -> List.of(
                     action("Trend changes", "open_report", "/reports/trend-changes"),
-                    action("Monthly comparison", "open_report", "/reports/monthly-comparison"));
+                    action("Monthly comparison", "open_report", "/reports/cashflow"));
             default -> List.of(action("View cashflow", "open_report", "/reports/cashflow"));
         };
     }
