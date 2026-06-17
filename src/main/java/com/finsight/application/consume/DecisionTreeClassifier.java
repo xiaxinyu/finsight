@@ -463,7 +463,9 @@ public class DecisionTreeClassifier {
         if(token == null) return true;
         String t = token.trim().toLowerCase();
         if(t.length() <= 1) return true;
-        String[] arr = {"公司","有限","集团","商户","外部","客户","支付宝","微信","银行","消费","交易","账单","充值","支付","订单","平台","服务","门店","分店","商店","商城"};
+        String[] arr = {"公司","有限","集团","商户","外部","客户","支付宝","微信","财付通","tenpay","微信支付",
+                "银行","消费","交易","账单","充值","支付","订单","平台","服务","门店","分店","商店","商城",
+                "主体","相关","运营"};
         for(String s : arr){ if(t.equals(s)) return true; }
         return false;
     }

@@ -32,6 +32,7 @@ import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
 import { MerchantReport } from './MerchantReport'
 import { TrendChangesReport } from './TrendChangesReport'
+import { SpendingDriftReport } from './SpendingDriftReport'
 
 type ReportFilters = {
   period: [dayjs.Dayjs, dayjs.Dayjs]
@@ -255,6 +256,16 @@ export function ReportsPage() {
 
   if (cfg.type === 'merchantDrift') {
     return <MerchantReport title={cfg.title} subtitle={cfg.subtitle} mode="drift" />
+  }
+
+  if (cfg.type === 'yearCompare') {
+    return (
+      <SpendingDriftReport
+        title={cfg.title}
+        subtitle={cfg.subtitle}
+        txnType={cfg.txnType}
+      />
+    )
   }
 
   if (cfg.type === 'trendChanges') {

@@ -3,9 +3,7 @@ package com.finsight.application.statement.impl;
 import com.finsight.application.card.BankCardService;
 import com.finsight.application.transaction.TransactionAmountNormalizer;
 import com.finsight.application.transaction.TransactionFieldSanitizer;
-import com.finsight.application.consume.ClassificationNarrationBuilder;
-import com.finsight.application.consume.ClassificationProperties;
-import com.finsight.application.consume.ClassificationService;
+import com.finsight.application.statement.StatementImportClassifier;
 import com.finsight.application.importer.StatementImporterFactory;
 import com.finsight.application.statement.StatementProcessingService;
 import com.finsight.domain.model.BankCard;
@@ -29,10 +27,7 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
     private BankCardService bankCardService;
 
     @Autowired
-    private ClassificationService classificationService;
-
-    @Autowired
-    private ClassificationProperties classificationProperties;
+    private StatementImportClassifier statementImportClassifier;
 
     @Autowired
     private TransactionTempRepository transactionTempRepository;
@@ -58,7 +53,7 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
                 t.setBankCardId(resolvedCardId);
                 t.setBankCardName(resolvedCardName);
             }
-            classifyTransaction(t, bankCode, cardTypeCode);
+            statementImportClassifier.classify(t, bankCode, cardTypeCode);
             if (StringUtils.isNotBlank(statementId)) {
                 t.setRecordID(statementId);
             }
@@ -114,32 +109,6 @@ public class StatementProcessingServiceImpl implements StatementProcessingServic
             }
         }
         return null;
-    }
-
-    /**
-     * Rule-based category uses a single magnitude: statement imports set {@code incomeMoney} for inflows
-     * and {@code balanceMoney} as a positive expense amount for outflows (never both on one row).
-     */
-    private void classifyTransaction(Transaction t, String bankCode, String cardTypeCode) {
-        double income = t.getIncomeMoney() == null ? 0.0 : Math.max(0.0, t.getIncomeMoney());
-        double expense = t.getBalanceMoney() == null ? 0.0 : Math.max(0.0, t.getBalanceMoney());
-        double amount = Math.max(income, expense);
-        Date txnDate = t.getTransactionDate();
-        if (txnDate == null) {
-            txnDate = t.getBookKeepingDate();
-        }
-        String narration = ClassificationNarrationBuilder.fromTransaction(t);
-        ClassificationService.Result r = classificationService.classify(
-                narration, bankCode, cardTypeCode, amount, txnDate);
-        if (r == null && classificationProperties.isImportOtherFallback()) {
-            r = classificationService.otherFallback();
-        }
-        if (r != null) {
-            t.setCategoryCode(r.id);
-            t.setCategoryName(r.name);
-            t.setConsumeCode(r.id);
-            t.setConsumeName(r.name);
-        }
     }
 
     private String buildDateTime(Date txnDate, String txnTime) {

@@ -3134,6 +3134,45 @@
   min-height: 0;
 }
 
+.fs-spending-drift__warn {
+  margin-bottom: 0;
+}
+
+.fs-spending-drift__body {
+  align-items: stretch;
+}
+
+.fs-spending-drift__chart-card {
+  height: 100%;
+}
+
+.fs-spending-drift__chart-card .ant-card-body {
+  min-height: 0;
+}
+
+.fs-spending-drift__table .ant-table-thead > tr > th {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.fs-spending-drift .fs-report-insights {
+  margin-bottom: 0;
+}
+
+.fs-spending-drift .fs-report-insights-list {
+  margin-bottom: 0;
+}
+
+.fs-delta--up {
+  color: #ea580c;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-delta--down {
+  color: #16a34a;
+  font-variant-numeric: tabular-nums;
+}
+
 .fs-report-drill-loading {
   text-align: center;
   padding: 48px;

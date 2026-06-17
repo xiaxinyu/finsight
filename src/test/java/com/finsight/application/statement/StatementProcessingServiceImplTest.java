@@ -1,8 +1,7 @@
 package com.finsight.application.statement;
 
 import com.finsight.application.card.BankCardService;
-import com.finsight.application.consume.ClassificationProperties;
-import com.finsight.application.consume.ClassificationService;
+import com.finsight.application.statement.StatementImportClassifier;
 import com.finsight.application.statement.impl.StatementProcessingServiceImpl;
 import com.finsight.domain.model.BankCard;
 import org.junit.jupiter.api.Test;
@@ -24,10 +23,7 @@ class StatementProcessingServiceImplTest {
     private BankCardService bankCardService;
 
     @Mock
-    private ClassificationService classificationService;
-
-    @Mock
-    private ClassificationProperties classificationProperties;
+    private StatementImportClassifier statementImportClassifier;
 
     @InjectMocks
     private StatementProcessingServiceImpl service;

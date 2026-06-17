@@ -44,7 +44,7 @@ export const reportConfigs: Record<string, ReportConfig> = {
   },
   'spending-drift': {
     title: 'Spending Drift',
-    subtitle: 'Year-over-year category changes',
+    subtitle: 'Compare category spending between two periods — align dates for fair YoY',
     type: 'yearCompare',
     txnType: 'expense',
     compareYear: true,

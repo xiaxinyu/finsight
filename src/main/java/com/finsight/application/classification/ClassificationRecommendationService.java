@@ -83,7 +83,7 @@ public class ClassificationRecommendationService {
 
     private CategoryRecommendation recommendFromWeakRules(Transaction tx, List<String> keywords,
                                                             String bankCode, String cardTypeCode) {
-        String narration = ClassificationNarrationBuilder.fromTransaction(tx);
+        String narration = ClassificationNarrationBuilder.forMatching(tx);
         List<ClassificationService.Result> hits = classificationService.suggestRelaxed(
                 narration,
                 StringUtils.defaultString(bankCode),
@@ -156,7 +156,7 @@ public class ClassificationRecommendationService {
     }
 
     private CategoryRecommendation recommendFromHeuristic(Transaction tx, List<String> keywords) {
-        String narration = ClassificationNarrationBuilder.fromTransaction(tx);
+        String narration = ClassificationNarrationBuilder.forMatching(tx);
         String expanded = ClassificationTextNormalizer.expand(narration).toLowerCase(Locale.ROOT);
         String[][] hints = {
                 {"邮购分期", "分期", "SHOP", "购物", "网购", "邮购"},
@@ -214,7 +214,7 @@ public class ClassificationRecommendationService {
     }
 
     private List<String> searchPhrases(Transaction tx) {
-        String narration = ClassificationNarrationBuilder.fromTransaction(tx);
+        String narration = ClassificationNarrationBuilder.forMatching(tx);
         Set<String> phrases = new LinkedHashSet<>();
         String expanded = ClassificationTextNormalizer.expand(narration);
         for (String part : expanded.split("\\s+")) {
@@ -232,7 +232,7 @@ public class ClassificationRecommendationService {
     }
 
     private List<String> extractKeywords(Transaction tx) {
-        String narration = ClassificationNarrationBuilder.fromTransaction(tx);
+        String narration = ClassificationNarrationBuilder.forMatching(tx);
         List<String> tokens = classificationService.tokens(narration);
         Set<String> out = new LinkedHashSet<>();
         if (tokens != null) {

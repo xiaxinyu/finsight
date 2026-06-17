@@ -187,9 +187,9 @@ export function defaultPeriodStrings(): { start: string; end: string } {
   }
 }
 
-export function defaultComparePeriodRange(): PeriodRange {
-  const y = dayjs().subtract(1, 'year')
-  return [y.startOf('year'), y.endOf('year')]
+export function defaultComparePeriodRange(anchor?: PeriodRange): PeriodRange {
+  const [start, end] = anchor ?? defaultPeriodRange()
+  return [start.subtract(1, 'year'), end.subtract(1, 'year')]
 }
 
 export function presetRange(id: PeriodPresetId): PeriodRange {
