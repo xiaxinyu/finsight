@@ -46,6 +46,17 @@ function sourceMeta(source?: ReclassifyPreviewRow['source'], action?: string) {
   return null
 }
 
+function formatConfidence(value?: number): string {
+  const n = Number(value)
+  if (!n || Number.isNaN(n)) return '—'
+  return `${Math.round(n * 100)}%`
+}
+
+function beforeLabel(row: ClassifyEditRow): string {
+  const name = row.beforeCategoryName || row.beforeCategoryCode
+  return name ? String(name) : 'Unclassified'
+}
+
 function toEditRows(rows: ReclassifyPreviewRow[]): ClassifyEditRow[] {
   return rows.map((p) => ({
     ...p,
@@ -138,7 +149,7 @@ function ClassifyConfirmModalInner({
         </div>
       )}
       open={open}
-      width={980}
+      width={1080}
       centered
       destroyOnClose
       maskClosable={!busy}
@@ -228,8 +239,15 @@ function ClassifyConfirmModalInner({
             ),
           },
           {
-            title: 'Category',
-            width: 340,
+            title: 'Before',
+            width: 120,
+            render: (_, r) => (
+              <span className="fs-classify-before">{beforeLabel(r)}</span>
+            ),
+          },
+          {
+            title: 'Suggested',
+            width: 300,
             render: (_, r) => {
               const meta = sourceMeta(r.source, r.action)
               return (
@@ -247,6 +265,20 @@ function ClassifyConfirmModalInner({
                     onChange={(v) => updateCategory(r.id, v || undefined)}
                   />
                 </div>
+              )
+            },
+          },
+          {
+            title: 'Confidence',
+            dataIndex: 'confidence',
+            width: 88,
+            render: (v, r) => {
+              const text = formatConfidence(v)
+              const low = Number(v) > 0 && Number(v) < 0.6
+              return (
+                <Tooltip title={cellText(r.reason) || undefined}>
+                  <Tag bordered={false} color={low ? 'orange' : 'green'} className="fs-classify-tag">{text}</Tag>
+                </Tooltip>
               )
             },
           },
