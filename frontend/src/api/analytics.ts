@@ -181,6 +181,7 @@ export async function fetchTrends(fromYear: number, toYear: number) {
 export type AdvisorCard = {
   id?: string
   type: string
+  combinedKind?: string
   priority?: number
   urgency?: 'high' | 'medium' | 'low' | string
   confidence?: number
@@ -188,6 +189,7 @@ export type AdvisorCard = {
   reason?: string
   detail?: string
   impactAmount?: number
+  sections?: { key: string; title: string; body: string }[]
   evidence?: ProfileEvidence[]
   evidenceRefs?: { source: string; ref: string }[]
   actions?: { label: string; type: string; payload: Record<string, string> }[]

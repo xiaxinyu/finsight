@@ -18,6 +18,7 @@ function dimensionIdFromRadarName(name: string): string | undefined {
 }
 import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
 import { profileActionLinks } from './profileActions'
+import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
 
 export function ProfilePage() {
   const { flags } = useFeatureFlags()
@@ -66,6 +67,7 @@ export function ProfilePage() {
           description={`Using ${data.metricsSource === 'report_sql' ? 'report SQL fallback' : 'stored metrics'}. ${(data.metricsGate.mismatches || []).join('; ')}`}
         />
       )}
+      <CombinedInsightPanel title="Actionable combined insights" />
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <ContentCard title="Overall">

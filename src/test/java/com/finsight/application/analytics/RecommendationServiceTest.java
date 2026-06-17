@@ -45,6 +45,9 @@ class RecommendationServiceTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private CombinedInsightService combinedInsightService;
+
     @InjectMocks
     private RecommendationService service;
 
@@ -57,36 +60,32 @@ class RecommendationServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("fin_insight_card"))).thenReturn(1);
         when(jdbcTemplate.queryForList(anyString(), eq(String.class), anyString()))
                 .thenReturn(List.of("data_trust"));
-        when(profileService.currentProfile()).thenReturn(Map.of(
-                "dimensions", List.of(
-                        Map.of(
-                                "id", "data_trust",
-                                "score", 40,
-                                "summary", "classify more",
-                                "evidence", List.of(Map.of(
-                                        "source", "quality",
-                                        "ref", "unclassifiedCount",
-                                        "label", "Unclassified",
-                                        "detail", "Needs review",
-                                        "value", "12 unclassified")),
-                                "actions", List.of()),
-                        Map.of("id", "liquidity_safety", "score", 50, "summary", "low runway", "evidence", List.of(), "actions", List.of())
-                )
+        when(combinedInsightService.topCombinedCards(5)).thenReturn(List.of(
+                Map.of(
+                        "id", "combined_forecast_pressure",
+                        "type", "combined",
+                        "priority", 78,
+                        "urgency", "high",
+                        "confidence", 0.8,
+                        "impactAmount", 1200),
+                Map.of("id", "combined_archetype_trend", "type", "combined", "priority", 72),
+                Map.of("id", "combined_subscription_review", "type", "combined", "priority", 68)
         ));
-        when(forecastService.forecast(any(Integer.class), anyString())).thenReturn(Map.of("deficitMonths", List.of()));
 
         List<Map<String, Object>> cards = service.topRecommendations("user1");
 
         assertTrue(cards.stream().noneMatch(c -> "data_trust".equals(c.get("id"))));
+        assertEquals("combined_forecast_pressure", cards.get(0).get("id"));
         Map<String, Object> card = cards.get(0);
         assertNotNull(card.get("urgency"));
         assertNotNull(card.get("confidence"));
         assertNotNull(card.get("expiresAt"));
         assertTrue(((Number) card.get("impactAmount")).doubleValue() > 0);
-        verify(profileService).currentProfile();
+        verify(combinedInsightService).topCombinedCards(5);
+        verify(profileService, never()).currentProfile();
         verify(jdbcTemplate, atLeastOnce()).update(
                 argThat((String sql) -> sql.contains("on duplicate key update")),
-                eq("user1:liquidity_safety"),
+                eq("user1:combined_forecast_pressure"),
                 eq("user1"),
                 any(),
                 any(),
