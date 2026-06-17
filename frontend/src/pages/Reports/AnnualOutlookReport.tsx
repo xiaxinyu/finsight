@@ -13,6 +13,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { FsChart } from '../../components/FsChart'
 import { FsDataTable } from '../../components/FsDataTable'
 import { InsightPanel } from '../../components/InsightPanel'
+import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildReportDrillContext, drillParamsForYearMonth } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
@@ -209,6 +210,12 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
         <>
           <ReportKpiStrip items={kpis} />
           <InsightPanel bullets={insights} title="Outlook" />
+          <div style={{ marginTop: 16 }}>
+            <CombinedInsightPanel
+              title="Forecast-linked recommendations"
+              subtitle="Deficit months, trend drivers, and merchant evidence in one view"
+            />
+          </div>
 
           {data.budgetSuggestion && (
             <ContentCard title="Budget suggestion" size="small" className="fs-annual-outlook-budget">

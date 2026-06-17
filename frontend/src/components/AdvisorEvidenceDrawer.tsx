@@ -12,6 +12,7 @@ import {
   urgencyColor,
   urgencyLabel,
 } from '../utils/advisorCard'
+import { combinedKindLabel, sectionSourceLabel } from '../utils/combinedInsight'
 
 type Props = {
   open: boolean
@@ -36,7 +37,14 @@ export function AdvisorEvidenceDrawer({ open, card, onClose }: Props) {
       open={open}
       onClose={onClose}
       destroyOnClose
-      extra={card.urgency && <Tag color={urgencyColor(card.urgency)}>{urgencyLabel(card.urgency)}</Tag>}
+      extra={(
+        <>
+          {card.combinedKind && (
+            <Tag color="geekblue" style={{ marginRight: 8 }}>{combinedKindLabel(card.combinedKind)}</Tag>
+          )}
+          {card.urgency && <Tag color={urgencyColor(card.urgency)}>{urgencyLabel(card.urgency)}</Tag>}
+        </>
+      )}
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Typography.Paragraph style={{ marginBottom: 0 }}>{card.reason || card.detail}</Typography.Paragraph>
@@ -47,6 +55,26 @@ export function AdvisorEvidenceDrawer({ open, card, onClose }: Props) {
           <Descriptions.Item label="Priority">{card.priority ?? '—'}</Descriptions.Item>
           <Descriptions.Item label="Expires">{card.expiresAt ? card.expiresAt.slice(0, 10) : '—'}</Descriptions.Item>
         </Descriptions>
+
+        {card.sections?.length ? (
+          <div>
+            <Typography.Text strong>Linked signals</Typography.Text>
+            <List
+              size="small"
+              style={{ marginTop: 8 }}
+              dataSource={card.sections}
+              renderItem={(section) => (
+                <List.Item style={{ display: 'block', paddingInline: 0 }}>
+                  <Tag style={{ marginBottom: 4 }}>{sectionSourceLabel(section.key)}</Tag>
+                  <Typography.Text strong style={{ display: 'block' }}>{section.title}</Typography.Text>
+                  <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+                    {section.body}
+                  </Typography.Paragraph>
+                </List.Item>
+              )}
+            />
+          </div>
+        ) : null}
 
         <div>
           <Typography.Text strong>Evidence</Typography.Text>

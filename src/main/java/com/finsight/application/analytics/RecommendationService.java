@@ -27,19 +27,22 @@ public class RecommendationService {
     private final ForecastService forecastService;
     private final TrendAnalysisService trendAnalysisService;
     private final JdbcTemplate jdbcTemplate;
+    private final CombinedInsightService combinedInsightService;
 
     public RecommendationService(FinsightFeatureProperties features,
                                    InsightService insightService,
                                    FinancialProfileService profileService,
                                    ForecastService forecastService,
                                    TrendAnalysisService trendAnalysisService,
-                                   JdbcTemplate jdbcTemplate) {
+                                   JdbcTemplate jdbcTemplate,
+                                   CombinedInsightService combinedInsightService) {
         this.features = features;
         this.insightService = insightService;
         this.profileService = profileService;
         this.forecastService = forecastService;
         this.trendAnalysisService = trendAnalysisService;
         this.jdbcTemplate = jdbcTemplate;
+        this.combinedInsightService = combinedInsightService;
     }
 
     public List<Map<String, Object>> topRecommendations(String userId) throws Exception {
@@ -49,30 +52,48 @@ public class RecommendationService {
         List<Map<String, Object>> cards = new ArrayList<>();
         Set<String> suppressed = loadSuppressedCardIds(userId);
 
-        Map<String, Object> profile = profileService.currentProfile();
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> dims = (List<Map<String, Object>>) profile.get("dimensions");
-        for (Map<String, Object> dim : dims) {
-            String dimId = String.valueOf(dim.get("id"));
-            if (suppressed.contains(dimId)) {
+        for (Map<String, Object> combined : combinedInsightService.topCombinedCards(5)) {
+            if (suppressed.contains(String.valueOf(combined.get("id")))) {
                 continue;
             }
-            double score = ((Number) dim.get("score")).doubleValue();
-            if (score >= 60) {
-                continue;
-            }
-            cards.add(recommendationFromDimension(dim));
+            Map<String, Object> card = new LinkedHashMap<>(combined);
+            enrichCardDefaults(card);
+            cards.add(card);
             if (cards.size() >= 3) {
                 break;
             }
         }
 
         if (cards.size() < 3) {
-            Map<String, Object> forecast = forecastService.forecast(YearMonth.now().getYear(), "base");
+            Map<String, Object> profile = profileService.currentProfile();
             @SuppressWarnings("unchecked")
-            List<String> deficits = (List<String>) forecast.getOrDefault("deficitMonths", List.of());
-            if (!deficits.isEmpty() && !suppressed.contains("cashflow_risk")) {
-                cards.add(cashflowRiskCard(forecast, deficits));
+            List<Map<String, Object>> dims = (List<Map<String, Object>>) profile.get("dimensions");
+            for (Map<String, Object> dim : dims) {
+                String dimId = String.valueOf(dim.get("id"));
+                if (suppressed.contains(dimId)) {
+                    continue;
+                }
+                double score = ((Number) dim.get("score")).doubleValue();
+                if (score >= 60) {
+                    continue;
+                }
+                cards.add(recommendationFromDimension(dim));
+                if (cards.size() >= 3) {
+                    break;
+                }
+            }
+        }
+
+        if (cards.size() < 3) {
+            boolean hasCombinedForecast = cards.stream()
+                    .anyMatch(c -> "combined_forecast_pressure".equals(c.get("id")));
+            if (!hasCombinedForecast) {
+                Map<String, Object> forecast = forecastService.forecast(YearMonth.now().getYear(), "base");
+                @SuppressWarnings("unchecked")
+                List<String> deficits = (List<String>) forecast.getOrDefault("deficitMonths", List.of());
+                if (!deficits.isEmpty() && !suppressed.contains("cashflow_risk")) {
+                    cards.add(cashflowRiskCard(forecast, deficits));
+                }
             }
         }
 
@@ -134,6 +155,18 @@ public class RecommendationService {
                 Integer.class,
                 table);
         return count != null && count > 0;
+    }
+
+    private void enrichCardDefaults(Map<String, Object> card) {
+        if (card.get("expiresAt") == null) {
+            card.put("expiresAt", LocalDateTime.now().plusDays(7).toString());
+        }
+        if (card.get("urgency") == null && card.get("priority") instanceof Number priority) {
+            card.put("urgency", urgencyFor(priority.intValue()));
+        }
+        if (card.get("impactAmount") == null) {
+            card.put("impactAmount", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        }
     }
 
     private void persistCards(String userId, List<Map<String, Object>> cards) {
