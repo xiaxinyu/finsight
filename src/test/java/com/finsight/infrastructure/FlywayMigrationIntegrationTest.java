@@ -25,7 +25,8 @@ class FlywayMigrationIntegrationTest {
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("finsight_test")
             .withUsername("test")
-            .withPassword("test");
+            .withPassword("test")
+            .withCommand("--log-bin-trust-function-creators=1");
 
     @DynamicPropertySource
     static void datasourceProps(DynamicPropertyRegistry registry) {
