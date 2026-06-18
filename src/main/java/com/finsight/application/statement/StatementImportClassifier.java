@@ -4,7 +4,6 @@ import com.finsight.application.consume.ClassificationNarrationBuilder;
 import com.finsight.application.consume.ClassificationProperties;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.domain.model.Transaction;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;

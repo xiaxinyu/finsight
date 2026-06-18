@@ -20,6 +20,7 @@ public class TransactionQuery {
     private String month;
     private String sortField;
     private String sortOrder;
+    private String merchantToken;
 
     public String getTxnTypes() { return txnTypes; }
     public void setTxnTypes(String txnTypes) { this.txnTypes = txnTypes; }
@@ -55,5 +56,7 @@ public class TransactionQuery {
     public void setSortField(String sortField) { this.sortField = sortField; }
     public String getSortOrder() { return sortOrder; }
     public void setSortOrder(String sortOrder) { this.sortOrder = sortOrder; }
+    public String getMerchantToken() { return merchantToken; }
+    public void setMerchantToken(String merchantToken) { this.merchantToken = merchantToken; }
 }
 

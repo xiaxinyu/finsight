@@ -57,6 +57,9 @@ public final class TransactionQueryAssembler {
                 q.setEmptyConsume(Boolean.TRUE);
             }
         }
+        if (!StringTool.isNullOrEmpty(param.getMerchantToken())) {
+            q.setMerchantToken(StringUtils.trim(param.getMerchantToken()).toLowerCase());
+        }
         TransactionSort.apply(param, q);
         return q;
     }

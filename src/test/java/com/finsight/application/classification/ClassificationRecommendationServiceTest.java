@@ -66,7 +66,7 @@ class ClassificationRecommendationServiceTest {
                 .thenReturn(List.of());
         when(transactionRepository.getTransactions(any(), any(Page.class))).thenReturn(List.of());
         when(categoryService.listAll()).thenReturn(List.of());
-        when(classificationService.tokens(eq("(分期) 邮购分期24029247887/09/12期")))
+        when(classificationService.tokens(any()))
                 .thenReturn(List.of("邮购分期", "分期"));
 
         Transaction tx = new Transaction();

@@ -3163,6 +3163,10 @@
   margin-bottom: 0;
 }
 
+.fs-drill-partial-alert {
+  margin-bottom: 0;
+}
+
 .fs-delta--up {
   color: #ea580c;
   font-variant-numeric: tabular-nums;
