@@ -1,8 +1,6 @@
 -- Align v_transaction_analytics.merchant_token and drilldown SQL with Java MerchantNormalizer.
 -- Same content as docs/tech/database/merchant-token-normalization.sql (function + view).
 
-SET SESSION log_bin_trust_function_creators = 1;
-
 DROP FUNCTION IF EXISTS finsight_normalize_merchant_token;
 
 CREATE FUNCTION finsight_normalize_merchant_token(raw_merchant VARCHAR(512))

@@ -8,10 +8,8 @@
 --   1. Re-run audit query #15 in classification-data-audit.sql (orphan profile tokens should drop).
 --   2. Optional: POST /api/v1/maintenance/merchant-profiles/refresh to rebuild fin_merchant_profile.
 --
--- If CREATE FUNCTION fails with error 1419 (binary logging), run once as DBA:
+-- If CREATE FUNCTION fails with error 1419 (binary logging), run once as DBA before this script:
 --   SET GLOBAL log_bin_trust_function_creators = 1;
-
-SET SESSION log_bin_trust_function_creators = 1;
 
 DROP FUNCTION IF EXISTS finsight_normalize_merchant_token;
 

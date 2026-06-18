@@ -30,6 +30,16 @@ class FlywayMigrationIntegrationTest {
 
     @DynamicPropertySource
     static void datasourceProps(DynamicPropertyRegistry registry) {
+        try {
+            MYSQL.execInContainer(
+                    "mysql",
+                    "-uroot",
+                    "-p" + MYSQL.getPassword(),
+                    "-e",
+                    "SET GLOBAL log_bin_trust_function_creators = 1");
+        } catch (Exception ignored) {
+            // Container flag or DBA may already allow function creation.
+        }
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
