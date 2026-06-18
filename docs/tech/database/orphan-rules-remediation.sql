@@ -3,6 +3,9 @@
 --
 --   mysql -u <user> -p finsight < docs/tech/database/orphan-rules-remediation.sql
 --
+-- MySQL Workbench "safe update mode" (Error 1175): UPDATEs below use cls_rule.id (PK).
+-- Alternatively: Edit -> Preferences -> SQL Editor -> uncheck "Safe Updates", reconnect.
+--
 -- Workflow:
 --   1. Run BEFORE inventory (Step 0) and save results.
 --   2. Review Step 2 remap candidates; edit Step 3 with your mappings.
@@ -31,15 +34,28 @@ order by r.active desc, r.priority, r.pattern;
 -- =============================================================================
 -- Step 1: Normalize cls_rule.category_id from legacy category id → active code
 -- (Safe: does not change category codes, only rule pointers.)
+-- Uses cls_rule.id in WHERE for MySQL Workbench safe-update mode (Error 1175).
 -- =============================================================================
-update cls_rule r
-inner join cls_category c
-    on c.id = r.category_id
-   and coalesce(c.deleted, 0) = 0
-set r.category_id = c.code
-where r.category_id = c.id
-  and c.code is not null
-  and trim(c.code) <> '';
+update cls_rule
+set category_id = (
+    select c.code
+    from cls_category c
+    where c.id = cls_rule.category_id
+      and coalesce(c.deleted, 0) = 0
+    limit 1
+)
+where id in (
+    select rid from (
+        select r2.id as rid
+        from cls_rule r2
+        inner join cls_category c2
+            on c2.id = r2.category_id
+           and coalesce(c2.deleted, 0) = 0
+        where r2.category_id = c2.id
+          and c2.code is not null
+          and trim(c2.code) <> ''
+    ) normalize_rule_ids
+);
 
 -- =============================================================================
 -- Step 2: Remap candidates — deleted categories still referenced by rules
@@ -100,27 +116,39 @@ order by orphan.rule_count desc;
 -- update cls_rule
 -- set category_id = 'DAILY-01',
 --     remark = trim(concat(coalesce(remark, ''), ' [remapped from OLD-CODE]'))
--- where category_id in ('OLD-CODE', 'legacy-id-here')
---   and coalesce(active, 1) = 1;
+-- where id in (
+--     select rid from (
+--         select id as rid
+--         from cls_rule
+--         where category_id in ('OLD-CODE', 'legacy-id-here')
+--           and coalesce(active, 1) = 1
+--     ) remap_rule_ids
+-- );
 
 -- =============================================================================
 -- Step 4: Archive remaining ACTIVE orphaned rules (inactive legacy)
 -- Run only after Step 3 remaps are done.
 -- =============================================================================
-update cls_rule r
-left join cls_category c
-    on c.code = r.category_id or c.id = r.category_id
-set r.active = 0,
-    r.remark = trim(concat(
-        coalesce(nullif(trim(r.remark), ''), ''),
-        case when coalesce(nullif(trim(r.remark), ''), '') = '' then '' else ' ' end,
+update cls_rule
+set active = 0,
+    remark = trim(concat(
+        coalesce(nullif(trim(remark), ''), ''),
+        case when coalesce(nullif(trim(remark), ''), '') = '' then '' else ' ' end,
         '[inactive legacy: orphan category]'
     ))
-where coalesce(r.category_id, '') <> ''
-  and (c.id is null or coalesce(c.deleted, 0) = 1)
-  and coalesce(r.active, 1) = 1
-  and coalesce(r.remark, '') not like '%[inactive legacy: orphan category]%'
-  and coalesce(r.remark, '') not like '%[auto-disabled: orphan category]%';
+where id in (
+    select rid from (
+        select r2.id as rid
+        from cls_rule r2
+        left join cls_category c
+            on c.code = r2.category_id or c.id = r2.category_id
+        where coalesce(r2.category_id, '') <> ''
+          and (c.id is null or coalesce(c.deleted, 0) = 1)
+          and coalesce(r2.active, 1) = 1
+          and coalesce(r2.remark, '') not like '%[inactive legacy: orphan category]%'
+          and coalesce(r2.remark, '') not like '%[auto-disabled: orphan category]%'
+    ) archive_rule_ids
+);
 
 -- =============================================================================
 -- Step 5: AFTER — verification (active orphans should be 0)
