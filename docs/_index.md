@@ -17,6 +17,8 @@ This repository follows a Kubernetes-style documentation structure (Docs-as-Code
   - [Reference](tech/reference/)
   - [Architecture](tech/architecture/)
   - [Contributing](tech/contributing/)
+  - [Database](tech/database/)
+  - [Roadmap](tech/roadmap/)
 
 ## How to navigate
 

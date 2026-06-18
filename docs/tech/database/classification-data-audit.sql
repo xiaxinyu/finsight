@@ -1,0 +1,255 @@
+-- FinSight classification and report data audit.
+-- Run against the application MySQL database before and after category/rule changes.
+
+-- 1. Category tree health.
+select
+    c.id,
+    c.code,
+    c.name,
+    c.level,
+    c.parent_id,
+    p.code as parent_code,
+    p.name as parent_name,
+    c.txn_types,
+    c.deleted
+from cls_category c
+left join cls_category p
+    on p.code = c.parent_id or p.id = c.parent_id
+order by c.level, c.parent_id, c.sort_no, c.code;
+
+-- 2. Active categories without parent when level is child.
+select
+    c.id,
+    c.code,
+    c.name,
+    c.level,
+    c.parent_id
+from cls_category c
+left join cls_category p
+    on p.code = c.parent_id or p.id = c.parent_id
+where coalesce(c.deleted, 0) <> 1
+  and coalesce(c.level, 1) > 1
+  and p.id is null;
+
+-- 3. Orphaned rules.
+select
+    r.id,
+    r.pattern,
+    r.pattern_type,
+    r.category_id,
+    r.priority,
+    r.active,
+    r.remark
+from cls_rule r
+left join cls_category c
+    on c.code = r.category_id or c.id = r.category_id
+where coalesce(r.category_id, '') <> ''
+  and (c.id is null or coalesce(c.deleted, 0) = 1)
+order by r.active desc, r.priority, r.pattern;
+
+-- 4. Invalid rules with blank pattern.
+select
+    r.id,
+    r.pattern,
+    r.category_id,
+    r.priority,
+    r.active,
+    r.remark
+from cls_rule r
+where r.pattern is null or trim(r.pattern) = ''
+order by r.active desc, r.priority;
+
+-- 5. Rules without category.
+select
+    r.id,
+    r.pattern,
+    r.pattern_type,
+    r.category_id,
+    r.priority,
+    r.active,
+    r.remark
+from cls_rule r
+where r.category_id is null or trim(r.category_id) = ''
+order by r.active desc, r.priority;
+
+-- 6. Duplicate active rule patterns across categories.
+select
+    lower(trim(r.pattern)) as normalized_pattern,
+    count(*) as rule_count,
+    group_concat(distinct r.category_id order by r.category_id separator ', ') as categories,
+    group_concat(r.id order by r.priority separator ', ') as rule_ids
+from cls_rule r
+where coalesce(r.active, 1) = 1
+  and r.pattern is not null
+  and trim(r.pattern) <> ''
+group by lower(trim(r.pattern))
+having count(*) > 1
+order by rule_count desc, normalized_pattern;
+
+-- 7. Broad keyword risk.
+select
+    r.id,
+    r.pattern,
+    r.category_id,
+    r.pattern_type,
+    r.priority,
+    r.active
+from cls_rule r
+where coalesce(r.active, 1) = 1
+  and lower(trim(coalesce(r.pattern, ''))) in (
+      '支付', '消费', '转账', '付款', '收款', '交易', '代扣', '快捷', '微信', '支付宝'
+  )
+order by r.priority, r.pattern;
+
+-- 8. Rule count by category.
+select
+    c.code,
+    c.name,
+    count(r.id) as rule_count,
+    sum(case when coalesce(r.active, 1) = 1 then 1 else 0 end) as active_rule_count
+from cls_category c
+left join cls_rule r
+    on r.category_id = c.code or r.category_id = c.id
+where coalesce(c.deleted, 0) <> 1
+group by c.code, c.name
+order by active_rule_count desc, rule_count desc, c.code;
+
+-- 9. Transaction classification coverage.
+select
+    count(*) as total_txns,
+    sum(case when coalesce(trim(consume_code), '') = '' and coalesce(trim(consume_name), '') = '' then 1 else 0 end) as unclassified_txns,
+    round(sum(case when coalesce(trim(consume_code), '') = '' and coalesce(trim(consume_name), '') = '' then 1 else 0 end) / nullif(count(*), 0) * 100, 2) as unclassified_pct,
+    round(sum(case when coalesce(trim(consume_code), '') = '' and coalesce(trim(consume_name), '') = '' then abs(coalesce(balance_money, 0) + coalesce(income_money, 0)) else 0 end), 2) as unclassified_amount
+from `transaction`
+where deleted is null or deleted = 0;
+
+-- 10. Transactions pointing to missing or deleted categories.
+select
+    t.consume_code,
+    t.consume_name,
+    count(*) as txn_count,
+    round(sum(abs(coalesce(t.balance_money, 0) + coalesce(t.income_money, 0))), 2) as amount
+from `transaction` t
+left join cls_category c
+    on c.code = t.consume_code
+where (t.deleted is null or t.deleted = 0)
+  and coalesce(trim(t.consume_code), '') <> ''
+  and (c.id is null or coalesce(c.deleted, 0) = 1)
+group by t.consume_code, t.consume_name
+order by amount desc;
+
+-- 11. Transaction category field drift.
+select
+    t.id,
+    t.transaction_date,
+    t.transaction_desc,
+    t.consume_id,
+    t.consume_code,
+    t.consume_name,
+    c.code as canonical_code,
+    c.name as canonical_name
+from `transaction` t
+left join cls_category c
+    on c.code = t.consume_code
+where (t.deleted is null or t.deleted = 0)
+  and coalesce(trim(t.consume_code), '') <> ''
+  and c.id is not null
+  and (
+      coalesce(trim(t.consume_name), '') <> coalesce(trim(c.name), '')
+      or coalesce(trim(t.consume_id), '') not in ('', coalesce(trim(c.code), ''), coalesce(trim(c.id), ''))
+  )
+order by t.transaction_date desc
+limit 200;
+
+-- 12. Category amount by level for report sanity checks.
+select
+    v.category_l1_code,
+    v.category_l1_name,
+    v.category_code,
+    v.category_name,
+    v.direction,
+    count(*) as txn_count,
+    round(sum(v.amount), 2) as amount
+from v_transaction_analytics v
+where v.is_transfer = 0
+  and v.is_refund = 0
+group by v.category_l1_code, v.category_l1_name, v.category_code, v.category_name, v.direction
+order by amount desc;
+
+-- 13. Monthly income / expense sanity check from analytics view.
+select
+    date_format(v.txn_date, '%Y-%m') as year_month,
+    round(sum(case when v.direction = 'income' and v.is_transfer = 0 then v.amount else 0 end), 2) as income,
+    round(sum(case when v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 then v.amount else 0 end), 2) as expense,
+    round(sum(case when v.direction = 'income' and v.is_transfer = 0 then v.amount else 0 end)
+        - sum(case when v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 then v.amount else 0 end), 2) as net
+from v_transaction_analytics v
+group by date_format(v.txn_date, '%Y-%m')
+order by year_month desc;
+
+-- 14. Merchant token coverage from analytics view.
+select
+    count(*) as expense_txns,
+    sum(case when coalesce(trim(merchant_token), '') = '' then 1 else 0 end) as blank_merchant_token,
+    round(sum(case when coalesce(trim(merchant_token), '') = '' then 1 else 0 end) / nullif(count(*), 0) * 100, 2) as blank_pct
+from v_transaction_analytics
+where direction = 'expense'
+  and is_transfer = 0
+  and is_refund = 0;
+
+-- 15. Merchant profile tokens that may not match analytics token directly.
+-- Rows here need investigation because report drilldown may miss transactions.
+select
+    mp.user_id,
+    mp.merchant_token,
+    mp.display_name,
+    mp.txn_count as profile_txn_count,
+    count(v.id) as analytics_matching_txns
+from fin_merchant_profile mp
+left join v_transaction_analytics v
+    on v.merchant_token = mp.merchant_token
+   and v.direction = 'expense'
+   and v.is_transfer = 0
+   and v.is_refund = 0
+group by mp.user_id, mp.merchant_token, mp.display_name, mp.txn_count
+having analytics_matching_txns = 0
+order by mp.txn_count desc;
+
+-- 16. Fixed vs variable sanity.
+select
+    v.fixed_flag,
+    v.category_l1_code,
+    v.category_l1_name,
+    count(*) as txn_count,
+    round(sum(v.amount), 2) as amount
+from v_transaction_analytics v
+where v.direction = 'expense'
+  and v.is_transfer = 0
+  and v.is_refund = 0
+group by v.fixed_flag, v.category_l1_code, v.category_l1_name
+order by v.fixed_flag desc, amount desc;
+
+-- 17. Transfer and refund exclusion volume.
+select
+    date_format(v.txn_date, '%Y-%m') as year_month,
+    sum(case when v.is_transfer = 1 then 1 else 0 end) as transfer_txns,
+    round(sum(case when v.is_transfer = 1 then v.amount else 0 end), 2) as transfer_amount,
+    sum(case when v.is_refund = 1 then 1 else 0 end) as refund_txns,
+    round(sum(case when v.is_refund = 1 then v.amount else 0 end), 2) as refund_amount
+from v_transaction_analytics v
+group by date_format(v.txn_date, '%Y-%m')
+order by year_month desc;
+
+-- 18. Top unclassified raw descriptions for rule creation.
+select
+    coalesce(nullif(trim(opponent_name), ''), nullif(trim(transaction_desc), ''), nullif(trim(memo), ''), 'UNKNOWN') as raw_text,
+    count(*) as txn_count,
+    round(sum(abs(coalesce(balance_money, 0) + coalesce(income_money, 0))), 2) as amount
+from `transaction`
+where (deleted is null or deleted = 0)
+  and coalesce(trim(consume_code), '') = ''
+  and coalesce(trim(consume_name), '') = ''
+group by raw_text
+order by txn_count desc, amount desc
+limit 100;
+
