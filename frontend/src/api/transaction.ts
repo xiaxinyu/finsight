@@ -35,6 +35,7 @@ export interface TransactionQuery {
   txnTypes?: string
   demoArea?: string
   emptyConsume?: string
+  merchantToken?: string
   sortField?: 'transactionDate' | 'amount' | 'card' | 'type'
   sortOrder?: 'asc' | 'desc'
 }
@@ -129,6 +130,22 @@ export async function fetchTransactionStats(params: TransactionQuery): Promise<T
   const res = await listTransactions({ ...params, page: 1, rows: rowsToLoad })
   const agg = aggregateTransactionRows(res.rows)
   return { ...agg, total, truncated: total > STATS_ROW_CAP }
+}
+
+export type { DrillBreakdownResult } from '../utils/drillBreakdown'
+
+export async function fetchDrillBreakdown(params: TransactionQuery & { merchantToken?: string }, sampleLimit = 200) {
+  const q = new URLSearchParams()
+  Object.entries({ ...params, sampleLimit }).forEach(([k, v]) => {
+    if (v != null && v !== '') q.set(k, String(v))
+  })
+  const suffix = q.toString() ? `?${q.toString()}` : ''
+  const raw = await getJson<Record<string, unknown>>(`/api/v1/transactions/drill-breakdown${suffix}`)
+  const n = normalizeResult<import('../utils/drillBreakdown').DrillBreakdownResult>(raw)
+  if (!n.ok || !n.data) {
+    throw new ApiError(n.message || 'Failed to load drill breakdown', 500)
+  }
+  return n.data
 }
 
 export async function updateTransaction(tx: Partial<TransactionRow>) {

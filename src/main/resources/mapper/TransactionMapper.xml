@@ -139,6 +139,74 @@
             or (cat.code is null and coalesce(t.balance_money,0) &gt; 0)
         )
     </sql>
+    <sql id="filterMerchantTokenT">
+        <if test="q != null and q.merchantToken != null">
+            and lower(trim(coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), '')))
+                = #{q.merchantToken,jdbcType=VARCHAR}
+        </if>
+    </sql>
+    <sql id="transactionDrillFilterT">
+        <include refid="activeTransactionT"/>
+        <include refid="excludeTransferT"/>
+        <if test="q != null">
+            <if test="q.txnTypes != null and q.txnTypes == 'income'">
+                <include refid="filterTxnTypeIncomeT"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
+                <include refid="filterTxnTypeExpenseT"/>
+            </if>
+            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
+                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="q.transactionDateStart != null">
+                and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
+            </if>
+            <if test="q.transactionDateEnd != null">
+                and t.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
+            </if>
+            <if test="q.consumptionType != null">
+                and t.consumption_type = #{q.consumptionType,jdbcType=NUMERIC}
+            </if>
+            <include refid="filterBankCardT"/>
+            <if test="q.cardTypeName != null">
+                and t.card_type_name = #{q.cardTypeName,jdbcType=VARCHAR}
+            </if>
+            <if test="q.consumeID != null">
+                and (t.consume_id = #{q.consumeID,jdbcType=VARCHAR} or t.category_id = #{q.consumeID,jdbcType=VARCHAR})
+            </if>
+            <if test="q.consumeCode != null">
+                and (t.consume_code = #{q.consumeCode,jdbcType=VARCHAR} or t.category_code = #{q.consumeCode,jdbcType=VARCHAR})
+            </if>
+            <include refid="filterCategoryCodesT"/>
+            <if test="q.emptyConsume != null and q.emptyConsume == true">
+                and (
+                    t.consume_name is null or length(trim(t.consume_name)) = 0
+                    or t.consume_code is null or length(trim(t.consume_code)) = 0
+                    or t.category_name is null or length(trim(t.category_name)) = 0
+                    or t.category_code is null or length(trim(t.category_code)) = 0
+                )
+            </if>
+            <if test="q.consumeName != null">
+                and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+            </if>
+            <if test="q.demoArea != null">
+                and (
+                    t.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                    or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
+                )
+            </if>
+            <include refid="filterMerchantTokenT"/>
+            <if test="q.weekName != null">
+                and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
+            </if>
+            <if test="q.year != null">
+                and year(t.transaction_date) = #{q.year,jdbcType=VARCHAR}
+            </if>
+            <if test="q.month != null">
+                and month(t.transaction_date) = #{q.month,jdbcType=VARCHAR}
+            </if>
+        </if>
+    </sql>
     <sql id="filterTxnTypeIncomeC">
         and (
             cat.txn_types like '%income%'
@@ -458,6 +526,7 @@
                     or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 )
             </if>
+            <include refid="filterMerchantTokenT"/>
             <if test="q.weekName != null">
                 and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>
@@ -525,6 +594,7 @@
                 and (t.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')
                 or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
+            <include refid="filterMerchantTokenT"/>
             <if test="q.weekName != null">
                 and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>
@@ -960,19 +1030,44 @@
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
-        <include refid="activeTransactionT"/>
-        <if test="q != null">
-            <if test="q.transactionDateStart != null">
-                and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
-            </if>
-            <if test="q.transactionDateEnd != null">
-                and t.transaction_date &lt;= #{q.transactionDateEnd,jdbcType=DATE}
-            </if>
-            <include refid="filterBankCardT"/>
-            <if test="q.emptyConsume != null and q.emptyConsume == true">
-                and (t.consume_code is null or trim(t.consume_code) = '')
-                and (t.consume_name is null or trim(t.consume_name) = '')
-            </if>
-        </if>
+        <include refid="transactionDrillFilterT"/>
+    </select>
+
+    <select id="drillCategoryBreakdown" resultType="com.finsight.domain.model.DrillBreakdownItem">
+        select
+            coalesce(nullif(trim(t.consume_code), ''), '__UNCLASSIFIED__') as code,
+            coalesce(nullif(trim(cat.name), ''), nullif(trim(t.consume_name), ''), '未分类') as label,
+            count(distinct t.id) as txnCount,
+            round(sum(<include refid="rowDisplayAmountT"/>)) as total
+        from transaction t
+        left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
+        left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where 1 = 1
+        <include refid="transactionDrillFilterT"/>
+        group by
+            coalesce(nullif(trim(t.consume_code), ''), '__UNCLASSIFIED__'),
+            coalesce(nullif(trim(cat.name), ''), nullif(trim(t.consume_name), ''), '未分类')
+        order by total desc
+        limit #{limit,jdbcType=NUMERIC}
+    </select>
+
+    <select id="drillMerchantBreakdown" resultType="com.finsight.domain.model.DrillBreakdownItem">
+        select
+            lower(trim(coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), ''))) as token,
+            coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), 'Unknown') as label,
+            count(distinct t.id) as txnCount,
+            round(sum(<include refid="rowDisplayAmountT"/>)) as total
+        from transaction t
+        left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
+        left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
+        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        where 1 = 1
+        <include refid="transactionDrillFilterT"/>
+        group by
+            lower(trim(coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), ''))),
+            coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), 'Unknown')
+        order by total desc
+        limit #{limit,jdbcType=NUMERIC}
     </select>
 </mapper>

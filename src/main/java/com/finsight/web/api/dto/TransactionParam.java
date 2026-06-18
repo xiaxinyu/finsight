@@ -19,6 +19,7 @@ public class TransactionParam extends PageParam {
     private String emptyConsume; // '1' means query where consume is empty
     private String sortField;
     private String sortOrder;
+    private String merchantToken;
 
 	public String getTransactionDateStartStr() {
 		return transactionDateStartStr;
@@ -138,5 +139,13 @@ public class TransactionParam extends PageParam {
 
     public void setSortOrder(String sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public String getMerchantToken() {
+        return merchantToken;
+    }
+
+    public void setMerchantToken(String merchantToken) {
+        this.merchantToken = merchantToken;
     }
 }

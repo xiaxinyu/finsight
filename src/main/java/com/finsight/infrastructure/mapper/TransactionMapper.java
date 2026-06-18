@@ -36,4 +36,10 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     List<String> listIdsNeedingAmountNormalization();
 
     java.util.Map<String, Object> aggregateStats(@Param("q") TransactionQuery query);
+
+    java.util.List<com.finsight.domain.model.DrillBreakdownItem> drillCategoryBreakdown(
+            @Param("q") TransactionQuery query, @Param("limit") int limit);
+
+    java.util.List<com.finsight.domain.model.DrillBreakdownItem> drillMerchantBreakdown(
+            @Param("q") TransactionQuery query, @Param("limit") int limit);
 }

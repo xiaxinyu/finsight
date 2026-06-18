@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Breadcrumb, Button, Drawer, List, Space, Spin, Typography } from 'antd'
+import { Alert, Breadcrumb, Button, Drawer, List, Space, Spin, Typography } from 'antd'
 import { RightOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { listTransactions, type TransactionRow } from '../../api/transaction'
+import { fetchDrillBreakdown } from '../../api/transaction'
 import { FsDataTable } from '../FsDataTable'
 import { EmptyState } from '../EmptyState'
 import { MoneyText } from '../MoneyText'
@@ -13,7 +13,11 @@ import { moneyTypeFromRow } from '../../utils/moneyType'
 import type { DrillDownContext, DrillDownLayer } from './types'
 import { drillBreadcrumbs, previousLayer } from './layerNav'
 import { mergeDrillActions } from './buildDrillContext'
-import { rowMatchesMerchantToken } from '../../utils/merchantNormalize'
+import {
+  formatPartialDrillMessage,
+  isDrillTruncated,
+  mapBreakdownRows,
+} from '../../utils/drillBreakdown'
 
 type Props = {
   open: boolean
@@ -27,16 +31,6 @@ type BreakdownRow = {
   kind: 'category' | 'merchant'
   count: number
   total: number
-}
-
-function merchantLabel(row: TransactionRow): string {
-  const opp = (row as { opponentName?: string }).opponentName
-  if (opp && opp.trim()) return opp.trim()
-  return (row.transactionDesc || 'Unknown').trim()
-}
-
-function categoryLabel(row: TransactionRow): string {
-  return (row.consumeName || 'Uncategorized').trim()
 }
 
 export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
@@ -66,73 +60,41 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
 
 function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; context: DrillDownContext; onClose: () => void }) {
   const [layer, setLayer] = useState<DrillDownLayer>('insight')
-  const merchantToken = context.params.merchantToken || null
+  const contextMerchantToken = context.params.merchantToken || null
   const [categoryFilter, setCategoryFilter] = useState<string | null>(() => context.params.consumeName || null)
   const [merchantFilter, setMerchantFilter] = useState<string | null>(() => (
-    merchantToken ? merchantToken : (context.params.merchantLabel || null)
+    contextMerchantToken ? contextMerchantToken : (context.params.merchantLabel || null)
   ))
+  const [merchantTokenFilter, setMerchantTokenFilter] = useState<string | null>(() => contextMerchantToken)
 
   const queryParams = useMemo(() => {
-    if (!context) return {}
-    const next = { ...context.params }
+    const next: Record<string, string> = { ...context.params }
     if (categoryFilter && !next.consumeName) next.consumeName = categoryFilter
-    if (next.merchantToken) {
+    const token = merchantTokenFilter || next.merchantToken
+    if (token) {
+      next.merchantToken = token
       delete next.demoArea
     }
     return next
-  }, [context, categoryFilter])
+  }, [context.params, categoryFilter, merchantTokenFilter])
 
   const { data, isFetching } = useQuery({
     queryKey: ['unified-drill', queryParams],
-    enabled: open && !!context && !!queryParams.transactionDateStartStr && layer !== 'insight' && layer !== 'actions',
-    queryFn: () => listTransactions({ ...queryParams, page: 1, rows: 200 }),
+    enabled: open && !!queryParams.transactionDateStartStr && layer !== 'insight' && layer !== 'actions',
+    queryFn: () => fetchDrillBreakdown(queryParams),
   })
 
-  const categories = useMemo(() => {
-    const map = new Map<string, BreakdownRow>()
-    for (const row of data?.rows || []) {
-      const label = categoryLabel(row)
-      const key = label.toLowerCase()
-      const amt = rowAmount(row)
-      const existing = map.get(key)
-      if (existing) {
-        existing.count += 1
-        existing.total += amt
-      } else {
-        map.set(key, { key, label, kind: 'category', count: 1, total: amt })
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [data?.rows])
-
-  const merchants = useMemo(() => {
-    const map = new Map<string, BreakdownRow>()
-    for (const row of data?.rows || []) {
-      const label = merchantLabel(row)
-      const key = label.toLowerCase()
-      const amt = rowAmount(row)
-      const existing = map.get(key)
-      if (existing) {
-        existing.count += 1
-        existing.total += amt
-      } else {
-        map.set(key, { key, label, kind: 'merchant', count: 1, total: amt })
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total)
-  }, [data?.rows])
-
-  const filteredRows = useMemo(() => {
-    if (!merchantFilter) return data?.rows || []
-    if (merchantToken) {
-      return (data?.rows || []).filter((r) => rowMatchesMerchantToken(
-        (r as { opponentName?: string }).opponentName,
-        r.transactionDesc,
-        merchantToken,
-      ))
-    }
-    return (data?.rows || []).filter((r) => merchantLabel(r).toLowerCase() === merchantFilter.toLowerCase())
-  }, [data?.rows, merchantFilter, merchantToken])
+  const categories = useMemo(
+    () => mapBreakdownRows(data?.categories, 'category') as BreakdownRow[],
+    [data?.categories],
+  )
+  const merchants = useMemo(
+    () => mapBreakdownRows(data?.merchants, 'merchant') as BreakdownRow[],
+    [data?.merchants],
+  )
+  const transactionRows = data?.transactions || []
+  const truncated = isDrillTruncated(data)
+  const partialMessage = data ? formatPartialDrillMessage(data.total, data.sampleSize) : ''
 
   const actions = mergeDrillActions(context.actions)
   const showCategories = !context.params.consumeName && !categoryFilter
@@ -141,21 +103,47 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
     setLayer('insight')
     setCategoryFilter(null)
     setMerchantFilter(null)
+    setMerchantTokenFilter(null)
     onClose()
   }
 
   const goBack = () => {
     const prev = previousLayer(layer, merchantFilter)
     if (!prev) return
-    if (layer === 'transactions') setMerchantFilter(null)
+    if (layer === 'transactions') {
+      setMerchantFilter(null)
+      setMerchantTokenFilter(null)
+    }
     setLayer(prev)
   }
 
   const onCrumbClick = (crumbLayer: DrillDownLayer, merchant?: string | null) => {
     setLayer(crumbLayer)
-    if (crumbLayer !== 'transactions') setMerchantFilter(null)
-    else setMerchantFilter(merchant || null)
+    if (crumbLayer !== 'transactions') {
+      setMerchantFilter(null)
+      setMerchantTokenFilter(null)
+    } else {
+      setMerchantFilter(merchant || null)
+    }
   }
+
+  const partialAlert = truncated && partialMessage ? (
+    <Alert
+      type="warning"
+      showIcon
+      className="fs-drill-partial-alert"
+      message="Partial transaction sample"
+      description={partialMessage}
+      style={{ marginBottom: 12 }}
+    />
+  ) : null
+
+  const breakdownMeta = data && (
+    <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
+      {formatMoney(data.aggregateTotal)} total across {data.total.toLocaleString()} transaction{data.total === 1 ? '' : 's'}
+      {truncated ? ` · sample list capped at ${data.sampleSize.toLocaleString()}` : ''}
+    </Typography.Paragraph>
+  )
 
   return (
     <Drawer
@@ -201,24 +189,30 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
         isFetching ? (
           <div className="fs-report-drill-loading"><Spin tip="Loading breakdown…" /></div>
         ) : showCategories ? (
-          <FsDataTable
-            columns={[
-              { title: 'Category', dataIndex: 'label', sortType: 'text', ellipsis: true },
-              { title: 'Txns', dataIndex: 'count', align: 'right', sortType: 'number', width: 72 },
-              { title: 'Total', dataIndex: 'total', unit: 'CNY', align: 'right', sortType: 'number', render: (v) => formatMoney(Number(v)) },
-            ]}
-            dataSource={categories as unknown as Record<string, unknown>[]}
-            rowKey="key"
-            onRow={(record) => ({
-              onClick: () => {
-                setCategoryFilter(String((record as BreakdownRow).label))
-              },
-              style: { cursor: 'pointer' },
-            })}
-            locale={{ emptyText: <EmptyState compact title="No categories" description="No rows match this slice." /> }}
-          />
+          <>
+            {partialAlert}
+            {breakdownMeta}
+            <FsDataTable
+              columns={[
+                { title: 'Category', dataIndex: 'label', sortType: 'text', ellipsis: true },
+                { title: 'Txns', dataIndex: 'count', align: 'right', sortType: 'number', width: 72 },
+                { title: 'Total', dataIndex: 'total', unit: 'CNY', align: 'right', sortType: 'number', render: (v) => formatMoney(Number(v)) },
+              ]}
+              dataSource={categories as unknown as Record<string, unknown>[]}
+              rowKey="key"
+              onRow={(record) => ({
+                onClick: () => {
+                  setCategoryFilter(String((record as BreakdownRow).label))
+                },
+                style: { cursor: 'pointer' },
+              })}
+              locale={{ emptyText: <EmptyState compact title="No categories" description="No rows match this slice." /> }}
+            />
+          </>
         ) : (
           <>
+            {partialAlert}
+            {breakdownMeta}
             {categoryFilter && (
               <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
                 Category: <strong>{categoryFilter}</strong>
@@ -237,7 +231,9 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
               rowKey="key"
               onRow={(record) => ({
                 onClick: () => {
-                  setMerchantFilter(String((record as BreakdownRow).label))
+                  const row = record as BreakdownRow
+                  setMerchantFilter(row.label)
+                  setMerchantTokenFilter(row.key)
                   setLayer('transactions')
                 },
                 style: { cursor: 'pointer' },
@@ -256,6 +252,7 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
           <div className="fs-report-drill-loading"><Spin tip="Loading transactions…" /></div>
         ) : (
           <>
+            {partialAlert}
             {merchantFilter && (
               <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
                 Merchant: <strong>{merchantFilter}</strong>
@@ -283,7 +280,7 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
                   ),
                 },
               ]}
-              dataSource={filteredRows as unknown as Record<string, unknown>[]}
+              dataSource={transactionRows as unknown as Record<string, unknown>[]}
               rowKey="id"
               locale={{ emptyText: <EmptyState compact title="No transactions" description="No rows for this slice." /> }}
             />
