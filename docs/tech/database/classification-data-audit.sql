@@ -32,6 +32,7 @@ where coalesce(c.deleted, 0) <> 1
   and p.id is null;
 
 -- 3. Orphaned rules.
+-- Remediation script: docs/tech/database/orphan-rules-remediation.sql
 select
     r.id,
     r.pattern,

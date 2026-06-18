@@ -41,35 +41,40 @@ public class ClassificationRuleHygieneService {
     }
 
     public List<ConsumeRule> listOrphanRules() {
-        List<ConsumeCategory> activeCategories = categoryService.listAll().stream()
-                .filter(c -> c != null && (c.getDeleted() == null || c.getDeleted() != 1))
-                .collect(Collectors.toList());
-        Set<String> activeCategoryIds = activeCategories.stream()
-                .map(ConsumeCategory::getId)
-                .filter(StringUtils::isNotBlank)
-                .collect(Collectors.toSet());
-        Set<String> activeCodes = activeCategories.stream()
-                .map(ConsumeCategory::getCode)
-                .filter(StringUtils::isNotBlank)
-                .map(String::trim)
-                .collect(Collectors.toSet());
+        List<ConsumeCategory> activeCategories = activeCategories();
+        Set<String> activeCategoryIds = OrphanRuleSupport.activeCategoryIds(activeCategories);
+        Set<String> activeCodes = OrphanRuleSupport.activeCategoryCodes(activeCategories);
 
         List<ConsumeRule> orphans = new ArrayList<>();
         for (ConsumeRule rule : ruleService.list()) {
-            if (rule == null) {
-                continue;
-            }
-            String catId = StringUtils.trimToEmpty(rule.getCategoryId());
-            if (catId.isEmpty()) {
-                orphans.add(rule);
-                continue;
-            }
-            if (!activeCategoryIds.contains(catId) && !activeCodes.contains(catId)) {
+            if (OrphanRuleSupport.isActiveOrphan(rule, activeCategoryIds, activeCodes)) {
                 orphans.add(rule);
             }
         }
         ruleService.loadTags(orphans);
         return orphans;
+    }
+
+    public List<ConsumeRule> listArchivedLegacyOrphanRules() {
+        List<ConsumeCategory> activeCategories = activeCategories();
+        Set<String> activeCategoryIds = OrphanRuleSupport.activeCategoryIds(activeCategories);
+        Set<String> activeCodes = OrphanRuleSupport.activeCategoryCodes(activeCategories);
+
+        List<ConsumeRule> archived = new ArrayList<>();
+        for (ConsumeRule rule : ruleService.list()) {
+            if (OrphanRuleSupport.isLegacyArchived(rule)
+                    && !OrphanRuleSupport.pointsToActiveCategory(rule, activeCategoryIds, activeCodes)) {
+                archived.add(rule);
+            }
+        }
+        ruleService.loadTags(archived);
+        return archived;
+    }
+
+    private List<ConsumeCategory> activeCategories() {
+        return categoryService.listAll().stream()
+                .filter(c -> c != null && (c.getDeleted() == null || c.getDeleted() != 1))
+                .collect(Collectors.toList());
     }
 
     public List<String> recommendKeywordsFromUnclassified(int limit) {
@@ -107,6 +112,7 @@ public class ClassificationRuleHygieneService {
         List<ConsumeRule> orphans = listOrphanRules();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("orphanCount", orphans.size());
+        out.put("archivedLegacyOrphanCount", listArchivedLegacyOrphanRules().size());
         out.put("recommendedKeywords", recommendKeywordsFromUnclassified(15));
         return out;
     }
