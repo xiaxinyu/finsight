@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tree, TreeSelect, Typography,
+  Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Tree, TreeSelect, Typography,
 } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import {
@@ -25,6 +25,17 @@ import {
 import { cellText } from '../../../utils/cell'
 
 const ALL_KEY = '__all__'
+
+const HIDDEN_TREE_KEYS = new Set([LEGACY_KEY, INVALID_KEY])
+
+function isMainListRule(
+  rule: ConsumeRuleRow,
+  activeCategories: ConsumeCategoryRow[],
+  allCategories: ConsumeCategoryRow[],
+): boolean {
+  const issue = classifyRule(rule, activeCategories, allCategories)
+  return issue !== 'invalid_pattern' && issue !== 'legacy_archived'
+}
 
 const PATTERN_TYPES = [
   { value: 'contains', label: 'Contains' },
@@ -90,10 +101,11 @@ function buildTreeNodes(
   allCategories: ConsumeCategoryRow[],
 ): DataNode[] {
   const orphanCount = countByIssue(rules, 'orphaned', activeCategories, allCategories)
-  const legacyCount = countByIssue(rules, 'legacy_archived', activeCategories, allCategories)
   const noCatCount = countByIssue(rules, 'no_category', activeCategories, allCategories)
-  const invalidCount = countByIssue(rules, 'invalid_pattern', activeCategories, allCategories)
-  const validCount = rules.length - invalidCount
+  const mainListCount = rules.filter((r) => {
+    const issue = classifyRule(r, activeCategories, allCategories)
+    return issue !== 'invalid_pattern' && issue !== 'legacy_archived'
+  }).length
 
   const mapNode = (node: CategoryTreeNode): { node: DataNode; total: number } => {
     const cat = flatActive.find((c) => (c.id || c.code) === node.key)
@@ -116,26 +128,20 @@ function buildTreeNodes(
   if (orphanCount > 0) {
     attention.push({ key: ORPHAN_KEY, title: labelWithCount('Orphaned', orphanCount, true) })
   }
-  if (legacyCount > 0) {
-    attention.push({ key: LEGACY_KEY, title: labelWithCount('Inactive legacy', legacyCount, true) })
-  }
   if (noCatCount > 0) {
     attention.push({ key: NO_CAT_KEY, title: labelWithCount('No category', noCatCount, true) })
-  }
-  if (invalidCount > 0) {
-    attention.push({ key: INVALID_KEY, title: labelWithCount('Invalid / legacy', invalidCount, true) })
   }
 
   const categoryNodes = categories.map((c) => mapNode(c).node)
   if (!attention.length) {
     return [
-      { key: ALL_KEY, title: labelWithCount('All rules', validCount, true) },
+      { key: ALL_KEY, title: labelWithCount('All rules', mainListCount, true) },
       ...categoryNodes,
     ]
   }
 
   return [
-    { key: ALL_KEY, title: labelWithCount('All rules', validCount, true) },
+    { key: ALL_KEY, title: labelWithCount('All rules', mainListCount, true) },
     ...categoryNodes,
     { key: '__attention_divider__', title: 'Needs attention', selectable: false, disabled: true },
     ...attention,
@@ -198,6 +204,12 @@ export function RulesAdminPage() {
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([])
 
+  useEffect(() => {
+    if (HIDDEN_TREE_KEYS.has(selectedKey)) {
+      setSelectedKey(ALL_KEY)
+    }
+  }, [selectedKey])
+
   const { data: allCategories = [], isLoading: catsLoading } = useQuery({
     queryKey: ['admin-categories', 'withDeleted'],
     queryFn: () => listCategoriesAdmin(true),
@@ -250,7 +262,7 @@ export function RulesAdminPage() {
       (r, cat) => ruleMatchesCategory(r.categoryId, cat),
     )
     if (selectedKey === ALL_KEY) {
-      list = list.filter((r) => classifyRule(r, activeCategories, allCategories) !== 'invalid_pattern')
+      list = list.filter((r) => isMainListRule(r, activeCategories, allCategories))
     }
     const q = keyword.trim().toLowerCase()
     if (q) {
@@ -262,16 +274,16 @@ export function RulesAdminPage() {
   }, [rules, selectedKey, activeCategories, allCategories, keyword])
 
   const stats = useMemo(() => {
-    const active = rules.filter((r) => r.active === 1 && r.pattern?.trim()).length
-    const disabled = rules.filter((r) => r.active !== 1 && r.pattern?.trim()).length
+    const visible = rules.filter((r) => isMainListRule(r, activeCategories, allCategories))
+    const active = visible.filter((r) => r.active === 1 && r.pattern?.trim()).length
+    const disabled = visible.filter((r) => r.active !== 1 && r.pattern?.trim()).length
     const orphaned = countByIssue(rules, 'orphaned', activeCategories, allCategories)
-    const legacyArchived = countByIssue(rules, 'legacy_archived', activeCategories, allCategories)
-    return { active, disabled, orphaned, legacyArchived }
+    return { active, disabled, orphaned }
   }, [rules, activeCategories, allCategories])
 
   const panelTitle = panelTitleForKey(selectedKey, activeMap)
   const panelHint = panelHintForKey(selectedKey)
-  const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === LEGACY_KEY || selectedKey === NO_CAT_KEY
+  const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === NO_CAT_KEY
 
   const openCreate = (presetPattern = '') => {
     const presetCategory = ![ALL_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
@@ -313,6 +325,45 @@ export function RulesAdminPage() {
     form.setFieldsValue({ ...rule, tags: rule.tags || [] })
     setEditorOpen(true)
   }
+
+  const isInteractiveRowClick = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false
+    return Boolean(target.closest('.fs-rule-row-actions, .ant-switch, .ant-popover, button, a, input, textarea, .ant-select'))
+  }
+
+  const onRowClick = (rule: ConsumeRuleRow, e: MouseEvent) => {
+    if (isInteractiveRowClick(e.target)) return
+    openEdit(rule)
+  }
+
+  const renderRuleActions = (rule: ConsumeRuleRow) => (
+    <div
+      className="fs-rule-row-actions"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <Tooltip title="Edit rule" mouseEnterDelay={0.4}>
+        <Button
+          type="text"
+          size="small"
+          icon={<EditOutlined />}
+          aria-label="Edit rule"
+          onClick={() => openEdit(rule)}
+        />
+      </Tooltip>
+      <Popconfirm title="Delete this rule?" okText="Delete" okButtonProps={{ danger: true }} onConfirm={() => onDelete(String(rule.id))}>
+        <Tooltip title="Delete rule" mouseEnterDelay={0.4}>
+          <Button
+            type="text"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            aria-label="Delete rule"
+          />
+        </Tooltip>
+      </Popconfirm>
+    </div>
+  )
 
   const onSave = async () => {
     const values = await form.validateFields()
@@ -417,14 +468,19 @@ export function RulesAdminPage() {
             size="small"
             loading={loading}
             dataSource={filtered}
+            onRow={(record) => ({
+              onClick: (e) => onRowClick(record, e),
+            })}
             rowClassName={(r) => {
               const issue = classifyRule(r, activeCategories, allCategories)
-              if (issue !== 'ok') return 'fs-rule-row--attention'
-              if (r.active !== 1) return 'fs-rule-row--off'
-              return ''
+              const classes = ['fs-rule-row--clickable']
+              if (issue !== 'ok') classes.push('fs-rule-row--attention')
+              if (r.active !== 1) classes.push('fs-rule-row--off')
+              return classes.join(' ')
             }}
-            pagination={{ pageSize: 25, size: 'small', showTotal: (t) => `${t} rules` }}
-            scroll={{ y: tableHeight }}
+            pagination={{ pageSize: 25, size: 'small', showTotal: (t) => `${t} rules`, showSizeChanger: false }}
+            scroll={{ x: 960, y: tableHeight }}
+            tableLayout="fixed"
             locale={{
               emptyText: (
                 <EmptyState
@@ -516,23 +572,25 @@ export function RulesAdminPage() {
               {
                 title: 'On',
                 dataIndex: 'active',
-                width: 52,
+                width: 56,
+                align: 'center' as const,
                 render: (_, r) => (
-                  <Switch size="small" checked={r.active === 1} onChange={(c) => onToggleActive(r, c)} />
+                  <span
+                    className="fs-rule-switch-wrap"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <Switch size="small" checked={r.active === 1} onChange={(c) => onToggleActive(r, c)} />
+                  </span>
                 ),
               },
               {
                 title: '',
-                width: 72,
+                key: 'actions',
+                width: 88,
                 fixed: 'right' as const,
-                render: (_, r) => (
-                  <Space size={2} className="fs-rule-row-actions">
-                    <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
-                    <Popconfirm title="Delete this rule?" onConfirm={() => onDelete(String(r.id))}>
-                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
-                  </Space>
-                ),
+                className: 'fs-rule-actions-col',
+                render: (_, r) => renderRuleActions(r),
               },
             ]}
           />
@@ -571,6 +629,28 @@ export function RulesAdminPage() {
         destroyOnClose
         width={520}
         className="fs-rule-editor-modal"
+        footer={(_, { OkBtn, CancelBtn }) => (
+          <div className="fs-rule-editor-footer">
+            {editing?.id ? (
+              <Popconfirm
+                title="Delete this rule?"
+                okText="Delete"
+                okButtonProps={{ danger: true }}
+                onConfirm={() => {
+                  void onDelete(String(editing.id)).then(() => setEditorOpen(false))
+                }}
+              >
+                <Button danger icon={<DeleteOutlined />}>Delete</Button>
+              </Popconfirm>
+            ) : (
+              <span />
+            )}
+            <Space>
+              <CancelBtn />
+              <OkBtn />
+            </Space>
+          </div>
+        )}
       >
         <Form form={form} layout="vertical" size="middle" className="fs-rule-editor-form">
           <Form.Item name="pattern" label="Keyword" rules={[{ required: true, message: 'Keyword is required' }]}>
