@@ -187,7 +187,7 @@ from v_transaction_analytics v
 group by date_format(v.txn_date, '%Y-%m')
 order by year_month desc;
 
--- 14. Merchant token coverage from analytics view.
+-- 14. Merchant token coverage from analytics view (uses finsight_normalize_merchant_token).
 select
     count(*) as expense_txns,
     sum(case when coalesce(trim(merchant_token), '') = '' then 1 else 0 end) as blank_merchant_token,

@@ -13,6 +13,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Runs when Docker is available; CI job {@code backend-flyway} uses {@code -Dtest=FlywayMigrationIntegrationTest}. */
@@ -49,7 +50,23 @@ class FlywayMigrationIntegrationTest {
         assertTrue(tableExists("cls_rule"));
         assertTrue(tableExists("imp_staging_entry"));
         assertTrue(tableExists("fin_bank_account"));
-        assertTrue(migrationAtLeast(21));
+        assertTrue(migrationAtLeast(22));
+    }
+
+    @Test
+    void merchantTokenFunctionAlignsWithJavaNormalizer() {
+        assertEquals(
+                "netflix",
+                jdbcTemplate.queryForObject(
+                        "select finsight_normalize_merchant_token(?)",
+                        String.class,
+                        "Netflix.com 883920184"));
+        assertEquals(
+                "starbucks coffee",
+                jdbcTemplate.queryForObject(
+                        "select finsight_normalize_merchant_token(?)",
+                        String.class,
+                        "STARBUCKS COFFEE Order No: 883920184 Alipay"));
     }
 
     private boolean migrationAtLeast(int version) {

@@ -139,10 +139,15 @@
             or (cat.code is null and coalesce(t.balance_money,0) &gt; 0)
         )
     </sql>
+    <sql id="merchantRawT">
+        coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), '')
+    </sql>
+    <sql id="merchantTokenNormT">
+        finsight_normalize_merchant_token(<include refid="merchantRawT"/>)
+    </sql>
     <sql id="filterMerchantTokenT">
-        <if test="q != null and q.merchantToken != null">
-            and lower(trim(coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), '')))
-                = #{q.merchantToken,jdbcType=VARCHAR}
+        <if test="q != null and q.merchantToken != null and q.merchantToken != ''">
+            and <include refid="merchantTokenNormT"/> = #{q.merchantToken,jdbcType=VARCHAR}
         </if>
     </sql>
     <sql id="transactionDrillFilterT">
@@ -1054,7 +1059,7 @@
 
     <select id="drillMerchantBreakdown" resultType="com.finsight.domain.model.DrillBreakdownItem">
         select
-            lower(trim(coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), ''))) as token,
+            <include refid="merchantTokenNormT"/> as token,
             coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), 'Unknown') as label,
             count(distinct t.id) as txnCount,
             round(sum(<include refid="rowDisplayAmountT"/>)) as total
@@ -1065,8 +1070,9 @@
         where 1 = 1
         <include refid="transactionDrillFilterT"/>
         group by
-            lower(trim(coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), ''))),
+            <include refid="merchantTokenNormT"/>,
             coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), 'Unknown')
+        having token is not null and trim(token) != ''
         order by total desc
         limit #{limit,jdbcType=NUMERIC}
     </select>
