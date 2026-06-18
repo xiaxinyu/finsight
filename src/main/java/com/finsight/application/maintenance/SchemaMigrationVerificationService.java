@@ -38,7 +38,8 @@ public class SchemaMigrationVerificationService {
         out.put("clsCategoryRows", count("cls_category"));
         out.put("clsRuleRows", count("cls_rule"));
         out.put("clsRuleActiveRows", countActiveRules());
-        out.put("orphanRuleRows", countOrphanRules());
+        out.put("orphanRuleRows", countActiveOrphanRules());
+        out.put("archivedLegacyOrphanRuleRows", countArchivedLegacyOrphanRules());
         out.put("blankPatternRuleRows", countBlankPatternRules());
         out.put("archivedConsumeCategory", tableExists("_archive_consume_category"));
         out.put("archivedConsumeRule", tableExists("_archive_consume_rule"));
@@ -66,7 +67,7 @@ public class SchemaMigrationVerificationService {
         return c == null ? 0 : c;
     }
 
-    private long countOrphanRules() {
+    private long countActiveOrphanRules() {
         if (!tableExists("cls_rule") || !tableExists("cls_category")) {
             return -1;
         }
@@ -75,7 +76,27 @@ public class SchemaMigrationVerificationService {
                         + "left join cls_category c on (c.code = r.category_id or c.id = r.category_id) "
                         + "and coalesce(c.deleted,0)=0 "
                         + "where r.category_id is not null and trim(r.category_id)<>'' "
-                        + "and c.id is null",
+                        + "and c.id is null "
+                        + "and coalesce(r.active,1)=1 "
+                        + "and coalesce(r.remark,'') not like '%[inactive legacy:%' "
+                        + "and coalesce(r.remark,'') not like '%[auto-disabled: orphan%'",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private long countArchivedLegacyOrphanRules() {
+        if (!tableExists("cls_rule") || !tableExists("cls_category")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from cls_rule r "
+                        + "left join cls_category c on (c.code = r.category_id or c.id = r.category_id) "
+                        + "and coalesce(c.deleted,0)=0 "
+                        + "where r.category_id is not null and trim(r.category_id)<>'' "
+                        + "and c.id is null "
+                        + "and coalesce(r.active,1)=0 "
+                        + "and (coalesce(r.remark,'') like '%[inactive legacy:%' "
+                        + "     or coalesce(r.remark,'') like '%[auto-disabled: orphan%')",
                 Long.class);
         return c == null ? 0 : c;
     }

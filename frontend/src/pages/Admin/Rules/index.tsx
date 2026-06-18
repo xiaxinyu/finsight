@@ -20,7 +20,7 @@ import { useFillTableHeight } from '../../../hooks/useFillTableHeight'
 import { buildCategoryTree, ruleMatchesCategory, type CategoryTreeNode } from '../../../utils/categoryTree'
 import { categoryTitleMap, resolveCategoryTitleExtended } from '../../../utils/categoryLookup'
 import {
-  classifyRule, filterByTreeKey, INVALID_KEY, NO_CAT_KEY, ORPHAN_KEY, type RuleIssue,
+  classifyRule, filterByTreeKey, INVALID_KEY, LEGACY_KEY, NO_CAT_KEY, ORPHAN_KEY, type RuleIssue,
 } from '../../../utils/ruleHealth'
 import { cellText } from '../../../utils/cell'
 
@@ -90,6 +90,7 @@ function buildTreeNodes(
   allCategories: ConsumeCategoryRow[],
 ): DataNode[] {
   const orphanCount = countByIssue(rules, 'orphaned', activeCategories, allCategories)
+  const legacyCount = countByIssue(rules, 'legacy_archived', activeCategories, allCategories)
   const noCatCount = countByIssue(rules, 'no_category', activeCategories, allCategories)
   const invalidCount = countByIssue(rules, 'invalid_pattern', activeCategories, allCategories)
   const validCount = rules.length - invalidCount
@@ -114,6 +115,9 @@ function buildTreeNodes(
   const attention: DataNode[] = []
   if (orphanCount > 0) {
     attention.push({ key: ORPHAN_KEY, title: labelWithCount('Orphaned', orphanCount, true) })
+  }
+  if (legacyCount > 0) {
+    attention.push({ key: LEGACY_KEY, title: labelWithCount('Inactive legacy', legacyCount, true) })
   }
   if (noCatCount > 0) {
     attention.push({ key: NO_CAT_KEY, title: labelWithCount('No category', noCatCount, true) })
@@ -141,6 +145,7 @@ function buildTreeNodes(
 const TREE_LABELS: Record<string, string> = {
   [ALL_KEY]: 'all rules',
   [ORPHAN_KEY]: 'orphaned',
+  [LEGACY_KEY]: 'inactive legacy',
   [NO_CAT_KEY]: 'no category',
   [INVALID_KEY]: 'invalid legacy',
 }
@@ -163,6 +168,7 @@ function filterTreeBySearch(nodes: DataNode[], query: string, nameByKey: Map<str
 function panelTitleForKey(key: string, activeMap: Map<string, string>): string {
   if (key === ALL_KEY) return 'All rules'
   if (key === ORPHAN_KEY) return 'Orphaned rules'
+  if (key === LEGACY_KEY) return 'Inactive legacy orphan rules'
   if (key === NO_CAT_KEY) return 'Rules without category'
   if (key === INVALID_KEY) return 'Invalid / legacy rules'
   return activeMap.get(key) || key
@@ -170,6 +176,7 @@ function panelTitleForKey(key: string, activeMap: Map<string, string>): string {
 
 function panelHintForKey(key: string): string | undefined {
   if (key === ORPHAN_KEY) return 'These rules reference categories that were removed (soft-deleted), not deleted rules themselves.'
+  if (key === LEGACY_KEY) return 'Archived orphan rules are inactive and kept for audit. Remap or leave disabled.'
   if (key === NO_CAT_KEY) return 'Assign a category so imports can classify matching transactions.'
   if (key === INVALID_KEY) return 'Rows with no keyword cannot match anything — usually safe to delete.'
   return undefined
@@ -258,15 +265,16 @@ export function RulesAdminPage() {
     const active = rules.filter((r) => r.active === 1 && r.pattern?.trim()).length
     const disabled = rules.filter((r) => r.active !== 1 && r.pattern?.trim()).length
     const orphaned = countByIssue(rules, 'orphaned', activeCategories, allCategories)
-    return { active, disabled, orphaned }
+    const legacyArchived = countByIssue(rules, 'legacy_archived', activeCategories, allCategories)
+    return { active, disabled, orphaned, legacyArchived }
   }, [rules, activeCategories, allCategories])
 
   const panelTitle = panelTitleForKey(selectedKey, activeMap)
   const panelHint = panelHintForKey(selectedKey)
-  const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === NO_CAT_KEY
+  const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === LEGACY_KEY || selectedKey === NO_CAT_KEY
 
   const openCreate = (presetPattern = '') => {
-    const presetCategory = ![ALL_KEY, ORPHAN_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
+    const presetCategory = ![ALL_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
     setEditing(null)
     form.setFieldsValue({
       pattern: presetPattern,
@@ -453,6 +461,9 @@ export function RulesAdminPage() {
                   const title = resolveCategoryTitleExtended(activeMap, allCategories, r.categoryId)
                   if (issue === 'orphaned') {
                     return <span className="fs-rule-cat fs-rule-cat--orphan" title={title}>{title}</span>
+                  }
+                  if (issue === 'legacy_archived') {
+                    return <span className="fs-rule-cat fs-rule-cat--legacy" title={title}>{title}</span>
                   }
                   if (issue === 'no_category') {
                     return <span className="fs-rule-cat fs-rule-cat--none">—</span>
