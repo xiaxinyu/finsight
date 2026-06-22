@@ -41,6 +41,8 @@ public class SchemaMigrationVerificationService {
         out.put("orphanRuleRows", countActiveOrphanRules());
         out.put("archivedLegacyOrphanRuleRows", countArchivedLegacyOrphanRules());
         out.put("blankPatternRuleRows", countBlankPatternRules());
+        out.put("activeBlankPatternRuleRows", countActiveBlankPatternRules());
+        out.put("archivedInvalidPatternRuleRows", countArchivedInvalidPatternRules());
         out.put("archivedConsumeCategory", tableExists("_archive_consume_category"));
         out.put("archivedConsumeRule", tableExists("_archive_consume_rule"));
         out.put("leftoverLegacyTables", listLeftoverLegacyTables());
@@ -107,6 +109,32 @@ public class SchemaMigrationVerificationService {
         }
         Long c = jdbcTemplate.queryForObject(
                 "select count(*) from cls_rule where pattern is null or trim(pattern)=''",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private long countActiveBlankPatternRules() {
+        if (!tableExists("cls_rule")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from cls_rule "
+                        + "where (pattern is null or trim(pattern)='') "
+                        + "and coalesce(active,1)=1",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private long countArchivedInvalidPatternRules() {
+        if (!tableExists("cls_rule")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from cls_rule "
+                        + "where (pattern is null or trim(pattern)='') "
+                        + "and coalesce(active,1)=0 "
+                        + "and (coalesce(remark,'') like '%[auto-disabled: blank pattern]%' "
+                        + "     or coalesce(remark,'') like '%[inactive legacy: blank pattern]%')",
                 Long.class);
         return c == null ? 0 : c;
     }

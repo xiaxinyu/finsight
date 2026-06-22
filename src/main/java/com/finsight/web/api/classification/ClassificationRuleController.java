@@ -117,6 +117,11 @@ public class ClassificationRuleController {
         return new ArrayList<>(ruleHygieneService.listOrphanRules());
     }
 
+    @GetMapping("/invalid-patterns")
+    public List<ClassificationRule> invalidPatterns() {
+        return new ArrayList<>(ruleHygieneService.listActiveInvalidPatternRules());
+    }
+
     @GetMapping("/recommend-unclassified")
     public List<String> recommendUnclassified(
             @RequestParam(value = "limit", required = false, defaultValue = "20") int limit) {

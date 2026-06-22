@@ -72,6 +72,37 @@ class ClassificationRuleHygieneServiceTest {
         assertEquals(1, summary.get("archivedLegacyOrphanCount"));
     }
 
+    @Test
+    void listActiveInvalidPatternRules_returnsOnlyActiveBlankPatterns() {
+        when(ruleService.list()).thenReturn(List.of(
+                invalidRule("r1", 1, null),
+                invalidRule("r2", 0, InvalidRuleSupport.AUTO_DISABLED_BLANK_PATTERN_REMARK),
+                rule("r3", "DAILY-01", 1, null)));
+
+        List<ConsumeRule> invalid = service.listActiveInvalidPatternRules();
+
+        assertEquals(1, invalid.size());
+        assertEquals("r1", invalid.get(0).getId());
+        verify(ruleService).loadTags(invalid);
+    }
+
+    @Test
+    void hygieneSummary_countsInvalidPatternBuckets() {
+        when(categoryService.listAll()).thenReturn(List.of());
+        when(ruleService.list()).thenReturn(List.of(
+                invalidRule("r1", 1, null),
+                invalidRule("r2", 0, InvalidRuleSupport.INACTIVE_LEGACY_BLANK_PATTERN_REMARK),
+                invalidRule("r3", 0, null)));
+        when(transactionRepository.getTransactions(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+
+        Map<String, Object> summary = service.hygieneSummary();
+
+        assertEquals(1, summary.get("activeInvalidPatternCount"));
+        assertEquals(1, summary.get("archivedInvalidPatternCount"));
+        assertEquals(1, summary.get("inactiveInvalidWithoutRemarkCount"));
+    }
+
     private static ConsumeCategory category(String id, String code, int deleted) {
         ConsumeCategory c = new ConsumeCategory();
         c.setId(id);
@@ -87,6 +118,15 @@ class ClassificationRuleHygieneServiceTest {
         r.setActive(active);
         r.setRemark(remark);
         r.setPattern("test");
+        return r;
+    }
+
+    private static ConsumeRule invalidRule(String id, int active, String remark) {
+        ConsumeRule r = new ConsumeRule();
+        r.setId(id);
+        r.setActive(active);
+        r.setRemark(remark);
+        r.setPattern("");
         return r;
     }
 }

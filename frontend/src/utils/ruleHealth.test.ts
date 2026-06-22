@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { ConsumeCategoryRow, ConsumeRuleRow } from '../api/admin'
 import {
   classifyRule,
+  isArchivedInvalidPattern,
   isLegacyArchivedOrphan,
+  INVALID_PATTERN_MARKERS,
   LEGACY_ORPHAN_MARKERS,
   ORPHAN_KEY,
   filterByTreeKey,
@@ -50,5 +52,20 @@ describe('ruleHealth', () => {
     ]
     const filtered = filterByTreeKey(rules, ORPHAN_KEY, activeCategories, allCategories, () => false)
     expect(filtered.map((r) => r.id)).toEqual(['a'])
+  })
+
+  it('archived blank pattern is legacy not active invalid', () => {
+    const archived = rule({
+      pattern: '',
+      active: 0,
+      remark: `note ${INVALID_PATTERN_MARKERS[0]}`,
+    })
+    expect(isArchivedInvalidPattern(archived)).toBe(true)
+    expect(classifyRule(archived, activeCategories, allCategories)).toBe('legacy_archived')
+  })
+
+  it('active blank pattern stays invalid', () => {
+    const activeInvalid = rule({ pattern: '  ', active: 1 })
+    expect(classifyRule(activeInvalid, activeCategories, allCategories)).toBe('invalid_pattern')
   })
 })
