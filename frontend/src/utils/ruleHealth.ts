@@ -11,6 +11,13 @@ export { ORPHAN_KEY, NO_CAT_KEY, INVALID_KEY, LEGACY_KEY }
 
 const LEGACY_ORPHAN_REMARK = '[inactive legacy: orphan category]'
 const AUTO_DISABLED_ORPHAN_REMARK = '[auto-disabled: orphan category]'
+const AUTO_DISABLED_BLANK_PATTERN_REMARK = '[auto-disabled: blank pattern]'
+const INACTIVE_LEGACY_BLANK_PATTERN_REMARK = '[inactive legacy: blank pattern]'
+
+export const INVALID_PATTERN_MARKERS = [
+  AUTO_DISABLED_BLANK_PATTERN_REMARK,
+  INACTIVE_LEGACY_BLANK_PATTERN_REMARK,
+]
 
 function categoryKeys(cat: ConsumeCategoryRow): string[] {
   const keys = new Set<string>()
@@ -27,6 +34,15 @@ export function isLegacyArchivedOrphan(rule: ConsumeRuleRow): boolean {
   if (isRuleActive(rule)) return false
   const remark = (rule.remark ?? '').toLowerCase()
   return remark.includes('[inactive legacy:') || remark.includes('[auto-disabled: orphan')
+}
+
+export function isArchivedInvalidPattern(rule: ConsumeRuleRow): boolean {
+  if (isRuleActive(rule)) return false
+  const pattern = rule.pattern?.trim()
+  if (pattern) return false
+  const remark = (rule.remark ?? '').toLowerCase()
+  return remark.includes('[auto-disabled: blank pattern]')
+    || remark.includes('[inactive legacy: blank pattern]')
 }
 
 function pointsToActiveCategory(
@@ -46,7 +62,10 @@ export function classifyRule(
   allCategories: ConsumeCategoryRow[],
 ): RuleIssue {
   const pattern = rule.pattern?.trim()
-  if (!pattern) return 'invalid_pattern'
+  if (!pattern) {
+    if (isArchivedInvalidPattern(rule)) return 'legacy_archived'
+    return 'invalid_pattern'
+  }
 
   const catId = rule.categoryId?.trim()
   if (!catId) return 'no_category'

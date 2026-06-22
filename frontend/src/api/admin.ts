@@ -81,6 +81,9 @@ export async function createRule(rule: ConsumeRuleRow) {
 export type RuleHygieneSummary = {
   orphanCount: number
   archivedLegacyOrphanCount?: number
+  activeInvalidPatternCount?: number
+  archivedInvalidPatternCount?: number
+  inactiveInvalidWithoutRemarkCount?: number
   recommendedKeywords: string[]
 }
 

@@ -49,6 +49,7 @@ where coalesce(r.category_id, '') <> ''
 order by r.active desc, r.priority, r.pattern;
 
 -- 4. Invalid rules with blank pattern.
+-- Remediation script: docs/tech/database/invalid-rules-remediation.sql
 select
     r.id,
     r.pattern,

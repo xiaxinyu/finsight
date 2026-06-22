@@ -71,6 +71,28 @@ public class ClassificationRuleHygieneService {
         return archived;
     }
 
+    public List<ConsumeRule> listActiveInvalidPatternRules() {
+        List<ConsumeRule> invalid = new ArrayList<>();
+        for (ConsumeRule rule : ruleService.list()) {
+            if (InvalidRuleSupport.isActiveInvalidPattern(rule)) {
+                invalid.add(rule);
+            }
+        }
+        ruleService.loadTags(invalid);
+        return invalid;
+    }
+
+    public List<ConsumeRule> listArchivedInvalidPatternRules() {
+        List<ConsumeRule> archived = new ArrayList<>();
+        for (ConsumeRule rule : ruleService.list()) {
+            if (InvalidRuleSupport.isArchivedInvalidPattern(rule)) {
+                archived.add(rule);
+            }
+        }
+        ruleService.loadTags(archived);
+        return archived;
+    }
+
     private List<ConsumeCategory> activeCategories() {
         return categoryService.listAll().stream()
                 .filter(c -> c != null && (c.getDeleted() == null || c.getDeleted() != 1))
@@ -113,7 +135,20 @@ public class ClassificationRuleHygieneService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("orphanCount", orphans.size());
         out.put("archivedLegacyOrphanCount", listArchivedLegacyOrphanRules().size());
+        out.put("activeInvalidPatternCount", listActiveInvalidPatternRules().size());
+        out.put("archivedInvalidPatternCount", listArchivedInvalidPatternRules().size());
+        out.put("inactiveInvalidWithoutRemarkCount", countInactiveInvalidWithoutRemark());
         out.put("recommendedKeywords", recommendKeywordsFromUnclassified(15));
         return out;
+    }
+
+    private int countInactiveInvalidWithoutRemark() {
+        int count = 0;
+        for (ConsumeRule rule : ruleService.list()) {
+            if (InvalidRuleSupport.isInactiveInvalidWithoutRemark(rule)) {
+                count++;
+            }
+        }
+        return count;
     }
 }
