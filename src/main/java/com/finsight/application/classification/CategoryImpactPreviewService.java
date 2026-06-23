@@ -57,7 +57,7 @@ public class CategoryImpactPreviewService {
         out.setChildCategoryCount(childCount);
         for (Map<String, Object> row : loadAmountByMonth(refs)) {
             out.addMonth(
-                    String.valueOf(row.get("year_month")),
+                    String.valueOf(row.get("txn_month")),
                     row.get("txn_count") == null ? 0 : ((Number) row.get("txn_count")).longValue(),
                     row.get("amount") == null ? 0 : ((Number) row.get("amount")).doubleValue());
         }
@@ -112,13 +112,7 @@ public class CategoryImpactPreviewService {
         if (refs.isEmpty()) {
             return List.of();
         }
-        String sql = "select date_format(t.transaction_date, '%Y-%m') as year_month, "
-                + "count(*) as txn_count, "
-                + "round(sum(abs(coalesce(t.expense_amount,0)) + abs(coalesce(t.income_money,0))), 2) as amount "
-                + "from `transaction` t where coalesce(t.deleted,0)=0 and "
-                + CategoryImpactSupport.transactionMatchSql(refs)
-                + " group by date_format(t.transaction_date, '%Y-%m') "
-                + "order by year_month desc limit " + MONTHLY_LIMIT;
+        String sql = CategoryImpactSupport.monthlyAmountSql(refs, MONTHLY_LIMIT);
         return jdbcTemplate.queryForList(sql, CategoryImpactSupport.transactionMatchParams(refs));
     }
 
