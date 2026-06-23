@@ -1,0 +1,21 @@
+{
+  "runTag": "2026-06-23-sprint1",
+  "issue": "#68",
+  "phase": "BEFORE",
+  "note": "Populate CSV/JSON via scripts/db/export-classification-audit-baseline.sh against your MySQL instance.",
+  "exports": [
+    "baseline-orphan-rules.csv",
+    "baseline-invalid-rules.csv",
+    "baseline-duplicate-patterns.csv",
+    "baseline-field-drift.csv",
+    "baseline-unclassified-top100.csv",
+    "baseline-other-consumption-top100.csv",
+    "baseline-merchant-token-samples.csv",
+    "baseline-summary.json"
+  ],
+  "remediationDocs": [
+    "l2-category-candidates.zh-cn.md",
+    "rule-fix-priority-list.zh-cn.md"
+  ],
+  "apiSummary": "GET /api/v1/maintenance/classification-audit-summary"
+}

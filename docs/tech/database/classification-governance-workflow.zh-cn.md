@@ -39,6 +39,10 @@ flowchart LR
 
 ```bash
 mysql -u <user> -p finsight < docs/tech/database/classification-data-audit.sql > audit-$(date +%Y%m%d-%H%M).txt
+
+# 或按章节导出 CSV/JSON 到 audit-results/<run-tag>/：
+chmod +x scripts/db/export-classification-audit-baseline.sh
+RUN_TAG=2026-06-23-sprint1 ./scripts/db/export-classification-audit-baseline.sh
 ```
 
 必导出的 baseline 片段（对应 audit.sql 章节）：

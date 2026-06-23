@@ -1,0 +1,16 @@
+{
+  "artifact": "BASELINE_SUMMARY",
+  "runTag": "2026-06-23-sprint1",
+  "phase": "BEFORE",
+  "note": "Replace with output from export-classification-audit-baseline.sh or GET /api/v1/maintenance/classification-audit-summary",
+  "active_orphan_rules": null,
+  "active_invalid_pattern_rules": null,
+  "category_field_drift_rows": null,
+  "unclassified_txns": null,
+  "other_category_txns": null,
+  "merchant_profile_mismatch_count": null,
+  "duplicate_pattern_groups": null,
+  "broad_keyword_rules": null,
+  "rules_without_category": null,
+  "txn_missing_category_groups": null
+}
