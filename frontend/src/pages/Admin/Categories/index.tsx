@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Alert, Button, Form, Input, InputNumber, message, Popconfirm, Select, Space, Tree,
+  Alert, Button, Form, Input, InputNumber, message, Select, Space, Tree,
 } from 'antd'
 import { ClusterOutlined, PlusOutlined } from '@ant-design/icons'
 import {
-  createCategory, deleteCategory, listCategoriesAdmin, updateCategory, type ConsumeCategoryRow,
+  createCategory,
+  deleteCategory,
+  fetchCategoryImpactPreview,
+  listCategoriesAdmin,
+  migrateCategory,
+  updateCategory,
+  type CategoryImpactPreview,
+  type ConsumeCategoryRow,
 } from '../../../api/admin'
+import { CategoryImpactPreviewModal } from '../../../components/CategoryImpactPreviewModal'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
 import { PageSkeleton } from '../../../components/PageSkeleton'
@@ -14,11 +22,20 @@ import { buildCategoryTree, toAntTreeNodes } from '../../../utils/categoryTree'
 
 const EMPTY: ConsumeCategoryRow = { name: '', code: '', parentId: '', sortNo: 1, txnTypes: 'expense' }
 
+type PendingAction = 'delete' | 'rename' | 'merge' | null
+
 export function CategoriesAdminPage() {
   const qc = useQueryClient()
   const [form] = Form.useForm<ConsumeCategoryRow>()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [impactOpen, setImpactOpen] = useState(false)
+  const [impactLoading, setImpactLoading] = useState(false)
+  const [impactPreview, setImpactPreview] = useState<CategoryImpactPreview | null>(null)
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null)
+  const [pendingValues, setPendingValues] = useState<ConsumeCategoryRow | null>(null)
+  const [mergeTargetCode, setMergeTargetCode] = useState<string | null>(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   const { data: categories = [], isLoading, isError, error } = useQuery({
     queryKey: ['admin-categories'],
@@ -51,34 +68,119 @@ export function CategoriesAdminPage() {
     qc.invalidateQueries({ queryKey: ['consume-tree'] })
   }
 
+  const closeImpact = () => {
+    setImpactOpen(false)
+    setImpactPreview(null)
+    setPendingAction(null)
+    setPendingValues(null)
+    setMergeTargetCode(null)
+  }
+
+  const openImpactPreview = useCallback(async (
+    action: PendingAction,
+    values?: ConsumeCategoryRow,
+    targetCode?: string,
+  ) => {
+    if (!selected?.id || !action) return
+    setPendingAction(action)
+    setPendingValues(values ?? null)
+    setMergeTargetCode(targetCode ?? null)
+    setImpactOpen(true)
+    setImpactLoading(true)
+    setImpactPreview(null)
+    try {
+      const preview = await fetchCategoryImpactPreview(
+        selected.id,
+        action,
+        targetCode,
+      )
+      setImpactPreview(preview)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Failed to load impact preview')
+      closeImpact()
+    } finally {
+      setImpactLoading(false)
+    }
+  }, [selected?.id])
+
   const onSave = async () => {
     const values = await form.validateFields()
-    try {
-      if (creating) {
+    if (creating) {
+      try {
         await createCategory(values)
         message.success('Category created')
         setCreating(false)
-      } else if (selected?.id) {
-        await updateCategory(selected.id, values, true)
-        message.success('Category updated')
+        reload()
+      } catch (e) {
+        message.error(e instanceof Error ? e.message : 'Save failed')
       }
+      return
+    }
+    if (!selected?.id) return
+    const nameChanged = (values.name ?? '').trim() !== (selected.name ?? '').trim()
+    if (nameChanged) {
+      await openImpactPreview('rename', values)
+      return
+    }
+    try {
+      await updateCategory(selected.id, values, true)
+      message.success('Category updated')
       reload()
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Save failed')
     }
   }
 
-  const onDelete = async () => {
+  const onDeleteClick = () => {
     if (!selected?.id) return
+    openImpactPreview('delete')
+  }
+
+  const onMergeClick = () => {
+    if (!selected?.id || !mergeTargetCode) {
+      message.warning('Select a merge target category first')
+      return
+    }
+    if (mergeTargetCode === selected.code) {
+      message.warning('Source and target must differ')
+      return
+    }
+    openImpactPreview('merge', undefined, mergeTargetCode)
+  }
+
+  const mergeTargetOptions = useMemo(
+    () => categories
+      .filter((c) => c.deleted !== 1 && c.code && c.code !== selected?.code)
+      .map((c) => ({ value: c.code!, label: `${c.name || c.code} (${c.code})` })),
+    [categories, selected?.code],
+  )
+
+  const confirmImpact = async () => {
+    if (!selected?.id || !pendingAction) return
+    setConfirmLoading(true)
     try {
-      await deleteCategory(selected.id)
-      message.success('Category deleted')
-      setSelectedId(null)
+      if (pendingAction === 'delete') {
+        await deleteCategory(selected.id)
+        message.success('Category deleted')
+        setSelectedId(null)
+      } else if (pendingAction === 'rename' && pendingValues) {
+        await updateCategory(selected.id, pendingValues, true)
+        message.success('Category updated')
+      } else if (pendingAction === 'merge' && mergeTargetCode) {
+        await migrateCategory(selected.id, mergeTargetCode, true, false)
+        message.success('Category merged')
+        setSelectedId(null)
+      }
+      closeImpact()
       reload()
     } catch (e) {
-      message.error(e instanceof Error ? e.message : 'Delete failed')
+      message.error(e instanceof Error ? e.message : 'Operation failed')
+    } finally {
+      setConfirmLoading(false)
     }
   }
+
+  const deleteBlocked = (impactPreview?.childCategoryCount ?? 0) > 0
 
   return (
     <DataPageLayout
@@ -142,12 +244,22 @@ export function CategoriesAdminPage() {
               <Form.Item name="sortNo" label="Sort order">
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
-              <Space>
+              <Space wrap>
                 <Button type="primary" onClick={onSave}>{creating ? 'Create' : 'Save'}</Button>
                 {!creating && selected?.id && (
-                  <Popconfirm title="Soft-delete this category?" onConfirm={onDelete}>
-                    <Button danger>Delete</Button>
-                  </Popconfirm>
+                  <>
+                    <Button danger onClick={onDeleteClick}>Delete</Button>
+                    <Select
+                      allowClear
+                      size="small"
+                      placeholder="Merge into…"
+                      style={{ minWidth: 180 }}
+                      options={mergeTargetOptions}
+                      value={mergeTargetCode ?? undefined}
+                      onChange={(v) => setMergeTargetCode(v ?? null)}
+                    />
+                    <Button size="small" disabled={!mergeTargetCode} onClick={onMergeClick}>Merge</Button>
+                  </>
                 )}
                 {creating && (
                   <Button onClick={() => setCreating(false)}>Cancel</Button>
@@ -159,6 +271,30 @@ export function CategoriesAdminPage() {
           )}
         </div>
       </div>
+
+      <CategoryImpactPreviewModal
+        open={impactOpen}
+        loading={impactLoading || confirmLoading}
+        preview={impactPreview}
+        actionLabel={
+          pendingAction === 'rename'
+            ? 'Rename category'
+            : pendingAction === 'merge'
+              ? 'Merge category'
+              : 'Delete category'
+        }
+        confirmLabel={
+          pendingAction === 'rename'
+            ? 'Save changes'
+            : pendingAction === 'merge'
+              ? 'Merge categories'
+              : 'Delete category'
+        }
+        confirmDanger={pendingAction === 'delete' || pendingAction === 'merge'}
+        confirmDisabled={pendingAction === 'delete' && deleteBlocked}
+        onCancel={closeImpact}
+        onConfirm={confirmImpact}
+      />
     </DataPageLayout>
   )
 }
