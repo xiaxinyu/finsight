@@ -47,7 +47,7 @@ class CategoryImpactPreviewServiceTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), any(Object[].class))).thenReturn(10L);
         when(jdbcTemplate.queryForObject(anyString(), eq(Double.class), any(Object[].class))).thenReturn(1234.5);
         when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of(
-                Map.of("year_month", "2026-01", "txn_count", 4, "amount", 200.0)));
+                Map.of("txn_month", "2026-01", "txn_count", 4, "amount", 200.0)));
 
         CategoryImpactPreview preview = service.preview("DAILY-01", CategoryImpactAction.DELETE, null);
 

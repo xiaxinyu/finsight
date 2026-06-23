@@ -23,6 +23,8 @@ public final class CategoryImpactSupport {
             "Home dashboard buckets"
     );
 
+    private static final String TXN_MONTH_EXPR = "date_format(t.transaction_date, '%Y-%m')";
+
     private CategoryImpactSupport() {
     }
 
@@ -42,10 +44,10 @@ public final class CategoryImpactSupport {
         }
         List<String> clauses = new ArrayList<>();
         for (int i = 0; i < refs.size(); i++) {
-            clauses.add("consume_code = ?");
-            clauses.add("consume_id = ?");
-            clauses.add("category_code = ?");
-            clauses.add("category_id = ?");
+            clauses.add("t.consume_code = ?");
+            clauses.add("t.consume_id = ?");
+            clauses.add("t.category_code = ?");
+            clauses.add("t.category_id = ?");
         }
         return "(" + String.join(" OR ", clauses) + ")";
     }
@@ -61,6 +63,23 @@ public final class CategoryImpactSupport {
             }
         }
         return params.toArray();
+    }
+
+    /**
+     * Monthly txn rollup for impact preview. Uses {@code txn_month} alias — not {@code year_month},
+     * because MySQL treats {@code ORDER BY year_month} as the YEAR_MONTH() function.
+     */
+    public static String monthlyAmountSql(List<String> refs, int limit) {
+        if (refs == null || refs.isEmpty()) {
+            return "select null as txn_month, 0 as txn_count, 0 as amount where 1=0";
+        }
+        return "select " + TXN_MONTH_EXPR + " as txn_month, "
+                + "count(*) as txn_count, "
+                + "round(sum(abs(coalesce(t.expense_amount,0)) + abs(coalesce(t.income_money,0))), 2) as amount "
+                + "from `transaction` t where coalesce(t.deleted,0)=0 and "
+                + transactionMatchSql(refs)
+                + " group by " + TXN_MONTH_EXPR
+                + " order by " + TXN_MONTH_EXPR + " desc limit " + limit;
     }
 
     public static List<String> warningsFor(CategoryImpactAction action,
