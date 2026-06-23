@@ -5,6 +5,7 @@ import { BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { Link } from 'react-router-dom'
 import { runForecastScenario } from '../../api/analytics'
+import { fetchForecastBacktest } from '../../api/classification'
 import type { ForecastCategory, ForecastMonth } from '../../api/analytics'
 import { saveBudgetLine } from '../../api/finance'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
@@ -75,6 +76,13 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
     queryKey: ['annual-outlook', year, scenario, scenarioPayload],
     queryFn: () => runForecastScenario({ year, scenario, ...scenarioPayload }),
     enabled: flags.forecast,
+  })
+
+  const { data: backtest } = useQuery({
+    queryKey: ['forecast-backtest'],
+    queryFn: () => fetchForecastBacktest(6),
+    enabled: flags.forecast,
+    staleTime: 300_000,
   })
 
   const loading = isLoading || isFetching || inputsApplying
@@ -196,6 +204,11 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
         { label: 'Cash risk', type: 'report', path: '/reports/cash-risk' },
       ],
       source: 'annual-outlook',
+      provenance: {
+        reportId: 'annual-outlook',
+        sourceView: 'forecast month row',
+        aggregateTotal: month?.net ?? (month ? monthForecastNet(month) ?? undefined : undefined),
+      },
     }))
   }
 
@@ -221,6 +234,11 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
         { label: 'Adjust budget', type: 'planning', path: '/planning' },
       ],
       source: 'annual-outlook',
+      provenance: {
+        reportId: 'annual-outlook',
+        sourceView: 'category forecast row',
+        aggregateTotal: category.yearTotal,
+      },
     }))
   }
 
@@ -293,6 +311,15 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
             onApply={applyScenarioInputs}
           />
           <InsightPanel bullets={methodology} title="Methodology" />
+          {backtest && (backtest.incomeMape != null || backtest.expenseMape != null) && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 12 }}
+              message="Forecast backtest (recent 6 months)"
+              description={`Income MAPE ${backtest.incomeMape != null ? `${(backtest.incomeMape * 100).toFixed(1)}%` : 'n/a'} · Expense MAPE ${backtest.expenseMape != null ? `${(backtest.expenseMape * 100).toFixed(1)}%` : 'n/a'} — compare with actuals before trusting projections.`}
+            />
+          )}
           <InsightPanel bullets={insights} title="Outlook" />
           <div style={{ marginTop: 16 }}>
             <CombinedInsightPanel

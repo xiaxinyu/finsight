@@ -10,10 +10,15 @@ import { createTransfer } from '../../api/finance'
 import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
-  classifyTransactions, classifyUnclassifiedInFilter, parseReclassifyResult, deleteTransaction, expenseToIncome,
+  deleteTransaction, expenseToIncome,
   fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction,
   type ReclassifyResult, type TransactionQuery, type TransactionRow,
 } from '../../api/transaction'
+import {
+  applyReclassification,
+  previewReclassificationByIds,
+  previewReclassificationUnclassified,
+} from '../../api/classification'
 import { useConsumeTreeSelect } from '../../hooks/useConsumeTree'
 import { useCardTree } from '../../hooks/useCardTree'
 import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
@@ -422,10 +427,9 @@ export function TransactionsPage() {
     }
     setClassifyBusy(true)
     try {
-      const raw = pending.mode === 'ids'
-        ? await classifyTransactions(pending.ids, { persist: false })
-        : await classifyUnclassifiedInFilter({ ...pending.filters, persist: false } as TransactionQuery & { persist?: boolean })
-      const r = parseReclassifyResult(raw)
+      const r = pending.mode === 'ids'
+        ? await previewReclassificationByIds(pending.ids, false)
+        : await previewReclassificationUnclassified(pending.filters)
       if (!r) {
         message.error('Could not preview classification')
         return
@@ -443,13 +447,11 @@ export function TransactionsPage() {
     if (!editRows.length) return
     setClassifyBusy(true)
     try {
-      await Promise.all(editRows.map((r) => updateTransaction({
-        id: r.id,
-        consumeCode: r.categoryCode,
-        consumeID: r.categoryCode,
-        consumeName: findTreeTitle(treeData, r.categoryCode) || r.categoryName,
-      })))
-      message.success(`Applied ${editRows.length} categor${editRows.length === 1 ? 'y' : 'ies'}`)
+      const ids = editRows.map((r) => r.id).join(',')
+      const applied = await applyReclassification(ids, false, 'Transactions auto-classify confirm')
+      const count = applied.result?.classified ?? editRows.length
+      const batchHint = applied.batchId ? ` (batch ${applied.batchId})` : ''
+      message.success(`Applied ${count} categor${count === 1 ? 'y' : 'ies'}${batchHint}`)
       setClassifyPreviewOpen(false)
       setClassifyPreview(null)
       setSelectedRowKeys([])
@@ -459,7 +461,7 @@ export function TransactionsPage() {
     } finally {
       setClassifyBusy(false)
     }
-  }, [treeData, reload])
+  }, [reload])
 
   const previewRows = useMemo(
     () => buildClassifyPreviewRows(classifyPreview?.preview ?? [], selectedRows),

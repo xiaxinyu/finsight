@@ -130,6 +130,10 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
       },
       explanation: insights.map((b) => b.text),
       source: 'report',
+      provenance: {
+        reportId: 'spending-drift',
+        sourceView: 'category drift row',
+      },
     }))
   }
 

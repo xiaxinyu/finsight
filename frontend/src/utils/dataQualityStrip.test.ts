@@ -18,4 +18,14 @@ describe('dataQualityStrip', () => {
     expect(text).toContain('18%')
     expect(text).toContain('Rule Engine')
   })
+
+  it('formats config versions when present', () => {
+    const text = formatDataQualityStrip({
+      confidence: 'medium',
+      versions: { taxonomyVersion: 2, ruleSetVersion: 5, metricRefreshVersion: 9 },
+    })
+    expect(text).toContain('taxonomy v2')
+    expect(text).toContain('rules v5')
+    expect(text).toContain('metrics v9')
+  })
 })

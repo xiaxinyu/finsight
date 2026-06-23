@@ -139,6 +139,12 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
         <>Sample: {(provenance?.sampleCount ?? data?.sampleSize ?? 0).toLocaleString()} · </>
       )}
       {(provenance?.truncated ?? truncated) ? 'Truncated sample' : 'Full sample'}
+      {provenance?.filterParams && Object.keys(provenance.filterParams).length > 0 && (
+        <> · Filters: {Object.entries(provenance.filterParams)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(', ')}</>
+      )}
     </Typography.Paragraph>
   ) : null
 

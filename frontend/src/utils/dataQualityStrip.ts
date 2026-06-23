@@ -33,6 +33,12 @@ export function formatDataQualityStrip(data: DataQualityStripData): string {
   if (data.metricsSource) {
     parts.push(`metrics: ${data.metricsSource}`)
   }
+  if (data.versions) {
+    const v = data.versions
+    parts.push(
+      `taxonomy v${v.taxonomyVersion ?? '?'} · rules v${v.ruleSetVersion ?? '?'} · metrics v${v.metricRefreshVersion ?? '?'}`,
+    )
+  }
   if (conf === 'low') {
     parts.push('→ tune Rule Engine / classify unclassified rows before trusting trends')
   }
