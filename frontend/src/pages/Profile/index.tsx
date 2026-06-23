@@ -10,23 +10,25 @@ import { FsChart } from '../../components/FsChart'
 import { EmptyState } from '../../components/EmptyState'
 import { PageSkeleton } from '../../components/PageSkeleton'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
+import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
 import { buildProfileRadarOption, PROFILE_DIM_LABELS, profileUserTypeLabel } from './profileRadar'
+import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
+import { profileActionLinks } from './profileActions'
+import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
 
 function dimensionIdFromRadarName(name: string): string | undefined {
   const entry = Object.entries(PROFILE_DIM_LABELS).find(([, label]) => label === name)
   return entry?.[0]
 }
-import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
-import { profileActionLinks } from './profileActions'
-import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
 
 export function ProfilePage() {
   const { flags } = useFeatureFlags()
   const [activeDimension, setActiveDimension] = useState<ProfileDimension | null>(null)
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['financial-profile'],
+    queryKey: QUERY_KEYS.financialProfile,
     queryFn: fetchProfile,
     enabled: flags.profile,
+    staleTime: ANALYTICS_STALE_MS,
   })
 
   const radarOption = useMemo(
@@ -52,23 +54,27 @@ export function ProfilePage() {
   }
   if (!data) return null
 
+  const metricsWarning = data.metricsGate?.gateEnabled && !data.metricsGate.ok
+
   return (
     <DataPageLayout
+      className="fs-data-page--profile"
       title="Financial Profile"
       subtitle={`Explainable 10-dimension view · ${data.asOf}`}
       icon={<UserOutlined />}
     >
-      {data.metricsGate?.gateEnabled && !data.metricsGate.ok && (
+      {metricsWarning && (
         <Alert
           type="warning"
           showIcon
           style={{ marginBottom: 12 }}
           message="Metrics reconciliation mismatch"
-          description={`Using ${data.metricsSource === 'report_sql' ? 'report SQL fallback' : 'stored metrics'}. ${(data.metricsGate.mismatches || []).join('; ')}`}
+          description={`Using stored metrics (${data.metricsSource || 'fin_metric_monthly'}). ${data.metricsGate?.warning || (data.metricsGate?.mismatches || []).join('; ')}`}
         />
       )}
-      <CombinedInsightPanel title="Actionable combined insights" />
-      <Row gutter={[16, 16]}>
+
+      {/* Layer 1: health summary */}
+      <Row gutter={[16, 16]} className="fs-profile-summary-row">
         <Col xs={24} md={8}>
           <ContentCard title="Overall">
             <Typography.Title level={2} style={{ margin: 0 }}>{data.overallScore}</Typography.Title>
@@ -82,38 +88,58 @@ export function ProfilePage() {
           </ContentCard>
         </Col>
         <Col xs={24} md={16}>
-          <ContentCard title="Dimension radar">
-            <FsChart
-              option={radarOption}
-              height={320}
-              onEvents={{
-                click: (p) => {
-                  const name = (p as { name?: string }).name
-                  if (!name) return
-                  const dimId = dimensionIdFromRadarName(name)
-                  const dim = data.dimensions.find((d) => d.id === dimId)
-                  if (dim) setActiveDimension(dim)
-                },
-              }}
-            />
+          <ContentCard title="Dimension radar" className="fs-profile-radar-card">
+            <div className="fs-profile-radar-wrap">
+              <FsChart
+                option={radarOption}
+                height={320}
+                onEvents={{
+                  click: (p) => {
+                    const name = (p as { name?: string }).name
+                    if (!name) return
+                    const dimId = dimensionIdFromRadarName(name)
+                    const dim = data.dimensions.find((d) => d.id === dimId)
+                    if (dim) setActiveDimension(dim)
+                  },
+                }}
+              />
+            </div>
+            <div className="fs-profile-radar-mobile-list" aria-hidden="false">
+              {data.dimensions.map((dim) => (
+                <button
+                  key={dim.id}
+                  type="button"
+                  className="fs-profile-dim-bar"
+                  onClick={() => setActiveDimension(dim)}
+                >
+                  <span>{PROFILE_DIM_LABELS[dim.id] || dim.id}</span>
+                  <span className="fs-profile-dim-bar-track">
+                    <span className="fs-profile-dim-bar-fill" style={{ width: `${dim.score}%` }} />
+                  </span>
+                  <strong>{dim.score}</strong>
+                </button>
+              ))}
+            </div>
           </ContentCard>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      {/* Layer 2: dimension matrix */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }} className="fs-profile-matrix-row">
         {data.dimensions.map((dim) => {
           const primaryEvidence = dim.evidence?.[0]
           const primaryAction = profileActionLinks(dim)[0]
           return (
             <Col xs={24} md={12} lg={8} key={dim.id}>
               <ContentCard
+                className="fs-profile-dimension-card"
                 title={PROFILE_DIM_LABELS[dim.id] || dim.id}
                 extra={<Typography.Link onClick={() => setActiveDimension(dim)}>Details</Typography.Link>}
               >
                 <div
                   role="button"
                   tabIndex={0}
-                  style={{ cursor: 'pointer' }}
+                  className="fs-profile-dimension-body"
                   onClick={() => setActiveDimension(dim)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveDimension(dim) }}
                 >
@@ -121,17 +147,21 @@ export function ProfilePage() {
                     <Tag>{dim.level}</Tag>
                     <strong>{dim.score}</strong>
                   </div>
-                  <Typography.Paragraph type="secondary" style={{ minHeight: 40, marginBottom: 8 }}>
+                  <Typography.Paragraph
+                    type="secondary"
+                    className="fs-profile-dimension-reason"
+                    ellipsis={{ rows: 2, tooltip: dim.reason || dim.summary }}
+                  >
                     {dim.reason || dim.summary}
                   </Typography.Paragraph>
                   {primaryEvidence && (
-                    <Typography.Paragraph style={{ marginBottom: 8, fontSize: 13 }}>
+                    <Typography.Paragraph className="fs-profile-dimension-evidence" ellipsis={{ tooltip: String(primaryEvidence.value ?? '—') }}>
                       <Typography.Text type="secondary">{primaryEvidence.label || primaryEvidence.ref}: </Typography.Text>
                       {String(primaryEvidence.value ?? '—')}
                     </Typography.Paragraph>
                   )}
                   {primaryAction && (
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    <Typography.Text type="secondary" className="fs-profile-dimension-action">
                       {primaryAction.label} →
                     </Typography.Text>
                   )}
@@ -141,6 +171,11 @@ export function ProfilePage() {
           )
         })}
       </Row>
+
+      {/* Layer 3: compact combined insights */}
+      <div className="fs-profile-insights-row">
+        <CombinedInsightPanel compact title="Actionable insights" limit={2} />
+      </div>
 
       <ProfileDimensionDrawer
         open={!!activeDimension}

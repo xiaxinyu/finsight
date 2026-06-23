@@ -4,9 +4,12 @@ import com.finsight.application.analytics.FinancialProfileService;
 import com.finsight.application.config.FeatureFlagService;
 import com.finsight.web.api.dto.CommonResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/analytics")
@@ -33,5 +36,13 @@ public class AnalyticsProfileController {
                                        @RequestParam(required = false) String dimension) {
         featureFlags.requireProfile();
         return CommonResult.success(profileService.history(from, to, dimension));
+    }
+
+    /** Explicit snapshot refresh for scheduled jobs / ops — not invoked on GET profile. */
+    @PostMapping("/profile/snapshots/refresh")
+    public CommonResult refreshProfileSnapshots() throws Exception {
+        featureFlags.requireProfile();
+        profileService.refreshProfileSnapshots();
+        return CommonResult.success(Map.of("refreshed", true));
     }
 }

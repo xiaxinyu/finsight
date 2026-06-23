@@ -35,6 +35,7 @@ import { defaultPeriodRange, formatPeriodPreview, type PeriodRange } from '../..
 import { rollupToLevel1 } from '../../utils/reportAnalytics'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
+import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
 
 function savingsRateLabel(income: number, net: number): string {
   if (income <= 0) return '—'
@@ -95,9 +96,10 @@ export function DashboardPage() {
     queryFn: cashflowMetrics,
   })
   const { data: advisorCards, isError: cardsError, error: cardsErr, refetch: refetchAdvisor } = useQuery({
-    queryKey: ['advisor-recommendations'],
+    queryKey: QUERY_KEYS.advisorRecommendations,
     queryFn: advisorRecommendations,
     enabled: flags.advisor,
+    staleTime: ANALYTICS_STALE_MS,
   })
   const { data: legacyCards } = useQuery({
     queryKey: ['decision-cards'],

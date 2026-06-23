@@ -40,6 +40,40 @@ cd frontend && npm run dev
 cd frontend && npm test
 ```
 
+## 响应式与表格规范（v2.0.0）
+
+### 视口验收
+
+核心页面应在 **360、390、768、1024、1440**（及 1920）宽度下无**页面级**横向溢出：
+
+- Profile（`.fs-data-page--profile`）
+- Dashboard
+- Reports 壳层
+- Transactions Detail
+
+自动化（可选，本地）：`cd frontend && npm run test:e2e`（Playwright）。**CI 暂不跑 E2E**；发布前请手工在 DevTools 设备模式下抽查上述视口。
+
+### 表格
+
+- 固定表头 + 明确 `scroll.x`；窄屏优先横向滚动，不压缩到不可读
+- 金额列右对齐、等宽数字（`MoneyText` / tabular nums）
+- Transactions：Date | Transaction | Category | Merchant | Amount | Card | Actions
+- 行内操作按钮最小点击区域 **40×40px**（`.fs-row-action`）
+
+### 图表
+
+- 固定高度（如 Profile radar 320px），避免加载后布局跳变
+- 移动端（≤768px）Profile radar 切换为维度条形列表
+
+### 空态 / 错误态
+
+- 使用 `EmptyState` / `Alert` + `PageSkeleton`；禁止空白图表占位
+
+### 前端缓存
+
+- 重型 analytics query 默认 `staleTime: 600_000`（10 分钟）
+- 键名见 `frontend/src/constants/queryKeys.ts`
+
 ## 生产打包
 
 ```bash

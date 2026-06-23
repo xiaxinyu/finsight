@@ -40,6 +40,7 @@ import { EmptyState } from '../../components/EmptyState'
 import { MoneyText } from '../../components/MoneyText'
 import { moneyTypeFromRow } from '../../utils/moneyType'
 import { TransactionCardCell } from '../../components/TransactionCardCell'
+import { TransactionMerchantCell } from '../../components/TransactionMerchantCell'
 import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
@@ -322,7 +323,15 @@ export function TransactionsPage() {
         width: 280,
         fixed: 'left',
         ellipsis: true,
-        render: (_, r) => <TransactionLedgerCell row={r} pageMaxAmount={pageMaxAmount} />,
+        render: (_, r) => <TransactionLedgerCell row={r} pageMaxAmount={pageMaxAmount} showTags={false} />,
+      },
+      {
+        title: <TableHeader name="Merchant" />,
+        dataIndex: 'opponentName',
+        width: 120,
+        ellipsis: true,
+        responsive: ['md'],
+        render: (_, r) => <TransactionMerchantCell row={r} />,
       },
       {
         title: <TableHeader name="Category" />,
@@ -554,7 +563,7 @@ export function TransactionsPage() {
           actionRef={actionRef}
           rowKey="id"
           size="small"
-          scroll={{ x: 920, y: tableHeight }}
+          scroll={{ x: 1040, y: tableHeight }}
           search={false}
           loading={tableLoading}
           options={{ density: true, reload: () => reload(), setting: true, fullScreen: false }}

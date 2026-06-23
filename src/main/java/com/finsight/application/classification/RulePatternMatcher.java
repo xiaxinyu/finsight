@@ -1,9 +1,7 @@
 package com.finsight.application.classification;
 
 import com.finsight.application.consume.ClassificationNarrationBuilder;
-import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.consume.ClassificationTextNormalizer;
-import com.finsight.application.transaction.TransactionReclassificationService;
 import com.finsight.domain.model.ClassificationRule;
 import com.finsight.domain.model.Transaction;
 import org.apache.commons.lang3.StringUtils;

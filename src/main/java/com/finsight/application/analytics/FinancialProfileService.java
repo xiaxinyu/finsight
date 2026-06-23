@@ -26,6 +26,9 @@ public class FinancialProfileService {
     private static final double SAVINGS_TARGET = 0.2;
     private static final double FIXED_BURDEN_THRESHOLD = 35;
     private static final double LIQUIDITY_TARGET_MONTHS = 6;
+    private static final long PROFILE_BUDGET_MS = 800;
+
+    private static final ThreadLocal<String> USER_OVERRIDE = new ThreadLocal<>();
 
     private final MetricMonthlyRepository metricRepository;
     private final WealthService wealthService;
@@ -34,7 +37,10 @@ public class FinancialProfileService {
     private final AuthenticationFacade authenticationFacade;
     private final JdbcTemplate jdbcTemplate;
     private final MetricGateService metricGateService;
-    private final MetricMonthlyService metricMonthlyService;
+    private final AnalyticsCacheService cacheService;
+    private final AnalyticsRequestMemo requestMemo;
+    private final AnalyticsCacheKeySupport cacheKeySupport;
+    private final MetricGateRepairService metricGateRepairService;
 
     public FinancialProfileService(MetricMonthlyRepository metricRepository,
                                    WealthService wealthService,
@@ -43,7 +49,10 @@ public class FinancialProfileService {
                                    AuthenticationFacade authenticationFacade,
                                    JdbcTemplate jdbcTemplate,
                                    MetricGateService metricGateService,
-                                   MetricMonthlyService metricMonthlyService) {
+                                   AnalyticsCacheService cacheService,
+                                   AnalyticsRequestMemo requestMemo,
+                                   AnalyticsCacheKeySupport cacheKeySupport,
+                                   MetricGateRepairService metricGateRepairService) {
         this.metricRepository = metricRepository;
         this.wealthService = wealthService;
         this.cashflowService = cashflowService;
@@ -51,18 +60,86 @@ public class FinancialProfileService {
         this.authenticationFacade = authenticationFacade;
         this.jdbcTemplate = jdbcTemplate;
         this.metricGateService = metricGateService;
-        this.metricMonthlyService = metricMonthlyService;
+        this.cacheService = cacheService;
+        this.requestMemo = requestMemo;
+        this.cacheKeySupport = cacheKeySupport;
+        this.metricGateRepairService = metricGateRepairService;
     }
 
+    /**
+     * Read-only profile for GET endpoints. Uses request memo + TTL cache; does not write snapshots.
+     */
     public Map<String, Object> currentProfile() throws Exception {
+        Map<String, Object> memo = requestMemo.getProfile();
+        if (memo != null) {
+            AnalyticsTiming.logCacheHit("profile", true);
+            return memo;
+        }
+        String cacheKey = cacheKeySupport.profileKey(userKey());
+        Map<String, Object> cached = cacheService.getProfile(cacheKey);
+        if (cached != null) {
+            AnalyticsTiming.logCacheHit("profile", true);
+            requestMemo.setProfile(cached);
+            return cached;
+        }
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("profile", PROFILE_BUDGET_MS)) {
+            Map<String, Object> computed = computeProfile();
+            cacheService.putProfile(cacheKey, computed);
+            requestMemo.setProfile(computed);
+            AnalyticsTiming.logCacheHit("profile", false);
+            return computed;
+        }
+    }
+
+    /**
+     * Explicit snapshot refresh for scheduled jobs or ops — not invoked on GET.
+     */
+    public void refreshProfileSnapshots() throws Exception {
+        refreshProfileSnapshotsForUser(userKey());
+    }
+
+    public void refreshProfileSnapshotsForUser(String userId) throws Exception {
+        USER_OVERRIDE.set(userId);
+        try {
+            Map<String, Object> profile = computeProfile();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> dimensions = (List<Map<String, Object>>) profile.get("dimensions");
+            persistSnapshot(userId, dimensions);
+            cacheService.invalidateProfile(cacheKeySupport.profileKey(userId));
+        } finally {
+            USER_OVERRIDE.remove();
+        }
+    }
+
+    public List<Map<String, Object>> history(String from, String to, String dimension) {
+        if (dimension != null && !dimension.isBlank()) {
+            return jdbcTemplate.queryForList(
+                    "select snapshot_date as snapshotDate, dimension, score, level_label as level, payload_json as payload "
+                            + "from fin_profile_snapshot where user_id = ? and snapshot_date between ? and ? "
+                            + "and dimension = ? order by snapshot_date",
+                    userKey(), from, to, dimension);
+        }
+        return jdbcTemplate.queryForList(
+                "select snapshot_date as snapshotDate, dimension, score, level_label as level, payload_json as payload "
+                        + "from fin_profile_snapshot where user_id = ? and snapshot_date between ? and ? order by snapshot_date",
+                userKey(), from, to);
+    }
+
+    Map<String, Object> computeProfile() throws Exception {
         String userId = userKey();
         YearMonth end = YearMonth.now();
         YearMonth start = end.minusMonths(11);
         Map<String, Object> metricsGate = metricGateService.status(3);
-        boolean reportFallback = metricGateService.useReportFallback();
-        List<Map<String, Object>> metrics = reportFallback
-                ? metricMonthlyService.historyFromReports(start.format(YM), end.format(YM))
-                : metricRepository.listForUser(userId, start.format(YM), end.format(YM));
+        boolean gateMismatch = metricGateService.useReportFallback();
+        List<Map<String, Object>> metrics = metricRepository.listForUser(userId, start.format(YM), end.format(YM));
+        String metricsSource = gateMismatch ? "fin_metric_monthly_degraded" : "fin_metric_monthly";
+        if (gateMismatch) {
+            metricsGate = new LinkedHashMap<>(metricsGate);
+            metricsGate.put("fallbackBlocked", true);
+            metricsGate.put("warning",
+                    "Reconciliation mismatch detected; inline report recalculation is disabled on read paths.");
+            metricGateRepairService.scheduleRepairIfGateBlocked(true);
+        }
 
         Map<String, Object> wealth = wealthService.snapshot();
         Map<String, Object> cashflow = cashflowService.metrics();
@@ -157,27 +234,13 @@ public class FinancialProfileService {
         out.put("dimensions", dimensions);
         out.put("asOf", LocalDate.now().toString());
         out.put("metricsGate", metricsGate);
-        out.put("metricsSource", reportFallback ? "report_sql" : "fin_metric_monthly");
-
-        persistSnapshot(userId, dimensions);
+        out.put("metricsSource", metricsSource);
         return out;
     }
 
-    public List<Map<String, Object>> history(String from, String to, String dimension) {
-        if (dimension != null && !dimension.isBlank()) {
-            return jdbcTemplate.queryForList(
-                    "select snapshot_date as snapshotDate, dimension, score, level_label as level, payload_json as payload "
-                            + "from fin_profile_snapshot where user_id = ? and snapshot_date between ? and ? "
-                            + "and dimension = ? order by snapshot_date",
-                    userKey(), from, to, dimension);
-        }
-        return jdbcTemplate.queryForList(
-                "select snapshot_date as snapshotDate, dimension, score, level_label as level, payload_json as payload "
-                        + "from fin_profile_snapshot where user_id = ? and snapshot_date between ? and ? order by snapshot_date",
-                userKey(), from, to);
-    }
-
     private ProfileScoring.ConcentrationStats loadConcentrationStats(String userId, YearMonth start, YearMonth end) {
+        LocalDate rangeStart = start.atDay(1);
+        LocalDate rangeEndExclusive = end.plusMonths(1).atDay(1);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.category_code, v.category_name, sum(v.amount) as amount "
                         + "from v_transaction_analytics v "
@@ -185,11 +248,11 @@ public class FinancialProfileService {
                         + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
                         + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
                         + "and v.category_code != '__UNCLASSIFIED__' "
-                        + "and date_format(v.txn_date, '%Y-%m') between ? and ? "
+                        + "and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
                         + "group by v.category_code, v.category_name "
                         + "order by amount desc",
-                start.format(YM), end.format(YM), userId, userId);
+                rangeStart, rangeEndExclusive, userId, userId);
         return ProfileScoring.concentrationFromRows(rows);
     }
 
@@ -204,6 +267,15 @@ public class FinancialProfileService {
                     UUID.randomUUID().toString(), userId, today, dim.get("id"), dim.get("score"),
                     dim.get("level"), com.alibaba.fastjson.JSON.toJSONString(dim));
         }
+    }
+
+    private String userKey() {
+        String override = USER_OVERRIDE.get();
+        if (override != null && !override.isBlank()) {
+            return override;
+        }
+        String user = authenticationFacade.getUserName();
+        return user == null || user.isBlank() ? "_anonymous" : user;
     }
 
     private static Map<String, Object> dimension(String id,
@@ -396,10 +468,5 @@ public class FinancialProfileService {
         double avg = average(values);
         double var = values.stream().mapToDouble(v -> (v - avg) * (v - avg)).average().orElse(0);
         return Math.sqrt(var);
-    }
-
-    private String userKey() {
-        String user = authenticationFacade.getUserName();
-        return user == null || user.isBlank() ? "_anonymous" : user;
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -32,6 +32,10 @@ import { cellText } from '../../../utils/cell'
 const ALL_KEY = '__all__'
 
 const HIDDEN_TREE_KEYS = new Set([LEGACY_KEY, INVALID_KEY])
+
+function normalizeTreeKey(key: string): string {
+  return HIDDEN_TREE_KEYS.has(key) ? ALL_KEY : key
+}
 
 function isMainListRule(
   rule: ConsumeRuleRow,
@@ -210,7 +214,14 @@ export function RulesAdminPage() {
   const [form] = Form.useForm<ConsumeRuleRow>()
   const { treeData: categorySelectTree } = useConsumeTreeSelect()
 
-  const [selectedKey, setSelectedKey] = useState(ALL_KEY)
+  const categoryFromUrl = searchParams.get('category') || ''
+
+  const [selectedKey, setSelectedKeyState] = useState(ALL_KEY)
+  const [treeSelection, setTreeSelection] = useState<{ source: 'url' | 'manual'; key: string }>({
+    source: 'url',
+    key: ALL_KEY,
+  })
+  const [urlSnapshot, setUrlSnapshot] = useState(categoryFromUrl)
   const [keyword, setKeyword] = useState('')
   const [treeSearch, setTreeSearch] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
@@ -222,13 +233,10 @@ export function RulesAdminPage() {
   const [impactPreview, setImpactPreview] = useState<RuleImpactPreview | null>(null)
   const [impactScope, setImpactScope] = useState<'ALL_MATCHES' | 'UNCLASSIFIED_ONLY' | 'WOULD_OVERRIDE'>('ALL_MATCHES')
 
-  useEffect(() => {
-    if (HIDDEN_TREE_KEYS.has(selectedKey)) {
-      setSelectedKey(ALL_KEY)
-    }
-  }, [selectedKey])
-
-  const categoryFromUrl = searchParams.get('category') || ''
+  if (categoryFromUrl !== urlSnapshot) {
+    setUrlSnapshot(categoryFromUrl)
+    setTreeSelection({ source: 'url', key: ALL_KEY })
+  }
 
   const { data: allCategories = [], isLoading: catsLoading } = useQuery({
     queryKey: ['admin-categories', 'withDeleted'],
@@ -241,15 +249,26 @@ export function RulesAdminPage() {
     [allCategories],
   )
 
-  useEffect(() => {
-    if (!categoryFromUrl || !activeCategories.length) return
+  const urlTreeKey = useMemo(() => {
+    if (!categoryFromUrl || !activeCategories.length) return null
     const match = activeCategories.find(
       (c) => c.code === categoryFromUrl || c.id === categoryFromUrl,
     )
-    if (match) {
-      setSelectedKey(match.id || match.code || ALL_KEY)
-    }
+    if (!match) return null
+    return normalizeTreeKey(match.id || match.code || ALL_KEY)
   }, [categoryFromUrl, activeCategories])
+
+  const effectiveSelectedKey = useMemo(() => {
+    if (treeSelection.source === 'manual') return normalizeTreeKey(treeSelection.key)
+    if (urlTreeKey !== null) return urlTreeKey
+    return normalizeTreeKey(selectedKey)
+  }, [treeSelection, urlTreeKey, selectedKey])
+
+  const setSelectedKey = (key: string) => {
+    const normalized = normalizeTreeKey(key)
+    setSelectedKeyState(normalized)
+    setTreeSelection({ source: 'manual', key: normalized })
+  }
 
   const { data: rules = [], isLoading: rulesLoading, refetch } = useQuery({
     queryKey: ['admin-rules'],
@@ -302,13 +321,13 @@ export function RulesAdminPage() {
   const filtered = useMemo(() => {
     let list = filterByTreeKey(
       rules,
-      selectedKey,
+      effectiveSelectedKey,
       activeCategories,
       allCategories,
       (r, cat) => ruleMatchesCategory(r.categoryId, cat),
       highRiskIds,
     )
-    if (selectedKey === ALL_KEY) {
+    if (effectiveSelectedKey === ALL_KEY) {
       list = list.filter((r) => isMainListRule(r, activeCategories, allCategories))
     }
     const q = keyword.trim().toLowerCase()
@@ -318,7 +337,7 @@ export function RulesAdminPage() {
       )
     }
     return list.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
-  }, [rules, selectedKey, activeCategories, allCategories, keyword, highRiskIds])
+  }, [rules, effectiveSelectedKey, activeCategories, allCategories, keyword, highRiskIds])
 
   const stats = useMemo(() => {
     const visible = rules.filter((r) => isMainListRule(r, activeCategories, allCategories))
@@ -330,13 +349,13 @@ export function RulesAdminPage() {
     return { active, disabled, orphaned, highRisk, duplicateGroups }
   }, [rules, activeCategories, allCategories, highRiskIds.size, riskReport?.duplicatePatternGroupCount])
 
-  const panelTitle = panelTitleForKey(selectedKey, activeMap)
-  const panelHint = panelHintForKey(selectedKey)
-  const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === NO_CAT_KEY
+  const panelTitle = panelTitleForKey(effectiveSelectedKey, activeMap)
+  const panelHint = panelHintForKey(effectiveSelectedKey)
+  const showCategoryCol = effectiveSelectedKey === ALL_KEY || effectiveSelectedKey === ORPHAN_KEY || effectiveSelectedKey === NO_CAT_KEY
 
   const openCreate = (presetPattern = '') => {
     setImpactPreview(null)
-    const presetCategory = ![ALL_KEY, HIGH_RISK_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
+    const presetCategory = ![ALL_KEY, HIGH_RISK_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(effectiveSelectedKey) ? effectiveSelectedKey : ''
     setEditing(null)
     form.setFieldsValue({
       pattern: presetPattern,
@@ -511,7 +530,7 @@ export function RulesAdminPage() {
           ) : (
             <Tree
               showLine
-              selectedKeys={[selectedKey]}
+              selectedKeys={[effectiveSelectedKey]}
               treeData={visibleTree}
               onSelect={(keys) => {
                 const k = keys[0]

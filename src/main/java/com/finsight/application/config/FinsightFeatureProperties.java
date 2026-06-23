@@ -13,6 +13,7 @@ public class FinsightFeatureProperties {
     private Forecast forecast = new Forecast();
     private MerchantMining merchantMining = new MerchantMining();
     private Metrics metrics = new Metrics();
+    private Analytics analytics = new Analytics();
     private Security security = new Security();
 
     public Planning getPlanning() {
@@ -61,6 +62,14 @@ public class FinsightFeatureProperties {
 
     public void setMetrics(Metrics metrics) {
         this.metrics = metrics;
+    }
+
+    public Analytics getAnalytics() {
+        return analytics;
+    }
+
+    public void setAnalytics(Analytics analytics) {
+        this.analytics = analytics;
     }
 
     public Security getSecurity() {
@@ -150,6 +159,59 @@ public class FinsightFeatureProperties {
 
         public void setReconcileGate(boolean reconcileGate) {
             this.reconcileGate = reconcileGate;
+        }
+    }
+
+    public static class Analytics {
+        /** Profile read cache TTL (seconds). Default 10 minutes. */
+        private int profileCacheTtlSeconds = 600;
+        /** Advisor recommendations cache TTL (seconds). Default 10 minutes. */
+        private int advisorCacheTtlSeconds = 600;
+        /** Forecast preview cache TTL (seconds). Default 10 minutes. */
+        private int forecastCacheTtlSeconds = 600;
+        /** When true, {@code ProfileSnapshotScheduler} persists daily snapshots per ledger user. */
+        private boolean profileSnapshotSchedulerEnabled = false;
+        /** Cron for profile snapshot scheduler (Spring {@code @Scheduled}). */
+        private String profileSnapshotSchedulerCron = "0 0 2 * * *";
+
+        public int getProfileCacheTtlSeconds() {
+            return profileCacheTtlSeconds;
+        }
+
+        public void setProfileCacheTtlSeconds(int profileCacheTtlSeconds) {
+            this.profileCacheTtlSeconds = profileCacheTtlSeconds;
+        }
+
+        public int getAdvisorCacheTtlSeconds() {
+            return advisorCacheTtlSeconds;
+        }
+
+        public void setAdvisorCacheTtlSeconds(int advisorCacheTtlSeconds) {
+            this.advisorCacheTtlSeconds = advisorCacheTtlSeconds;
+        }
+
+        public int getForecastCacheTtlSeconds() {
+            return forecastCacheTtlSeconds;
+        }
+
+        public void setForecastCacheTtlSeconds(int forecastCacheTtlSeconds) {
+            this.forecastCacheTtlSeconds = forecastCacheTtlSeconds;
+        }
+
+        public boolean isProfileSnapshotSchedulerEnabled() {
+            return profileSnapshotSchedulerEnabled;
+        }
+
+        public void setProfileSnapshotSchedulerEnabled(boolean profileSnapshotSchedulerEnabled) {
+            this.profileSnapshotSchedulerEnabled = profileSnapshotSchedulerEnabled;
+        }
+
+        public String getProfileSnapshotSchedulerCron() {
+            return profileSnapshotSchedulerCron;
+        }
+
+        public void setProfileSnapshotSchedulerCron(String profileSnapshotSchedulerCron) {
+            this.profileSnapshotSchedulerCron = profileSnapshotSchedulerCron;
         }
     }
 

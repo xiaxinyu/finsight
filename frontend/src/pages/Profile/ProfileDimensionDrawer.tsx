@@ -7,6 +7,7 @@ import type { ProfileDimension } from '../../api/analytics'
 import { fetchProfileHistory } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
 import { EmptyState } from '../../components/EmptyState'
+import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
 import { PROFILE_DIM_LABELS } from './profileRadar'
 import { buildProfileHistoryOption, historyDateRange } from './profileHistoryChart'
 import { profileActionLinks } from './profileActions'
@@ -23,8 +24,9 @@ export function ProfileDimensionDrawer({ open, dimension, asOf, onClose }: Props
   const dimensionId = dimension?.id || ''
 
   const { data: history, isLoading } = useQuery({
-    queryKey: ['profile-history', dimensionId, range.from, range.to],
+    queryKey: QUERY_KEYS.profileHistory(dimensionId, range.from, range.to),
     enabled: open && !!dimensionId,
+    staleTime: ANALYTICS_STALE_MS,
     queryFn: () => fetchProfileHistory(range.from, range.to, dimensionId),
   })
 
