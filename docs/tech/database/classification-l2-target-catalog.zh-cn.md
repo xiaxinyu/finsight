@@ -48,5 +48,6 @@ mysql -u <user> -p finsight < docs/tech/database/l2-category-sprint2-seed.sql
 
 ## 关联
 
+- **去重合并**：[category-dedup-merge-playbook.zh-cn.md](./category-dedup-merge-playbook.zh-cn.md)（`INC` vs `INCOME` 等）
 - Audit 候选：[audit-results/2026-06-23-sprint1/l2-category-candidates.zh-cn.md](./audit-results/2026-06-23-sprint1/l2-category-candidates.zh-cn.md)
 - 工作流：[classification-governance-workflow.zh-cn.md](./classification-governance-workflow.zh-cn.md)

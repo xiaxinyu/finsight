@@ -8,6 +8,8 @@ import java.util.Set;
 public final class ClassificationL1Codes {
 
     public static final String INCOME = "INCOME";
+    /** Legacy income L1 (preferred canonical root when both INC and INCOME exist). */
+    public static final String INC = "INC";
     public static final String FIXED = "FIXED";
     public static final String LIVING = "LIVING";
     public static final String SHOPPING = "SHOPPING";
@@ -24,7 +26,7 @@ public final class ClassificationL1Codes {
     public static final String OTHER = "OTHER";
 
     private static final Set<String> ALL = Set.of(
-            INCOME, FIXED, LIVING, SHOPPING, TRAVEL, EDU, ENT, GIFT, REIM,
+            INCOME, INC, FIXED, LIVING, SHOPPING, TRAVEL, EDU, ENT, GIFT, REIM,
             ASSET, LIABILITY, INVEST, WEALTH, FEE, OTHER);
 
     private ClassificationL1Codes() {

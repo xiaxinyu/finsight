@@ -3,6 +3,7 @@ package com.finsight.application.classification;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,10 +49,23 @@ public class L2CategorySeedService {
         out.put("catalogOnlyCount", items.stream().filter(i -> i.action() == L2CategorySeedPlanner.Action.SKIP_CATALOG_ONLY).count());
         out.put("items", items);
         out.put("nameUpdates", L2CategorySeedPlanner.buildNameUpdates());
+        out.put("duplicateL1Hints", buildDuplicateL1Hints(existing));
         out.put("manualScript", "docs/tech/database/l2-category-sprint2-seed.sql");
+        out.put("dedupPlaybook", "docs/tech/database/category-dedup-merge-playbook.zh-cn.md");
         out.put("catalogDoc", "docs/tech/database/classification-l2-target-catalog.zh-cn.md");
-        out.put("note", "Does not mutate data — run manual SQL after review. New categories apply to new rules only.");
+        out.put("note", "Does not mutate data — run manual SQL after review. Prefer UI merge per dedup playbook.");
         return out;
+    }
+
+    private List<Map<String, String>> buildDuplicateL1Hints(Set<String> existing) {
+        List<Map<String, String>> hints = new ArrayList<>();
+        if (existing.contains("INC") && existing.contains("INCOME")) {
+            hints.add(Map.of(
+                    "pair", "INC + INCOME",
+                    "action", "Merge INCOME (source) into INC (target) via Categories UI",
+                    "doc", "docs/tech/database/category-dedup-merge-playbook.zh-cn.md"));
+        }
+        return hints;
     }
 
     private boolean tableExists(String table) {

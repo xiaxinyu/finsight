@@ -69,7 +69,7 @@ public class ClassificationCategoryAdminController {
             @PathVariable String id,
             @RequestParam(value = "toCode", required = false) String toCode,
             @RequestParam(value = "deleteAfter", required = false, defaultValue = "true") boolean deleteAfter,
-            @RequestParam(value = "cascade", required = false, defaultValue = "false") boolean cascade) {
+            @RequestParam(value = "cascade", required = false, defaultValue = "true") boolean cascade) {
         return adminFacade.migrate(id, toCode, deleteAfter, cascade);
     }
 }

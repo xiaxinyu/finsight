@@ -10,6 +10,7 @@
 -- Manual execution only; never auto-applied by Flyway.
 
 -- Step 0: ensure L1 roots exist (insert if missing)
+-- Skip INCOME L1 when legacy INC already exists
 insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, deleted, version, created_at, updated_at) select 'INCOME', 'INCOME', '收入', 1, null, 10, 'income', 0, 0, now(), now() from dual where not exists (select 1 from cls_category where code = 'INCOME');
 insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, deleted, version, created_at, updated_at) select 'FIXED', 'FIXED', '固定支出', 1, null, 20, 'expense', 0, 0, now(), now() from dual where not exists (select 1 from cls_category where code = 'FIXED');
 insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, deleted, version, created_at, updated_at) select 'LIVING', 'LIVING', '日常生活', 1, null, 30, 'expense', 0, 0, now(), now() from dual where not exists (select 1 from cls_category where code = 'LIVING');
@@ -111,6 +112,17 @@ update cls_category set report_role = 'income' where code = 'INCOME-01' and coal
 update cls_category set report_role = 'income' where code = 'INCOME-02' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
 update cls_category set report_role = 'investment' where code = 'INCOME-03' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
 update cls_category set report_role = 'income' where code = 'INCOME-99' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-01' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-02' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-03' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'investment' where code = 'INC-04' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-05' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-06' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-07' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'liability' where code = 'INC-08' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-09' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'refund' where code = 'INC-10' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
+update cls_category set report_role = 'income' where code = 'INC-99' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
 update cls_category set report_role = 'budget' where code = 'FIXED-01' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
 update cls_category set report_role = 'budget' where code = 'FIXED-02' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');
 update cls_category set report_role = 'budget' where code = 'FIXED-03' and coalesce(deleted, 0) = 0 and (report_role is null or trim(report_role) = '');

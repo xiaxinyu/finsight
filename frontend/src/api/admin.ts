@@ -148,7 +148,7 @@ export async function migrateCategory(
   id: string,
   toCode: string,
   deleteAfter = true,
-  cascade = false,
+  cascade = true,
 ) {
   const params = new URLSearchParams()
   params.set('toCode', toCode)

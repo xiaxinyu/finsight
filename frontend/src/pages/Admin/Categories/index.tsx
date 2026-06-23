@@ -167,7 +167,7 @@ export function CategoriesAdminPage() {
         await updateCategory(selected.id, pendingValues, true)
         message.success('Category updated')
       } else if (pendingAction === 'merge' && mergeTargetCode) {
-        await migrateCategory(selected.id, mergeTargetCode, true, false)
+        await migrateCategory(selected.id, mergeTargetCode, true, true)
         message.success('Category merged')
         setSelectedId(null)
       }

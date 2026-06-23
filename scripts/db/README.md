@@ -12,7 +12,8 @@
 | [`soft-delete-cmb-duplicate-transactions.sql`](soft-delete-cmb-duplicate-transactions.sql) | 软删招商银行重复 |
 | Flyway `V18__transaction_analytics_view.sql` | 分析宽表视图 `v_transaction_analytics` |
 | [`export-classification-audit-baseline.sh`](export-classification-audit-baseline.sh) | 导出分类审计 baseline CSV/JSON 到 `docs/tech/database/audit-results/` |
-| [`l2-category-sprint2-seed.sql`](../docs/tech/database/l2-category-sprint2-seed.sql) | **手动** 插入 v1.8 L2 分类（Issue #69，不批量改历史交易） |
+| [`category-dedup-merge-playbook.zh-cn.md`](../docs/tech/database/category-dedup-merge-playbook.zh-cn.md) | **手动/UI** L1/L2 去重合并步骤（INC vs INCOME 等） |
+| [`l2-category-sprint2-seed.sql`](../docs/tech/database/l2-category-sprint2-seed.sql) | **手动** 插入 v1.8 L2 分类（Issue #69） |
 | `GET /api/v1/maintenance/l2-category-seed-plan` | 在线 L2 seed 计划（待插入 / 已存在） |
 | `GET /api/v1/maintenance/classification-audit-summary` | 在线汇总 + P0/P1/P2 remediation plan |
 | `GET /api/v1/analytics/export?format=csv` | 导出 CSV 供 Excel / Python 挖掘 |

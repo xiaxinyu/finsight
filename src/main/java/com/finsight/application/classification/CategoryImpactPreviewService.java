@@ -74,6 +74,13 @@ public class CategoryImpactPreviewService {
             } else {
                 out.setTargetCode(target.getCode());
                 out.setTargetName(target.getName());
+                if (CategoryMergeSupport.isLevelOne(cat) && CategoryMergeSupport.isLevelOne(target)) {
+                    out.getWarnings().removeIf(w -> w.startsWith("Category has"));
+                    if (childCount > 0) {
+                        out.getWarnings().add(childCount + " child categories will be reparented under "
+                                + target.getCode() + " (duplicate L1 merge).");
+                    }
+                }
             }
         }
         return out;
