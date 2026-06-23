@@ -71,7 +71,28 @@ WHERE v.txn_date >= '2025-07-01' AND v.txn_date < '2026-07-01'
 
 React Query 默认 `staleTime: 600_000`（10 分钟）。Network 面板中 Profile + Advisor 不应在短时间内重复触发相同重型 API。
 
-## 6. 回滚
+## 6. 生产 / 预发 P95 压测
+
+对**已登录会话**跑 warm-cache 预算检查（默认各 20 次，丢弃前 3 次 warmup）：
+
+```bash
+export FINSIGHT_BASE_URL=https://your-host
+export FINSIGHT_USER=admin
+export FINSIGHT_PASS='secret'
+bash scripts/ops/analytics-p95-smoke.sh
+```
+
+预算（可覆盖环境变量）：
+
+| 端点 | 默认 P95 预算 |
+|------|----------------|
+| GET `/api/v1/analytics/profile` | 800ms |
+| GET `/api/v1/advisor/recommendations` | 500ms |
+| GET `/api/v1/analytics/forecast` | 1000ms |
+
+建议在低峰期连续跑 2–3 轮，并同时观察 MySQL CPU（见 §1）。
+
+## 7. 回滚
 
 若 v2.0.0 性能改动引入问题：
 
