@@ -13,4 +13,12 @@ export type DrillDownContext = {
   params: Record<string, string>
   actions?: DrillDownAction[]
   source?: 'dashboard' | 'report' | 'profile' | 'cash-risk' | 'annual-outlook'
+  provenance?: {
+    reportId?: string
+    sourceView?: string
+    aggregateTotal?: number
+    sampleCount?: number
+    truncated?: boolean
+    filterParams?: Record<string, string>
+  }
 }

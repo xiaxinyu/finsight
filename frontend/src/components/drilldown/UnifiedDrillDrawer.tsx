@@ -95,6 +95,7 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
   const transactionRows = data?.transactions || []
   const truncated = isDrillTruncated(data)
   const partialMessage = data ? formatPartialDrillMessage(data.total, data.sampleSize) : ''
+  const provenance = context.provenance
 
   const actions = mergeDrillActions(context.actions)
   const showCategories = !context.params.consumeName && !categoryFilter
@@ -126,6 +127,20 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
       setMerchantFilter(merchant || null)
     }
   }
+
+  const provenanceBlock = provenance || data ? (
+    <Typography.Paragraph type="secondary" className="fs-drill-provenance" style={{ marginBottom: 12 }}>
+      {provenance?.reportId && <>Report: {provenance.reportId} · </>}
+      {provenance?.sourceView && <>Source: {provenance.sourceView} · </>}
+      {(provenance?.aggregateTotal != null || data?.aggregateTotal != null) && (
+        <>Aggregate: {formatMoney(provenance?.aggregateTotal ?? data?.aggregateTotal ?? 0)} · </>
+      )}
+      {(provenance?.sampleCount != null || data?.sampleSize != null) && (
+        <>Sample: {(provenance?.sampleCount ?? data?.sampleSize ?? 0).toLocaleString()} · </>
+      )}
+      {(provenance?.truncated ?? truncated) ? 'Truncated sample' : 'Full sample'}
+    </Typography.Paragraph>
+  ) : null
 
   const partialAlert = truncated && partialMessage ? (
     <Alert
@@ -165,6 +180,8 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
             : undefined,
         }))}
       />
+
+      {provenanceBlock}
 
       {layer === 'insight' && (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>

@@ -6,6 +6,7 @@ import { EmptyState } from './EmptyState'
 import {
   cardPrimaryLabel,
   cardPrimaryPath,
+  evidenceSourceLabel,
   formatConfidence,
   formatImpact,
   normalizeEvidence,
@@ -86,7 +87,7 @@ export function AdvisorEvidenceDrawer({ open, card, onClose }: Props) {
               renderItem={(item) => (
                 <List.Item style={{ display: 'block', paddingInline: 0 }}>
                   <Descriptions size="small" column={1} colon={false}>
-                    <Descriptions.Item label={item.label || item.ref}>
+                    <Descriptions.Item label={item.label || evidenceSourceLabel(item.source) || item.ref}>
                       <Typography.Text>{String(item.value ?? '—')}</Typography.Text>
                     </Descriptions.Item>
                     {item.detail && (

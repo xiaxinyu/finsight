@@ -243,7 +243,7 @@ public class TransactionReclassificationService {
         }
     }
 
-    static boolean isUnclassified(Transaction t) {
+    public static boolean isUnclassified(Transaction t) {
         return StringUtils.isBlank(t.getConsumeCode())
                 && StringUtils.isBlank(t.getConsumeName())
                 && StringUtils.isBlank(t.getCategoryCode())

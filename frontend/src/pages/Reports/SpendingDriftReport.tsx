@@ -16,6 +16,7 @@ import { buildReportDrillContext } from '../../components/drilldown/buildDrillCo
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { DataQualityStrip } from '../../components/DataQualityStrip'
 import { EmptyState } from '../../components/EmptyState'
 import { FsDataTable } from '../../components/FsDataTable'
 import { PeriodRangePicker } from '../../components/PeriodRangePicker'
@@ -239,6 +240,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
         </FilterToolbar>
       )}
     >
+      <DataQualityStrip metricsSource="report_sql" compact />
       {isError && (
         <Alert
           type="error"

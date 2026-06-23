@@ -1,5 +1,7 @@
 package com.finsight.web.api.system;
 
+import com.finsight.application.analytics.DirtyMonthService;
+import com.finsight.application.analytics.ForecastBacktestService;
 import com.finsight.application.analytics.MetricMonthlyService;
 import com.finsight.application.analytics.MetricReconciliationService;
 import com.finsight.application.authentication.AuthenticationFacade;
@@ -29,6 +31,8 @@ public class MaintenanceController {
     private final AuthenticationFacade authenticationFacade;
     private final ClassificationAuditSummaryService auditSummaryService;
     private final L2CategorySeedService l2CategorySeedService;
+    private final DirtyMonthService dirtyMonthService;
+    private final ForecastBacktestService forecastBacktestService;
 
     public MaintenanceController(TransactionDataMigrationService migrationService,
                                SchemaMigrationVerificationService verificationService,
@@ -36,7 +40,9 @@ public class MaintenanceController {
                                MetricReconciliationService metricReconciliationService,
                                AuthenticationFacade authenticationFacade,
                                ClassificationAuditSummaryService auditSummaryService,
-                               L2CategorySeedService l2CategorySeedService) {
+                               L2CategorySeedService l2CategorySeedService,
+                               DirtyMonthService dirtyMonthService,
+                               ForecastBacktestService forecastBacktestService) {
         this.migrationService = migrationService;
         this.verificationService = verificationService;
         this.metricMonthlyService = metricMonthlyService;
@@ -44,6 +50,8 @@ public class MaintenanceController {
         this.authenticationFacade = authenticationFacade;
         this.auditSummaryService = auditSummaryService;
         this.l2CategorySeedService = l2CategorySeedService;
+        this.dirtyMonthService = dirtyMonthService;
+        this.forecastBacktestService = forecastBacktestService;
     }
 
     @PostMapping("/normalize-transaction-amounts")
@@ -83,5 +91,21 @@ public class MaintenanceController {
         String user = authenticationFacade.getUserName();
         String userId = user == null || user.isBlank() ? "_anonymous" : user;
         return CommonResult.success(metricReconciliationService.reconcile(userId, yearMonth));
+    }
+
+    @GetMapping("/dirty-months")
+    public CommonResult dirtyMonths() {
+        return CommonResult.success(dirtyMonthService.listDirty());
+    }
+
+    @PostMapping("/refresh-dirty-months")
+    public CommonResult refreshDirtyMonths() throws Exception {
+        return CommonResult.success(dirtyMonthService.refreshAllDirty());
+    }
+
+    @GetMapping("/forecast-backtest")
+    public CommonResult forecastBacktest(
+            @org.springframework.web.bind.annotation.RequestParam(value = "months", defaultValue = "6") int months) {
+        return CommonResult.success(forecastBacktestService.backtest(months));
     }
 }

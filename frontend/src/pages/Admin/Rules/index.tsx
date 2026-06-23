@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Tree, TreeSelect, Typography,
+  Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Tree, TreeSelect, Typography, Alert,
 } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import {
@@ -10,8 +10,9 @@ import {
 } from '@ant-design/icons'
 import type { ConsumeCategoryRow } from '../../../api/admin'
 import {
-  createRule, deleteRule, fetchRuleRiskAnalysis, fetchUnclassifiedRuleKeywords, listCategoriesAdmin, listRules, updateRule,
+  createRule, deleteRule, fetchRuleImpactPreview, fetchRuleRiskAnalysis, fetchUnclassifiedRuleKeywords, listCategoriesAdmin, listRules, updateRule,
   type ConsumeRuleRow,
+  type RuleImpactPreview,
 } from '../../../api/admin'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
@@ -217,6 +218,9 @@ export function RulesAdminPage() {
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [suggestedKeywords, setSuggestedKeywords] = useState<string[]>([])
+  const [impactLoading, setImpactLoading] = useState(false)
+  const [impactPreview, setImpactPreview] = useState<RuleImpactPreview | null>(null)
+  const [impactScope, setImpactScope] = useState<'ALL_MATCHES' | 'UNCLASSIFIED_ONLY' | 'WOULD_OVERRIDE'>('ALL_MATCHES')
 
   useEffect(() => {
     if (HIDDEN_TREE_KEYS.has(selectedKey)) {
@@ -331,6 +335,7 @@ export function RulesAdminPage() {
   const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === NO_CAT_KEY
 
   const openCreate = (presetPattern = '') => {
+    setImpactPreview(null)
     const presetCategory = ![ALL_KEY, HIGH_RISK_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
     setEditing(null)
     form.setFieldsValue({
@@ -366,6 +371,7 @@ export function RulesAdminPage() {
   }
 
   const openEdit = (rule: ConsumeRuleRow) => {
+    setImpactPreview(null)
     setEditing(rule)
     form.setFieldsValue({ ...rule, tags: rule.tags || [] })
     setEditorOpen(true)
@@ -409,6 +415,33 @@ export function RulesAdminPage() {
       </Popconfirm>
     </div>
   )
+
+  const runImpactPreview = async () => {
+    const values = form.getFieldsValue()
+    if (!values.pattern?.trim()) {
+      message.warning('Enter a keyword before testing impact')
+      return
+    }
+    setImpactLoading(true)
+    try {
+      const preview = await fetchRuleImpactPreview({
+        ruleId: editing?.id ? String(editing.id) : undefined,
+        pattern: values.pattern,
+        patternType: values.patternType,
+        categoryId: values.categoryId,
+        priority: values.priority,
+        bankCode: values.bankCode || undefined,
+        cardTypeCode: values.cardTypeCode || undefined,
+        scope: impactScope,
+      })
+      setImpactPreview(preview)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Impact preview failed')
+      setImpactPreview(null)
+    } finally {
+      setImpactLoading(false)
+    }
+  }
 
   const onSave = async () => {
     const values = await form.validateFields()
@@ -743,6 +776,7 @@ export function RulesAdminPage() {
               <span />
             )}
             <Space>
+              <Button loading={impactLoading} onClick={() => void runImpactPreview()}>Test impact</Button>
               <CancelBtn />
               <OkBtn />
             </Space>
@@ -791,6 +825,35 @@ export function RulesAdminPage() {
           >
             <Switch />
           </Form.Item>
+          <Form.Item label="Impact scope">
+            <Select
+              value={impactScope}
+              onChange={setImpactScope}
+              options={[
+                { value: 'ALL_MATCHES', label: 'All matches (90d)' },
+                { value: 'UNCLASSIFIED_ONLY', label: 'Unclassified only' },
+                { value: 'WOULD_OVERRIDE', label: 'Would override classified' },
+              ]}
+            />
+          </Form.Item>
+          {impactPreview && (
+            <Alert
+              type="info"
+              showIcon
+              message={`${impactPreview.matchedCount ?? 0} matches · ${(impactPreview.matchedAmount ?? 0).toFixed(0)} amount`}
+              description={(
+                <div>
+                  <div>Unclassified: {impactPreview.unclassifiedMatchCount ?? 0} · Would override: {impactPreview.wouldOverrideCount ?? 0}</div>
+                  {(impactPreview.samples || []).slice(0, 3).map((s) => (
+                    <div key={s.transactionId} style={{ marginTop: 4 }}>
+                      {s.description} → {s.afterCategoryCode}
+                      {s.priorityExplanation ? ` (${s.priorityExplanation})` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+            />
+          )}
         </Form>
       </Modal>
     </DataPageLayout>

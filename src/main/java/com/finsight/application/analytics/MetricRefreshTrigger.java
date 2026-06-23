@@ -19,9 +19,12 @@ public class MetricRefreshTrigger {
     private static final DateTimeFormatter YM = DateTimeFormatter.ofPattern("yyyy-MM");
 
     private final MetricMonthlyService metricMonthlyService;
+    private final DirtyMonthService dirtyMonthService;
 
-    public MetricRefreshTrigger(MetricMonthlyService metricMonthlyService) {
+    public MetricRefreshTrigger(MetricMonthlyService metricMonthlyService,
+                                DirtyMonthService dirtyMonthService) {
         this.metricMonthlyService = metricMonthlyService;
+        this.dirtyMonthService = dirtyMonthService;
     }
 
     public void afterTransactionsChanged(Collection<Date> transactionDates) {
@@ -36,6 +39,7 @@ public class MetricRefreshTrigger {
                 months.add(ym.format(YM));
             }
         }
+        dirtyMonthService.markDirty(months);
         for (String month : months) {
             metricMonthlyService.refreshAsync(month);
         }

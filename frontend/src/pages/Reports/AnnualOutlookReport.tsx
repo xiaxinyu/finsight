@@ -12,6 +12,7 @@ import { useFilterApply } from '../../hooks/useFilterApply'
 import { AnnualOutlookScenarioInputs } from '../../components/AnnualOutlookScenarioInputs'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { DataQualityStrip } from '../../components/DataQualityStrip'
 import { EmptyState } from '../../components/EmptyState'
 import { FsChart } from '../../components/FsChart'
 import { FsDataTable } from '../../components/FsDataTable'
@@ -267,6 +268,7 @@ export function AnnualOutlookReport({ title, subtitle }: AnnualOutlookReportProp
         </div>
       )}
     >
+      <DataQualityStrip metricsSource="fin_metric_monthly" compact />
       {!flags.forecast && (
         <EmptyState title="Forecast module disabled" description="Enable finsight.forecast.enabled to use Annual Outlook." />
       )}

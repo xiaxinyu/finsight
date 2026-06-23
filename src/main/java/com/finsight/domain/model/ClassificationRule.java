@@ -34,4 +34,8 @@ public class ClassificationRule extends BaseEntity {
     private Double maxAmount;
     private Date startDate;
     private Date endDate;
+
+    private Date lastMatchedAt;
+    private Integer hitCount;
+    private java.math.BigDecimal impactAmount90d;
 }
