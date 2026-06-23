@@ -11,6 +11,8 @@
 | [`preview-cmb-duplicate-transactions.sql`](preview-cmb-duplicate-transactions.sql) | 查看招商银行重复（描述可略有差异） |
 | [`soft-delete-cmb-duplicate-transactions.sql`](soft-delete-cmb-duplicate-transactions.sql) | 软删招商银行重复 |
 | Flyway `V18__transaction_analytics_view.sql` | 分析宽表视图 `v_transaction_analytics` |
+| [`export-classification-audit-baseline.sh`](export-classification-audit-baseline.sh) | 导出分类审计 baseline CSV/JSON 到 `docs/tech/database/audit-results/` |
+| `GET /api/v1/maintenance/classification-audit-summary` | 在线汇总 + P0/P1/P2 remediation plan |
 | `GET /api/v1/analytics/export?format=csv` | 导出 CSV 供 Excel / Python 挖掘 |
 
 ## 推荐流程
