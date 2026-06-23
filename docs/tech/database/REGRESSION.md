@@ -2,6 +2,8 @@
 
 Unused-table cleanup is **manual** only: `scripts/db/cleanup-unused-tables.sql` (not on app startup).
 
+Classification governance workflow: [classification-governance-workflow.zh-cn.md](./classification-governance-workflow.zh-cn.md)
+
 After Flyway migrate:
 
 1. `mvn clean package`
