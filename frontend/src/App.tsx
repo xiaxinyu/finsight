@@ -5,10 +5,18 @@ import { useEffect } from 'react'
 import { finsightTheme } from './styles/finsight-tokens'
 import { AppRoutes } from './routes/AppRoutes'
 import { setUnauthorizedHandler } from './api/client'
+import { ANALYTICS_GC_MS, ANALYTICS_STALE_MS } from './constants/queryKeys'
 import './index.css'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: ANALYTICS_STALE_MS,
+      gcTime: ANALYTICS_GC_MS,
+    },
+  },
 })
 
 function AuthBridge() {

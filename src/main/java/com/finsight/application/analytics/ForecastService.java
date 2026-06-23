@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -30,8 +31,10 @@ public class ForecastService {
     public static final String METRIC_CATEGORY_EXPENSE_PREFIX = "EXPENSE_FORECAST_CAT:";
 
     private static final int TOP_CATEGORY_FORECASTS = 5;
+    private static final long FORECAST_BUDGET_MS = 1000;
 
     private static final DateTimeFormatter YM = DateTimeFormatter.ofPattern("yyyy-MM");
+    public static final String PREVIEW_RUN_PREFIX = "preview-";
 
     private final MetricMonthlyRepository metricRepository;
     private final BillService billService;
@@ -39,7 +42,10 @@ public class ForecastService {
     private final AuthenticationFacade authenticationFacade;
     private final JdbcTemplate jdbcTemplate;
     private final MetricGateService metricGateService;
-    private final MetricMonthlyService metricMonthlyService;
+    private final AnalyticsCacheService cacheService;
+    private final AnalyticsRequestMemo requestMemo;
+    private final AnalyticsCacheKeySupport cacheKeySupport;
+    private final MetricGateRepairService metricGateRepairService;
 
     public ForecastService(MetricMonthlyRepository metricRepository,
                            BillService billService,
@@ -47,29 +53,69 @@ public class ForecastService {
                            AuthenticationFacade authenticationFacade,
                            JdbcTemplate jdbcTemplate,
                            MetricGateService metricGateService,
-                           MetricMonthlyService metricMonthlyService) {
+                           AnalyticsCacheService cacheService,
+                           AnalyticsRequestMemo requestMemo,
+                           AnalyticsCacheKeySupport cacheKeySupport,
+                           MetricGateRepairService metricGateRepairService) {
         this.metricRepository = metricRepository;
         this.billService = billService;
         this.budgetService = budgetService;
         this.authenticationFacade = authenticationFacade;
         this.jdbcTemplate = jdbcTemplate;
         this.metricGateService = metricGateService;
-        this.metricMonthlyService = metricMonthlyService;
+        this.cacheService = cacheService;
+        this.requestMemo = requestMemo;
+        this.cacheKeySupport = cacheKeySupport;
+        this.metricGateRepairService = metricGateRepairService;
     }
 
     public Map<String, Object> forecast(int year, String scenario) throws Exception {
-        return forecast(year, scenario, ForecastScenarioParams.empty());
+        return forecastPreview(year, scenario, ForecastScenarioParams.empty());
     }
 
     public Map<String, Object> forecast(int year, String scenario, ForecastScenarioParams adjustments) throws Exception {
+        return forecastPreview(year, scenario, adjustments);
+    }
+
+    private Map<String, Object> forecastPreview(int year, String scenario, ForecastScenarioParams adjustments)
+            throws Exception {
+        String cacheKey = cacheKeySupport.forecastKey(userKey(), year, scenario, adjustments);
+        Map<String, Object> memo = requestMemo.getForecast(cacheKey);
+        if (memo != null) {
+            AnalyticsTiming.logCacheHit("forecast", true);
+            return memo;
+        }
+        Map<String, Object> cached = cacheService.getForecast(cacheKey);
+        if (cached != null) {
+            AnalyticsTiming.logCacheHit("forecast", true);
+            requestMemo.setForecast(cacheKey, cached);
+            return cached;
+        }
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("forecast", FORECAST_BUDGET_MS)) {
+            Map<String, Object> computed = computeForecast(year, scenario, adjustments, false);
+            cacheService.putForecast(cacheKey, computed);
+            requestMemo.setForecast(cacheKey, computed);
+            AnalyticsTiming.logCacheHit("forecast", false);
+            return computed;
+        }
+    }
+
+    Map<String, Object> computeForecast(int year, String scenario, ForecastScenarioParams adjustments, boolean persist)
+            throws Exception {
         String userId = userKey();
         YearMonth end = YearMonth.now().minusMonths(1);
         YearMonth start = end.minusMonths(23);
         Map<String, Object> metricsGate = metricGateService.status(3);
-        boolean reportFallback = metricGateService.useReportFallback();
-        List<Map<String, Object>> history = reportFallback
-                ? metricMonthlyService.historyFromReports(start.format(YM), end.format(YM))
-                : metricRepository.listForUser(userId, start.format(YM), end.format(YM));
+        boolean gateMismatch = metricGateService.useReportFallback();
+        List<Map<String, Object>> history = metricRepository.listForUser(userId, start.format(YM), end.format(YM));
+        String metricsSource = gateMismatch ? "fin_metric_monthly_degraded" : "fin_metric_monthly";
+        if (gateMismatch) {
+            metricsGate = new LinkedHashMap<>(metricsGate);
+            metricsGate.put("fallbackBlocked", true);
+            metricsGate.put("warning",
+                    "Reconciliation mismatch detected; inline report recalculation is disabled on read paths.");
+            metricGateRepairService.scheduleRepairIfGateBlocked(true);
+        }
 
         Map<String, Double> actualIncomeByMonth = monthlyMetricMap(history, MetricCode.INCOME_TOTAL.name());
         Map<String, Double> actualExpenseByMonth = monthlyMetricMap(history, MetricCode.EXPENSE_TOTAL.name());
@@ -127,18 +173,21 @@ public class ForecastService {
             months.add(row);
         }
 
-        String runId = UUID.randomUUID().toString();
+        String runId = persist ? UUID.randomUUID().toString() : PREVIEW_RUN_PREFIX + year + "-" + scenario;
         List<Map<String, Object>> categoryForecasts = buildCategoryForecasts(
-                year, factor, spread, userId, start.format(YM), end.format(YM), yearExpense);
-        jdbcTemplate.update("insert into fin_forecast_run (id, user_id, scenario, target_year, params_json, created_at) "
-                        + "values (?, ?, ?, ?, ?, now(3))",
-                runId, userId, scenario, year, "{\"method\":\"rolling_mean_seasonal\"}");
-        persistForecastLines(runId, months, categoryForecasts, spread);
+                year, factor, spread, userId, start, end, yearExpense);
+        if (persist) {
+            jdbcTemplate.update("insert into fin_forecast_run (id, user_id, scenario, target_year, params_json, created_at) "
+                            + "values (?, ?, ?, ?, ?, now(3))",
+                    runId, userId, scenario, year, "{\"method\":\"rolling_mean_seasonal\"}");
+            persistForecastLines(runId, months, categoryForecasts, spread);
+        }
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("year", year);
         out.put("scenario", scenario);
         out.put("runId", runId);
+        out.put("preview", !persist);
         out.put("yearIncome", round(yearIncome));
         out.put("yearExpense", round(yearExpense));
         out.put("yearNet", round(yearIncome - yearExpense));
@@ -155,12 +204,12 @@ public class ForecastService {
         out.put("explanation", buildExplanation(adjustments, actualMonthCount));
         out.put("budgetSuggestion", buildBudgetSuggestion(yearExpense, scenario, deficitMonths.size()));
         out.put("metricsGate", metricsGate);
-        out.put("metricsSource", reportFallback ? "report_sql" : "fin_metric_monthly");
+        out.put("metricsSource", metricsSource);
         return out;
     }
 
     public Map<String, Object> categoryForecasts(int year, String scenario) throws Exception {
-        Map<String, Object> forecast = forecast(year, scenario);
+        Map<String, Object> forecast = forecastPreview(year, scenario, ForecastScenarioParams.empty());
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("year", forecast.get("year"));
         out.put("scenario", forecast.get("scenario"));
@@ -211,7 +260,7 @@ public class ForecastService {
             }
         }
         ForecastScenarioParams adjustments = ForecastScenarioParams.fromMap(params);
-        Map<String, Object> out = forecast(year, scenario, adjustments);
+        Map<String, Object> out = computeForecast(year, scenario, adjustments, true);
         out.put("inputParams", params);
         out.put("adjustments", adjustments.toMap());
         return out;
@@ -352,8 +401,8 @@ public class ForecastService {
                                                              double factor,
                                                              ForecastConfidence.Spread spread,
                                                              String userId,
-                                                             String historyStart,
-                                                             String historyEnd,
+                                                             YearMonth historyStart,
+                                                             YearMonth historyEnd,
                                                              double yearExpenseTotal) {
         Map<String, CategoryHistory> histories = loadCategoryHistory(userId, historyStart, historyEnd);
         List<CategoryHistory> ranked = histories.values().stream()
@@ -388,7 +437,9 @@ public class ForecastService {
         return forecasts;
     }
 
-    private Map<String, CategoryHistory> loadCategoryHistory(String userId, String start, String end) {
+    private Map<String, CategoryHistory> loadCategoryHistory(String userId, YearMonth start, YearMonth end) {
+        LocalDate rangeStart = start.atDay(1);
+        LocalDate rangeEndExclusive = end.plusMonths(1).atDay(1);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.category_code, v.category_name, date_format(v.txn_date, '%Y-%m') as month_key, "
                         + "sum(v.amount) as amount "
@@ -397,10 +448,10 @@ public class ForecastService {
                         + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
                         + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
                         + "and v.category_code != '__UNCLASSIFIED__' "
-                        + "and date_format(v.txn_date, '%Y-%m') between ? and ? "
+                        + "and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
-                        + "group by v.category_code, v.category_name, month_key",
-                start, end, userId, userId);
+                        + "group by v.category_code, v.category_name, date_format(v.txn_date, '%Y-%m')",
+                rangeStart, rangeEndExclusive, userId, userId);
 
         Map<String, CategoryHistory> out = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {

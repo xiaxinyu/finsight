@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,13 @@ class FinancialProfileServiceTest {
     @Mock
     private MetricGateService metricGateService;
     @Mock
-    private MetricMonthlyService metricMonthlyService;
+    private AnalyticsCacheService cacheService;
+    @Mock
+    private AnalyticsRequestMemo requestMemo;
+    @Mock
+    private AnalyticsCacheKeySupport cacheKeySupport;
+    @Mock
+    private MetricGateRepairService metricGateRepairService;
 
     @InjectMocks
     private FinancialProfileService service;
@@ -55,7 +62,7 @@ class FinancialProfileServiceTest {
     void currentProfile_includesReadableEvidenceAndActionPaths() throws Exception {
         stubProfileDeps();
         when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
-                anyString(), anyString(), anyString(), anyString()))
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of(categoryRow("food", "Food", 3000)));
 
         Map<String, Object> profile = service.currentProfile();
@@ -84,7 +91,7 @@ class FinancialProfileServiceTest {
     void currentProfile_spendingConcentrationUsesCategoryShare() throws Exception {
         stubProfileDeps();
         when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
-                anyString(), anyString(), anyString(), anyString()))
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of(
                         categoryRow("food", "Food", 8000),
                         categoryRow("travel", "Travel", 2000)));
@@ -107,7 +114,7 @@ class FinancialProfileServiceTest {
     void currentProfile_usesCanonicalReportActionPaths() throws Exception {
         stubProfileDeps();
         when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
-                anyString(), anyString(), anyString(), anyString()))
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
         Map<String, Object> profile = service.currentProfile();
@@ -122,17 +129,17 @@ class FinancialProfileServiceTest {
     }
 
     @Test
-    void currentProfile_persistsSnapshotsWithUpsert() throws Exception {
+    void currentProfile_doesNotPersistSnapshotsOnRead() throws Exception {
         stubProfileDeps();
         when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
-                anyString(), anyString(), anyString(), anyString()))
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
         service.currentProfile();
 
-        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
-        verify(jdbcTemplate, times(10)).update(sql.capture(), any(), any(), any(), any(), any(), any(), any());
-        assertTrue(sql.getAllValues().stream().allMatch(s -> s.toLowerCase().contains("on duplicate key update")));
+        verify(jdbcTemplate, times(0)).update(
+                org.mockito.ArgumentMatchers.contains("fin_profile_snapshot"),
+                any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -154,7 +161,7 @@ class FinancialProfileServiceTest {
     void currentProfile_spendingControlEvidenceShowsExpenseRatio() throws Exception {
         stubProfileDeps();
         when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
-                anyString(), anyString(), anyString(), anyString()))
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
         Map<String, Object> profile = service.currentProfile();
@@ -173,6 +180,9 @@ class FinancialProfileServiceTest {
 
     private void stubProfileDeps() throws Exception {
         when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(requestMemo.getProfile()).thenReturn(null);
+        when(cacheKeySupport.profileKey("alice")).thenReturn("profile:alice");
+        when(cacheService.getProfile("profile:alice")).thenReturn(null);
         when(metricGateService.status(3)).thenReturn(Map.of("ok", true, "gateEnabled", false));
         when(metricGateService.useReportFallback()).thenReturn(false);
         when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleMetrics());

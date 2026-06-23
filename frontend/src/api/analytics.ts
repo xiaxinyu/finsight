@@ -45,7 +45,7 @@ export type ProfileData = {
   userTypeExplanation?: string
   asOf: string
   dimensions: ProfileDimension[]
-  metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }
+  metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[]; warning?: string; fallbackBlocked?: boolean }
   metricsSource?: string
 }
 
@@ -130,7 +130,7 @@ export type ForecastData = {
   budgetTarget?: BudgetTarget
   explanation?: string[]
   budgetSuggestion?: BudgetSuggestion
-  metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[] }
+  metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[]; warning?: string; fallbackBlocked?: boolean }
   metricsSource?: string
   adjustments?: {
     incomeChangePct?: number

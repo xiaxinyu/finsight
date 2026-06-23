@@ -18,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -59,7 +61,16 @@ class ForecastServiceTest {
     private MetricGateService metricGateService;
 
     @Mock
-    private MetricMonthlyService metricMonthlyService;
+    private AnalyticsCacheService cacheService;
+
+    @Mock
+    private AnalyticsRequestMemo requestMemo;
+
+    @Mock
+    private AnalyticsCacheKeySupport cacheKeySupport;
+
+    @Mock
+    private MetricGateRepairService metricGateRepairService;
 
     @InjectMocks
     private ForecastService service;
@@ -68,8 +79,6 @@ class ForecastServiceTest {
     void forecast_includesConfidenceBoundsAndBudgetSuggestion() throws Exception {
         stubCommon();
         stubCategoryHistoryEmpty();
-        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
-                .thenReturn(1);
 
         Map<String, Object> out = service.forecast(2026, "stress");
 
@@ -178,8 +187,6 @@ class ForecastServiceTest {
     void forecast_scenarioChangesYearNetAndConfidenceWidth() throws Exception {
         stubCommon();
         stubCategoryHistoryEmpty();
-        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
-                .thenReturn(0);
 
         Map<String, Object> base = service.forecast(2026, "base");
         Map<String, Object> stress = service.forecast(2026, "stress");
@@ -198,10 +205,9 @@ class ForecastServiceTest {
     @Test
     void forecast_includesTopCategoryForecasts() throws Exception {
         stubCommon();
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
-        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
-                .thenReturn(0);
 
         Map<String, Object> out = service.forecast(2026, "base");
 
@@ -222,10 +228,9 @@ class ForecastServiceTest {
     @Test
     void categoryForecasts_returnsDedicatedPayload() throws Exception {
         stubCommon();
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
-        when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
-                .thenReturn(0);
 
         Map<String, Object> out = service.categoryForecasts(2026, "optimistic");
 
@@ -236,16 +241,30 @@ class ForecastServiceTest {
     }
 
     @Test
-    void forecast_persistsAggregateAndCategoryLines() throws Exception {
+    void forecast_previewDoesNotPersistRun() throws Exception {
         stubCommon();
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+        stubCategoryHistoryEmpty();
+
+        Map<String, Object> out = service.forecast(2026, "base");
+
+        assertTrue(String.valueOf(out.get("runId")).startsWith(ForecastService.PREVIEW_RUN_PREFIX));
+        assertEquals(true, out.get("preview"));
+        verify(jdbcTemplate, times(0)).update(contains("insert into fin_forecast_run"), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void simulateScenario_persistsAggregateAndCategoryLines() throws Exception {
+        stubCommon();
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
                 .thenReturn(1);
 
-        Map<String, Object> out = service.forecast(2026, "base");
+        Map<String, Object> out = service.simulateScenario(Map.of("year", 2026, "scenario", "base"));
 
         assertNotNull(out.get("runId"));
+        assertEquals(false, out.get("preview"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> months = (List<Map<String, Object>>) out.get("months");
         assertEquals(12, months.size());
@@ -306,6 +325,10 @@ class ForecastServiceTest {
 
     private void stubCommon() throws Exception {
         when(authenticationFacade.getUserName()).thenReturn("user1");
+        lenient().when(requestMemo.getForecast(anyString())).thenReturn(null);
+        lenient().when(cacheKeySupport.forecastKey(eq("user1"), any(Integer.class), anyString(), any()))
+                .thenAnswer(inv -> "forecast:" + inv.getArgument(1));
+        lenient().when(cacheService.getForecast(anyString())).thenReturn(null);
         when(metricGateService.status(3)).thenReturn(Map.of("ok", true));
         when(metricGateService.useReportFallback()).thenReturn(false);
         when(metricRepository.listForUser(anyString(), anyString(), anyString())).thenReturn(sampleHistory());
@@ -314,7 +337,8 @@ class ForecastServiceTest {
     }
 
     private void stubCategoryHistoryEmpty() {
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), anyString(), anyString(), anyString(), anyString()))
+        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
     }
 

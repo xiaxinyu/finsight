@@ -80,6 +80,24 @@ class FlywayMigrationIntegrationTest {
                         "STARBUCKS COFFEE Order No: 883920184 Alipay"));
     }
 
+    @Test
+    void v30TransactionAnalyticsIndexesExist() {
+        assertTrue(indexExists("transaction", "idx_txn_owner_deleted_date"));
+        assertTrue(indexExists("transaction", "idx_txn_consume_code"));
+        assertTrue(indexExists("transaction", "idx_txn_kind"));
+        assertTrue(indexExists("transaction", "idx_txn_bank_card"));
+    }
+
+    private boolean indexExists(String table, String indexName) {
+        Integer count = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.statistics "
+                        + "where table_schema = database() and table_name = ? and index_name = ?",
+                Integer.class,
+                table,
+                indexName);
+        return count != null && count > 0;
+    }
+
     private boolean migrationAtLeast(int version) {
         Integer max = jdbcTemplate.queryForObject(
                 "select coalesce(max(cast(version as unsigned)),0) from flyway_schema_history where success=1",

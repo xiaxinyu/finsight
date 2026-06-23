@@ -69,6 +69,11 @@ public record ForecastScenarioParams(
         return out;
     }
 
+    public String cacheKey() {
+        return String.format("i=%s,b=%s,l=%s,t=%s",
+                incomeChangePct, newMonthlyBill, lumpSumExpense, targetMonthlyPayment);
+    }
+
     private static Double readDouble(Object value) {
         if (value instanceof Number n) {
             return n.doubleValue();

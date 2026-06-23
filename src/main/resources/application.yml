@@ -60,6 +60,12 @@ finsight:
     enabled: true           # false: /api/v1/advisor/merchants/* returns 404
   metrics:
     reconcile-gate: false   # true: block advisor metrics when reconciliation fails
+  analytics:
+    profile-cache-ttl-seconds: 600   # 10 min — warm GET /analytics/profile
+    advisor-cache-ttl-seconds: 600   # 10 min — warm GET /advisor/recommendations
+    forecast-cache-ttl-seconds: 600  # 10 min — forecast preview GET paths
+    profile-snapshot-scheduler-enabled: false  # true: daily 02:00 snapshot persist per ledger user
+    profile-snapshot-cron: "0 0 2 * * *"
   security:
     csrf-enabled: false
     actuator-public: true

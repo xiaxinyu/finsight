@@ -3969,3 +3969,115 @@
 .fs-annual-outlook-scenario-field {
   margin-bottom: 0 !important;
 }
+
+/* ── Profile page (v2.0.0 responsive) ── */
+.fs-data-page--profile .fs-profile-insights-row {
+  margin-top: 16px;
+}
+
+.fs-profile-dimension-card .ant-card-body {
+  min-height: 168px;
+}
+
+.fs-profile-dimension-body {
+  cursor: pointer;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-profile-dimension-reason,
+.fs-profile-dimension-evidence {
+  margin-bottom: 8px !important;
+  min-height: 44px;
+}
+
+.fs-profile-dimension-action {
+  font-size: 12px;
+  margin-top: auto;
+}
+
+.fs-profile-radar-mobile-list {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-profile-dim-bar {
+  display: grid;
+  grid-template-columns: 1fr minmax(80px, 120px) 36px;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--fs-border, #e5e7eb);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fs-profile-dim-bar-track {
+  height: 8px;
+  background: #eef2ff;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fs-profile-dim-bar-fill {
+  display: block;
+  height: 100%;
+  background: #2563eb;
+  border-radius: 999px;
+}
+
+.fs-combined-insight-subtitle {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.fs-combined-insight--compact .ant-card-head {
+  min-height: 40px;
+}
+
+.fs-combined-insight--compact .ant-card-body {
+  padding-top: 8px;
+}
+
+.fs-advisor-strip--compact .fs-advisor-card {
+  padding: 10px 12px;
+}
+
+.fs-advisor-strip--compact .fs-advisor-card-reason {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fs-tx-merchant {
+  font-size: 13px;
+  max-width: 120px;
+  display: block;
+}
+
+.fs-row-action {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+@media (max-width: 768px) {
+  .fs-profile-radar-wrap {
+    display: none;
+  }
+
+  .fs-profile-radar-mobile-list {
+    display: flex;
+  }
+
+  .fs-data-page--profile .fs-profile-matrix-row .ant-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}

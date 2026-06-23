@@ -13,6 +13,7 @@ import {
 
 type AdvisorStripProps = {
   cards: AdvisorCard[]
+  compact?: boolean
   onOpenEvidence?: (card: AdvisorCard) => void
   onAccept?: (id: string) => void
   onSnooze?: (id: string) => void
@@ -21,6 +22,7 @@ type AdvisorStripProps = {
 
 export function AdvisorStrip({
   cards,
+  compact = false,
   onOpenEvidence,
   onAccept,
   onSnooze,
@@ -28,11 +30,13 @@ export function AdvisorStrip({
 }: AdvisorStripProps) {
   if (!cards.length) return null
   return (
-    <div className="fs-advisor-strip">
-      <div className="fs-advisor-strip-head">
-        <ThunderboltOutlined />
-        <span>Today&apos;s priorities</span>
-      </div>
+    <div className={`fs-advisor-strip${compact ? ' fs-advisor-strip--compact' : ''}`}>
+      {!compact && (
+        <div className="fs-advisor-strip-head">
+          <ThunderboltOutlined />
+          <span>Today&apos;s priorities</span>
+        </div>
+      )}
       {cards.slice(0, 3).map((card, i) => {
         const path = cardPrimaryPath(card)
         const cardId = card.id || `${card.title}-${i}`
@@ -48,11 +52,13 @@ export function AdvisorStrip({
                 )}
               </div>
               <div className="fs-advisor-card-reason">{card.reason || card.detail}</div>
-              <div className="fs-advisor-card-meta">
-                <span>Impact: <strong>{formatImpact(card)}</strong></span>
-                <span>Confidence: <strong>{formatConfidence(card)}</strong></span>
-                {path && <span>Next: <strong>{cardPrimaryLabel(card)}</strong></span>}
-              </div>
+              {!compact && (
+                <div className="fs-advisor-card-meta">
+                  <span>Impact: <strong>{formatImpact(card)}</strong></span>
+                  <span>Confidence: <strong>{formatConfidence(card)}</strong></span>
+                  {path && <span>Next: <strong>{cardPrimaryLabel(card)}</strong></span>}
+                </div>
+              )}
             </div>
             <div className="fs-advisor-card-actions">
               {onOpenEvidence && (

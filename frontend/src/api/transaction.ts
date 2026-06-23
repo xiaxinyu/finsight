@@ -18,6 +18,7 @@ export interface TransactionRow {
   consumeName?: string
   consumeID?: string
   demoArea?: string
+  opponentName?: string
   txnKind?: string
   createuser?: string
   updateuser?: string
@@ -35,6 +36,7 @@ export interface TransactionQuery {
   txnTypes?: string
   demoArea?: string
   emptyConsume?: string
+  opponentName?: string
   merchantToken?: string
   sortField?: 'transactionDate' | 'amount' | 'card' | 'type'
   sortOrder?: 'asc' | 'desc'

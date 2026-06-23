@@ -9,50 +9,64 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 public class RecommendationService {
 
+    private static final long ADVISOR_BUDGET_MS = 500;
+
     private final FinsightFeatureProperties features;
     private final InsightService insightService;
-    private final FinancialProfileService profileService;
-    private final ForecastService forecastService;
-    private final TrendAnalysisService trendAnalysisService;
     private final JdbcTemplate jdbcTemplate;
     private final CombinedInsightService combinedInsightService;
+    private final AnalyticsCacheService cacheService;
+    private final AnalyticsCacheKeySupport cacheKeySupport;
 
     public RecommendationService(FinsightFeatureProperties features,
                                    InsightService insightService,
-                                   FinancialProfileService profileService,
-                                   ForecastService forecastService,
-                                   TrendAnalysisService trendAnalysisService,
                                    JdbcTemplate jdbcTemplate,
-                                   CombinedInsightService combinedInsightService) {
+                                   CombinedInsightService combinedInsightService,
+                                   AnalyticsCacheService cacheService,
+                                   AnalyticsCacheKeySupport cacheKeySupport) {
         this.features = features;
         this.insightService = insightService;
-        this.profileService = profileService;
-        this.forecastService = forecastService;
-        this.trendAnalysisService = trendAnalysisService;
         this.jdbcTemplate = jdbcTemplate;
         this.combinedInsightService = combinedInsightService;
+        this.cacheService = cacheService;
+        this.cacheKeySupport = cacheKeySupport;
     }
 
     public List<Map<String, Object>> topRecommendations(String userId) throws Exception {
         if (!features.getAdvisor().isEnabled()) {
             return legacyCards();
         }
+        String cacheKey = cacheKeySupport.advisorKey(userId);
+        List<Map<String, Object>> cached = cacheService.getAdvisor(cacheKey);
+        if (cached != null) {
+            AnalyticsTiming.logCacheHit("advisor", true);
+            return cached;
+        }
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor", ADVISOR_BUDGET_MS)) {
+            List<Map<String, Object>> cards = computeRecommendations(userId);
+            List<Map<String, Object>> limited = cards.stream().limit(3).toList();
+            cacheService.putAdvisor(cacheKey, limited);
+            AnalyticsTiming.logCacheHit("advisor", false);
+            return limited;
+        }
+    }
+
+    private List<Map<String, Object>> computeRecommendations(String userId) throws Exception {
         List<Map<String, Object>> cards = new ArrayList<>();
         Set<String> suppressed = loadSuppressedCardIds(userId);
+        CombinedInsightContext context = combinedInsightService.buildContext();
 
-        for (Map<String, Object> combined : combinedInsightService.topCombinedCards(5)) {
+        for (Map<String, Object> combined : context.topCards(5)) {
             if (suppressed.contains(String.valueOf(combined.get("id")))) {
                 continue;
             }
@@ -65,9 +79,8 @@ public class RecommendationService {
         }
 
         if (cards.size() < 3) {
-            Map<String, Object> profile = profileService.currentProfile();
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> dims = (List<Map<String, Object>>) profile.get("dimensions");
+            List<Map<String, Object>> dims = (List<Map<String, Object>>) context.profile().get("dimensions");
             for (Map<String, Object> dim : dims) {
                 String dimId = String.valueOf(dim.get("id"));
                 if (suppressed.contains(dimId)) {
@@ -88,7 +101,7 @@ public class RecommendationService {
             boolean hasCombinedForecast = cards.stream()
                     .anyMatch(c -> "combined_forecast_pressure".equals(c.get("id")));
             if (!hasCombinedForecast) {
-                Map<String, Object> forecast = forecastService.forecast(YearMonth.now().getYear(), "base");
+                Map<String, Object> forecast = context.forecast();
                 @SuppressWarnings("unchecked")
                 List<String> deficits = (List<String>) forecast.getOrDefault("deficitMonths", List.of());
                 if (!deficits.isEmpty() && !suppressed.contains("cashflow_risk")) {
@@ -113,8 +126,7 @@ public class RecommendationService {
             break;
         }
 
-        persistCards(userId, cards);
-        return cards.stream().limit(3).toList();
+        return cards;
     }
 
     public void feedback(String userId, String cardId, String action) {
@@ -127,7 +139,8 @@ public class RecommendationService {
         jdbcTemplate.update(
                 "insert into fin_recommendation_feedback (id, user_id, card_id, action, created_at, snooze_until) "
                         + "values (?, ?, ?, ?, now(3), ?)",
-                UUID.randomUUID().toString(), userId, cardId, action, snoozeUntil);
+                java.util.UUID.randomUUID().toString(), userId, cardId, action, snoozeUntil);
+        cacheService.invalidateAdvisor(cacheKeySupport.advisorKey(userId));
     }
 
     private List<Map<String, Object>> legacyCards() throws AppServiceException {
@@ -166,34 +179,6 @@ public class RecommendationService {
         }
         if (card.get("impactAmount") == null) {
             card.put("impactAmount", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
-        }
-    }
-
-    private void persistCards(String userId, List<Map<String, Object>> cards) {
-        if (!tableExists("fin_insight_card")) {
-            return;
-        }
-        for (Map<String, Object> card : cards) {
-            String cardKey = card.get("id") != null && !String.valueOf(card.get("id")).isBlank()
-                    ? String.valueOf(card.get("id"))
-                    : UUID.randomUUID().toString();
-            if (card.get("id") == null || String.valueOf(card.get("id")).isBlank()) {
-                card.put("id", cardKey);
-            }
-            String storageId = storageId(userId, cardKey);
-            jdbcTemplate.update(
-                    "insert into fin_insight_card (id, user_id, card_type, priority, title, reason, impact_amount, "
-                            + "evidence_json, actions_json, created_at, expires_at) "
-                            + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, now(3), date_add(now(3), interval 7 day)) "
-                            + "on duplicate key update "
-                            + "user_id = values(user_id), card_type = values(card_type), priority = values(priority), "
-                            + "title = values(title), reason = values(reason), impact_amount = values(impact_amount), "
-                            + "evidence_json = values(evidence_json), actions_json = values(actions_json), "
-                            + "created_at = now(3), expires_at = date_add(now(3), interval 7 day)",
-                    storageId, userId, card.get("type"), card.get("priority"), card.get("title"), card.get("reason"),
-                    card.get("impactAmount"),
-                    com.alibaba.fastjson.JSON.toJSONString(card.get("evidence")),
-                    com.alibaba.fastjson.JSON.toJSONString(card.get("actions")));
         }
     }
 

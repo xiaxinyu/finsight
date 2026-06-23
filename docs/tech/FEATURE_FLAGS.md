@@ -10,7 +10,12 @@ Runtime toggles under `finsight.*` in `application.yml`. The SPA reads effective
 | `finsight.profile.enabled` | `true` | Profile analytics API returns **404**; Profile menu hidden. |
 | `finsight.forecast.enabled` | `true` | Forecast/trends/scenarios/cash-risk APIs return **404**; related reports hidden. |
 | `finsight.merchant-mining.enabled` | `true` | Merchant mining APIs return **404**. |
-| `finsight.metrics.reconcile-gate` | `false` | When `true`, advisor layers fall back to report SQL if metrics reconciliation fails. |
+| `finsight.metrics.reconcile-gate` | `false` | When `true`, read paths show degraded-metrics warning instead of inline report SQL recalculation. |
+| `finsight.analytics.profile-cache-ttl-seconds` | `600` | In-process TTL for GET `/analytics/profile` (10 min). |
+| `finsight.analytics.advisor-cache-ttl-seconds` | `600` | TTL for GET `/advisor/recommendations`. |
+| `finsight.analytics.forecast-cache-ttl-seconds` | `600` | TTL for forecast preview GET paths. |
+| `finsight.analytics.profile-snapshot-scheduler-enabled` | `false` | Daily snapshot persist via `ProfileSnapshotScheduler`. |
+| `finsight.analytics.profile-snapshot-cron` | `0 0 2 * * *` | Cron when scheduler enabled (02:00 local server time). |
 | `finsight.security.csrf-enabled` | `false` (dev) | Enable CSRF protection (recommended in prod). |
 | `finsight.security.actuator-public` | `true` (dev) | When `false`, `/actuator/health` requires authentication. |
 
