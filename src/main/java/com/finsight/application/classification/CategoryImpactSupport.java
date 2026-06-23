@@ -87,7 +87,11 @@ public final class CategoryImpactSupport {
             if (StringUtils.isBlank(targetCode)) {
                 warnings.add("Merge requires a target category code.");
             } else if (transactionCount > 0) {
-                warnings.add("Merge with cascade updates " + transactionCount + " transactions to the target code; without cascade, transactions stay on the source code (orphaned label risk).");
+                warnings.add("Merge will update " + transactionCount
+                        + " transactions and remap active rules to the target code.");
+            }
+            if (activeRuleCount > 0) {
+                warnings.add(activeRuleCount + " active rules on the source will point to the target after merge.");
             }
         }
         return warnings;

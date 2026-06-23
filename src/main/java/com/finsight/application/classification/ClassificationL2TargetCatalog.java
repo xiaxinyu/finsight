@@ -10,11 +10,24 @@ import java.util.Optional;
  */
 public enum ClassificationL2TargetCatalog {
 
-    // --- Income ---
+    // --- Income (v1.8 seed) ---
     INCOME_SALARY("INCOME-01", "工资薪金", ClassificationL1Codes.INCOME, 1, "income", "income"),
     INCOME_SIDE("INCOME-02", "副业经营", ClassificationL1Codes.INCOME, 2, "income", "income"),
     INCOME_INVEST_GAIN("INCOME-03", "投资收益", ClassificationL1Codes.INCOME, 3, "income,invest", "investment"),
     INCOME_OTHER("INCOME-99", "其他收入", ClassificationL1Codes.INCOME, 99, "income", "income"),
+
+    // --- Legacy income (INC-*, keep existing codes; merge INCOME-* into these) ---
+    LEGACY_INC_SALARY("INC-01", "工资薪金", ClassificationL1Codes.INC, 1, "income", "income", false),
+    LEGACY_INC_BONUS("INC-02", "奖金/提成/年终奖", ClassificationL1Codes.INC, 2, "income", "income", false),
+    LEGACY_INC_SIDE("INC-03", "兼职/自由职业收入", ClassificationL1Codes.INC, 3, "income", "income", false),
+    LEGACY_INC_INVEST("INC-04", "投资收益（股息、利息、理财）", ClassificationL1Codes.INC, 4, "income,invest", "investment", false),
+    LEGACY_INC_RENTAL("INC-05", "房租/资产出租收入", ClassificationL1Codes.INC, 5, "income", "income", false),
+    LEGACY_INC_GIFT("INC-06", "亲友资助/赠与", ClassificationL1Codes.INC, 6, "income", "income", false),
+    LEGACY_INC_SUBSIDY("INC-07", "政府补贴/退税/公积金提取", ClassificationL1Codes.INC, 7, "income", "income", false),
+    LEGACY_INC_BORROW_IN("INC-08", "借款（他人借入）", ClassificationL1Codes.INC, 8, "income,liability", "liability", false),
+    LEGACY_INC_LEND_OUT("INC-09", "借款（他人借出）", ClassificationL1Codes.INC, 9, "income", "income", false),
+    LEGACY_INC_REIMBURSE("INC-10", "报销到账（餐补、差旅等）", ClassificationL1Codes.INC, 10, "income,refund", "refund", false),
+    LEGACY_INC_OTHER("INC-99", "其他收入", ClassificationL1Codes.INC, 99, "income", "income", false),
 
     // --- Fixed expense ---
     FIXED_RENT("FIXED-01", "房租/房贷", ClassificationL1Codes.FIXED, 1, "expense", "budget"),

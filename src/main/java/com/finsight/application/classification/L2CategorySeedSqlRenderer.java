@@ -15,7 +15,7 @@ public final class L2CategorySeedSqlRenderer {
         StringBuilder sb = new StringBuilder();
         sb.append("-- Generated from ClassificationL2TargetCatalog — Issue #69\n");
         sb.append("-- Manual execution only; never auto-applied by Flyway.\n\n");
-        sb.append(renderL1Ensures()).append("\n");
+        sb.append(renderL1Ensures(existingCodes)).append("\n");
         for (L2CategorySeedPlanner.SeedItem item : L2CategorySeedPlanner.buildInsertPlan(existingCodes)) {
             if (item.action() != L2CategorySeedPlanner.Action.INSERT) {
                 continue;
@@ -80,10 +80,15 @@ public final class L2CategorySeedSqlRenderer {
         return value == null ? "" : value.replace("'", "''");
     }
 
-    private static String renderL1Ensures() {
+    private static String renderL1Ensures(Set<String> existingCodes) {
         StringBuilder sb = new StringBuilder();
         sb.append("-- Step 0: ensure L1 roots exist (insert if missing)\n");
+        sb.append("-- Skip INCOME L1 when legacy INC already exists\n");
         for (ClassificationL1TargetCatalog l1 : ClassificationL1TargetCatalog.all()) {
+            if ("INCOME".equals(l1.code()) && existingCodes != null && existingCodes.contains("INC")) {
+                sb.append("-- skipped INCOME L1 (legacy INC present)\n");
+                continue;
+            }
             sb.append("insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, "
                     + "deleted, version, created_at, updated_at) select '")
                     .append(escapeSql(l1.code())).append("', '")

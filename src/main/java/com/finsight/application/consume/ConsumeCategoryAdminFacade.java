@@ -9,6 +9,8 @@ import com.finsight.domain.model.ConsumeRule;
 import com.finsight.domain.model.Transaction;
 import com.finsight.infrastructure.mapper.TransactionMapper;
 import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.application.classification.CategoryMergeSupport;
+import com.finsight.application.classification.CategoryMergeSupport.MergeMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -282,71 +284,163 @@ public class ConsumeCategoryAdminFacade {
             return r;
         }
 
-        if (target.getLevel() != null && target.getLevel() == 1) {
-            LambdaUpdateWrapper<ConsumeCategory> uwMove = Wrappers.lambdaUpdate();
-            uwMove.eq(ConsumeCategory::getId, src.getId())
-                    .set(ConsumeCategory::getParentId, tgtCode)
-                    .set(ConsumeCategory::getLevel, 2);
-            categoryService.update(null, uwMove);
-            log.info("Reparent category: src[id={},code={}] -> parent {}", src.getId(), src.getCode(), tgtCode);
-        } else {
-            int affected1 = 0, affected2 = 0, affected3 = 0, affected4 = 0, affected5 = 0, affected6 = 0;
-            if (cascade) {
-                LambdaUpdateWrapper<Transaction> uw1 = Wrappers.lambdaUpdate();
-                uw1.set(Transaction::getConsumeID, tgtCode)
-                        .set(Transaction::getConsumeCode, tgtCode)
-                        .set(Transaction::getConsumeName, tgtName)
-                        .eq(Transaction::getConsumeID, src.getId());
-                affected1 = transactionMapper.update(null, uw1);
-
-                LambdaUpdateWrapper<Transaction> uw2 = Wrappers.lambdaUpdate();
-                uw2.set(Transaction::getConsumeID, tgtCode)
-                        .set(Transaction::getConsumeCode, tgtCode)
-                        .set(Transaction::getConsumeName, tgtName)
-                        .eq(Transaction::getConsumeID, src.getCode());
-                affected2 = transactionMapper.update(null, uw2);
-
-                LambdaUpdateWrapper<Transaction> uw3 = Wrappers.lambdaUpdate();
-                uw3.set(Transaction::getConsumeCode, tgtCode)
-                        .set(Transaction::getConsumeName, tgtName)
-                        .eq(Transaction::getConsumeCode, src.getCode());
-                affected3 = transactionMapper.update(null, uw3);
-
-                LambdaUpdateWrapper<Transaction> uw4 = Wrappers.lambdaUpdate();
-                uw4.set(Transaction::getConsumeCode, tgtCode)
-                        .set(Transaction::getConsumeName, tgtName)
-                        .like(Transaction::getConsumeID, "/" + src.getCode());
-                affected4 = transactionMapper.update(null, uw4);
-
-                LambdaUpdateWrapper<Transaction> uw5 = Wrappers.lambdaUpdate();
-                uw5.set(Transaction::getConsumeCode, tgtCode)
-                        .set(Transaction::getConsumeName, tgtName)
-                        .like(Transaction::getConsumeID, "-" + src.getCode());
-                affected5 = transactionMapper.update(null, uw5);
-
-                if (src.getName() != null && !src.getName().trim().isEmpty()) {
-                    LambdaUpdateWrapper<Transaction> uw6 = Wrappers.lambdaUpdate();
-                    uw6.set(Transaction::getConsumeCode, tgtCode)
-                            .eq(Transaction::getConsumeName, src.getName());
-                    affected6 = transactionMapper.update(null, uw6);
-                }
-            }
-            log.info("Migrate transactions from src[id={},code={}] to target[code={},name={}], affected rows: byId={}, byConsumeId={}, byConsumeCodeCol={}, likeSlash={}, likeDash={}, byName={}",
-                    src.getId(), src.getCode(), tgtCode, tgtName, affected1, affected2, affected3, affected4, affected5, affected6);
-
-            if (deleteAfter) {
-                LambdaUpdateWrapper<ConsumeCategory> uwDel = Wrappers.lambdaUpdate();
-                uwDel.eq(ConsumeCategory::getId, src.getId())
-                        .set(ConsumeCategory::getDeleted, 1);
-                categoryService.update(null, uwDel);
-                log.info("Soft-deleted source category after migration: id={}, code={}", src.getId(), src.getCode());
-            }
+        MergeMode mode;
+        try {
+            mode = CategoryMergeSupport.resolveMode(src, target);
+        } catch (IllegalArgumentException ex) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, ex.getMessage());
         }
+
+        switch (mode) {
+            case L1_INTO_L1 -> mergeL1IntoL1(src, target, deleteAfter);
+            case L2_REPARENT_TO_L1 -> reparentL2ToL1(src, target);
+            case L2_INTO_L2 -> mergeL2IntoL2(src, target, deleteAfter, cascade);
+        }
+
         syncAllTransactionConsumeCodes();
+        classificationService.reload();
         CollectionResult<String> r = new CollectionResult<>();
         r.setRows(java.util.Arrays.asList("ok"));
         r.setTotal(1);
         return r;
+    }
+
+    private void mergeL1IntoL1(ConsumeCategory src, ConsumeCategory target, boolean deleteAfter) {
+        String srcCode = src.getCode();
+        String tgtCode = target.getCode();
+        LambdaQueryWrapper<ConsumeCategory> qwChildren = Wrappers.lambdaQuery();
+        qwChildren.eq(ConsumeCategory::getParentId, srcCode)
+                .ne(ConsumeCategory::getDeleted, 1);
+        List<ConsumeCategory> children = categoryService.list(qwChildren);
+        int reparented = 0;
+        for (ConsumeCategory child : children) {
+            LambdaUpdateWrapper<ConsumeCategory> uwChild = Wrappers.lambdaUpdate();
+            uwChild.eq(ConsumeCategory::getId, child.getId())
+                    .set(ConsumeCategory::getParentId, tgtCode)
+                    .set(ConsumeCategory::getLevel, 2);
+            if (categoryService.update(null, uwChild)) {
+                reparented++;
+            }
+        }
+        log.info("L1 merge: reparented {} children from {} -> {}", reparented, srcCode, tgtCode);
+
+        if (deleteAfter) {
+            LambdaUpdateWrapper<ConsumeCategory> uwDel = Wrappers.lambdaUpdate();
+            uwDel.eq(ConsumeCategory::getId, src.getId())
+                    .set(ConsumeCategory::getDeleted, 1);
+            categoryService.update(null, uwDel);
+            deactivateRulesForCategory(src);
+            log.info("Soft-deleted duplicate L1 after merge: id={}, code={}", src.getId(), srcCode);
+        }
+    }
+
+    private void reparentL2ToL1(ConsumeCategory src, ConsumeCategory target) {
+        LambdaUpdateWrapper<ConsumeCategory> uwMove = Wrappers.lambdaUpdate();
+        uwMove.eq(ConsumeCategory::getId, src.getId())
+                .set(ConsumeCategory::getParentId, target.getCode())
+                .set(ConsumeCategory::getLevel, 2);
+        categoryService.update(null, uwMove);
+        log.info("Reparent L2: src[id={},code={}] -> parent {}", src.getId(), src.getCode(), target.getCode());
+    }
+
+    private void mergeL2IntoL2(ConsumeCategory src, ConsumeCategory target, boolean deleteAfter, boolean cascade) {
+        String tgtCode = target.getCode();
+        String tgtName = target.getName();
+        int affected1 = 0, affected2 = 0, affected3 = 0, affected4 = 0, affected5 = 0, affected6 = 0;
+        int rulesRemapped = 0;
+
+        if (cascade) {
+            LambdaUpdateWrapper<Transaction> uw1 = Wrappers.lambdaUpdate();
+            applyTransactionCategoryTarget(uw1, tgtCode, tgtName);
+            uw1.eq(Transaction::getConsumeID, src.getId());
+            affected1 = transactionMapper.update(null, uw1);
+
+            LambdaUpdateWrapper<Transaction> uw2 = Wrappers.lambdaUpdate();
+            applyTransactionCategoryTarget(uw2, tgtCode, tgtName);
+            uw2.eq(Transaction::getConsumeID, src.getCode());
+            affected2 = transactionMapper.update(null, uw2);
+
+            LambdaUpdateWrapper<Transaction> uw3 = Wrappers.lambdaUpdate();
+            applyTransactionCategoryTarget(uw3, tgtCode, tgtName);
+            uw3.eq(Transaction::getConsumeCode, src.getCode());
+            affected3 = transactionMapper.update(null, uw3);
+
+            LambdaUpdateWrapper<Transaction> uw3b = Wrappers.lambdaUpdate();
+            applyTransactionCategoryTarget(uw3b, tgtCode, tgtName);
+            uw3b.eq(Transaction::getCategoryCode, src.getCode());
+            transactionMapper.update(null, uw3b);
+
+            LambdaUpdateWrapper<Transaction> uw4 = Wrappers.lambdaUpdate();
+            applyTransactionCategoryTarget(uw4, tgtCode, tgtName);
+            uw4.like(Transaction::getConsumeID, "/" + src.getCode());
+            affected4 = transactionMapper.update(null, uw4);
+
+            LambdaUpdateWrapper<Transaction> uw5 = Wrappers.lambdaUpdate();
+            applyTransactionCategoryTarget(uw5, tgtCode, tgtName);
+            uw5.like(Transaction::getConsumeID, "-" + src.getCode());
+            affected5 = transactionMapper.update(null, uw5);
+
+            if (src.getName() != null && !src.getName().trim().isEmpty()) {
+                LambdaUpdateWrapper<Transaction> uw6 = Wrappers.lambdaUpdate();
+                applyTransactionCategoryTarget(uw6, tgtCode, tgtName);
+                uw6.eq(Transaction::getConsumeCode, src.getCode())
+                        .eq(Transaction::getConsumeName, src.getName());
+                affected6 = transactionMapper.update(null, uw6);
+            }
+
+            rulesRemapped = remapRulesToTarget(src, tgtCode);
+        }
+
+        log.info("Migrate L2 src[id={},code={}] -> target[code={},name={}], cascade={}, txnById={}, txnByConsumeId={}, "
+                        + "txnByConsumeCode={}, likeSlash={}, likeDash={}, txnByName={}, rulesRemapped={}",
+                src.getId(), src.getCode(), tgtCode, tgtName, cascade,
+                affected1, affected2, affected3, affected4, affected5, affected6, rulesRemapped);
+
+        if (deleteAfter) {
+            LambdaUpdateWrapper<ConsumeCategory> uwDel = Wrappers.lambdaUpdate();
+            uwDel.eq(ConsumeCategory::getId, src.getId())
+                    .set(ConsumeCategory::getDeleted, 1);
+            categoryService.update(null, uwDel);
+            if (!cascade) {
+                deactivateRulesForCategory(src);
+            }
+            log.info("Soft-deleted source category after migration: id={}, code={}", src.getId(), src.getCode());
+        }
+    }
+
+    private void applyTransactionCategoryTarget(LambdaUpdateWrapper<Transaction> uw, String tgtCode, String tgtName) {
+        uw.set(Transaction::getConsumeID, tgtCode)
+                .set(Transaction::getConsumeCode, tgtCode)
+                .set(Transaction::getCategoryCode, tgtCode)
+                .set(Transaction::getCategoryId, tgtCode);
+        if (tgtName != null && !tgtName.isBlank()) {
+            uw.set(Transaction::getConsumeName, tgtName)
+                    .set(Transaction::getCategoryName, tgtName);
+        }
+    }
+
+    private int remapRulesToTarget(ConsumeCategory src, String tgtCode) {
+        String srcCode = src.getCode();
+        String srcId = src.getId();
+        if ((srcCode == null || srcCode.isBlank()) && (srcId == null || srcId.isBlank())) {
+            return 0;
+        }
+        LambdaUpdateWrapper<ConsumeRule> uw = Wrappers.lambdaUpdate();
+        uw.set(ConsumeRule::getCategoryId, tgtCode);
+        uw.and(w -> {
+            if (srcCode != null && !srcCode.isBlank()) {
+                w.eq(ConsumeRule::getCategoryId, srcCode);
+            }
+            if (srcId != null && !srcId.isBlank()) {
+                if (srcCode != null && !srcCode.isBlank()) {
+                    w.or().eq(ConsumeRule::getCategoryId, srcId);
+                } else {
+                    w.eq(ConsumeRule::getCategoryId, srcId);
+                }
+            }
+        });
+        return consumeRuleService.update(null, uw) ? 1 : 0;
     }
 
     private String buildId(Integer level, String code, String parentId) {
