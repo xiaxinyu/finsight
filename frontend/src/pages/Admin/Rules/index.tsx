@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Tree, TreeSelect, Typography,
@@ -190,6 +191,7 @@ function panelHintForKey(key: string): string | undefined {
 
 export function RulesAdminPage() {
   const qc = useQueryClient()
+  const [searchParams] = useSearchParams()
   const listPanelRef = useRef<HTMLDivElement>(null)
   const tableHeight = useFillTableHeight(listPanelRef)
   const [form] = Form.useForm<ConsumeRuleRow>()
@@ -210,6 +212,8 @@ export function RulesAdminPage() {
     }
   }, [selectedKey])
 
+  const categoryFromUrl = searchParams.get('category') || ''
+
   const { data: allCategories = [], isLoading: catsLoading } = useQuery({
     queryKey: ['admin-categories', 'withDeleted'],
     queryFn: () => listCategoriesAdmin(true),
@@ -220,6 +224,16 @@ export function RulesAdminPage() {
     () => allCategories.filter((c) => c.deleted !== 1),
     [allCategories],
   )
+
+  useEffect(() => {
+    if (!categoryFromUrl || !activeCategories.length) return
+    const match = activeCategories.find(
+      (c) => c.code === categoryFromUrl || c.id === categoryFromUrl,
+    )
+    if (match) {
+      setSelectedKey(match.id || match.code || ALL_KEY)
+    }
+  }, [categoryFromUrl, activeCategories])
 
   const { data: rules = [], isLoading: rulesLoading, refetch } = useQuery({
     queryKey: ['admin-rules'],
