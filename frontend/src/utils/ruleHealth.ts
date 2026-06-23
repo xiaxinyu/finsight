@@ -6,8 +6,9 @@ const ORPHAN_KEY = '__orphaned__'
 const NO_CAT_KEY = '__no_category__'
 const INVALID_KEY = '__invalid__'
 const LEGACY_KEY = '__legacy_orphan__'
+const HIGH_RISK_KEY = '__high_risk__'
 
-export { ORPHAN_KEY, NO_CAT_KEY, INVALID_KEY, LEGACY_KEY }
+export { ORPHAN_KEY, NO_CAT_KEY, INVALID_KEY, LEGACY_KEY, HIGH_RISK_KEY }
 
 const LEGACY_ORPHAN_REMARK = '[inactive legacy: orphan category]'
 const AUTO_DISABLED_ORPHAN_REMARK = '[auto-disabled: orphan category]'
@@ -103,6 +104,7 @@ export function filterByTreeKey(
   activeCategories: ConsumeCategoryRow[],
   allCategories: ConsumeCategoryRow[],
   matchCategory: (rule: ConsumeRuleRow, cat: ConsumeCategoryRow) => boolean,
+  highRiskRuleIds?: Set<string>,
 ): ConsumeRuleRow[] {
   if (key === ORPHAN_KEY) {
     return rules.filter((r) => classifyRule(r, activeCategories, allCategories) === 'orphaned')
@@ -115,6 +117,10 @@ export function filterByTreeKey(
   }
   if (key === INVALID_KEY) {
     return rules.filter((r) => classifyRule(r, activeCategories, allCategories) === 'invalid_pattern')
+  }
+  if (key === HIGH_RISK_KEY) {
+    if (!highRiskRuleIds?.size) return []
+    return rules.filter((r) => r.id && highRiskRuleIds.has(String(r.id)))
   }
   if (key === '__all__') return rules
   const cat = activeCategories.find((c) => c.id === key || c.code === key)

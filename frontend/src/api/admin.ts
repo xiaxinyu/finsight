@@ -84,11 +84,22 @@ export type RuleHygieneSummary = {
   activeInvalidPatternCount?: number
   archivedInvalidPatternCount?: number
   inactiveInvalidWithoutRemarkCount?: number
+  highRiskRuleCount?: number
+  duplicatePatternGroupCount?: number
+  broadKeywordRuleCount?: number
+  crossCategoryConflictRuleCount?: number
+  directionMismatchRuleCount?: number
   recommendedKeywords: string[]
 }
 
 export async function fetchRuleHygiene(): Promise<RuleHygieneSummary> {
   return getJson('/api/v1/classification/rules/hygiene') as Promise<RuleHygieneSummary>
+}
+
+export type { RuleRiskReport } from '../utils/ruleRisk'
+
+export async function fetchRuleRiskAnalysis(): Promise<import('../utils/ruleRisk').RuleRiskReport> {
+  return getJson('/api/v1/classification/rules/risk-analysis') as Promise<import('../utils/ruleRisk').RuleRiskReport>
 }
 
 export async function fetchUnclassifiedRuleKeywords(limit = 20): Promise<string[]> {

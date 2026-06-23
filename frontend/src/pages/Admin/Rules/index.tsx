@@ -6,11 +6,11 @@ import {
 } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import {
-  BulbOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined,
+  BulbOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined, ThunderboltOutlined,
 } from '@ant-design/icons'
 import type { ConsumeCategoryRow } from '../../../api/admin'
 import {
-  createRule, deleteRule, fetchUnclassifiedRuleKeywords, listCategoriesAdmin, listRules, updateRule,
+  createRule, deleteRule, fetchRuleRiskAnalysis, fetchUnclassifiedRuleKeywords, listCategoriesAdmin, listRules, updateRule,
   type ConsumeRuleRow,
 } from '../../../api/admin'
 import { DataPageLayout } from '../../../components/DataPageLayout'
@@ -21,8 +21,11 @@ import { useFillTableHeight } from '../../../hooks/useFillTableHeight'
 import { buildCategoryTree, ruleMatchesCategory, type CategoryTreeNode } from '../../../utils/categoryTree'
 import { categoryTitleMap, resolveCategoryTitleExtended } from '../../../utils/categoryLookup'
 import {
-  classifyRule, filterByTreeKey, INVALID_KEY, LEGACY_KEY, NO_CAT_KEY, ORPHAN_KEY, type RuleIssue,
+  classifyRule, filterByTreeKey, HIGH_RISK_KEY, INVALID_KEY, LEGACY_KEY, NO_CAT_KEY, ORPHAN_KEY, type RuleIssue,
 } from '../../../utils/ruleHealth'
+import {
+  buildRiskEntryMap, downloadRemediationCsv, highRiskRuleIds, RISK_COLORS, RISK_LABELS, type RuleRiskKind,
+} from '../../../utils/ruleRisk'
 import { cellText } from '../../../utils/cell'
 
 const ALL_KEY = '__all__'
@@ -100,6 +103,7 @@ function buildTreeNodes(
   rules: ConsumeRuleRow[],
   activeCategories: ConsumeCategoryRow[],
   allCategories: ConsumeCategoryRow[],
+  highRiskCount: number,
 ): DataNode[] {
   const orphanCount = countByIssue(rules, 'orphaned', activeCategories, allCategories)
   const noCatCount = countByIssue(rules, 'no_category', activeCategories, allCategories)
@@ -126,6 +130,9 @@ function buildTreeNodes(
   }
 
   const attention: DataNode[] = []
+  if (highRiskCount > 0) {
+    attention.push({ key: HIGH_RISK_KEY, title: labelWithCount('High risk', highRiskCount, true) })
+  }
   if (orphanCount > 0) {
     attention.push({ key: ORPHAN_KEY, title: labelWithCount('Orphaned', orphanCount, true) })
   }
@@ -151,6 +158,7 @@ function buildTreeNodes(
 
 const TREE_LABELS: Record<string, string> = {
   [ALL_KEY]: 'all rules',
+  [HIGH_RISK_KEY]: 'high risk',
   [ORPHAN_KEY]: 'orphaned',
   [LEGACY_KEY]: 'inactive legacy',
   [NO_CAT_KEY]: 'no category',
@@ -174,6 +182,7 @@ function filterTreeBySearch(nodes: DataNode[], query: string, nameByKey: Map<str
 
 function panelTitleForKey(key: string, activeMap: Map<string, string>): string {
   if (key === ALL_KEY) return 'All rules'
+  if (key === HIGH_RISK_KEY) return 'High-risk rules'
   if (key === ORPHAN_KEY) return 'Orphaned rules'
   if (key === LEGACY_KEY) return 'Inactive legacy orphan rules'
   if (key === NO_CAT_KEY) return 'Rules without category'
@@ -182,6 +191,9 @@ function panelTitleForKey(key: string, activeMap: Map<string, string>): string {
 }
 
 function panelHintForKey(key: string): string | undefined {
+  if (key === HIGH_RISK_KEY) {
+    return 'Duplicate patterns, broad keywords, cross-category conflicts, or direction mismatches. Export remediation list to fix in bulk.'
+  }
   if (key === ORPHAN_KEY) return 'These rules reference categories that were removed (soft-deleted), not deleted rules themselves.'
   if (key === LEGACY_KEY) return 'Archived orphan rules are inactive and kept for audit. Remap or leave disabled.'
   if (key === NO_CAT_KEY) return 'Assign a category so imports can classify matching transactions.'
@@ -247,11 +259,27 @@ export function RulesAdminPage() {
     staleTime: 30_000,
   })
 
+  const { data: riskReport } = useQuery({
+    queryKey: ['admin-rules-risk'],
+    queryFn: fetchRuleRiskAnalysis,
+    staleTime: 30_000,
+  })
+
+  const riskByRuleId = useMemo(() => buildRiskEntryMap(riskReport?.entries), [riskReport?.entries])
+  const highRiskIds = useMemo(() => highRiskRuleIds(riskReport?.entries), [riskReport?.entries])
+
   const activeMap = useMemo(() => categoryTitleMap(activeCategories), [activeCategories])
   const categoryTree = useMemo(() => buildCategoryTree(allCategories), [allCategories])
   const treeNodes = useMemo(
-    () => buildTreeNodes(categoryTree, activeCategories, rules, activeCategories, allCategories),
-    [categoryTree, activeCategories, rules, allCategories],
+    () => buildTreeNodes(
+      categoryTree,
+      activeCategories,
+      rules,
+      activeCategories,
+      allCategories,
+      highRiskIds.size,
+    ),
+    [categoryTree, activeCategories, rules, allCategories, highRiskIds.size],
   )
   const nameByKey = useMemo(() => {
     const m = new Map<string, string>()
@@ -274,6 +302,7 @@ export function RulesAdminPage() {
       activeCategories,
       allCategories,
       (r, cat) => ruleMatchesCategory(r.categoryId, cat),
+      highRiskIds,
     )
     if (selectedKey === ALL_KEY) {
       list = list.filter((r) => isMainListRule(r, activeCategories, allCategories))
@@ -285,22 +314,24 @@ export function RulesAdminPage() {
       )
     }
     return list.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
-  }, [rules, selectedKey, activeCategories, allCategories, keyword])
+  }, [rules, selectedKey, activeCategories, allCategories, keyword, highRiskIds])
 
   const stats = useMemo(() => {
     const visible = rules.filter((r) => isMainListRule(r, activeCategories, allCategories))
     const active = visible.filter((r) => r.active === 1 && r.pattern?.trim()).length
     const disabled = visible.filter((r) => r.active !== 1 && r.pattern?.trim()).length
     const orphaned = countByIssue(rules, 'orphaned', activeCategories, allCategories)
-    return { active, disabled, orphaned }
-  }, [rules, activeCategories, allCategories])
+    const highRisk = highRiskIds.size
+    const duplicateGroups = riskReport?.duplicatePatternGroupCount ?? 0
+    return { active, disabled, orphaned, highRisk, duplicateGroups }
+  }, [rules, activeCategories, allCategories, highRiskIds.size, riskReport?.duplicatePatternGroupCount])
 
   const panelTitle = panelTitleForKey(selectedKey, activeMap)
   const panelHint = panelHintForKey(selectedKey)
   const showCategoryCol = selectedKey === ALL_KEY || selectedKey === ORPHAN_KEY || selectedKey === NO_CAT_KEY
 
   const openCreate = (presetPattern = '') => {
-    const presetCategory = ![ALL_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
+    const presetCategory = ![ALL_KEY, HIGH_RISK_KEY, ORPHAN_KEY, LEGACY_KEY, NO_CAT_KEY, INVALID_KEY].includes(selectedKey) ? selectedKey : ''
     setEditing(null)
     form.setFieldsValue({
       pattern: presetPattern,
@@ -394,6 +425,7 @@ export function RulesAdminPage() {
       setEditorOpen(false)
       refetch()
       qc.invalidateQueries({ queryKey: ['admin-rules'] })
+      qc.invalidateQueries({ queryKey: ['admin-rules-risk'] })
     } catch (e) {
       message.error(e instanceof Error ? e.message : 'Save failed')
     }
@@ -403,12 +435,24 @@ export function RulesAdminPage() {
     await deleteRule(id)
     message.success('Deleted')
     refetch()
+    qc.invalidateQueries({ queryKey: ['admin-rules-risk'] })
   }
 
   const onToggleActive = async (rule: ConsumeRuleRow, active: boolean) => {
     if (!rule.id) return
     await updateRule(String(rule.id), { ...rule, active: active ? 1 : 0 })
     refetch()
+    qc.invalidateQueries({ queryKey: ['admin-rules-risk'] })
+  }
+
+  const exportRemediation = () => {
+    const items = riskReport?.remediation || []
+    if (!items.length) {
+      message.info('No remediation items to export')
+      return
+    }
+    downloadRemediationCsv(items)
+    message.success(`Exported ${items.length} remediation row(s)`)
   }
 
   const loading = catsLoading || rulesLoading
@@ -457,6 +501,12 @@ export function RulesAdminPage() {
                 {stats.orphaned > 0 && (
                   <span className="fs-rule-stat fs-rule-stat--warn">{stats.orphaned} orphaned</span>
                 )}
+                {stats.highRisk > 0 && (
+                  <span className="fs-rule-stat fs-rule-stat--warn">{stats.highRisk} high risk</span>
+                )}
+                {stats.duplicateGroups > 0 && (
+                  <span className="fs-rule-stat fs-rule-stat--warn">{stats.duplicateGroups} duplicate groups</span>
+                )}
               </div>
             </div>
             <Space size="small" wrap className="fs-rule-main-actions">
@@ -469,6 +519,13 @@ export function RulesAdminPage() {
               />
               <Button icon={<BulbOutlined />} onClick={openSuggestKeywords}>
                 Suggest keywords
+              </Button>
+              <Button
+                icon={<DownloadOutlined />}
+                disabled={!riskReport?.remediation?.length}
+                onClick={exportRemediation}
+              >
+                Export remediation
               </Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>
                 Add rule
@@ -565,6 +622,32 @@ export function RulesAdminPage() {
                   const card = r.cardTypeCode?.trim()
                   if (!bank && !card) return <span className="fs-rule-scope-any">Any</span>
                   return <span className="fs-rule-scope">{[bank, card].filter(Boolean).join(' · ')}</span>
+                },
+              },
+              {
+                title: 'Risk',
+                key: 'risk',
+                width: 168,
+                render: (_, r) => {
+                  const entry = r.id ? riskByRuleId.get(String(r.id)) : undefined
+                  const risks = entry?.risks || []
+                  if (!risks.length) return <span className="fs-cell-muted">—</span>
+                  return (
+                    <span className="fs-rule-risks">
+                      {risks.slice(0, 2).map((kind) => (
+                        <Tooltip key={kind} title={entry?.suggestion}>
+                          <Tag bordered={false} color={RISK_COLORS[kind as RuleRiskKind] || 'default'} className="fs-rule-risk-tag">
+                            {RISK_LABELS[kind as RuleRiskKind] || kind}
+                          </Tag>
+                        </Tooltip>
+                      ))}
+                      {risks.length > 2 && (
+                        <Tooltip title={risks.slice(2).map((k) => RISK_LABELS[k as RuleRiskKind] || k).join(', ')}>
+                          <span className="fs-rule-tag-more">+{risks.length - 2}</span>
+                        </Tooltip>
+                      )}
+                    </span>
+                  )
                 },
               },
               {

@@ -6,6 +6,7 @@ import com.finsight.application.consume.ConsumeRuleService;
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.domain.port.TransactionRepository;
+import com.finsight.web.api.dto.RuleRiskReportDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,13 +31,16 @@ class ClassificationRuleHygieneServiceTest {
     private TransactionRepository transactionRepository;
     @Mock
     private ClassificationService classificationService;
+    @Mock
+    private RuleRiskAnalysisService ruleRiskAnalysisService;
 
     private ClassificationRuleHygieneService service;
 
     @BeforeEach
     void setUp() {
         service = new ClassificationRuleHygieneService(
-                ruleService, categoryService, transactionRepository, classificationService);
+                ruleService, categoryService, transactionRepository, classificationService,
+                ruleRiskAnalysisService);
     }
 
     @Test
@@ -65,6 +69,7 @@ class ClassificationRuleHygieneServiceTest {
                 rule("r2", "GONE", 0, OrphanRuleSupport.AUTO_DISABLED_ORPHAN_REMARK)));
         when(transactionRepository.getTransactions(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        stubEmptyRiskReport();
 
         Map<String, Object> summary = service.hygieneSummary();
 
@@ -95,12 +100,18 @@ class ClassificationRuleHygieneServiceTest {
                 invalidRule("r3", 0, null)));
         when(transactionRepository.getTransactions(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        stubEmptyRiskReport();
 
         Map<String, Object> summary = service.hygieneSummary();
 
         assertEquals(1, summary.get("activeInvalidPatternCount"));
         assertEquals(1, summary.get("archivedInvalidPatternCount"));
         assertEquals(1, summary.get("inactiveInvalidWithoutRemarkCount"));
+    }
+
+    private void stubEmptyRiskReport() {
+        RuleRiskReportDto report = new RuleRiskReportDto();
+        when(ruleRiskAnalysisService.analyze()).thenReturn(report);
     }
 
     private static ConsumeCategory category(String id, String code, int deleted) {
