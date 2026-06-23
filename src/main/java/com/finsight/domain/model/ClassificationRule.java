@@ -37,5 +37,7 @@ public class ClassificationRule extends BaseEntity {
 
     private Date lastMatchedAt;
     private Integer hitCount;
+
+    @TableField("impact_amount_90d")
     private java.math.BigDecimal impactAmount90d;
 }
