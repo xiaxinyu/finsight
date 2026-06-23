@@ -43,6 +43,7 @@ public class SchemaMigrationVerificationService {
         out.put("blankPatternRuleRows", countBlankPatternRules());
         out.put("activeBlankPatternRuleRows", countActiveBlankPatternRules());
         out.put("archivedInvalidPatternRuleRows", countArchivedInvalidPatternRules());
+        out.put("transactionCategoryFieldDriftRows", countTransactionCategoryFieldDrift());
         out.put("archivedConsumeCategory", tableExists("_archive_consume_category"));
         out.put("archivedConsumeRule", tableExists("_archive_consume_rule"));
         out.put("leftoverLegacyTables", listLeftoverLegacyTables());
@@ -135,6 +136,26 @@ public class SchemaMigrationVerificationService {
                         + "and coalesce(active,1)=0 "
                         + "and (coalesce(remark,'') like '%[auto-disabled: blank pattern]%' "
                         + "     or coalesce(remark,'') like '%[inactive legacy: blank pattern]%')",
+                Long.class);
+        return c == null ? 0 : c;
+    }
+
+    private long countTransactionCategoryFieldDrift() {
+        if (!tableExists("transaction") || !tableExists("cls_category")) {
+            return -1;
+        }
+        Long c = jdbcTemplate.queryForObject(
+                "select count(*) from `transaction` t "
+                        + "inner join cls_category c on c.code = t.consume_code and coalesce(c.deleted,0)=0 "
+                        + "where coalesce(t.deleted,0)=0 "
+                        + "and coalesce(trim(t.consume_code),'')<>'' "
+                        + "and ( "
+                        + "  coalesce(trim(t.consume_name),'')<>coalesce(trim(c.name),'') "
+                        + "  or coalesce(trim(t.consume_id),'') not in ('', coalesce(trim(c.code),''), coalesce(trim(c.id),'')) "
+                        + "  or coalesce(trim(t.category_code),'')<>coalesce(trim(t.consume_code),'') "
+                        + "  or coalesce(trim(t.category_name),'')<>coalesce(trim(c.name),'') "
+                        + "  or coalesce(trim(t.category_id),'') not in ('', coalesce(trim(c.code),''), coalesce(trim(c.id),'')) "
+                        + ")",
                 Long.class);
         return c == null ? 0 : c;
     }

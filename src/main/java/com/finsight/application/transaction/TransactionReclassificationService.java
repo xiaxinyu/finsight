@@ -235,10 +235,7 @@ public class TransactionReclassificationService {
     }
 
     private void applyCategory(Transaction tx, ClassificationService.Result match, String userName) {
-        tx.setCategoryCode(match.id);
-        tx.setCategoryName(match.name);
-        tx.setConsumeCode(match.id);
-        tx.setConsumeName(match.name);
+        TransactionCategoryFieldSync.applyCategoryFields(tx, match.id, match.name);
         try {
             transactionService.updateTransaction(tx, userName);
         } catch (Exception e) {

@@ -3,6 +3,7 @@ package com.finsight.application.statement;
 import com.finsight.application.consume.ClassificationNarrationBuilder;
 import com.finsight.application.consume.ClassificationProperties;
 import com.finsight.application.consume.ClassificationService;
+import com.finsight.application.transaction.TransactionCategoryFieldSync;
 import com.finsight.domain.model.Transaction;
 import org.springframework.stereotype.Component;
 
@@ -68,10 +69,7 @@ public class StatementImportClassifier {
         if (r == null) {
             return;
         }
-        t.setCategoryCode(r.id);
-        t.setCategoryName(r.name);
-        t.setConsumeCode(r.id);
-        t.setConsumeName(r.name);
+        TransactionCategoryFieldSync.applyCategoryFields(t, r.id, r.name);
     }
 
     private static double amount(Transaction t) {
