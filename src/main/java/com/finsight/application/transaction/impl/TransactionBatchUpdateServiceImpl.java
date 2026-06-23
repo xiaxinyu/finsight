@@ -2,12 +2,10 @@ package com.finsight.application.transaction.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.finsight.application.consume.ConsumeCategoryService;
 import com.finsight.application.transaction.ITransactionBatchUpdateService;
 import com.finsight.application.transaction.ITransactionService;
+import com.finsight.application.transaction.TransactionCategoryFieldNormalizer;
 import com.finsight.common.exception.AppServiceException;
-import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.domain.model.Transaction;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -30,7 +28,7 @@ public class TransactionBatchUpdateServiceImpl implements ITransactionBatchUpdat
     private ITransactionService transactionService;
 
     @Autowired
-    private ConsumeCategoryService consumeCategoryService;
+    private TransactionCategoryFieldNormalizer categoryFieldNormalizer;
 
     @Override
     public Optional<String> batchUpdateTransactions(String payload, String userName) {
@@ -44,22 +42,11 @@ public class TransactionBatchUpdateServiceImpl implements ITransactionBatchUpdat
             try {
                 String id = StringUtils.trimToEmpty(c.getId());
                 String code = StringUtils.trimToEmpty(c.getConsumeCode());
-                String name = StringUtils.trimToEmpty(c.getConsumeName());
                 if (id.isEmpty() || code.isEmpty()) {
                     failed++;
                     continue;
                 }
-                if (name.isEmpty()) {
-                    ConsumeCategory cat = consumeCategoryService.getOne(
-                            Wrappers.<ConsumeCategory>lambdaQuery()
-                                    .eq(ConsumeCategory::getCode, code)
-                                    .ne(ConsumeCategory::getDeleted, 1),
-                            false
-                    );
-                    if (cat != null && StringUtils.isNotBlank(cat.getName())) {
-                        c.setConsumeName(cat.getName());
-                    }
-                }
+                categoryFieldNormalizer.normalize(c);
                 transactionService.updateTransaction(c, userName);
                 success++;
             } catch (AppServiceException e) {

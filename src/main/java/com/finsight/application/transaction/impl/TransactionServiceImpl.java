@@ -12,6 +12,8 @@ import com.finsight.common.exception.AppServiceException;
 import com.finsight.application.analytics.MetricRefreshTrigger;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.application.transaction.TransactionAmountNormalizer;
+import com.finsight.application.transaction.TransactionCategoryFieldNormalizer;
+import com.finsight.application.transaction.TransactionCategoryFieldSync;
 import com.finsight.application.transaction.TransactionFieldSanitizer;
 import com.finsight.domain.port.TransactionRepository;
 import com.finsight.application.query.TransactionQuery;
@@ -44,6 +46,9 @@ public class TransactionServiceImpl implements ITransactionService {
     @Autowired
     MetricRefreshTrigger metricRefreshTrigger;
 
+    @Autowired
+    TransactionCategoryFieldNormalizer categoryFieldNormalizer;
+
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
         try {
@@ -67,6 +72,9 @@ public class TransactionServiceImpl implements ITransactionService {
                     || transaction.getBalanceMoney() != null
                     || transaction.getIncomeMoney() != null) {
                 normalizeAmounts(transaction, kind);
+            }
+            if (transaction.hasCategoryFieldPatch()) {
+                categoryFieldNormalizer.normalize(transaction);
             }
             transaction.setUpdateUser(userName);
             transactionRepository.updateTransaction(transaction);
@@ -281,6 +289,9 @@ public class TransactionServiceImpl implements ITransactionService {
     private void prepareForInsert(Transaction transaction, String userName) {
         TransactionAmountNormalizer.normalize(transaction);
         TransactionFieldSanitizer.sanitize(transaction);
+        if (StringUtils.isNotBlank(TransactionCategoryFieldSync.resolveCanonicalCode(transaction))) {
+            categoryFieldNormalizer.normalize(transaction);
+        }
         if (transaction.getId() == null || transaction.getId().trim().isEmpty()
                 || transactionRepository.selectById(transaction.getId()) != null) {
             transaction.setId(StringTool.generateID());

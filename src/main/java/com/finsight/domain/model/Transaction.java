@@ -150,6 +150,13 @@ public class Transaction extends BaseEntity {
     public void setRecordID(String recordID) { this.recordID = recordID; }
     public String getStatementId() { return recordID; }
     public void setStatementId(String statementId) { this.recordID = statementId; }
+
+    /** True when a category column was explicitly set on this instance (partial update detection). */
+    public boolean hasCategoryFieldPatch() {
+        return consumeCode != null || categoryCode != null || consumeID != null || categoryId != null
+                || consumeName != null || categoryName != null;
+    }
+
     public Double getExpenseAmount() { return expenseAmount; }
     public void setExpenseAmount(Double expenseAmount) { this.expenseAmount = expenseAmount; }
     public void setBalanceMoney(Double balanceMoney) {

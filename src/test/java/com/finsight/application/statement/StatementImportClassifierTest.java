@@ -65,6 +65,8 @@ class StatementImportClassifierTest {
         classifier.classify(tx, "CCB", "credit");
 
         assertEquals("TRAVEL-01", tx.getCategoryCode());
+        assertEquals("TRAVEL-01", tx.getConsumeCode());
+        assertEquals("TRAVEL-01", tx.getConsumeID());
         assertEquals("公共交通", tx.getCategoryName());
         verify(importHeuristic).shouldOverrideRule("INVEST-01", "基金申购（买入基金）", transit,
                 "深圳市地铁相关运营主体");
