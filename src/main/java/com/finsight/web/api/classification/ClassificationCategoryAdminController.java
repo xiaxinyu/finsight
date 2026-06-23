@@ -1,8 +1,11 @@
 package com.finsight.web.api.classification;
 
+import com.finsight.application.classification.CategoryImpactAction;
+import com.finsight.application.classification.CategoryImpactPreviewService;
 import com.finsight.application.consume.ConsumeCategoryAdminFacade;
 import com.finsight.domain.model.Category;
 import com.finsight.domain.model.ConsumeCategory;
+import com.finsight.web.api.dto.CategoryImpactPreview;
 import com.finsight.web.api.dto.CollectionResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,9 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClassificationCategoryAdminController {
 
     private final ConsumeCategoryAdminFacade adminFacade;
+    private final CategoryImpactPreviewService impactPreviewService;
 
-    public ClassificationCategoryAdminController(ConsumeCategoryAdminFacade adminFacade) {
+    public ClassificationCategoryAdminController(ConsumeCategoryAdminFacade adminFacade,
+                                                 CategoryImpactPreviewService impactPreviewService) {
         this.adminFacade = adminFacade;
+        this.impactPreviewService = impactPreviewService;
     }
 
     @GetMapping
@@ -48,5 +54,22 @@ public class ClassificationCategoryAdminController {
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {
         adminFacade.delete(id);
+    }
+
+    @GetMapping("/{id}/impact-preview")
+    public CategoryImpactPreview impactPreview(
+            @PathVariable String id,
+            @RequestParam(value = "action", required = false, defaultValue = "delete") String action,
+            @RequestParam(value = "targetCode", required = false) String targetCode) {
+        return impactPreviewService.preview(id, CategoryImpactAction.parse(action), targetCode);
+    }
+
+    @PostMapping("/{id}/migrate")
+    public CollectionResult<String> migrate(
+            @PathVariable String id,
+            @RequestParam(value = "toCode", required = false) String toCode,
+            @RequestParam(value = "deleteAfter", required = false, defaultValue = "true") boolean deleteAfter,
+            @RequestParam(value = "cascade", required = false, defaultValue = "false") boolean cascade) {
+        return adminFacade.migrate(id, toCode, deleteAfter, cascade);
     }
 }

@@ -115,3 +115,44 @@ export async function updateCategory(id: string, cat: ConsumeCategoryRow, cascad
 export async function deleteCategory(id: string) {
   return deleteReq(`/api/v1/classification/categories/${encodeURIComponent(id)}`)
 }
+
+export type CategoryImpactPreview = {
+  categoryId?: string
+  categoryCode?: string
+  categoryName?: string
+  action?: string
+  targetCode?: string
+  targetName?: string
+  transactionCount?: number
+  totalAmount?: number
+  activeRuleCount?: number
+  inactiveRuleCount?: number
+  childCategoryCount?: number
+  amountByMonth?: Array<{ yearMonth: string; txnCount: number; amount: number }>
+  affectedReports?: string[]
+  warnings?: string[]
+  summary?: string
+}
+
+export async function fetchCategoryImpactPreview(
+  id: string,
+  action: 'delete' | 'rename' | 'merge' = 'delete',
+  targetCode?: string,
+): Promise<CategoryImpactPreview> {
+  const params = new URLSearchParams({ action })
+  if (targetCode) params.set('targetCode', targetCode)
+  return getJson(`/api/v1/classification/categories/${encodeURIComponent(id)}/impact-preview?${params}`) as Promise<CategoryImpactPreview>
+}
+
+export async function migrateCategory(
+  id: string,
+  toCode: string,
+  deleteAfter = true,
+  cascade = false,
+) {
+  const params = new URLSearchParams()
+  params.set('toCode', toCode)
+  if (deleteAfter) params.set('deleteAfter', 'true')
+  if (cascade) params.set('cascade', 'true')
+  return postJson(`/api/v1/classification/categories/${encodeURIComponent(id)}/migrate?${params}`, {})
+}
