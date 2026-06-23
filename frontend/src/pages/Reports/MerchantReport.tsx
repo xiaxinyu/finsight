@@ -12,6 +12,7 @@ import {
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
+import { DataQualityStrip } from '../../components/DataQualityStrip'
 import { EmptyState } from '../../components/EmptyState'
 import { FsChart } from '../../components/FsChart'
 import { FsDataTable } from '../../components/FsDataTable'
@@ -88,6 +89,10 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
       params: row.drillDown,
       explanation,
       source: 'report',
+      provenance: {
+        reportId: `merchant-${mode}`,
+        sourceView: 'merchant row',
+      },
     }))
   }
 
@@ -175,6 +180,7 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
       className="fs-data-page--dense fs-data-page--reports"
       toolbar={toolbar}
     >
+      <DataQualityStrip metricsSource="fin_metric_monthly" compact />
       {!enabled && (
         <EmptyState title="Merchant mining disabled" description="Enable finsight.merchant-mining.enabled to use merchant reports." />
       )}

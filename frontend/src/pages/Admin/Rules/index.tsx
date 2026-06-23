@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Tree, TreeSelect, Typography, Alert,
+  Button, Form, Input, InputNumber, message, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Tree, TreeSelect, Typography, Alert, Row, Col,
 } from 'antd'
 import type { DataNode } from 'antd/es/tree'
 import {
@@ -844,6 +844,22 @@ export function RulesAdminPage() {
               description={(
                 <div>
                   <div>Unclassified: {impactPreview.unclassifiedMatchCount ?? 0} · Would override: {impactPreview.wouldOverrideCount ?? 0}</div>
+                  {(impactPreview.beforeByCategory?.length || impactPreview.afterByCategory?.length) ? (
+                    <Row gutter={12} style={{ marginTop: 8 }}>
+                      <Col span={12}>
+                        <Typography.Text strong>Before</Typography.Text>
+                        {(impactPreview.beforeByCategory || []).slice(0, 5).map((row) => (
+                          <div key={`b-${row.categoryCode}`}>{row.categoryName || row.categoryCode}: {row.txnCount ?? 0} txns · {(row.amount ?? 0).toFixed(0)}</div>
+                        ))}
+                      </Col>
+                      <Col span={12}>
+                        <Typography.Text strong>After</Typography.Text>
+                        {(impactPreview.afterByCategory || []).slice(0, 5).map((row) => (
+                          <div key={`a-${row.categoryCode}`}>{row.categoryName || row.categoryCode}: {row.txnCount ?? 0} txns · {(row.amount ?? 0).toFixed(0)}</div>
+                        ))}
+                      </Col>
+                    </Row>
+                  ) : null}
                   {(impactPreview.samples || []).slice(0, 3).map((s) => (
                     <div key={s.transactionId} style={{ marginTop: 4 }}>
                       {s.description} → {s.afterCategoryCode}

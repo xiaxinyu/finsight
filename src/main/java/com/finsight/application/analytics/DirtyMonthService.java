@@ -14,13 +14,16 @@ public class DirtyMonthService {
 
     private final JdbcTemplate jdbcTemplate;
     private final MetricMonthlyService metricMonthlyService;
+    private final MerchantMiningService merchantMiningService;
     private final ConfigVersionBump configVersionBump;
 
     public DirtyMonthService(JdbcTemplate jdbcTemplate,
                              MetricMonthlyService metricMonthlyService,
+                             MerchantMiningService merchantMiningService,
                              ConfigVersionBump configVersionBump) {
         this.jdbcTemplate = jdbcTemplate;
         this.metricMonthlyService = metricMonthlyService;
+        this.merchantMiningService = merchantMiningService;
         this.configVersionBump = configVersionBump;
     }
 
@@ -63,10 +66,12 @@ public class DirtyMonthService {
                     month);
             refreshed.add(month);
         }
+        Map<String, Object> merchantProfiles = merchantMiningService.refreshProfiles();
         configVersionBump.bumpMetricRefresh();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("refreshedMonths", refreshed);
         out.put("count", refreshed.size());
+        out.put("merchantProfiles", merchantProfiles);
         return out;
     }
 }

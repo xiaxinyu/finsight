@@ -28,6 +28,7 @@ export function buildReportDrillContext(input: {
   explanation?: string[]
   actions?: DrillDownAction[]
   source?: DrillDownContext['source']
+  provenance?: DrillDownContext['provenance']
 }): DrillDownContext {
   const category = input.params.consumeName
   const explanation = input.explanation?.length
@@ -45,6 +46,10 @@ export function buildReportDrillContext(input: {
     params: input.params,
     actions: mergeDrillActions(input.actions),
     source: input.source ?? 'report',
+    provenance: {
+      filterParams: { ...input.params },
+      ...input.provenance,
+    },
   }
 }
 

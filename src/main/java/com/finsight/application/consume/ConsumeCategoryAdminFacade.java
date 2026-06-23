@@ -9,6 +9,8 @@ import com.finsight.domain.model.ConsumeRule;
 import com.finsight.domain.model.Transaction;
 import com.finsight.infrastructure.mapper.TransactionMapper;
 import com.finsight.web.api.dto.CollectionResult;
+import com.finsight.application.analytics.ConfigVersionBump;
+import com.finsight.application.classification.CategoryAliasService;
 import com.finsight.application.classification.CategoryMergeSupport;
 import com.finsight.application.classification.CategoryMergeSupport.MergeMode;
 import org.slf4j.Logger;
@@ -35,6 +37,12 @@ public class ConsumeCategoryAdminFacade {
 
     @Autowired
     private ClassificationService classificationService;
+
+    @Autowired
+    private CategoryAliasService categoryAliasService;
+
+    @Autowired
+    private ConfigVersionBump configVersionBump;
 
     public CollectionResult<ConsumeCategory> list() {
         return list(false);
@@ -76,6 +84,7 @@ public class ConsumeCategoryAdminFacade {
             }
             throw ex;
         }
+        configVersionBump.bumpTaxonomy();
         return cat;
     }
 
@@ -200,6 +209,7 @@ public class ConsumeCategoryAdminFacade {
         categoryService.update(null, uwDel);
         deactivateRulesForCategory(cat);
         classificationService.reload();
+        configVersionBump.bumpTaxonomy();
     }
 
     private void deactivateRulesForCategory(ConsumeCategory cat) {
@@ -300,6 +310,7 @@ public class ConsumeCategoryAdminFacade {
 
         syncAllTransactionConsumeCodes();
         classificationService.reload();
+        configVersionBump.bumpTaxonomy();
         CollectionResult<String> r = new CollectionResult<>();
         r.setRows(java.util.Arrays.asList("ok"));
         r.setTotal(1);
@@ -324,6 +335,8 @@ public class ConsumeCategoryAdminFacade {
             }
         }
         log.info("L1 merge: reparented {} children from {} -> {}", reparented, srcCode, tgtCode);
+
+        categoryAliasService.recordMergeAlias(src, target, "L1_MERGE");
 
         if (deleteAfter) {
             LambdaUpdateWrapper<ConsumeCategory> uwDel = Wrappers.lambdaUpdate();
@@ -396,6 +409,8 @@ public class ConsumeCategoryAdminFacade {
                         + "txnByConsumeCode={}, likeSlash={}, likeDash={}, txnByName={}, rulesRemapped={}",
                 src.getId(), src.getCode(), tgtCode, tgtName, cascade,
                 affected1, affected2, affected3, affected4, affected5, affected6, rulesRemapped);
+
+        categoryAliasService.recordMergeAlias(src, target, cascade ? "L2_MERGE_CASCADE" : "L2_MERGE");
 
         if (deleteAfter) {
             LambdaUpdateWrapper<ConsumeCategory> uwDel = Wrappers.lambdaUpdate();

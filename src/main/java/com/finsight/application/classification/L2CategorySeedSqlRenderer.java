@@ -1,5 +1,7 @@
 package com.finsight.application.classification;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.Set;
 
 /**
@@ -49,14 +51,35 @@ public final class L2CategorySeedSqlRenderer {
         StringBuilder sb = new StringBuilder();
         sb.append("-- Backfill report_role for catalog codes (requires V23 column)\n\n");
         for (ClassificationL2TargetCatalog target : ClassificationL2TargetCatalog.values()) {
-            sb.append("update cls_category set report_role = '")
-                    .append(escapeSql(target.reportRole()))
-                    .append("' where code = '")
-                    .append(escapeSql(target.code()))
-                    .append("' and coalesce(deleted, 0) = 0")
-                    .append(" and (report_role is null or trim(report_role) = '');\n");
+            sb.append(renderReportRoleUpdate(target.code(), target.reportRole()));
         }
         return sb.toString();
+    }
+
+    /**
+     * Backfill report_role for rows loaded from live DB (only where role is currently empty).
+     */
+    public static String renderReportRoleBackfillFromDatabase(java.util.List<CategoryReportRoleInference.DbCategoryRow> rows) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- Backfill report_role for live cls_category rows (inferred; requires V23 column)\n\n");
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        for (CategoryReportRoleInference.DbCategoryRow row : rows) {
+            if (row == null || StringUtils.isBlank(row.code()) || !seen.add(row.code().trim())) {
+                continue;
+            }
+            CategoryReportRoleInference.inferReportRole(row)
+                    .ifPresent(role -> sb.append(renderReportRoleUpdate(row.code(), role)));
+        }
+        return sb.toString();
+    }
+
+    private static String renderReportRoleUpdate(String code, String reportRole) {
+        return "update cls_category set report_role = '"
+                + escapeSql(reportRole)
+                + "' where code = '"
+                + escapeSql(code)
+                + "' and coalesce(deleted, 0) = 0"
+                + " and (report_role is null or trim(report_role) = '');\n";
     }
 
     private static String renderInsert(L2CategorySeedPlanner.SeedItem item) {

@@ -18,6 +18,7 @@ import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
+import { DataQualityStrip } from '../../components/DataQualityStrip'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { FsDataTable } from '../../components/FsDataTable'
@@ -170,6 +171,10 @@ export function ReportsPage() {
       params: next,
       explanation: explanation.length ? explanation : undefined,
       source: 'report',
+      provenance: {
+        reportId,
+        sourceView: categoryName ? 'chart category slice' : 'report chart',
+      },
     }))
   }
 
@@ -342,6 +347,7 @@ export function ReportsPage() {
         </FilterToolbar>
       )}
     >
+      <DataQualityStrip metricsSource="report_sql" compact />
       {isError && (
         <Alert
           type="error"

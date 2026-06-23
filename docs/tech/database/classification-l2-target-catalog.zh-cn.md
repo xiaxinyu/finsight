@@ -29,9 +29,14 @@ GET /api/v1/maintenance/l2-category-seed-plan
 # 1. 确保 Flyway V23 已应用（report_role 列）
 mvn spring-boot:run
 
-# 2. 审阅并执行 seed SQL
+# 2. 从当前数据库重新生成 seed SQL（推荐，避免 catalog 与库内 code 不一致）
+mvn test -Dtest=L2CategorySeedSqlFromDatabaseTest -Dregenerate.seed.from.db=true
+
+# 3. 审阅并执行 seed SQL
 mysql -u <user> -p finsight < docs/tech/database/l2-category-sprint2-seed.sql
 ```
+
+生成逻辑会以 **库内已有 code** 为准：仅 INSERT catalog 中仍缺失的 L2；`report_role` 回填覆盖库内所有空 role 行（含 `LIVING-*`、`FE-*`、`SHOPPING-*` 等 legacy code）。
 
 ## report_role 取值
 

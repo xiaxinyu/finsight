@@ -54,6 +54,18 @@ describe('buildDrillContext', () => {
     })
   })
 
+  it('buildReportDrillContext attaches provenance metadata', () => {
+    const ctx = buildReportDrillContext({
+      title: 'Food · Jan',
+      metricLabel: 'Food',
+      params: { transactionDateStartStr: '2026-01-01', transactionDateEndStr: '2026-01-31', consumeName: 'Food' },
+      provenance: { reportId: 'cashflow', sourceView: 'chart slice', aggregateTotal: 1200 },
+    })
+    expect(ctx.provenance?.reportId).toBe('cashflow')
+    expect(ctx.provenance?.filterParams?.consumeName).toBe('Food')
+    expect(ctx.provenance?.aggregateTotal).toBe(1200)
+  })
+
   it('buildDashboardDrillContext tags source dashboard', () => {
     const ctx = buildDashboardDrillContext({
       title: 'Dash',
