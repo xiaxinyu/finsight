@@ -98,8 +98,9 @@ public class FinanceApiController {
     }
 
     @GetMapping("/data-quality")
-    public CommonResult dataQuality() {
-        return CommonResult.success(dataQualityService.summary());
+    public CommonResult dataQuality(
+            @org.springframework.web.bind.annotation.RequestParam(value = "metricsSource", required = false) String metricsSource) {
+        return CommonResult.success(dataQualityService.reportStrip(metricsSource));
     }
 
     @GetMapping("/financial-pulse")

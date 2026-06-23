@@ -25,4 +25,7 @@ public class Category extends BaseEntity {
     private String txnTypes;
     @TableField(value = "report_role")
     private String reportRole;
+    private Integer budgetable;
+    @TableField(value = "cashflow_impact")
+    private String cashflowImpact;
 }

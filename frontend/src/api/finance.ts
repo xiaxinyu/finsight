@@ -16,8 +16,17 @@ export type PulseData = {
   dataQuality: {
     unclassifiedCount: number
     transferPairCount: number
+    unclassifiedPct?: number
+    orphanCategoryTxnCount?: number
+    refundExcludedCount?: number
+    merchantTokenCoveragePct?: number
+    metricsSource?: string
+    confidence?: string
+    versions?: Record<string, unknown>
   }
 }
+
+export type ReportDataQuality = PulseData['dataQuality']
 
 export type DecisionCard = {
   type: string
@@ -120,5 +129,10 @@ export async function createTransfer(fromTransactionId: string, toTransactionId:
 }
 
 export async function dataQuality() {
-  return unwrap<Record<string, number>>(await getJson('/api/v1/data-quality'))
+  return unwrap<ReportDataQuality>(await getJson('/api/v1/data-quality'))
+}
+
+export async function fetchReportDataQuality(metricsSource = 'fin_metric_monthly') {
+  const q = metricsSource ? `?metricsSource=${encodeURIComponent(metricsSource)}` : ''
+  return unwrap<ReportDataQuality>(await getJson(`/api/v1/data-quality${q}`))
 }

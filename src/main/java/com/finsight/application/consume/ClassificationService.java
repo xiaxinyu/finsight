@@ -84,6 +84,7 @@ public class ClassificationService {
             Result res = new Result();
             res.id = r.id;
             res.name = r.name;
+            res.priority = r.priority;
             out.add(res);
         }
         if(out.isEmpty()){
@@ -184,5 +185,6 @@ public class ClassificationService {
     public static class Result{
         public String id;
         public String name;
+        public Integer priority;
     }
 }

@@ -2,8 +2,10 @@ package com.finsight.web.api.classification;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.finsight.application.analytics.ConfigVersionBump;
 import com.finsight.application.classification.ClassificationRuleHygieneService;
 import com.finsight.application.classification.ClassificationRuleValidator;
+import com.finsight.application.classification.RuleImpactPreviewService;
 import com.finsight.application.classification.RuleRiskAnalysisService;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.consume.ConsumeRuleService;
@@ -11,6 +13,8 @@ import com.finsight.domain.model.ClassificationRule;
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.web.api.dto.ClassificationTestRequest;
 import com.finsight.web.api.dto.ClassificationTestResult;
+import com.finsight.web.api.dto.RuleImpactPreviewDto;
+import com.finsight.web.api.dto.RuleImpactPreviewRequest;
 import com.finsight.web.api.dto.RuleRiskReportDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -36,17 +40,23 @@ public class ClassificationRuleController {
     private final ClassificationRuleValidator ruleValidator;
     private final ClassificationRuleHygieneService ruleHygieneService;
     private final RuleRiskAnalysisService ruleRiskAnalysisService;
+    private final RuleImpactPreviewService ruleImpactPreviewService;
+    private final ConfigVersionBump configVersionBump;
 
     public ClassificationRuleController(ConsumeRuleService ruleService,
                                         ClassificationService classificationService,
                                         ClassificationRuleValidator ruleValidator,
                                         ClassificationRuleHygieneService ruleHygieneService,
-                                        RuleRiskAnalysisService ruleRiskAnalysisService) {
+                                        RuleRiskAnalysisService ruleRiskAnalysisService,
+                                        RuleImpactPreviewService ruleImpactPreviewService,
+                                        ConfigVersionBump configVersionBump) {
         this.ruleService = ruleService;
         this.classificationService = classificationService;
         this.ruleValidator = ruleValidator;
         this.ruleHygieneService = ruleHygieneService;
         this.ruleRiskAnalysisService = ruleRiskAnalysisService;
+        this.ruleImpactPreviewService = ruleImpactPreviewService;
+        this.configVersionBump = configVersionBump;
     }
 
     @GetMapping
@@ -88,6 +98,7 @@ public class ClassificationRuleController {
         rule.setId(com.finsight.common.util.StringTool.generateID());
         ruleService.save(ConsumeRule.from(rule));
         classificationService.reload();
+        configVersionBump.bumpRuleSet();
         return rule;
     }
 
@@ -97,6 +108,7 @@ public class ClassificationRuleController {
         ruleValidator.validate(rule);
         ruleService.updateById(ConsumeRule.from(rule));
         classificationService.reload();
+        configVersionBump.bumpRuleSet();
         return rule;
     }
 
@@ -104,6 +116,7 @@ public class ClassificationRuleController {
     public void delete(@PathVariable String id) {
         ruleService.removeById(id);
         classificationService.reload();
+        configVersionBump.bumpRuleSet();
     }
 
     @PostMapping("/reload")
@@ -120,6 +133,11 @@ public class ClassificationRuleController {
     @GetMapping("/risk-analysis")
     public RuleRiskReportDto riskAnalysis() {
         return ruleRiskAnalysisService.analyze();
+    }
+
+    @PostMapping("/impact-preview")
+    public RuleImpactPreviewDto impactPreview(@RequestBody RuleImpactPreviewRequest req) {
+        return ruleImpactPreviewService.preview(req);
     }
 
     @GetMapping("/orphans")

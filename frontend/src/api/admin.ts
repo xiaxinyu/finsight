@@ -102,6 +102,41 @@ export async function fetchRuleRiskAnalysis(): Promise<import('../utils/ruleRisk
   return getJson('/api/v1/classification/rules/risk-analysis') as Promise<import('../utils/ruleRisk').RuleRiskReport>
 }
 
+export type RuleImpactPreviewRequest = {
+  ruleId?: string
+  pattern?: string
+  patternType?: string
+  categoryId?: string
+  priority?: number
+  bankCode?: string
+  cardTypeCode?: string
+  scope?: 'UNCLASSIFIED_ONLY' | 'WOULD_OVERRIDE' | 'ALL_MATCHES'
+}
+
+export type RuleImpactPreview = {
+  scope?: string
+  matchedCount?: number
+  matchedAmount?: number
+  unclassifiedMatchCount?: number
+  wouldOverrideCount?: number
+  beforeByCategory?: Array<{ categoryCode?: string; categoryName?: string; txnCount?: number; amount?: number }>
+  afterByCategory?: Array<{ categoryCode?: string; categoryName?: string; txnCount?: number; amount?: number }>
+  samples?: Array<{
+    transactionId?: string
+    description?: string
+    amount?: number
+    beforeCategoryCode?: string
+    afterCategoryCode?: string
+    priorityExplanation?: string
+    wouldOverride?: boolean
+    unclassified?: boolean
+  }>
+}
+
+export async function fetchRuleImpactPreview(body: RuleImpactPreviewRequest): Promise<RuleImpactPreview> {
+  return postJson('/api/v1/classification/rules/impact-preview', body) as Promise<RuleImpactPreview>
+}
+
 export async function fetchUnclassifiedRuleKeywords(limit = 20): Promise<string[]> {
   return getJson(`/api/v1/classification/rules/recommend-unclassified?limit=${limit}`) as Promise<string[]>
 }

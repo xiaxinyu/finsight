@@ -33,6 +33,18 @@ export function cardPrimaryLabel(card: AdvisorCard): string {
   return card.actions?.[0]?.label || card.actionLabel || 'Take action'
 }
 
+export function evidenceSourceLabel(source?: string): string {
+  switch (source) {
+    case 'data_quality': return 'Data quality'
+    case 'rule': return 'Rule evidence'
+    case 'transaction_sample': return 'Transaction sample'
+    case 'forecast': return 'Forecast impact'
+    case 'profile': return 'Profile'
+    case 'trend': return 'Trend'
+    case 'merchant': return 'Merchant'
+    default: return source || 'Evidence'
+  }
+}
 export function normalizeEvidence(card: AdvisorCard): AdvisorEvidenceItem[] {
   if (card.evidence?.length) {
     return card.evidence
