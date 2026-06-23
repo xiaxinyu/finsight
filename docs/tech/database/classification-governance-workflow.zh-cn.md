@@ -28,7 +28,7 @@ flowchart LR
 |------|------|------|------|
 | 1 | **Audit** | 跑 `classification-data-audit.sql`，保存 baseline | `baseline-summary`、Top100、orphan/invalid 清单 |
 | 2 | **Design** | 根据审计结果设计二级分类增补 / 规则修复 | 分类变更清单、规则修复清单 |
-| 3 | **Create** | 在 Categories 新增分类（新 code 唯一） | 新 `cls_category` 行 |
+| 3 | **Create** | 在 Categories 新增分类（新 code 唯一） | 新 `cls_category` 行；手动 seed：[`l2-category-sprint2-seed.sql`](./l2-category-sprint2-seed.sql)（[#69](https://github.com/xiaxinyu/finsight/issues/69)） |
 | 4 | **Map Rules** | 在 Rule Engine 新增/调整规则；orphan 用 remediation SQL 映射 | 更新 `cls_rule` |
 | 5 | **Preview** | Categories impact preview ([#66](https://github.com/xiaxinyu/finsight/issues/66))；规则 dry-run ([#73](https://github.com/xiaxinyu/finsight/issues/73)) | 影响范围确认 |
 | 6 | **Apply** | 人工执行 remediation SQL；UI 确认删除/合并 | DB 变更记录 |

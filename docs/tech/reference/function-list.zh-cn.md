@@ -30,6 +30,7 @@
     *   **自动化关键字**: 恢复并优化了基于关键字的自动化功能。
 *   **类别管理 (Category Management)**
     *   **类别维护**: 创建、更新和删除消费类别。
+    *   **v1.8 L2 目标字典**: Sprint 2 二级分类增补清单与手动 seed 脚本，见 [`docs/tech/database/classification-l2-target-catalog.zh-cn.md`](../database/classification-l2-target-catalog.zh-cn.md)；在线 plan：`GET /api/v1/maintenance/l2-category-seed-plan`。
     *   **级联更新**: 更新类别时自动更新相关联的交易。
     *   **类别迁移**: 在不同类别间迁移数据的工具。
 

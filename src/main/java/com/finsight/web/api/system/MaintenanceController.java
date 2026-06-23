@@ -6,6 +6,7 @@ import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.classification.ClassificationAuditSummary;
 import com.finsight.application.classification.ClassificationAuditSummaryService;
 import com.finsight.application.classification.ClassificationRemediationPlanner;
+import com.finsight.application.classification.L2CategorySeedService;
 import com.finsight.application.maintenance.SchemaMigrationVerificationService;
 import com.finsight.application.transaction.TransactionDataMigrationService;
 import com.finsight.web.api.dto.CommonResult;
@@ -27,19 +28,22 @@ public class MaintenanceController {
     private final MetricReconciliationService metricReconciliationService;
     private final AuthenticationFacade authenticationFacade;
     private final ClassificationAuditSummaryService auditSummaryService;
+    private final L2CategorySeedService l2CategorySeedService;
 
     public MaintenanceController(TransactionDataMigrationService migrationService,
                                SchemaMigrationVerificationService verificationService,
                                MetricMonthlyService metricMonthlyService,
                                MetricReconciliationService metricReconciliationService,
                                AuthenticationFacade authenticationFacade,
-                               ClassificationAuditSummaryService auditSummaryService) {
+                               ClassificationAuditSummaryService auditSummaryService,
+                               L2CategorySeedService l2CategorySeedService) {
         this.migrationService = migrationService;
         this.verificationService = verificationService;
         this.metricMonthlyService = metricMonthlyService;
         this.metricReconciliationService = metricReconciliationService;
         this.authenticationFacade = authenticationFacade;
         this.auditSummaryService = auditSummaryService;
+        this.l2CategorySeedService = l2CategorySeedService;
     }
 
     @PostMapping("/normalize-transaction-amounts")
@@ -62,6 +66,11 @@ public class MaintenanceController {
         out.put("exportScript", "scripts/db/export-classification-audit-baseline.sh");
         out.put("resultsDir", "docs/tech/database/audit-results/");
         return CommonResult.success(out);
+    }
+
+    @GetMapping("/l2-category-seed-plan")
+    public CommonResult l2CategorySeedPlan() {
+        return CommonResult.success(l2CategorySeedService.buildSeedPlan());
     }
 
     @PostMapping("/refresh-metrics")

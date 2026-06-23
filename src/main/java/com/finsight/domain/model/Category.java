@@ -23,4 +23,6 @@ public class Category extends BaseEntity {
     private Integer deleted;
     @TableField(value = "txn_types")
     private String txnTypes;
+    @TableField(value = "report_role")
+    private String reportRole;
 }
