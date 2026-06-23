@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Alert, Button, Cascader, Form, Input, InputNumber, message, Select, Space, Tree,
+  Alert, Button, Cascader, Divider, Form, Input, InputNumber, Modal, message, Select, Space, Tag, Tree, Typography,
 } from 'antd'
 import { ClusterOutlined, PlusOutlined } from '@ant-design/icons'
 import {
   createCategory,
   deleteCategory,
+  fetchCategoryAsset,
+  fetchCategoryAssetSummary,
   fetchCategoryImpactPreview,
   listCategoriesAdmin,
   migrateCategory,
   updateCategory,
+  type CategoryChildCandidate,
   type CategoryImpactPreview,
   type ConsumeCategoryRow,
 } from '../../../api/admin'
+import { CategoryAssetPanel, CategoryCandidateConfirmModal } from '../../../components/CategoryAssetPanel'
 import { CategoryImpactPreviewModal } from '../../../components/CategoryImpactPreviewModal'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
@@ -28,7 +32,7 @@ import {
   applyMergeTargetConstraints,
   buildCategoryTree,
   collectSubtreeCodesFromTree,
-  toAntTreeNodes,
+  toAntTreeNodesWithCounts,
 } from '../../../utils/categoryTree'
 import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
 
@@ -57,14 +61,32 @@ export function CategoriesAdminPage() {
   const [pendingValues, setPendingValues] = useState<ConsumeCategoryRow | null>(null)
   const [mergeTargetCode, setMergeTargetCode] = useState<string | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
+  const [reportImpactOpen, setReportImpactOpen] = useState(false)
+  const [candidateDraft, setCandidateDraft] = useState<CategoryChildCandidate | null>(null)
+  const [candidateSaving, setCandidateSaving] = useState(false)
 
   const { data: categories = [], isLoading, isError, error } = useQuery({
     queryKey: ['admin-categories'],
     queryFn: () => listCategoriesAdmin(),
   })
+  const { data: assetSummary = {} } = useQuery({
+    queryKey: ['admin-category-asset-summary'],
+    queryFn: () => fetchCategoryAssetSummary(),
+    staleTime: 60_000,
+  })
   const { treeData: consumeTreeData } = useConsumeTreeSelect()
 
-  const treeData = useMemo(() => toAntTreeNodes(buildCategoryTree(categories)), [categories])
+  const { data: categoryAsset, isLoading: assetLoading } = useQuery({
+    queryKey: ['admin-category-asset', selectedId],
+    queryFn: () => fetchCategoryAsset(selectedId!),
+    enabled: Boolean(selectedId) && !creating,
+    staleTime: 30_000,
+  })
+
+  const treeData = useMemo(
+    () => toAntTreeNodesWithCounts(buildCategoryTree(categories), assetSummary, categories),
+    [categories, assetSummary],
+  )
   const selected = useMemo(
     () => categories.find((c) => c.id === selectedId) || null,
     [categories, selectedId],
@@ -87,7 +109,30 @@ export function CategoriesAdminPage() {
 
   const reload = () => {
     qc.invalidateQueries({ queryKey: ['admin-categories'] })
+    qc.invalidateQueries({ queryKey: ['admin-category-asset-summary'] })
+    qc.invalidateQueries({ queryKey: ['admin-category-asset'] })
     qc.invalidateQueries({ queryKey: ['consume-tree'] })
+  }
+
+  const onCreateCandidate = async () => {
+    if (!candidateDraft?.code || !selected) return
+    setCandidateSaving(true)
+    try {
+      await createCategory({
+        code: candidateDraft.code,
+        name: candidateDraft.name,
+        parentId: selected.code,
+        sortNo: candidateDraft.sortNo ?? 99,
+        txnTypes: candidateDraft.txnTypes ?? 'expense',
+      })
+      message.success(`Category ${candidateDraft.code} created`)
+      setCandidateDraft(null)
+      reload()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'Create failed')
+    } finally {
+      setCandidateSaving(false)
+    }
   }
 
   const closeImpact = () => {
@@ -307,12 +352,52 @@ export function CategoriesAdminPage() {
                   <Button onClick={() => setCreating(false)}>Cancel</Button>
                 )}
               </Space>
+              {!creating && selected?.id && (
+                <>
+                  <Divider style={{ margin: '12px 0' }} />
+                  <CategoryAssetPanel
+                    asset={categoryAsset ?? null}
+                    loading={assetLoading}
+                    onCreateCandidate={(c) => setCandidateDraft(c)}
+                    onViewReportImpact={() => setReportImpactOpen(true)}
+                  />
+                </>
+              )}
             </Form>
           ) : (
             <EmptyState compact title="Select a category" description="Choose a node in the tree or add a new category." />
           )}
         </div>
       </div>
+
+      <CategoryCandidateConfirmModal
+        open={Boolean(candidateDraft)}
+        candidate={candidateDraft}
+        parentName={selected?.name || selected?.code}
+        loading={candidateSaving}
+        onCancel={() => setCandidateDraft(null)}
+        onConfirm={onCreateCandidate}
+      />
+
+      <Modal
+        open={reportImpactOpen}
+        title="Report impact"
+        footer={<Button onClick={() => setReportImpactOpen(false)}>Close</Button>}
+        onCancel={() => setReportImpactOpen(false)}
+        width={640}
+        destroyOnClose
+      >
+        {categoryAsset ? (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Typography.Text type="secondary">
+              Transactions tagged with {categoryAsset.categoryCode} roll into these report surfaces.
+            </Typography.Text>
+            <Space wrap>
+              {categoryAsset.affectedReports?.map((r) => <Tag key={r}>{r}</Tag>)}
+            </Space>
+          </Space>
+        ) : null}
+      </Modal>
 
       <CategoryImpactPreviewModal
         open={impactOpen}

@@ -1,10 +1,12 @@
 package com.finsight.web.api.classification;
 
+import com.finsight.application.classification.CategoryAssetService;
 import com.finsight.application.classification.CategoryImpactAction;
 import com.finsight.application.classification.CategoryImpactPreviewService;
 import com.finsight.application.consume.ConsumeCategoryAdminFacade;
 import com.finsight.domain.model.Category;
 import com.finsight.domain.model.ConsumeCategory;
+import com.finsight.web.api.dto.CategoryAssetDto;
 import com.finsight.web.api.dto.CategoryImpactPreview;
 import com.finsight.web.api.dto.CollectionResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,17 +19,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/classification/categories")
 public class ClassificationCategoryAdminController {
 
     private final ConsumeCategoryAdminFacade adminFacade;
     private final CategoryImpactPreviewService impactPreviewService;
+    private final CategoryAssetService assetService;
 
     public ClassificationCategoryAdminController(ConsumeCategoryAdminFacade adminFacade,
-                                                 CategoryImpactPreviewService impactPreviewService) {
+                                                 CategoryImpactPreviewService impactPreviewService,
+                                                 CategoryAssetService assetService) {
         this.adminFacade = adminFacade;
         this.impactPreviewService = impactPreviewService;
+        this.assetService = assetService;
     }
 
     @GetMapping
@@ -38,6 +45,16 @@ public class ClassificationCategoryAdminController {
         out.setTotal(raw.getTotal());
         out.setRows(raw.getRows() == null ? null : raw.getRows().stream().map(c -> (Category) c).toList());
         return out;
+    }
+
+    @GetMapping("/asset-summary")
+    public Map<String, com.finsight.web.api.dto.CategoryAssetSummaryRow> assetSummary() {
+        return assetService.loadSummaryByCode();
+    }
+
+    @GetMapping("/{id}/asset")
+    public CategoryAssetDto asset(@PathVariable String id) {
+        return assetService.loadAsset(id);
     }
 
     @PostMapping

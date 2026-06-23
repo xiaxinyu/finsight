@@ -71,6 +71,41 @@ export function toAntTreeNodes(nodes: CategoryTreeNode[]): { key: string; title:
   }))
 }
 
+type AssetCountSummary = { transactionCount?: number; activeRuleCount?: number }
+
+export function toAntTreeNodesWithCounts(
+  nodes: CategoryTreeNode[],
+  summary: Record<string, AssetCountSummary>,
+  flat: Array<{ id?: string; code?: string }>,
+): { key: string; title: string; children?: ReturnType<typeof toAntTreeNodesWithCounts> }[] {
+  const mapNode = (node: CategoryTreeNode): {
+    key: string
+    title: string
+    txnTotal: number
+    children?: ReturnType<typeof toAntTreeNodesWithCounts>
+  } => {
+    const cat = flat.find((c) => (c.id || c.code) === node.key)
+    const code = cat?.code || node.code
+    const direct = code ? summary[code] : undefined
+    const childMapped = (node.children || []).map(mapNode)
+    const txnTotal = (direct?.transactionCount ?? 0)
+      + childMapped.reduce((sum, ch) => sum + ch.txnTotal, 0)
+    const title = txnTotal > 0 ? `${node.title} (${txnTotal})` : node.title
+    return {
+      key: node.key,
+      title,
+      txnTotal,
+      children: childMapped.length
+        ? childMapped.map((ch) => ({ key: ch.key, title: ch.title, children: ch.children }))
+        : undefined,
+    }
+  }
+  return nodes.map((n) => {
+    const mapped = mapNode(n)
+    return { key: mapped.key, title: mapped.title, children: mapped.children }
+  })
+}
+
 export type CategoryTreeSelectNode = {
   title: string
   value: string

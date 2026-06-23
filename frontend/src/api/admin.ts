@@ -116,6 +116,49 @@ export async function deleteCategory(id: string) {
   return deleteReq(`/api/v1/classification/categories/${encodeURIComponent(id)}`)
 }
 
+export type CategoryChildCandidate = {
+  code?: string
+  name?: string
+  parentL1Code?: string
+  sortNo?: number
+  txnTypes?: string
+  reportRole?: string
+  reason?: string
+}
+
+export type CategoryAsset = {
+  categoryId?: string
+  categoryCode?: string
+  categoryName?: string
+  level?: number
+  parentId?: string
+  transactionCount?: number
+  totalAmount?: number
+  lastTransactionDate?: string | null
+  activeRuleCount?: number
+  inactiveRuleCount?: number
+  orphanRuleCount?: number
+  childCategoryCount?: number
+  amountByMonth?: Array<{ yearMonth: string; txnCount: number; amount: number }>
+  affectedReports?: string[]
+  qualityFlags?: string[]
+  childCandidates?: CategoryChildCandidate[]
+}
+
+export type CategoryAssetSummaryRow = {
+  categoryCode?: string
+  transactionCount?: number
+  activeRuleCount?: number
+}
+
+export async function fetchCategoryAsset(id: string): Promise<CategoryAsset> {
+  return getJson(`/api/v1/classification/categories/${encodeURIComponent(id)}/asset`) as Promise<CategoryAsset>
+}
+
+export async function fetchCategoryAssetSummary(): Promise<Record<string, CategoryAssetSummaryRow>> {
+  return getJson('/api/v1/classification/categories/asset-summary') as Promise<Record<string, CategoryAssetSummaryRow>>
+}
+
 export type CategoryImpactPreview = {
   categoryId?: string
   categoryCode?: string

@@ -100,14 +100,15 @@ export function TransactionsPage() {
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
   const cardFromUrl = searchParams.get('cardId') || ''
+  const consumeFromUrl = searchParams.get('consume') || ''
 
   const initial: TxFilters = useMemo(() => ({
     ...defaultPeriodStrings(),
     card: cardFromUrl,
-    consume: '',
+    consume: consumeFromUrl,
     keyword: '',
     unclassified: unclassifiedFromUrl,
-  }), [cardFromUrl, unclassifiedFromUrl])
+  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl])
 
   const { draft, setDraft, applied, applying, isDirty, applySync, patchBoth, resetBoth } = useFilterApply(initial)
 
@@ -116,6 +117,12 @@ export function TransactionsPage() {
       setDraft((f) => ({ ...f, unclassified: true }))
     }
   }, [unclassifiedFromUrl, setDraft])
+
+  useEffect(() => {
+    if (consumeFromUrl) {
+      setDraft((f) => ({ ...f, consume: consumeFromUrl }))
+    }
+  }, [consumeFromUrl, setDraft])
 
   const { treeData } = useConsumeTreeSelect()
   const { tree: cardTree } = useCardTree()

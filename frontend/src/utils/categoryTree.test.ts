@@ -3,6 +3,7 @@ import {
   buildCategoryTree,
   collectSubtreeCodes,
   collectSubtreeCodesFromTree,
+  toAntTreeNodesWithCounts,
   toCategoryTreeSelect,
 } from './categoryTree'
 import type { ConsumeCategoryRow } from '../api/admin'
@@ -84,5 +85,21 @@ describe('toCategoryTreeSelect', () => {
     const transport = nodes.find((n) => n.value === 'TRANSPORT')!
     expect(transport.disabled).toBe(true)
     expect(nodes.find((n) => n.value === 'INC')!.disabled).toBeFalsy()
+  })
+})
+
+describe('toAntTreeNodesWithCounts', () => {
+  it('rolls up transaction counts on tree titles', () => {
+    const tree = buildCategoryTree(postDedupIncome)
+    const summary = {
+      'INC-01': { transactionCount: 5, activeRuleCount: 1 },
+      'INCOME-02': { transactionCount: 3, activeRuleCount: 0 },
+      'TRANS-02': { transactionCount: 8, activeRuleCount: 2 },
+    }
+    const nodes = toAntTreeNodesWithCounts(tree, summary, postDedupIncome)
+    const inc = nodes.find((n) => n.key === 'INC')!
+    expect(inc.title).toContain('(8)')
+    const transport = nodes.find((n) => n.key === 'TRANSPORT')!
+    expect(transport.title).toContain('(8)')
   })
 })

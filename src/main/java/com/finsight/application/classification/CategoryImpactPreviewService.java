@@ -90,8 +90,7 @@ public class CategoryImpactPreviewService {
         if (refs.isEmpty()) {
             return 0;
         }
-        String sql = "select count(*) from `transaction` t where coalesce(t.deleted,0)=0 and "
-                + CategoryImpactSupport.transactionMatchSql(refs);
+        String sql = CategoryStatsSupport.countTransactionsSql(refs);
         Long count = jdbcTemplate.queryForObject(sql, Long.class, CategoryImpactSupport.transactionMatchParams(refs));
         return count == null ? 0 : count;
     }
@@ -100,10 +99,7 @@ public class CategoryImpactPreviewService {
         if (refs.isEmpty()) {
             return 0;
         }
-        String sql = "select coalesce(round(sum("
-                + "abs(coalesce(t.expense_amount,0)) + abs(coalesce(t.income_money,0))"
-                + "), 2), 0) from `transaction` t where coalesce(t.deleted,0)=0 and "
-                + CategoryImpactSupport.transactionMatchSql(refs);
+        String sql = CategoryStatsSupport.sumTransactionAmountSql(refs);
         Double total = jdbcTemplate.queryForObject(sql, Double.class, CategoryImpactSupport.transactionMatchParams(refs));
         return total == null ? 0 : total;
     }
