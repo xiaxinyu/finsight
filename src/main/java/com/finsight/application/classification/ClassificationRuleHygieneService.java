@@ -10,6 +10,7 @@ import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Transaction;
 import com.finsight.application.query.TransactionQuery;
 import com.finsight.domain.port.TransactionRepository;
+import com.finsight.web.api.dto.RuleRiskReportDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
@@ -29,15 +30,18 @@ public class ClassificationRuleHygieneService {
     private final ConsumeCategoryService categoryService;
     private final TransactionRepository transactionRepository;
     private final ClassificationService classificationService;
+    private final RuleRiskAnalysisService ruleRiskAnalysisService;
 
     public ClassificationRuleHygieneService(ConsumeRuleService ruleService,
                                               ConsumeCategoryService categoryService,
                                               TransactionRepository transactionRepository,
-                                              ClassificationService classificationService) {
+                                              ClassificationService classificationService,
+                                              RuleRiskAnalysisService ruleRiskAnalysisService) {
         this.ruleService = ruleService;
         this.categoryService = categoryService;
         this.transactionRepository = transactionRepository;
         this.classificationService = classificationService;
+        this.ruleRiskAnalysisService = ruleRiskAnalysisService;
     }
 
     public List<ConsumeRule> listOrphanRules() {
@@ -138,6 +142,12 @@ public class ClassificationRuleHygieneService {
         out.put("activeInvalidPatternCount", listActiveInvalidPatternRules().size());
         out.put("archivedInvalidPatternCount", listArchivedInvalidPatternRules().size());
         out.put("inactiveInvalidWithoutRemarkCount", countInactiveInvalidWithoutRemark());
+        RuleRiskReportDto risk = ruleRiskAnalysisService.analyze();
+        out.put("highRiskRuleCount", risk.getHighRiskRuleCount());
+        out.put("duplicatePatternGroupCount", risk.getDuplicatePatternGroupCount());
+        out.put("broadKeywordRuleCount", risk.getBroadKeywordRuleCount());
+        out.put("crossCategoryConflictRuleCount", risk.getCrossCategoryConflictRuleCount());
+        out.put("directionMismatchRuleCount", risk.getDirectionMismatchRuleCount());
         out.put("recommendedKeywords", recommendKeywordsFromUnclassified(15));
         return out;
     }

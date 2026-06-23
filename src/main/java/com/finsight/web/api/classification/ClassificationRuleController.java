@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.application.classification.ClassificationRuleHygieneService;
 import com.finsight.application.classification.ClassificationRuleValidator;
+import com.finsight.application.classification.RuleRiskAnalysisService;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.consume.ConsumeRuleService;
 import com.finsight.domain.model.ClassificationRule;
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.web.api.dto.ClassificationTestRequest;
 import com.finsight.web.api.dto.ClassificationTestResult;
+import com.finsight.web.api.dto.RuleRiskReportDto;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,15 +35,18 @@ public class ClassificationRuleController {
     private final ClassificationService classificationService;
     private final ClassificationRuleValidator ruleValidator;
     private final ClassificationRuleHygieneService ruleHygieneService;
+    private final RuleRiskAnalysisService ruleRiskAnalysisService;
 
     public ClassificationRuleController(ConsumeRuleService ruleService,
                                         ClassificationService classificationService,
                                         ClassificationRuleValidator ruleValidator,
-                                        ClassificationRuleHygieneService ruleHygieneService) {
+                                        ClassificationRuleHygieneService ruleHygieneService,
+                                        RuleRiskAnalysisService ruleRiskAnalysisService) {
         this.ruleService = ruleService;
         this.classificationService = classificationService;
         this.ruleValidator = ruleValidator;
         this.ruleHygieneService = ruleHygieneService;
+        this.ruleRiskAnalysisService = ruleRiskAnalysisService;
     }
 
     @GetMapping
@@ -110,6 +115,11 @@ public class ClassificationRuleController {
     @GetMapping("/hygiene")
     public java.util.Map<String, Object> hygiene() {
         return ruleHygieneService.hygieneSummary();
+    }
+
+    @GetMapping("/risk-analysis")
+    public RuleRiskReportDto riskAnalysis() {
+        return ruleRiskAnalysisService.analyze();
     }
 
     @GetMapping("/orphans")
