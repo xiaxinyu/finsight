@@ -1,5 +1,16 @@
 -- FinSight classification and report data audit.
 -- Run against the application MySQL database before and after category/rule changes.
+--
+-- Workflow: docs/tech/database/classification-governance-workflow.zh-cn.md
+-- Baseline template: docs/tech/database/classification-audit-baseline-template.md
+--
+--   mysql -u <user> -p finsight < docs/tech/database/classification-data-audit.sql > audit-$(date +%Y%m%d).txt
+--
+-- Manual remediation only (never auto-applied by Flyway):
+--   orphan-rules-remediation.sql
+--   invalid-rules-remediation.sql
+--   transaction-category-field-remediation.sql
+--   merchant-token-normalization.sql
 
 -- 1. Category tree health.
 select
@@ -262,5 +273,87 @@ where (deleted is null or deleted = 0)
   and coalesce(trim(consume_name), '') = ''
 group by raw_text
 order by txn_count desc, amount desc
+limit 100;
+
+-- 19. Top transactions in OTHER / catch-all categories (by amount).
+-- Export as baseline-other-consumption-top100.csv
+select
+    t.id,
+    t.transaction_date,
+    t.consume_code,
+    t.consume_name,
+    coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), 'UNKNOWN') as raw_text,
+    round(abs(coalesce(t.expense_amount, 0)) + abs(coalesce(t.income_money, 0)), 2) as amount
+from `transaction` t
+left join cls_category c on c.code = t.consume_code
+where (t.deleted is null or t.deleted = 0)
+  and coalesce(trim(t.consume_code), '') <> ''
+  and (
+      t.consume_code like 'OTHER%'
+      or coalesce(c.name, t.consume_name, '') like '%其它%'
+      or coalesce(c.name, t.consume_name, '') like '%无法归类%'
+  )
+order by amount desc, t.transaction_date desc
+limit 100;
+
+-- 20. Audit baseline summary counts (save before/after each governance sprint).
+-- Export as baseline-summary.json or paste into classification-audit-baseline-template.md
+select
+    'BASELINE_SUMMARY' as artifact,
+    (select count(*) from cls_rule r
+        left join cls_category c on c.code = r.category_id or c.id = r.category_id
+        where coalesce(r.category_id, '') <> ''
+          and (c.id is null or coalesce(c.deleted, 0) = 1)
+          and coalesce(r.active, 1) = 1) as active_orphan_rules,
+    (select count(*) from cls_rule r
+        where (r.pattern is null or trim(r.pattern) = '')
+          and coalesce(r.active, 1) = 1) as active_invalid_pattern_rules,
+    (select count(*) from `transaction` t
+        inner join cls_category c on c.code = t.consume_code and coalesce(c.deleted, 0) = 0
+        where coalesce(t.deleted, 0) = 0
+          and coalesce(trim(t.consume_code), '') <> ''
+          and (
+              coalesce(trim(t.consume_name), '') <> coalesce(trim(c.name), '')
+              or coalesce(trim(t.category_code), '') <> coalesce(trim(t.consume_code), '')
+          )) as category_field_drift_rows,
+    (select sum(case when coalesce(trim(consume_code), '') = '' and coalesce(trim(consume_name), '') = ''
+        then 1 else 0 end) from `transaction` where coalesce(deleted, 0) = 0) as unclassified_txns,
+    (select count(*) from `transaction` t
+        where coalesce(t.deleted, 0) = 0
+          and coalesce(trim(t.consume_code), '') <> ''
+          and (t.consume_code like 'OTHER%')) as other_category_txns,
+    (select count(*) from (
+        select mp.merchant_token
+        from fin_merchant_profile mp
+        left join v_transaction_analytics v
+            on v.merchant_token = mp.merchant_token
+           and v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0
+        group by mp.user_id, mp.merchant_token, mp.display_name, mp.txn_count
+        having count(v.id) = 0
+    ) merchant_mismatch) as merchant_profile_mismatch_count;
+
+-- 21. Merchant token normalization samples (investigation rows for drilldown parity).
+-- Export as baseline-merchant-token-samples.csv
+-- Remediation reference: docs/tech/database/merchant-token-normalization.sql
+select
+    t.id,
+    t.transaction_date,
+    coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), '') as raw_merchant,
+    finsight_normalize_merchant_token(
+        coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), '')) as normalized_token,
+    v.merchant_token as analytics_view_token,
+    t.consume_code,
+    round(abs(coalesce(t.expense_amount, 0)), 2) as amount
+from `transaction` t
+left join v_transaction_analytics v on v.id = t.id
+where coalesce(t.deleted, 0) = 0
+  and abs(coalesce(t.expense_amount, 0)) > 0
+  and (
+      coalesce(trim(v.merchant_token), '') = ''
+      or finsight_normalize_merchant_token(
+          coalesce(nullif(trim(t.opponent_name), ''), nullif(trim(t.transaction_desc), ''), ''))
+         <> coalesce(v.merchant_token, '')
+  )
+order by t.transaction_date desc
 limit 100;
 
