@@ -29,6 +29,21 @@ public class L2CategorySeedService {
         List<String> codes = jdbcTemplate.queryForList(
                 "select distinct code from cls_category where code is not null and trim(code) <> ''",
                 String.class);
+        return toCodeSet(codes);
+    }
+
+    public Set<String> loadActiveCodes() {
+        if (!tableExists("cls_category")) {
+            return Set.of();
+        }
+        List<String> codes = jdbcTemplate.queryForList(
+                "select distinct code from cls_category where code is not null and trim(code) <> '' "
+                        + "and coalesce(deleted, 0) = 0",
+                String.class);
+        return toCodeSet(codes);
+    }
+
+    private static Set<String> toCodeSet(List<String> codes) {
         Set<String> out = new HashSet<>();
         for (String code : codes) {
             if (code != null && !code.isBlank()) {
@@ -49,7 +64,7 @@ public class L2CategorySeedService {
         out.put("catalogOnlyCount", items.stream().filter(i -> i.action() == L2CategorySeedPlanner.Action.SKIP_CATALOG_ONLY).count());
         out.put("items", items);
         out.put("nameUpdates", L2CategorySeedPlanner.buildNameUpdates());
-        out.put("duplicateL1Hints", buildDuplicateL1Hints(existing));
+        out.put("duplicateL1Hints", buildDuplicateL1Hints(loadActiveCodes()));
         out.put("manualScript", "docs/tech/database/l2-category-sprint2-seed.sql");
         out.put("dedupPlaybook", "docs/tech/database/category-dedup-merge-playbook.zh-cn.md");
         out.put("catalogDoc", "docs/tech/database/classification-l2-target-catalog.zh-cn.md");
@@ -57,12 +72,18 @@ public class L2CategorySeedService {
         return out;
     }
 
-    private List<Map<String, String>> buildDuplicateL1Hints(Set<String> existing) {
+    private List<Map<String, String>> buildDuplicateL1Hints(Set<String> active) {
         List<Map<String, String>> hints = new ArrayList<>();
-        if (existing.contains("INC") && existing.contains("INCOME")) {
+        if (active.contains("INC") && active.contains("INCOME")) {
             hints.add(Map.of(
                     "pair", "INC + INCOME",
                     "action", "Merge INCOME (source) into INC (target) via Categories UI",
+                    "doc", "docs/tech/database/category-dedup-merge-playbook.zh-cn.md"));
+        }
+        if (active.contains("TRANSPORT") && active.contains("TRAVEL")) {
+            hints.add(Map.of(
+                    "pair", "TRANSPORT + TRAVEL",
+                    "action", "Merge TRAVEL (source) into TRANSPORT (target) via Categories UI",
                     "doc", "docs/tech/database/category-dedup-merge-playbook.zh-cn.md"));
         }
         return hints;

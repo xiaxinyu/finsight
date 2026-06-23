@@ -37,6 +37,8 @@ class ClassificationL2TargetCatalogTest {
                 .collect(Collectors.toSet());
         assertTrue(catalogOnly.contains("OTHER-01"));
         assertTrue(catalogOnly.contains("TRAVEL-01"));
+        assertTrue(catalogOnly.contains("INCOME-01"));
+        assertTrue(catalogOnly.contains("INCOME-02"));
         assertFalse(ClassificationL2TargetCatalog.insertableBatch().stream()
                 .anyMatch(c -> catalogOnly.contains(c.code())));
     }

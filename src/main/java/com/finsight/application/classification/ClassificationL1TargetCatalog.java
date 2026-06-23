@@ -5,14 +5,15 @@ import java.util.List;
 
 /**
  * L1 category roots referenced by {@link ClassificationL2TargetCatalog}.
+ * After category dedup, {@code INC} and {@code TRANSPORT} are the preferred canonical roots.
  */
 public enum ClassificationL1TargetCatalog {
 
-    INCOME(ClassificationL1Codes.INCOME, "收入", 10, "income"),
+    INC(ClassificationL1Codes.INC, "收入", 10, "income"),
     FIXED(ClassificationL1Codes.FIXED, "固定支出", 20, "expense"),
     LIVING(ClassificationL1Codes.LIVING, "日常生活", 30, "expense"),
     SHOPPING(ClassificationL1Codes.SHOPPING, "购物与耐用品", 40, "expense"),
-    TRAVEL(ClassificationL1Codes.TRAVEL, "交通与车辆", 50, "expense"),
+    TRANSPORT(ClassificationL1Codes.TRANSPORT, "交通与车辆", 50, "expense"),
     EDU(ClassificationL1Codes.EDU, "教育与培训", 55, "expense"),
     ENT(ClassificationL1Codes.ENT, "娱乐与旅行", 60, "expense"),
     GIFT(ClassificationL1Codes.GIFT, "人情与公益", 65, "expense"),

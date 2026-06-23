@@ -57,6 +57,8 @@ public final class CategoryMergeSupport {
         String src = sourceCode.trim();
         String tgt = targetCode.trim();
         return ("INCOME".equalsIgnoreCase(src) && "INC".equalsIgnoreCase(tgt))
-                || ("INC".equalsIgnoreCase(src) && "INCOME".equalsIgnoreCase(tgt));
+                || ("INC".equalsIgnoreCase(src) && "INCOME".equalsIgnoreCase(tgt))
+                || ("TRAVEL".equalsIgnoreCase(src) && "TRANSPORT".equalsIgnoreCase(tgt))
+                || ("TRANSPORT".equalsIgnoreCase(src) && "TRAVEL".equalsIgnoreCase(tgt));
     }
 }

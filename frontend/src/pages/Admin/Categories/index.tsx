@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Alert, Button, Form, Input, InputNumber, message, Select, Space, Tree,
+  Alert, Button, Cascader, Form, Input, InputNumber, message, Select, Space, Tree,
 } from 'antd'
 import { ClusterOutlined, PlusOutlined } from '@ant-design/icons'
 import {
@@ -18,7 +18,28 @@ import { CategoryImpactPreviewModal } from '../../../components/CategoryImpactPr
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
 import { PageSkeleton } from '../../../components/PageSkeleton'
-import { buildCategoryTree, toAntTreeNodes } from '../../../utils/categoryTree'
+import {
+  cascaderSearchFilter,
+  findCascaderPath,
+  type CascaderOption,
+} from '../../../components/filters/treeToCascader'
+import { useConsumeTreeSelect } from '../../../hooks/useConsumeTree'
+import {
+  applyMergeTargetConstraints,
+  buildCategoryTree,
+  collectSubtreeCodesFromTree,
+  toAntTreeNodes,
+} from '../../../utils/categoryTree'
+import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
+
+function toMergeCascaderOptions(nodes: CategoryTreeSelectNode[]): CascaderOption[] {
+  return nodes.map((n) => ({
+    value: n.value,
+    label: n.title,
+    disabled: n.disabled,
+    children: n.children?.length ? toMergeCascaderOptions(n.children) : undefined,
+  }))
+}
 
 const EMPTY: ConsumeCategoryRow = { name: '', code: '', parentId: '', sortNo: 1, txnTypes: 'expense' }
 
@@ -41,6 +62,7 @@ export function CategoriesAdminPage() {
     queryKey: ['admin-categories'],
     queryFn: () => listCategoriesAdmin(),
   })
+  const { treeData: consumeTreeData } = useConsumeTreeSelect()
 
   const treeData = useMemo(() => toAntTreeNodes(buildCategoryTree(categories)), [categories])
   const selected = useMemo(
@@ -148,11 +170,24 @@ export function CategoriesAdminPage() {
     openImpactPreview('merge', undefined, mergeTargetCode)
   }
 
-  const mergeTargetOptions = useMemo(
-    () => categories
-      .filter((c) => c.deleted !== 1 && c.code && c.code !== selected?.code)
-      .map((c) => ({ value: c.code!, label: `${c.name || c.code} (${c.code})` })),
-    [categories, selected?.code],
+  const mergeTargetTree = useMemo(() => {
+    if (!selected?.code || !consumeTreeData.length) return []
+    const excludeCodes = collectSubtreeCodesFromTree(consumeTreeData, selected.code)
+    const sourceIsL1 = selected.level === 1 || !selected.parentId
+    return applyMergeTargetConstraints(consumeTreeData, {
+      excludeCodes,
+      l1TargetsOnly: sourceIsL1,
+    })
+  }, [consumeTreeData, selected])
+
+  const mergeCascaderOptions = useMemo(
+    () => toMergeCascaderOptions(mergeTargetTree),
+    [mergeTargetTree],
+  )
+
+  const mergeCascaderValue = useMemo(
+    () => (mergeTargetCode ? findCascaderPath(mergeCascaderOptions, mergeTargetCode) ?? undefined : undefined),
+    [mergeCascaderOptions, mergeTargetCode],
   )
 
   const confirmImpact = async () => {
@@ -249,14 +284,21 @@ export function CategoriesAdminPage() {
                 {!creating && selected?.id && (
                   <>
                     <Button danger onClick={onDeleteClick}>Delete</Button>
-                    <Select
+                    <Cascader<CascaderOption>
                       allowClear
                       size="small"
                       placeholder="Merge into…"
-                      style={{ minWidth: 180 }}
-                      options={mergeTargetOptions}
-                      value={mergeTargetCode ?? undefined}
-                      onChange={(v) => setMergeTargetCode(v ?? null)}
+                      className="fs-category-merge-target"
+                      style={{ minWidth: 240 }}
+                      options={mergeCascaderOptions}
+                      value={mergeCascaderValue}
+                      onChange={(path) => setMergeTargetCode(path?.length ? String(path[path.length - 1]) : null)}
+                      changeOnSelect
+                      expandTrigger="hover"
+                      popupClassName="fs-category-picker-popup"
+                      showSearch={{ filter: cascaderSearchFilter, matchInputWidth: true }}
+                      displayRender={(labels) => labels.join(' / ')}
+                      getPopupContainer={() => document.body}
                     />
                     <Button size="small" disabled={!mergeTargetCode} onClick={onMergeClick}>Merge</Button>
                   </>

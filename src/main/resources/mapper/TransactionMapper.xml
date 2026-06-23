@@ -902,7 +902,7 @@
                  when (cat.parent_id = 'ENT' or cat.code like 'ENT%') then 'entertainment'
                  when (cat.parent_id = 'EDU' or cat.code like 'EDU%') then 'edu'
                  when (cat.parent_id = 'OTHER' or cat.code like 'OTHER%') then 'other'
-                 when (cat.parent_id = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 when (cat.parent_id in ('LIVING','TRANSPORT','TRAVEL') or cat.code like 'LIVING%' or cat.code like 'DAILY%' or cat.code like 'TRAVEL%' or cat.code like 'TRANS-%') then 'life'
                  else 'life'
              end as bucket
              from transaction c
@@ -927,7 +927,7 @@
                  when (cat.parent_id = 'ENT' or cat.code like 'ENT%') then 'entertainment'
                  when (cat.parent_id = 'EDU' or cat.code like 'EDU%') then 'edu'
                  when (cat.parent_id = 'OTHER' or cat.code like 'OTHER%') then 'other'
-                 when (cat.parent_id = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 when (cat.parent_id in ('LIVING','TRANSPORT','TRAVEL') or cat.code like 'LIVING%' or cat.code like 'DAILY%' or cat.code like 'TRAVEL%' or cat.code like 'TRANS-%') then 'life'
                  else 'life'
              end as bucket
              from transaction c
@@ -951,7 +951,7 @@
                  when (cat.parent_id = 'ENT' or cat.code like 'ENT%') then 'entertainment'
                  when (cat.parent_id = 'EDU' or cat.code like 'EDU%') then 'edu'
                  when (cat.parent_id = 'OTHER' or cat.code like 'OTHER%') then 'other'
-                 when (cat.parent_id = 'LIVING' or cat.code like 'LIVING%') then 'life'
+                 when (cat.parent_id in ('LIVING','TRANSPORT','TRAVEL') or cat.code like 'LIVING%' or cat.code like 'DAILY%' or cat.code like 'TRAVEL%' or cat.code like 'TRANS-%') then 'life'
                  else 'life'
              end as bucket
              from transaction c

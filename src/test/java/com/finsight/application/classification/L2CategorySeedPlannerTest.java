@@ -33,4 +33,32 @@ class L2CategorySeedPlannerTest {
         assertTrue(L2CategorySeedPlanner.buildNameUpdates().stream()
                 .allMatch(u -> u.code() != null && !u.code().isBlank()));
     }
+
+    @Test
+    void insertPlanUsesCanonicalTransportParentOnFreshDb() {
+        var trans = L2CategorySeedPlanner.buildInsertPlan(Set.of()).stream()
+                .filter(i -> "TRANS-02".equals(i.code()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("TRANSPORT", trans.parentL1Code());
+    }
+
+    @Test
+    void insertPlanUsesTravelWhenOnlyLegacyTransportL1Exists() {
+        var trans = L2CategorySeedPlanner.buildInsertPlan(Set.of("TRAVEL")).stream()
+                .filter(i -> "TRANS-02".equals(i.code()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("TRAVEL", trans.parentL1Code());
+    }
+
+    @Test
+    void insertPlanUsesIncParentWhenOnlyLegacyIncomeL1Exists() {
+        var side = L2CategorySeedPlanner.buildInsertPlan(Set.of("INCOME")).stream()
+                .filter(i -> "INCOME-02".equals(i.code()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(L2CategorySeedPlanner.Action.SKIP_CATALOG_ONLY, side.action());
+        assertEquals("INCOME", side.parentL1Code());
+    }
 }

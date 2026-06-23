@@ -83,10 +83,10 @@ public final class L2CategorySeedSqlRenderer {
     private static String renderL1Ensures(Set<String> existingCodes) {
         StringBuilder sb = new StringBuilder();
         sb.append("-- Step 0: ensure L1 roots exist (insert if missing)\n");
-        sb.append("-- Skip INCOME L1 when legacy INC already exists\n");
+        sb.append("-- Skips duplicate L1 when canonical root already exists (INC, TRANSPORT)\n");
         for (ClassificationL1TargetCatalog l1 : ClassificationL1TargetCatalog.all()) {
-            if ("INCOME".equals(l1.code()) && existingCodes != null && existingCodes.contains("INC")) {
-                sb.append("-- skipped INCOME L1 (legacy INC present)\n");
+            if (shouldSkipL1Ensure(l1.code(), existingCodes)) {
+                sb.append("-- skipped ").append(l1.code()).append(" L1 (canonical root already present)\n");
                 continue;
             }
             sb.append("insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, "
@@ -100,5 +100,24 @@ public final class L2CategorySeedSqlRenderer {
                     .append(escapeSql(l1.code())).append("');\n");
         }
         return sb.toString();
+    }
+
+    private static boolean shouldSkipL1Ensure(String l1Code, Set<String> existingCodes) {
+        if (existingCodes == null || l1Code == null) {
+            return false;
+        }
+        if ("INC".equals(l1Code) && existingCodes.contains("INCOME")) {
+            return false;
+        }
+        if ("INCOME".equals(l1Code) && existingCodes.contains("INC")) {
+            return true;
+        }
+        if ("TRANSPORT".equals(l1Code) && existingCodes.contains("TRAVEL")) {
+            return false;
+        }
+        if ("TRAVEL".equals(l1Code) && existingCodes.contains("TRANSPORT")) {
+            return true;
+        }
+        return false;
     }
 }

@@ -10,11 +10,11 @@ import java.util.Optional;
  */
 public enum ClassificationL2TargetCatalog {
 
-    // --- Income (v1.8 seed) ---
-    INCOME_SALARY("INCOME-01", "工资薪金", ClassificationL1Codes.INCOME, 1, "income", "income"),
-    INCOME_SIDE("INCOME-02", "副业经营", ClassificationL1Codes.INCOME, 2, "income", "income"),
-    INCOME_INVEST_GAIN("INCOME-03", "投资收益", ClassificationL1Codes.INCOME, 3, "income,invest", "investment"),
-    INCOME_OTHER("INCOME-99", "其他收入", ClassificationL1Codes.INCOME, 99, "income", "income"),
+    // --- Income (v1.8 seed — merged into INC-* on deduped installs; catalog-only) ---
+    INCOME_SALARY("INCOME-01", "工资薪金", ClassificationL1Codes.INC, 1, "income", "income", false),
+    INCOME_SIDE("INCOME-02", "副业经营", ClassificationL1Codes.INC, 2, "income", "income", false),
+    INCOME_INVEST_GAIN("INCOME-03", "投资收益", ClassificationL1Codes.INC, 3, "income,invest", "investment", false),
+    INCOME_OTHER("INCOME-99", "其他收入", ClassificationL1Codes.INC, 99, "income", "income", false),
 
     // --- Legacy income (INC-*, keep existing codes; merge INCOME-* into these) ---
     LEGACY_INC_SALARY("INC-01", "工资薪金", ClassificationL1Codes.INC, 1, "income", "income", false),
@@ -56,14 +56,14 @@ public enum ClassificationL2TargetCatalog {
     SHOP_DURABLE("SHOP-05", "大件耐用品", ClassificationL1Codes.SHOPPING, 5, "expense", "budget"),
     SHOP_ECOMMERCE("SHOP-06", "电商购物", ClassificationL1Codes.SHOPPING, 6, "expense", "budget"),
 
-    // --- Transport (TRAVEL / TRANS- prefix) ---
-    TRANSIT_PUBLIC("TRAVEL-01", "公共交通", ClassificationL1Codes.TRAVEL, 1, "expense", "budget", false),
-    TRANS_RIDE("TRANS-02", "打车/网约车", ClassificationL1Codes.TRAVEL, 2, "expense", "budget"),
-    TRANS_FUEL("TRANS-03", "油费/充电", ClassificationL1Codes.TRAVEL, 3, "expense", "budget"),
-    TRANS_PARKING("TRANS-04", "停车", ClassificationL1Codes.TRAVEL, 4, "expense", "budget"),
-    TRANS_MAINT("TRANS-05", "保养维修", ClassificationL1Codes.TRAVEL, 5, "expense", "budget"),
-    TRANS_CAR_INS("TRANS-06", "车辆保险", ClassificationL1Codes.TRAVEL, 6, "expense", "cashflow"),
-    TRANS_TICKET("TRANS-07", "机票/火车", ClassificationL1Codes.TRAVEL, 7, "expense", "budget"),
+    // --- Transport (TRANSPORT L1 / TRAVEL-* + TRANS-* L2 after dedup) ---
+    TRANSIT_PUBLIC("TRAVEL-01", "公共交通", ClassificationL1Codes.TRANSPORT, 1, "expense", "budget", false),
+    TRANS_RIDE("TRANS-02", "打车/网约车", ClassificationL1Codes.TRANSPORT, 2, "expense", "budget"),
+    TRANS_FUEL("TRANS-03", "油费/充电", ClassificationL1Codes.TRANSPORT, 3, "expense", "budget"),
+    TRANS_PARKING("TRANS-04", "停车", ClassificationL1Codes.TRANSPORT, 4, "expense", "budget"),
+    TRANS_MAINT("TRANS-05", "保养维修", ClassificationL1Codes.TRANSPORT, 5, "expense", "budget"),
+    TRANS_CAR_INS("TRANS-06", "车辆保险", ClassificationL1Codes.TRANSPORT, 6, "expense", "cashflow"),
+    TRANS_TICKET("TRANS-07", "机票/火车", ClassificationL1Codes.TRANSPORT, 7, "expense", "budget"),
 
     // --- Entertainment & travel ---
     ENT_HOTEL("ENT-01", "酒店住宿", ClassificationL1Codes.ENT, 1, "expense", "budget"),

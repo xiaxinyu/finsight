@@ -36,6 +36,7 @@ class CategoryMergeSupportTest {
     @Test
     void detectsKnownDuplicateL1Pair() {
         assertTrue(CategoryMergeSupport.isKnownDuplicateL1Pair("INCOME", "INC"));
+        assertTrue(CategoryMergeSupport.isKnownDuplicateL1Pair("TRAVEL", "TRANSPORT"));
     }
 
     private static ConsumeCategory l1(String code) {

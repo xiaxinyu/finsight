@@ -162,8 +162,8 @@ public class ClassificationRecommendationService {
                 {"邮购分期", "分期", "SHOP", "购物", "网购", "邮购"},
                 {"年费", "手续费", "FEE", "银行", "金融"},
                 {"代付", "TRANSFER", "转账"},
-                {"地铁", "公交", "滴滴", "TRAVEL", "交通", "出行"},
-                {"美团", "饿了么", "外卖", "FOOD", "餐", "食"},
+                {"地铁", "公交", "滴滴", "TRAVEL", "TRANS", "交通", "出行", "TRANSPORT"},
+                {"美团", "饿了么", "外卖", "LIVING", "DAILY", "FOOD", "餐", "食"},
         };
         for (String[] row : hints) {
             boolean matched = false;
