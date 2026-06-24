@@ -1,6 +1,6 @@
 # v1.9.0 已知问题与 v2.0.0 关闭状态
 
-本文档对应 [v2.0.0 稳定化计划](./roadmap/v2.0.0-stability-quality-plan.zh-cn.md) §4.7 要求。
+本文档对应 [v2.0.0 稳定化计划](../roadmap/v2.0.0-stability-quality-plan.zh-cn.md) §4.7 要求。
 
 ## 已关闭（v2.0.0 代码 + 文档）
 

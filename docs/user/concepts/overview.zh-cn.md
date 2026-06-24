@@ -37,5 +37,5 @@
 
 ## 快捷入口
 
-- [项目主页](../README.zh-CN.md)
+- [项目主页](../../README.zh-CN.md)
 - [协作与规范（含 AI）](../../tech/contributing/rules-guide.zh-cn.md)

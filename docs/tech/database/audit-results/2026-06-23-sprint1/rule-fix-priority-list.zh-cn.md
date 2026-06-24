@@ -26,10 +26,10 @@ GET /api/v1/maintenance/classification-audit-summary
 
 | # | 问题 | 脚本 / 动作 | count（运行 export 后填写） | 状态 |
 |---|------|-------------|----------------------------|------|
-| 1 | Active orphaned rules | [orphan-rules-remediation.sql](../orphan-rules-remediation.sql) | | ☐ |
-| 2 | Active invalid (blank pattern) rules | [invalid-rules-remediation.sql](../invalid-rules-remediation.sql) | | ☐ |
-| 3 | Category field drift vs consume_code | [transaction-category-field-remediation.sql](../transaction-category-field-remediation.sql) | | ☐ |
-| 4 | Merchant profile token mismatch | [merchant-token-normalization.sql](../merchant-token-normalization.sql) | | ☐ |
+| 1 | Active orphaned rules | [orphan-rules-remediation.sql](../../orphan-rules-remediation.sql) | | ☐ |
+| 2 | Active invalid (blank pattern) rules | [invalid-rules-remediation.sql](../../invalid-rules-remediation.sql) | | ☐ |
+| 3 | Category field drift vs consume_code | [transaction-category-field-remediation.sql](../../transaction-category-field-remediation.sql) | | ☐ |
+| 4 | Merchant profile token mismatch | [merchant-token-normalization.sql](../../merchant-token-normalization.sql) | | ☐ |
 
 ## P1 — Sprint 1 规则 / 分类设计
 
