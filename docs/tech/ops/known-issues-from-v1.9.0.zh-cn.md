@@ -20,7 +20,7 @@
 |------|------|----------|
 | Profile P95 < 800ms | 需生产压测 | runbook + 慢查询脚本 |
 | MySQL CPU 刷新 <50% | 需生产压测 | 连续刷新 20 次观察 |
-| 5 视口 UI 无溢出 | 手工 + 可选 Playwright | DevTools 360–1440；`npm run test:e2e` 仅本地 |
+| 5 视口 UI 无溢出 | 桌面手工抽查（≥1024px） | 本版本不验收移动端；不跑 Playwright |
 | 每日快照一次 | 默认 scheduler **关闭** | 设 `finsight.analytics.profile-snapshot-scheduler-enabled=true` |
 
 ## 转入 v2.0.1（不阻塞 GA 若接受）

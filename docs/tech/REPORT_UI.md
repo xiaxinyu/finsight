@@ -51,7 +51,7 @@ cd frontend && npm test
 - Reports 壳层
 - Transactions Detail
 
-自动化（可选，本地）：`cd frontend && npm run test:e2e`（Playwright）。**CI 暂不跑 E2E**；发布前请手工在 DevTools 设备模式下抽查上述视口。
+自动化：本版本**不跑 Playwright**；桌面端（≥1024px）手工验收即可。
 
 ### 表格
 

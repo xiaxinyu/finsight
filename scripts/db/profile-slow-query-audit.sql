@@ -30,3 +30,24 @@ WHERE table_schema = DATABASE()
     'idx_txn_bank_card'
   )
 ORDER BY index_name, seq_in_index;
+
+-- 4) Trend merchant movers (sargable year range):
+EXPLAIN
+SELECT v.opponent_name, v.transaction_desc, v.amount
+FROM v_transaction_analytics v
+INNER JOIN transaction t ON t.id = v.id
+WHERE v.direction = 'expense' AND v.is_transfer = 0 AND v.is_refund = 0
+  AND v.amount > 0
+  AND v.txn_date >= '2025-01-01' AND v.txn_date < '2026-01-01'
+  AND (t.created_by = 'your_user' OR ('your_user' = '_anonymous' AND t.created_by IS NULL));
+
+-- 5) Forecast category history (row fetch + Java aggregate):
+EXPLAIN
+SELECT v.category_code, v.category_name, v.txn_date, v.amount
+FROM v_transaction_analytics v
+INNER JOIN transaction t ON t.id = v.id
+WHERE v.direction = 'expense' AND v.is_transfer = 0 AND v.is_refund = 0
+  AND v.amount > 0
+  AND v.category_code IS NOT NULL AND v.category_code != '' AND v.category_code != '__UNCLASSIFIED__'
+  AND v.txn_date >= '2025-01-01' AND v.txn_date < '2026-01-01'
+  AND (t.created_by = 'your_user' OR ('your_user' = '_anonymous' AND t.created_by IS NULL));

@@ -79,6 +79,14 @@ public class TransactionServiceImpl implements ITransactionService {
             transaction.setUpdateUser(userName);
             transactionRepository.updateTransaction(transaction);
             invalidateHomeSummaryCache();
+            List<Date> dates = new ArrayList<>();
+            if (existing.getTransactionDate() != null) {
+                dates.add(existing.getTransactionDate());
+            }
+            if (transaction.getTransactionDate() != null) {
+                dates.add(transaction.getTransactionDate());
+            }
+            metricRefreshTrigger.afterTransactionsChanged(dates, userName);
         } catch (AppServiceException e) {
             throw e;
         } catch (Exception e) {
@@ -156,6 +164,7 @@ public class TransactionServiceImpl implements ITransactionService {
         try {
             transactionRepository.deleteTransaction(id);
             invalidateHomeSummaryCache();
+            metricRefreshTrigger.afterTransactionsChanged(List.of(), null);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -274,7 +283,7 @@ public class TransactionServiceImpl implements ITransactionService {
                 success++;
             }
             invalidateHomeSummaryCache();
-            metricRefreshTrigger.afterTransactionsChanged(dates);
+            metricRefreshTrigger.afterTransactionsChanged(dates, userName);
             return success;
         } catch (Exception e) {
             throw new AppServiceException(e);

@@ -31,7 +31,10 @@ public final class TrendDecomposition {
     }
 
     public static boolean lifestyleInflationDetected(double incomePct, double expensePct, double expenseDelta) {
-        return expenseDelta > 0 && expensePct - incomePct >= 5.0;
+        if (expenseDelta < 500.0 || expenseDelta <= 0) {
+            return false;
+        }
+        return expensePct - incomePct >= 5.0;
     }
 
     public static Map<String, Object> deltaMetric(double from, double to) {

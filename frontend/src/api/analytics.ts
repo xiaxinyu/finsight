@@ -19,6 +19,7 @@ export type ProfileEvidence = {
   label?: string
   detail?: string
   value?: unknown
+  window?: string
 }
 
 export type ProfileDimension = {
@@ -41,6 +42,8 @@ export type ProfileHistoryPoint = {
 
 export type ProfileData = {
   overallScore: number
+  confidence?: 'low' | 'medium' | 'high'
+  sampleMonths?: number
   userType: string
   userTypeExplanation?: string
   asOf: string

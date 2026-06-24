@@ -119,8 +119,9 @@ public class ForecastService {
 
         Map<String, Double> actualIncomeByMonth = monthlyMetricMap(history, MetricCode.INCOME_TOTAL.name());
         Map<String, Double> actualExpenseByMonth = monthlyMetricMap(history, MetricCode.EXPENSE_TOTAL.name());
-        double avgIncome = rollingAvg(history, MetricCode.INCOME_TOTAL.name());
-        double avgExpense = rollingAvg(history, MetricCode.EXPENSE_TOTAL.name());
+        List<ForecastProjection.YearMonthValue> incomeSeries = ForecastProjection.toSeries(actualIncomeByMonth);
+        List<ForecastProjection.YearMonthValue> expenseSeries = ForecastProjection.toSeries(actualExpenseByMonth);
+        ForecastProjection.Quality projectionQuality = ForecastProjection.assessQuality(incomeSeries.size());
         double factor = scenarioFactor(scenario);
         ForecastConfidence.Spread spread = ForecastConfidence.forScenario(scenario);
         double monthlyBudgetTarget = resolveMonthlyBudgetTarget(adjustments);
@@ -142,9 +143,10 @@ public class ForecastService {
                 expense = actualExpenseByMonth.getOrDefault(monthKey, 0.0);
                 actualMonthCount++;
             } else {
-                double seasonal = seasonalIndex(m);
-                income = avgIncome * seasonal * factor;
-                expense = avgExpense * seasonal * (2 - factor * 0.5);
+                List<Double> priorIncome = ForecastProjection.priorValues(incomeSeries, ym);
+                List<Double> priorExpense = ForecastProjection.priorValues(expenseSeries, ym);
+                income = ForecastProjection.projectMonth(priorIncome, m, incomeSeries, factor);
+                expense = ForecastProjection.projectMonth(priorExpense, m, expenseSeries, 2 - factor * 0.5);
                 expense += billsForMonth(m);
                 double[] adjusted = applyScenarioAdjustments(income, expense, m, adjustments);
                 income = adjusted[0];
@@ -179,7 +181,7 @@ public class ForecastService {
         if (persist) {
             jdbcTemplate.update("insert into fin_forecast_run (id, user_id, scenario, target_year, params_json, created_at) "
                             + "values (?, ?, ?, ?, ?, now(3))",
-                    runId, userId, scenario, year, "{\"method\":\"rolling_mean_seasonal\"}");
+                    runId, userId, scenario, year, "{\"method\":\"hybrid_projection\"}");
             persistForecastLines(runId, months, categoryForecasts, spread);
         }
 
@@ -199,7 +201,13 @@ public class ForecastService {
         out.put("categoryForecasts", categoryForecasts);
         out.put("confidence", Map.of(
                 "halfWidthPct", spread.halfWidthPct(),
-                "method", "scenario_scaled_rolling_mean"));
+                "method", "hybrid_projection",
+                "confidenceLevel", projectionQuality.confidenceLevel(),
+                "sampleMonths", incomeSeries.size(),
+                "errorBandSource", "scenario_spread"));
+        out.put("confidenceLevel", projectionQuality.confidenceLevel());
+        out.put("sampleMonths", incomeSeries.size());
+        out.put("dataQualityImpact", gateMismatch ? "metrics_degraded" : "ok");
         out.put("budgetTarget", buildBudgetTarget(monthlyBudgetTarget, adjustments));
         out.put("explanation", buildExplanation(adjustments, actualMonthCount));
         out.put("budgetSuggestion", buildBudgetSuggestion(yearExpense, scenario, deficitMonths.size()));
@@ -332,7 +340,7 @@ public class ForecastService {
 
     private double billsForMonth(int month) {
         return billService.listEnabled().stream()
-                .filter(b -> b.getAmount() != null)
+                .filter(b -> ForecastBillSupport.appliesInMonth(b, month))
                 .mapToDouble(b -> b.getAmount().doubleValue())
                 .sum();
     }
@@ -441,25 +449,24 @@ public class ForecastService {
         LocalDate rangeStart = start.atDay(1);
         LocalDate rangeEndExclusive = end.plusMonths(1).atDay(1);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "select v.category_code, v.category_name, date_format(v.txn_date, '%Y-%m') as month_key, "
-                        + "sum(v.amount) as amount "
+                "select v.category_code, v.category_name, v.txn_date, v.amount "
                         + "from v_transaction_analytics v "
                         + "inner join transaction t on t.id = v.id "
                         + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
                         + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
                         + "and v.category_code != '__UNCLASSIFIED__' "
                         + "and v.txn_date >= ? and v.txn_date < ? "
-                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
-                        + "group by v.category_code, v.category_name, date_format(v.txn_date, '%Y-%m')",
+                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
                 rangeStart, rangeEndExclusive, userId, userId);
 
         Map<String, CategoryHistory> out = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
             String code = String.valueOf(row.get("category_code"));
             String name = String.valueOf(row.get("category_name"));
+            YearMonth ym = YearMonth.from(AnalyticsDateRange.toLocalDate(row.get("txn_date")));
             double amount = ((Number) row.get("amount")).doubleValue();
             out.computeIfAbsent(code, k -> new CategoryHistory(code, name))
-                    .addMonth(amount);
+                    .addMonthAmount(ym, amount);
         }
         return out;
     }
@@ -515,28 +522,27 @@ public class ForecastService {
                 upper);
     }
 
-    private record CategoryHistory(String code, String name, List<Double> monthlyTotals) {
+    private record CategoryHistory(String code, String name, Map<YearMonth, Double> byMonth) {
         CategoryHistory(String code, String name) {
-            this(code, name, new ArrayList<>());
+            this(code, name, new LinkedHashMap<>());
         }
 
-        void addMonth(double amount) {
-            monthlyTotals.add(amount);
+        void addMonthAmount(YearMonth ym, double amount) {
+            byMonth.merge(ym, amount, Double::sum);
         }
 
         double total() {
-            return monthlyTotals.stream().mapToDouble(Double::doubleValue).sum();
+            return byMonth.values().stream().mapToDouble(Double::doubleValue).sum();
         }
 
         double monthlyAvg() {
-            if (monthlyTotals.isEmpty()) {
+            if (byMonth.isEmpty()) {
                 return 0;
             }
-            int window = Math.min(6, monthlyTotals.size());
-            return monthlyTotals.subList(monthlyTotals.size() - window, monthlyTotals.size()).stream()
-                    .mapToDouble(Double::doubleValue)
-                    .average()
-                    .orElse(0);
+            List<YearMonth> sorted = byMonth.keySet().stream().sorted().toList();
+            int window = Math.min(6, sorted.size());
+            List<YearMonth> last = sorted.subList(sorted.size() - window, sorted.size());
+            return last.stream().mapToDouble(ym -> byMonth.getOrDefault(ym, 0.0)).average().orElse(0);
         }
     }
 

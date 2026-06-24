@@ -78,6 +78,16 @@ export function ProfilePage() {
         <Col xs={24} md={8}>
           <ContentCard title="Overall">
             <Typography.Title level={2} style={{ margin: 0 }}>{data.overallScore}</Typography.Title>
+            {data.confidence && (
+              <Tag color={data.confidence === 'high' ? 'green' : data.confidence === 'medium' ? 'blue' : 'orange'} style={{ marginTop: 8 }}>
+                Confidence: {data.confidence}
+              </Tag>
+            )}
+            {data.sampleMonths != null && (
+              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 12 }}>
+                Based on {data.sampleMonths} month(s) · source {data.metricsSource || 'fin_metric_monthly'}
+              </Typography.Text>
+            )}
             <Tag color="blue">{profileUserTypeLabel(data.userType)}</Tag>
             {data.userTypeExplanation && (
               <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 8 }}>

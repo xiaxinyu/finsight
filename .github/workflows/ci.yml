@@ -32,7 +32,14 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - run: mvn -B test -Dtest=AnalyticsPerformanceSmokeTest,AnalyticsCacheKeySupportTest,MetricGateRepairServiceTest,FinancialProfileServiceTest,ForecastServiceTest,RecommendationServiceTest
+      - run: mvn -B test -Dtest=AnalyticsPerformanceSmokeTest,AnalyticsCacheKeySupportTest,MetricGateRepairServiceTest,FinancialProfileServiceTest,ForecastServiceTest,RecommendationServiceTest,ProfileScoringTest,TrendDecompositionTest,ForecastBacktestServiceTest,TrendAnalysisServiceTest,ForecastProjectionTest,ForecastBillSupportTest
+
+  backend-sql-gate:
+    name: backend-sql-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-analytics-sql-gate.sh
 
   backend-flyway:
     name: backend-flyway

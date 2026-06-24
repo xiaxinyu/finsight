@@ -52,6 +52,14 @@ public class AnalyticsCacheService {
         advisorCache.invalidate(key);
     }
 
+    public void invalidateForecastsForUser(String userId) {
+        forecastCache.invalidatePrefix(userId + ":");
+    }
+
+    public void clearAllForecasts() {
+        forecastCache.clear();
+    }
+
     private static long secondsToMillis(int seconds) {
         return Math.max(60, seconds) * 1000L;
     }

@@ -13,6 +13,8 @@
 #   FINSIGHT_PROFILE_BUDGET_MS=800
 #   FINSIGHT_ADVISOR_BUDGET_MS=500
 #   FINSIGHT_FORECAST_BUDGET_MS=1000
+#   FINSIGHT_TREND_BUDGET_MS=1200
+#   FINSIGHT_CASH_RISK_BUDGET_MS=1200
 #   FINSIGHT_COOKIE_JAR=/tmp/finsight-smoke-cookies.txt
 set -euo pipefail
 
@@ -24,6 +26,9 @@ WARMUP="${FINSIGHT_WARMUP:-3}"
 PROFILE_BUDGET_MS="${FINSIGHT_PROFILE_BUDGET_MS:-800}"
 ADVISOR_BUDGET_MS="${FINSIGHT_ADVISOR_BUDGET_MS:-500}"
 FORECAST_BUDGET_MS="${FINSIGHT_FORECAST_BUDGET_MS:-1000}"
+TREND_BUDGET_MS="${FINSIGHT_TREND_BUDGET_MS:-1200}"
+CASH_RISK_BUDGET_MS="${FINSIGHT_CASH_RISK_BUDGET_MS:-1200}"
+YEAR=$(date +%Y)
 COOKIE_JAR="${FINSIGHT_COOKIE_JAR:-/tmp/finsight-smoke-cookies.txt}"
 
 if [[ -z "$USER" || -z "$PASS" ]]; then
@@ -97,6 +102,8 @@ failed=0
 measure_endpoint "profile" "/api/v1/analytics/profile" "$PROFILE_BUDGET_MS" || failed=1
 measure_endpoint "advisor" "/api/v1/advisor/recommendations" "$ADVISOR_BUDGET_MS" || failed=1
 measure_endpoint "forecast" "/api/v1/analytics/forecast?months=6" "$FORECAST_BUDGET_MS" || failed=1
+measure_endpoint "trends" "/api/v1/analytics/trends?fromYear=$((YEAR-1))&toYear=${YEAR}" "$TREND_BUDGET_MS" || failed=1
+measure_endpoint "cash-risk" "/api/v1/analytics/cash-risk-calendar?year=${YEAR}&scenario=stress" "$CASH_RISK_BUDGET_MS" || failed=1
 
 if (( failed != 0 )); then
   exit 1

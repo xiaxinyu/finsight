@@ -26,6 +26,8 @@ import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
+
 @ExtendWith(MockitoExtension.class)
 class TrendAnalysisServiceTest {
 
@@ -66,12 +68,14 @@ class TrendAnalysisServiceTest {
         when(transactionRepository.consumeReport(any())).thenReturn(
                 List.of(cat("FOOD", "Food", 1000), cat("TRAVEL", "Travel", 500)),
                 List.of(cat("FOOD", "Food", 1800), cat("TRAVEL", "Travel", 900)));
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq(2025), eq("user1"), eq("user1")))
+        when(jdbcTemplate.queryForList(contains("v.txn_date >="),
+                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2026, 1, 1)), eq("user1"), eq("user1")))
                 .thenReturn(List.of(Map.of(
                         "opponent_name", "Uber",
                         "transaction_desc", "",
                         "amount", 200)));
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq(2026), eq("user1"), eq("user1")))
+        when(jdbcTemplate.queryForList(contains("v.txn_date >="),
+                eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2027, 1, 1)), eq("user1"), eq("user1")))
                 .thenReturn(List.of(Map.of(
                         "opponent_name", "Uber",
                         "transaction_desc", "",

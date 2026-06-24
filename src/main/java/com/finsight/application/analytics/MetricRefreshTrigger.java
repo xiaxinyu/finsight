@@ -20,14 +20,21 @@ public class MetricRefreshTrigger {
 
     private final MetricMonthlyService metricMonthlyService;
     private final DirtyMonthService dirtyMonthService;
+    private final AnalyticsCacheInvalidationService cacheInvalidation;
 
     public MetricRefreshTrigger(MetricMonthlyService metricMonthlyService,
-                                DirtyMonthService dirtyMonthService) {
+                                DirtyMonthService dirtyMonthService,
+                                AnalyticsCacheInvalidationService cacheInvalidation) {
         this.metricMonthlyService = metricMonthlyService;
         this.dirtyMonthService = dirtyMonthService;
+        this.cacheInvalidation = cacheInvalidation;
     }
 
     public void afterTransactionsChanged(Collection<Date> transactionDates) {
+        afterTransactionsChanged(transactionDates, null);
+    }
+
+    public void afterTransactionsChanged(Collection<Date> transactionDates, String userId) {
         Set<String> months = new LinkedHashSet<>();
         months.add(YearMonth.now().format(YM));
         if (transactionDates != null) {
@@ -42,6 +49,11 @@ public class MetricRefreshTrigger {
         dirtyMonthService.markDirty(months);
         for (String month : months) {
             metricMonthlyService.refreshAsync(month);
+        }
+        if (userId != null && !userId.isBlank()) {
+            cacheInvalidation.invalidateForUser(userId);
+        } else {
+            cacheInvalidation.invalidateCurrentUser();
         }
     }
 

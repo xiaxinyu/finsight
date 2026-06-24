@@ -243,14 +243,15 @@ public class MerchantMiningService {
     }
 
     private Map<String, YearSpend> spendByMerchantForYear(String userId, int year) {
+        AnalyticsDateRange.HalfOpen range = AnalyticsDateRange.calendarYear(year);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.opponent_name, v.transaction_desc, v.amount "
                         + "from v_transaction_analytics v "
                         + "inner join transaction t on t.id = v.id "
                         + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
-                        + "and v.amount > 0 and year(v.txn_date) = ? "
+                        + "and v.amount > 0 and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
-                year, userId, userId);
+                range.startInclusive(), range.endExclusive(), userId, userId);
 
         Map<String, YearSpend> out = new HashMap<>();
         for (Map<String, Object> row : rows) {

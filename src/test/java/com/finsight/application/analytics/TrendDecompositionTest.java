@@ -30,6 +30,12 @@ class TrendDecompositionTest {
     }
 
     @Test
+    void lifestyleInflation_ignoresSmallExpenseDelta() {
+        assertFalse(TrendDecomposition.lifestyleInflationDetected(0, 20, 100));
+        assertFalse(TrendDecomposition.lifestyleInflationDetected(2, 12, 200));
+    }
+
+    @Test
     void topMovers_ranksByAbsoluteDelta() {
         Map<String, Double> from = Map.of("a", 100.0, "b", 200.0);
         Map<String, Double> to = Map.of("a", 150.0, "b", 500.0);

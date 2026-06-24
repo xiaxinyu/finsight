@@ -384,7 +384,7 @@ class ForecastServiceTest {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("category_code", code);
         row.put("category_name", name);
-        row.put("month_key", month);
+        row.put("txn_date", java.sql.Date.valueOf(LocalDate.parse(month + "-01")));
         row.put("amount", amount);
         return row;
     }
