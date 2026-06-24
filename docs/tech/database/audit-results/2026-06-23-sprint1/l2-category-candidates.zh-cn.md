@@ -45,4 +45,4 @@
 - [ ] `expected_rule_count` 已与本地 Top100 CSV 交叉验证
 - [ ] 设计评审后进入 Categories「Create」步骤（[#70](https://github.com/xiaxinyu/finsight/issues/70) 工作流 Step 3）
 
-关联：[classification-governance-workflow.zh-cn.md](../classification-governance-workflow.zh-cn.md)
+关联：[classification-governance-workflow.zh-cn.md](../../classification-governance-workflow.zh-cn.md)

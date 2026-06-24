@@ -37,5 +37,5 @@ This hub groups **strategy**, **product**, and **engineering** material so stake
 
 ## Quick links
 
-- [Project home](../README.md)
+- [Project home](../../README.md)
 - [Rules for AI / contributors](../../tech/contributing/rules-guide.md)
