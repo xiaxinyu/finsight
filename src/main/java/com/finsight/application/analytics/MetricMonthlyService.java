@@ -71,7 +71,8 @@ public class MetricMonthlyService {
         return metricRepository.listForUser(userKey(), fromYm, toYm);
     }
 
-    /** Report-SQL fallback when reconcile gate blocks stored metrics (read-only). */
+    /** @deprecated Diagnostic-only — do not use on user read paths; prefer {@link #history}. */
+    @Deprecated
     public List<Map<String, Object>> historyFromReports(String fromYm, String toYm) throws AppServiceException {
         YearMonth start = YearMonth.parse(fromYm, YM);
         YearMonth end = YearMonth.parse(toYm, YM);

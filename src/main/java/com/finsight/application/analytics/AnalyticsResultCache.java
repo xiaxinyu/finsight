@@ -34,6 +34,17 @@ final class AnalyticsResultCache<T> {
         store.remove(key);
     }
 
+    void invalidatePrefix(String prefix) {
+        if (prefix == null || prefix.isEmpty()) {
+            return;
+        }
+        store.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
+    void clear() {
+        store.clear();
+    }
+
     private record Entry<T>(T value, long expiresAtMs) {
     }
 }

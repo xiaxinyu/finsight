@@ -221,14 +221,17 @@ public class FinancialProfileService {
                 ProfileScoring.dataTrustReason(dataScore, unclassified, totalRows),
                 dataTrustEvidence(unclassified, totalRows)));
 
-        double overall = dimensions.stream()
-                .mapToDouble(d -> ((Number) d.get("score")).doubleValue())
-                .average().orElse(0);
-        ProfileScoring.UserTypeResult userType = ProfileScoring.classifyUserType(
-                ProfileScoring.scoresFromDimensions(dimensions));
+        Map<String, Double> dimensionScores = ProfileScoring.scoresFromDimensions(dimensions);
+        double overall = ProfileScoring.weightedOverallScore(dimensionScores);
+        ProfileScoring.UserTypeResult userType = ProfileScoring.classifyUserType(dimensionScores);
+        double dataTrustScore = dimensionScores.getOrDefault("data_trust", 50.0);
+        int sampleMonths = incomes.size();
+        String confidence = ProfileScoring.overallConfidence(dataTrustScore, sampleMonths, gateMismatch);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("overallScore", ProfileScoring.round(overall));
+        out.put("confidence", confidence);
+        out.put("sampleMonths", sampleMonths);
         out.put("userType", userType.type());
         out.put("userTypeExplanation", userType.explanation());
         out.put("dimensions", dimensions);
@@ -338,6 +341,8 @@ public class FinancialProfileService {
         return a;
     }
 
+    private static final String EVIDENCE_WINDOW = "12 months";
+
     private static Map<String, Object> ev(String source, String ref, String label, String detail, Object value) {
         Map<String, Object> e = new LinkedHashMap<>();
         e.put("source", source);
@@ -345,6 +350,7 @@ public class FinancialProfileService {
         e.put("label", label);
         e.put("detail", detail);
         e.put("value", value);
+        e.put("window", EVIDENCE_WINDOW);
         return e;
     }
 

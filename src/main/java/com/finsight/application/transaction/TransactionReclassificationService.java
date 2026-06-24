@@ -129,7 +129,7 @@ public class TransactionReclassificationService {
             }
         }
         if (persist && result.getClassified() > 0) {
-            metricRefreshTrigger.afterTransactionsChanged(changedDates);
+            metricRefreshTrigger.afterTransactionsChanged(changedDates, userName);
         }
         return result;
     }

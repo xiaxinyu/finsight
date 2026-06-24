@@ -4,7 +4,7 @@ import com.finsight.application.config.FinsightFeatureProperties;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,40 +35,19 @@ public class CombinedInsightService {
     }
 
     public CombinedInsightContext buildContext() throws Exception {
-        Map<String, Object> profile;
-        if (features.getProfile().isEnabled()) {
-            try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.profile", ADVISOR_PROFILE_BUDGET_MS)) {
-                profile = profileService.currentProfile();
-            }
-        } else {
-            profile = Map.of("userType", "balanced", "userTypeExplanation", "Profile module disabled", "dimensions", List.of());
-        }
-
+        Map<String, Object> profile = loadProfile();
         int year = YearMonth.now().getYear();
-        Map<String, Object> trends;
-        if (features.getForecast().isEnabled()) {
-            try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.trends", ADVISOR_TREND_BUDGET_MS)) {
-                trends = trendAnalysisService.trends(year - 1, year);
-            }
-        } else {
-            trends = Map.of();
-        }
-
-        Map<String, Object> forecast;
-        if (features.getForecast().isEnabled()) {
-            try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.forecast", ADVISOR_FORECAST_BUDGET_MS)) {
-                forecast = forecastService.forecast(year, "base");
-            }
-        } else {
-            forecast = Map.of();
-        }
-
+        Map<String, Object> trends = loadTrends(year);
+        Map<String, Object> forecast = loadForecast(year);
         Map<String, Object> subscriptions;
         Map<String, Object> concentration;
         if (features.getMerchantMining().isEnabled()) {
             try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.merchants", ADVISOR_MERCHANT_BUDGET_MS)) {
                 subscriptions = merchantMiningService.subscriptionReport();
                 concentration = merchantMiningService.concentration();
+            } catch (Exception ex) {
+                subscriptions = degradedModule("merchants", ex.getMessage());
+                concentration = Map.of("degraded", true);
             }
         } else {
             subscriptions = Map.of();
@@ -80,11 +59,45 @@ public class CombinedInsightService {
         return new CombinedInsightContext(profile, trends, forecast, subscriptions, concentration, cards);
     }
 
-    public List<Map<String, Object>> buildCombinedCards() throws Exception {
-        return new ArrayList<>(buildContext().cards());
+    private Map<String, Object> loadProfile() {
+        if (!features.getProfile().isEnabled()) {
+            return Map.of("userType", "balanced", "userTypeExplanation", "Profile module disabled", "dimensions", List.of());
+        }
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.profile", ADVISOR_PROFILE_BUDGET_MS)) {
+            return profileService.currentProfile();
+        } catch (Exception ex) {
+            return degradedModule("profile", ex.getMessage());
+        }
     }
 
-    public List<Map<String, Object>> topCombinedCards(int limit) throws Exception {
-        return buildContext().topCards(limit);
+    private Map<String, Object> loadTrends(int year) {
+        if (!features.getForecast().isEnabled()) {
+            return Map.of();
+        }
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.trends", ADVISOR_TREND_BUDGET_MS)) {
+            return trendAnalysisService.trends(year - 1, year);
+        } catch (Exception ex) {
+            return degradedModule("trends", ex.getMessage());
+        }
+    }
+
+    private Map<String, Object> loadForecast(int year) {
+        if (!features.getForecast().isEnabled()) {
+            return Map.of();
+        }
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("advisor.forecast", ADVISOR_FORECAST_BUDGET_MS)) {
+            return forecastService.forecast(year, "base");
+        } catch (Exception ex) {
+            return degradedModule("forecast", ex.getMessage());
+        }
+    }
+
+    private static Map<String, Object> degradedModule(String module, String detail) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("degraded", true);
+        out.put("module", module);
+        out.put("warning", "Module unavailable — showing partial advisor results");
+        out.put("detail", detail == null ? "" : detail);
+        return out;
     }
 }

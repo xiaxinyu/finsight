@@ -25,6 +25,33 @@ class ProfileScoringTest {
     }
 
     @Test
+    void weightedOverallScore_usesWeightTable() {
+        Map<String, Double> scores = scores(
+                "data_trust", 80,
+                "income_stability", 70,
+                "spending_control", 70,
+                "savings_discipline", 70,
+                "fixed_burden", 70,
+                "liquidity_safety", 70,
+                "debt_pressure", 70,
+                "lifestyle_inflation", 70,
+                "spending_concentration", 70,
+                "seasonality_risk", 70);
+        double weighted = ProfileScoring.weightedOverallScore(scores);
+        assertEquals(71.5, weighted);
+        int sum = ProfileScoring.DIMENSION_WEIGHTS.values().stream().mapToInt(Integer::intValue).sum();
+        assertEquals(100, sum);
+    }
+
+    @Test
+    void overallConfidence_degradesWithLowDataTrust() {
+        assertEquals("low", ProfileScoring.overallConfidence(40, 12, false));
+        assertEquals("medium", ProfileScoring.overallConfidence(60, 6, false));
+        assertEquals("high", ProfileScoring.overallConfidence(80, 12, false));
+        assertEquals("low", ProfileScoring.overallConfidence(80, 12, true));
+    }
+
+    @Test
     void classifyUserType_prioritizesDataQualityRisk() {
         ProfileScoring.UserTypeResult result = ProfileScoring.classifyUserType(scores(
                 "data_trust", 30,

@@ -14,6 +14,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -38,19 +39,32 @@ class ForecastBacktestServiceTest {
     }
 
     @Test
-    void backtest_computesMapeFromStoredForecasts() {
-        String month = YearMonth.now().minusMonths(1).format(DateTimeFormatter.ofPattern("yyyy-MM"));
-        when(metricRepository.listForUser(eq("tester"), anyString(), anyString())).thenReturn(List.of(
-                row(month, MetricCode.INCOME_TOTAL.name(), 10000),
-                row(month, ForecastService.METRIC_INCOME_FORECAST, 9000),
-                row(month, MetricCode.EXPENSE_TOTAL.name(), 5000),
-                row(month, ForecastService.METRIC_EXPENSE_FORECAST, 4500)));
+    void backtest_computesMapeFromCutoffProjection() {
+        YearMonth end = YearMonth.now().minusMonths(1);
+        List<Map<String, Object>> rows = new java.util.ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            String month = end.minusMonths(i).format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            rows.add(row(month, MetricCode.INCOME_TOTAL.name(), 8000 + i * 100));
+            rows.add(row(month, MetricCode.EXPENSE_TOTAL.name(), 5000 + i * 50));
+        }
+        when(metricRepository.listForUser(eq("tester"), anyString(), anyString())).thenReturn(rows);
 
-        Map<String, Object> out = service.backtest(1);
+        Map<String, Object> out = service.backtest(3);
 
         assertNotNull(out.get("incomeMape"));
+        assertEquals("cutoff_hybrid_projection", out.get("method"));
         assertNotNull(out.get("expenseMape"));
-        assertTrue(((Number) out.get("incomeMape")).doubleValue() > 0);
+        assertNotNull(out.get("incomeMae"));
+        assertNotNull(out.get("coverage"));
+        assertTrue(((Number) out.get("incomeMape")).doubleValue() >= 0);
+    }
+
+    @Test
+    void backtest_marksInsufficientSampleWhenEmpty() {
+        when(metricRepository.listForUser(eq("tester"), anyString(), anyString())).thenReturn(List.of());
+        Map<String, Object> out = service.backtest(3);
+        assertEquals(true, out.get("insufficientSample"));
+        assertEquals("low", out.get("confidenceLevel"));
     }
 
     private static Map<String, Object> row(String ym, String code, double value) {

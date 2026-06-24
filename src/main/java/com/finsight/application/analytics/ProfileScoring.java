@@ -11,6 +11,19 @@ import java.util.Map;
  */
 public final class ProfileScoring {
 
+    /** Dimension weights for overall score (sum = 100). Data trust weighs more on confidence. */
+    public static final Map<String, Integer> DIMENSION_WEIGHTS = Map.ofEntries(
+            Map.entry("data_trust", 15),
+            Map.entry("income_stability", 10),
+            Map.entry("spending_control", 12),
+            Map.entry("savings_discipline", 10),
+            Map.entry("fixed_burden", 10),
+            Map.entry("liquidity_safety", 12),
+            Map.entry("debt_pressure", 10),
+            Map.entry("lifestyle_inflation", 8),
+            Map.entry("spending_concentration", 8),
+            Map.entry("seasonality_risk", 5));
+
     public record UserTypeResult(String type, String explanation) {
     }
 
@@ -289,6 +302,29 @@ public final class ProfileScoring {
             scores.put(String.valueOf(dim.get("id")), ((Number) dim.get("score")).doubleValue());
         }
         return scores;
+    }
+
+    /** Weighted overall score; weights sum to 100. */
+    public static double weightedOverallScore(Map<String, Double> scores) {
+        double weightedSum = 0;
+        int totalWeight = 0;
+        for (Map.Entry<String, Integer> entry : DIMENSION_WEIGHTS.entrySet()) {
+            double score = scores.getOrDefault(entry.getKey(), 50.0);
+            weightedSum += score * entry.getValue();
+            totalWeight += entry.getValue();
+        }
+        return totalWeight == 0 ? 50.0 : round(weightedSum / totalWeight);
+    }
+
+    /** Profile-wide confidence driven by data quality and sample depth. */
+    public static String overallConfidence(double dataTrustScore, int sampleMonths, boolean metricsDegraded) {
+        if (metricsDegraded || dataTrustScore < 45 || sampleMonths < 3) {
+            return "low";
+        }
+        if (dataTrustScore < 65 || sampleMonths < 6) {
+            return "medium";
+        }
+        return "high";
     }
 
     public static double round(double v) {
