@@ -45,8 +45,8 @@ describe('merchantReports utils', () => {
   })
 
   it('builds subscription insights', () => {
-    const insights = buildSubscriptionInsights(subscriptionReport)
-    expect(insights[0].text).toContain('subscription')
+    const insights = buildSubscriptionInsights(subscriptionReport, 'Jan–Jun 2026')
+    expect(insights[0].text).toContain('Period')
   })
 
   it('formats stability from interval and CV', () => {

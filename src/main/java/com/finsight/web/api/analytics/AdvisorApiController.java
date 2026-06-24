@@ -63,9 +63,11 @@ public class AdvisorApiController {
     }
 
     @GetMapping("/merchants/subscriptions")
-    public CommonResult subscriptions() {
+    public CommonResult subscriptions(
+            @RequestParam(value = "transactionDateStartStr", required = false) String startStr,
+            @RequestParam(value = "transactionDateEndStr", required = false) String endStr) {
         featureFlags.requireMerchantMining();
-        return CommonResult.success(merchantMiningService.subscriptionReport());
+        return CommonResult.success(merchantMiningService.subscriptionReport(startStr, endStr));
     }
 
     @GetMapping("/merchants/concentration")

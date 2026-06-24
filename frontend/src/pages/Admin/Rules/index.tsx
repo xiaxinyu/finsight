@@ -521,22 +521,27 @@ export function RulesAdminPage() {
           <Input
             allowClear
             size="small"
+            className="fs-admin-split-tree-search"
             placeholder="Filter categories…"
             value={treeSearch}
             onChange={(e) => setTreeSearch(e.target.value)}
           />
           {loading ? (
-            <PageSkeleton variant="table" />
+            <div className="fs-admin-split-tree-scroll">
+              <PageSkeleton variant="table" />
+            </div>
           ) : (
-            <Tree
-              showLine
-              selectedKeys={[effectiveSelectedKey]}
-              treeData={visibleTree}
-              onSelect={(keys) => {
-                const k = keys[0]
-                if (k && !String(k).startsWith('__')) setSelectedKey(String(k))
-              }}
-            />
+            <div className="fs-admin-split-tree-scroll">
+              <Tree
+                showLine
+                selectedKeys={[effectiveSelectedKey]}
+                treeData={visibleTree}
+                onSelect={(keys) => {
+                  const k = keys[0]
+                  if (k && !String(k).startsWith('__')) setSelectedKey(String(k))
+                }}
+              />
+            </div>
           )}
         </div>
 

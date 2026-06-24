@@ -27,6 +27,10 @@ public final class MerchantNormalizer {
     private MerchantNormalizer() {
     }
 
+    private static final Pattern GENERIC_SEGMENT = Pattern.compile(
+            "^(支付宝|财付通|微信|消费|支出|transfer|payment|alipay|tenpay|wechat pay|wxpay)$",
+            Pattern.CASE_INSENSITIVE);
+
     public static String rawMerchant(String opponentName, String transactionDesc) {
         String opponent = opponentName == null ? "" : opponentName.trim();
         if (!opponent.isEmpty()) {
@@ -35,11 +39,33 @@ public final class MerchantNormalizer {
         return transactionDesc == null ? "" : transactionDesc.trim();
     }
 
+    /**
+     * Pulls the payee segment out of channel-prefixed bank strings, e.g.
+     * {@code 支付宝 - 消费 - Stripe Inc} → {@code Stripe Inc}.
+     */
+    public static String merchantCoreRaw(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        String s = raw.trim().replaceFirst("^\\(消费\\)\\s*", "");
+        if (s.contains(" - ") || s.contains("－") || s.contains("—")) {
+            String[] parts = s.split("[\\s]*[-－—][\\s]*");
+            for (int i = parts.length - 1; i >= 0; i--) {
+                String part = parts[i].trim();
+                if (part.isEmpty() || isGenericSegment(part)) {
+                    continue;
+                }
+                return part;
+            }
+        }
+        return s;
+    }
+
     public static String normalizeToken(String raw) {
         if (raw == null || raw.isBlank()) {
             return "";
         }
-        String normalized = raw.toLowerCase(Locale.ROOT).trim();
+        String normalized = merchantCoreRaw(raw).toLowerCase(Locale.ROOT).trim();
         normalized = ORDER_NO.matcher(normalized).replaceAll("");
         normalized = STORE_NO.matcher(normalized).replaceAll("");
         normalized = PAYMENT_CHANNEL.matcher(normalized).replaceAll("");
@@ -48,6 +74,10 @@ public final class MerchantNormalizer {
         normalized = DOMAIN_SUFFIX.matcher(normalized).replaceAll("");
         normalized = MULTI_SPACE.matcher(normalized).replaceAll(" ").trim();
         return normalized;
+    }
+
+    private static boolean isGenericSegment(String part) {
+        return GENERIC_SEGMENT.matcher(part.trim()).matches();
     }
 
     public static String displayName(String normalizedToken, String preferredRaw) {

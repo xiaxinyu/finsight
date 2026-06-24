@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Alert, Button, Cascader, Divider, Form, Input, InputNumber, Modal, message, Select, Space, Tag, Tree, Typography,
+  Alert, Button, Cascader, Form, Input, InputNumber, Modal, message, Select, Space, Tag, Tree, Typography,
 } from 'antd'
 import { ClusterOutlined, PlusOutlined } from '@ant-design/icons'
 import {
@@ -287,83 +287,90 @@ export function CategoriesAdminPage() {
       <div className="fs-admin-split">
         <div className="fs-admin-split-tree fs-table-panel">
           {isLoading ? (
-            <PageSkeleton variant="table" />
+            <div className="fs-admin-split-tree-scroll">
+              <PageSkeleton variant="table" />
+            </div>
           ) : !treeData.length ? (
             <EmptyState compact title="No categories" />
           ) : (
-            <Tree
-              showLine
-              treeData={treeData}
-              selectedKeys={selectedId && !creating ? [selectedId] : []}
-              onSelect={(keys) => {
-                setCreating(false)
-                setSelectedId(keys[0] ? String(keys[0]) : null)
-              }}
-            />
+            <div className="fs-admin-split-tree-scroll">
+              <Tree
+                showLine
+                treeData={treeData}
+                selectedKeys={selectedId && !creating ? [selectedId] : []}
+                onSelect={(keys) => {
+                  setCreating(false)
+                  setSelectedId(keys[0] ? String(keys[0]) : null)
+                }}
+              />
+            </div>
           )}
         </div>
-        <div className="fs-admin-split-form fs-table-panel">
+        <div className="fs-admin-split-form fs-table-panel fs-admin-category-detail">
           {creating || selected ? (
-            <Form form={form} layout="vertical" size="small" className="fs-admin-category-form">
-              <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}>
-                <Input />
-              </Form.Item>
-              <Form.Item name="code" label="Code" tooltip="Leave blank to auto-generate">
-                <Input placeholder="Auto-generated if empty" disabled={!creating && Boolean(selected?.id)} />
-              </Form.Item>
-              <Form.Item name="parentId" label="Parent category">
-                <Select allowClear options={parentOptions} placeholder="Root category (no parent)" />
-              </Form.Item>
-              <Form.Item name="txnTypes" label="Transaction types">
-                <Select options={[
-                  { value: 'expense', label: 'Expense' },
-                  { value: 'income', label: 'Income' },
-                  { value: 'expense,income', label: 'Both' },
-                ]} />
-              </Form.Item>
-              <Form.Item name="sortNo" label="Sort order">
-                <InputNumber min={1} style={{ width: '100%' }} />
-              </Form.Item>
-              <Space wrap>
-                <Button type="primary" onClick={onSave}>{creating ? 'Create' : 'Save'}</Button>
-                {!creating && selected?.id && (
-                  <>
-                    <Button danger onClick={onDeleteClick}>Delete</Button>
-                    <Cascader<CascaderOption>
-                      allowClear
-                      size="small"
-                      placeholder="Merge into…"
-                      className="fs-category-merge-target"
-                      style={{ minWidth: 240 }}
-                      options={mergeCascaderOptions}
-                      value={mergeCascaderValue}
-                      onChange={(path) => setMergeTargetCode(path?.length ? String(path[path.length - 1]) : null)}
-                      changeOnSelect
-                      expandTrigger="hover"
-                      popupClassName="fs-category-picker-popup"
-                      showSearch={{ filter: cascaderSearchFilter, matchInputWidth: true }}
-                      displayRender={(labels) => labels.join(' / ')}
-                      getPopupContainer={() => document.body}
-                    />
-                    <Button size="small" disabled={!mergeTargetCode} onClick={onMergeClick}>Merge</Button>
-                  </>
-                )}
-                {creating && (
-                  <Button onClick={() => setCreating(false)}>Cancel</Button>
-                )}
-              </Space>
+            <div className="fs-admin-category-detail-inner">
+              <Form form={form} layout="vertical" size="small" className="fs-admin-category-form">
+                <div className="fs-admin-category-form-fields">
+                  <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}>
+                    <Input />
+                  </Form.Item>
+                  <Form.Item name="code" label="Code" tooltip="Leave blank to auto-generate">
+                    <Input placeholder="Auto-generated if empty" disabled={!creating && Boolean(selected?.id)} />
+                  </Form.Item>
+                  <Form.Item name="parentId" label="Parent category">
+                    <Select allowClear options={parentOptions} placeholder="Root category (no parent)" />
+                  </Form.Item>
+                  <Form.Item name="txnTypes" label="Transaction types">
+                    <Select options={[
+                      { value: 'expense', label: 'Expense' },
+                      { value: 'income', label: 'Income' },
+                      { value: 'expense,income', label: 'Both' },
+                    ]} />
+                  </Form.Item>
+                  <Form.Item name="sortNo" label="Sort order">
+                    <InputNumber min={1} style={{ width: '100%' }} />
+                  </Form.Item>
+                </div>
+                <div className="fs-admin-category-form-actions">
+                  <Space wrap size="small">
+                    <Button type="primary" onClick={onSave}>{creating ? 'Create' : 'Save'}</Button>
+                    {!creating && selected?.id && (
+                      <>
+                        <Button danger onClick={onDeleteClick}>Delete</Button>
+                        <Cascader<CascaderOption>
+                          allowClear
+                          size="small"
+                          placeholder="Merge into…"
+                          className="fs-category-merge-target"
+                          style={{ minWidth: 240 }}
+                          options={mergeCascaderOptions}
+                          value={mergeCascaderValue}
+                          onChange={(path) => setMergeTargetCode(path?.length ? String(path[path.length - 1]) : null)}
+                          changeOnSelect
+                          expandTrigger="hover"
+                          popupClassName="fs-category-picker-popup"
+                          showSearch={{ filter: cascaderSearchFilter, matchInputWidth: true }}
+                          displayRender={(labels) => labels.join(' / ')}
+                          getPopupContainer={() => document.body}
+                        />
+                        <Button size="small" disabled={!mergeTargetCode} onClick={onMergeClick}>Merge</Button>
+                      </>
+                    )}
+                    {creating && (
+                      <Button onClick={() => setCreating(false)}>Cancel</Button>
+                    )}
+                  </Space>
+                </div>
+              </Form>
               {!creating && selected?.id && (
-                <>
-                  <Divider style={{ margin: '12px 0' }} />
-                  <CategoryAssetPanel
-                    asset={categoryAsset ?? null}
-                    loading={assetLoading}
-                    onCreateCandidate={(c) => setCandidateDraft(c)}
-                    onViewReportImpact={() => setReportImpactOpen(true)}
-                  />
-                </>
+                <CategoryAssetPanel
+                  asset={categoryAsset ?? null}
+                  loading={assetLoading}
+                  onCreateCandidate={(c) => setCandidateDraft(c)}
+                  onViewReportImpact={() => setReportImpactOpen(true)}
+                />
               )}
-            </Form>
+            </div>
           ) : (
             <EmptyState compact title="Select a category" description="Choose a node in the tree or add a new category." />
           )}

@@ -246,8 +246,15 @@ export async function refreshMerchantProfiles() {
   )
 }
 
-export async function fetchSubscriptionReport() {
-  return unwrap<SubscriptionReport>(await getJson('/api/v1/advisor/merchants/subscriptions'))
+export async function fetchSubscriptionReport(params?: {
+  transactionDateStartStr?: string
+  transactionDateEndStr?: string
+}) {
+  const q = new URLSearchParams()
+  if (params?.transactionDateStartStr) q.set('transactionDateStartStr', params.transactionDateStartStr)
+  if (params?.transactionDateEndStr) q.set('transactionDateEndStr', params.transactionDateEndStr)
+  const suffix = q.toString() ? `?${q.toString()}` : ''
+  return unwrap<SubscriptionReport>(await getJson(`/api/v1/advisor/merchants/subscriptions${suffix}`))
 }
 
 export async function fetchMerchantConcentration() {

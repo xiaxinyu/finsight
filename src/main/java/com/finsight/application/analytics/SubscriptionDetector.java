@@ -14,8 +14,8 @@ import java.util.Map;
 public final class SubscriptionDetector {
 
     public static final int MIN_OCCURRENCES = 3;
-    private static final double MAX_AMOUNT_CV = 0.15;
-    private static final double MIN_INTERVAL_SCORE = 0.67;
+    private static final double MAX_AMOUNT_CV = 0.22;
+    private static final double MIN_INTERVAL_SCORE = 0.6;
 
     private SubscriptionDetector() {
     }
@@ -98,13 +98,13 @@ public final class SubscriptionDetector {
     }
 
     static String cadenceForMedian(double medianGap) {
-        if (medianGap >= 25 && medianGap <= 38) {
+        if (medianGap >= 20 && medianGap <= 45) {
             return "monthly";
         }
-        if (medianGap >= 80 && medianGap <= 100) {
+        if (medianGap >= 75 && medianGap <= 105) {
             return "quarterly";
         }
-        if (medianGap >= 350 && medianGap <= 380) {
+        if (medianGap >= 340 && medianGap <= 390) {
             return "yearly";
         }
         return null;
@@ -112,9 +112,9 @@ public final class SubscriptionDetector {
 
     static boolean gapMatchesCadence(int gap, String cadence) {
         return switch (cadence) {
-            case "monthly" -> gap >= 25 && gap <= 38;
-            case "quarterly" -> gap >= 80 && gap <= 100;
-            case "yearly" -> gap >= 350 && gap <= 380;
+            case "monthly" -> gap >= 20 && gap <= 45;
+            case "quarterly" -> gap >= 75 && gap <= 105;
+            case "yearly" -> gap >= 340 && gap <= 390;
             default -> false;
         };
     }

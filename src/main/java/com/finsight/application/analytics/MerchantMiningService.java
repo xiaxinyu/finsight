@@ -3,6 +3,8 @@ package com.finsight.application.analytics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.support.ListingDateSupport;
+import com.finsight.common.exception.AppServiceException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,8 +16,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -24,6 +28,9 @@ public class MerchantMiningService {
     private static final int MIN_MERCHANT_TXNS = 3;
     private static final int MAX_PROFILES = 200;
     private static final double OPTIMIZABLE_CONFIDENCE = 0.75;
+
+    private static final int MIN_CATEGORY_MERCHANT_TXNS = 1;
+    private static final Set<String> SUBSCRIPTION_CATEGORY_CODES = Set.of("FIXED-05", "EXP_SUBSCRIPTION");
 
     private final JdbcTemplate jdbcTemplate;
     private final AuthenticationFacade authenticationFacade;
@@ -104,12 +111,46 @@ public class MerchantMiningService {
     }
 
     public Map<String, Object> subscriptionReport() {
-        List<Map<String, Object>> rows = loadProfiles(true);
+        return subscriptionReport(null, null);
+    }
+
+    public Map<String, Object> subscriptionReport(String startStr, String endStr) {
+        AnalyticsDateRange.HalfOpen range = resolvePeriod(startStr, endStr);
+        List<Map<String, Object>> subscriptions = new ArrayList<>();
+        Set<String> seenTokens = new LinkedHashSet<>();
+        int patternCount = 0;
+        int categoryOnlyCount = 0;
         double monthlyTotal = 0;
         double optimizable = 0;
-        List<Map<String, Object>> subscriptions = new ArrayList<>();
-        for (Map<String, Object> row : rows) {
-            Map<String, Object> item = mapSubscription(row);
+
+        for (MerchantAggregate aggregate : aggregateMerchantsInPeriod(range).values()) {
+            if (aggregate.txnCount() < MIN_MERCHANT_TXNS) {
+                continue;
+            }
+            SubscriptionDetector.SubscriptionSignal signal = SubscriptionDetector.detect(aggregate.points());
+            if (!signal.suspectedSubscription()) {
+                continue;
+            }
+            patternCount++;
+            Map<String, Object> item = mapLivePatternSubscription(aggregate, signal, range);
+            subscriptions.add(item);
+            seenTokens.add(aggregate.token());
+            double monthly = monthlyEquivalent(item);
+            monthlyTotal += monthly;
+            if (confidence(item) < OPTIMIZABLE_CONFIDENCE) {
+                optimizable += monthly;
+            }
+        }
+
+        Map<String, Object> categorySummary = loadCategorySubscriptionSummary(range);
+        for (Map<String, Object> categoryRow : loadCategorySubscriptionMerchants(range)) {
+            String token = String.valueOf(categoryRow.get("merchantToken"));
+            if (token.isBlank() || seenTokens.contains(token)) {
+                continue;
+            }
+            seenTokens.add(token);
+            categoryOnlyCount++;
+            Map<String, Object> item = mapCategorySubscription(categoryRow, range);
             subscriptions.add(item);
             double monthly = monthlyEquivalent(item);
             monthlyTotal += monthly;
@@ -118,11 +159,21 @@ public class MerchantMiningService {
             }
         }
 
+        subscriptions.sort(Comparator.comparingDouble((Map<String, Object> item) ->
+                -monthlyEquivalent(item)));
+
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("count", subscriptions.size());
+        summary.put("patternCount", patternCount);
+        summary.put("categoryOnlyCount", categoryOnlyCount);
         summary.put("monthlyTotal", round(monthlyTotal));
         summary.put("annualizedTotal", round(monthlyTotal * 12));
         summary.put("optimizableAmount", round(optimizable * 12));
+        summary.put("categoryTxnCount", categorySummary.getOrDefault("txnCount", 0));
+        summary.put("categoryTotalSpend", categorySummary.getOrDefault("totalSpend", 0));
+        summary.put("categoryMerchantCount", categorySummary.getOrDefault("merchantCount", 0));
+        summary.put("periodStart", range.startInclusive().toString());
+        summary.put("periodEnd", range.endExclusive().minusDays(1).toString());
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("subscriptions", subscriptions);
@@ -286,8 +337,243 @@ public class MerchantMiningService {
         item.put("amountCv", payload.getOrDefault("amountCv", 0));
         item.put("evidence", payload.getOrDefault("evidence", ""));
         item.put("monthlyEquivalent", round(monthlyEquivalentFromRow(row, payload)));
+        item.put("detectionSource", "pattern");
         item.put("drillDown", drillMerchantYear(token, displayName));
         return item;
+    }
+
+    private Map<String, Object> mapLivePatternSubscription(MerchantAggregate aggregate,
+                                                           SubscriptionDetector.SubscriptionSignal signal,
+                                                           AnalyticsDateRange.HalfOpen range) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("merchantToken", aggregate.token());
+        item.put("displayName", aggregate.displayName());
+        item.put("avgAmount", round(aggregate.avgAmount()));
+        item.put("txnCount", aggregate.txnCount());
+        item.put("lastSeen", Date.valueOf(aggregate.lastSeen()));
+        item.put("suspectedSubscription", true);
+        item.put("cadence", signal.cadence());
+        item.put("confidence", signal.confidence());
+        item.put("avgIntervalDays", signal.avgIntervalDays());
+        item.put("amountCv", signal.amountCv());
+        item.put("evidence", buildEvidence(signal, aggregate));
+        item.put("monthlyEquivalent", round(monthlyEquivalentFromCadence(aggregate.avgAmount(), signal.cadence())));
+        item.put("detectionSource", "pattern");
+        item.put("periodSpend", round(aggregate.totalSpend()));
+        item.put("drillDown", drillMerchantPeriod(aggregate.token(), aggregate.displayName(), range));
+        return item;
+    }
+
+    private Map<String, Object> mapCategorySubscription(Map<String, Object> aggregate,
+                                                      AnalyticsDateRange.HalfOpen range) {
+        String token = String.valueOf(aggregate.get("merchantToken"));
+        String displayName = String.valueOf(aggregate.get("displayName"));
+        int txnCount = ((Number) aggregate.get("txnCount")).intValue();
+        double totalSpend = ((Number) aggregate.get("totalSpend")).doubleValue();
+        int monthSpan = Math.max(1, ((Number) aggregate.get("monthSpan")).intValue());
+        double monthlyEq = totalSpend / monthSpan;
+        double conf = txnCount >= 3 ? 0.78 : txnCount >= 2 ? 0.72 : 0.65;
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("merchantToken", token);
+        item.put("displayName", displayName);
+        item.put("avgAmount", round(totalSpend / txnCount));
+        item.put("txnCount", txnCount);
+        item.put("lastSeen", aggregate.get("lastSeen"));
+        item.put("suspectedSubscription", true);
+        item.put("cadence", "category");
+        item.put("confidence", conf);
+        item.put("avgIntervalDays", 0);
+        item.put("amountCv", 0);
+        item.put("evidence", txnCount + " txns in subscription category · "
+                + formatMoney(totalSpend) + " in period");
+        item.put("monthlyEquivalent", round(monthlyEq));
+        item.put("detectionSource", "category");
+        item.put("periodSpend", round(totalSpend));
+        item.put("drillDown", drillCategoryMerchant(token, displayName, range));
+        return item;
+    }
+
+    private Map<String, Object> loadCategorySubscriptionSummary(AnalyticsDateRange.HalfOpen range) {
+        String userId = userKey();
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "select count(distinct v.id) as txn_count, "
+                        + "coalesce(sum(v.amount), 0) as total_spend, "
+                        + "count(distinct v.merchant_token) as merchant_count "
+                        + "from v_transaction_analytics v "
+                        + "inner join transaction t on t.id = v.id "
+                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "and v.amount > 0 and " + subscriptionCategoryPredicate("v")
+                        + "and v.txn_date >= ? and v.txn_date < ? "
+                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
+                Date.valueOf(range.startInclusive()),
+                Date.valueOf(range.endExclusive()),
+                userId, userId);
+        Map<String, Object> row = rows.isEmpty() ? Map.of() : rows.get(0);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("txnCount", intVal(row, "txn_count"));
+        out.put("totalSpend", dblVal(row, "total_spend"));
+        out.put("merchantCount", intVal(row, "merchant_count"));
+        return out;
+    }
+
+    private List<Map<String, Object>> loadCategorySubscriptionMerchants(AnalyticsDateRange.HalfOpen range) {
+        String userId = userKey();
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "select v.merchant_token, v.opponent_name, v.transaction_desc, v.amount, v.txn_date "
+                        + "from v_transaction_analytics v "
+                        + "inner join transaction t on t.id = v.id "
+                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "and v.amount > 0 and " + subscriptionCategoryPredicate("v")
+                        + "and v.txn_date >= ? and v.txn_date < ? "
+                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
+                Date.valueOf(range.startInclusive()),
+                Date.valueOf(range.endExclusive()),
+                userId, userId);
+
+        Map<String, CategoryMerchantAggregate> aggregates = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            String raw = MerchantNormalizer.rawMerchant(
+                    stringVal(row.get("opponent_name")),
+                    stringVal(row.get("transaction_desc")));
+            String token = MerchantNormalizer.normalizeToken(raw);
+            if (token.isEmpty()) {
+                token = stringVal(row.get("merchant_token"));
+            }
+            if (token.isEmpty()) {
+                continue;
+            }
+            LocalDate txnDate = toLocalDate(row.get("txn_date"));
+            double amount = ((Number) row.get("amount")).doubleValue();
+            aggregates.computeIfAbsent(token, k -> new CategoryMerchantAggregate(k, raw))
+                    .add(txnDate, amount, raw);
+        }
+
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (CategoryMerchantAggregate aggregate : aggregates.values()) {
+            if (aggregate.txnCount() < MIN_CATEGORY_MERCHANT_TXNS) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("merchantToken", aggregate.token());
+            item.put("displayName", aggregate.displayName());
+            item.put("txnCount", aggregate.txnCount());
+            item.put("totalSpend", round(aggregate.totalSpend()));
+            item.put("monthSpan", aggregate.monthSpan());
+            item.put("lastSeen", Date.valueOf(aggregate.lastSeen()));
+            out.add(item);
+        }
+        out.sort(Comparator.comparingDouble(r -> -((Number) r.get("totalSpend")).doubleValue()));
+        return out;
+    }
+
+    private Map<String, MerchantAggregate> aggregateMerchantsInPeriod(AnalyticsDateRange.HalfOpen range) {
+        Map<String, MerchantAggregate> aggregates = new LinkedHashMap<>();
+        for (Map<String, Object> row : loadExpenseRowsInPeriod(range)) {
+            String raw = MerchantNormalizer.rawMerchant(
+                    stringVal(row.get("opponent_name")),
+                    stringVal(row.get("transaction_desc")));
+            String token = MerchantNormalizer.normalizeToken(raw);
+            if (token.isEmpty()) {
+                continue;
+            }
+            LocalDate txnDate = toLocalDate(row.get("txn_date"));
+            double amount = ((Number) row.get("amount")).doubleValue();
+            aggregates.computeIfAbsent(token, MerchantAggregate::new)
+                    .add(txnDate, amount, raw);
+        }
+        return aggregates;
+    }
+
+    private List<Map<String, Object>> loadExpenseRowsInPeriod(AnalyticsDateRange.HalfOpen range) {
+        String userId = userKey();
+        return jdbcTemplate.queryForList(
+                "select v.opponent_name, v.transaction_desc, v.amount, v.txn_date "
+                        + "from v_transaction_analytics v "
+                        + "inner join transaction t on t.id = v.id "
+                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "and v.amount > 0 and v.txn_date >= ? and v.txn_date < ? "
+                        + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
+                        + "order by v.txn_date desc",
+                Date.valueOf(range.startInclusive()),
+                Date.valueOf(range.endExclusive()),
+                userId, userId);
+    }
+
+    private AnalyticsDateRange.HalfOpen resolvePeriod(String startStr, String endStr) {
+        try {
+            java.util.Date[] dates = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(startStr, endStr);
+            LocalDate start = fromUtilDate(dates[0]);
+            LocalDate endInclusive = fromUtilDate(dates[1]);
+            return new AnalyticsDateRange.HalfOpen(start, endInclusive.plusDays(1));
+        } catch (AppServiceException e) {
+            return AnalyticsDateRange.calendarYear(LocalDate.now().getYear());
+        }
+    }
+
+    private static LocalDate fromUtilDate(java.util.Date date) {
+        return new Date(date.getTime()).toLocalDate();
+    }
+
+    private static double monthlyEquivalentFromCadence(double avgAmount, String cadence) {
+        if (cadence == null) {
+            return avgAmount;
+        }
+        return switch (cadence) {
+            case "quarterly" -> avgAmount / 3;
+            case "yearly" -> avgAmount / 12;
+            default -> avgAmount;
+        };
+    }
+
+    private static String subscriptionCategoryPredicate(String alias) {
+        String codes = SUBSCRIPTION_CATEGORY_CODES.stream()
+                .map(code -> "'" + code + "'")
+                .collect(java.util.stream.Collectors.joining(", "));
+        return "(" + alias + ".category_name like '%订阅%' "
+                + "or " + alias + ".category_name like '%会员%' "
+                + "or " + alias + ".category_code in (" + codes + ")) ";
+    }
+
+    private static Map<String, String> drillCategoryMerchant(String token,
+                                                             String displayName,
+                                                             AnalyticsDateRange.HalfOpen range) {
+        Map<String, String> drill = drillMerchantPeriod(token, displayName, range);
+        drill.put("consumeName", "订阅");
+        return drill;
+    }
+
+    private static Map<String, String> drillMerchantPeriod(String token,
+                                                           String displayName,
+                                                           AnalyticsDateRange.HalfOpen range) {
+        Map<String, String> drill = new LinkedHashMap<>();
+        drill.put("transactionDateStartStr", formatUsDate(range.startInclusive()));
+        drill.put("transactionDateEndStr", formatUsDate(range.endExclusive().minusDays(1)));
+        drill.put("txnTypes", "expense");
+        drill.put("merchantToken", token);
+        drill.put("merchantLabel", displayName);
+        return drill;
+    }
+
+    private static String formatUsDate(LocalDate date) {
+        return String.format("%02d/%02d/%04d", date.getMonthValue(), date.getDayOfMonth(), date.getYear());
+    }
+
+    private static String formatMoney(double amount) {
+        return String.format("¥%,.2f", amount);
+    }
+
+    private static int intVal(Map<String, Object> m, String key) {
+        if (m == null || m.get(key) == null) {
+            return 0;
+        }
+        return ((Number) m.get(key)).intValue();
+    }
+
+    private static double dblVal(Map<String, Object> m, String key) {
+        if (m == null || m.get(key) == null) {
+            return 0;
+        }
+        return ((Number) m.get(key)).doubleValue();
     }
 
     private Map<String, Object> buildDriftRow(String token,
@@ -462,6 +748,10 @@ public class MerchantMiningService {
             return points.stream().mapToDouble(SubscriptionDetector.TxnPoint::amount).average().orElse(0);
         }
 
+        double totalSpend() {
+            return points.stream().mapToDouble(SubscriptionDetector.TxnPoint::amount).sum();
+        }
+
         LocalDate lastSeen() {
             return points.stream().map(SubscriptionDetector.TxnPoint::date).max(LocalDate::compareTo).orElse(LocalDate.now());
         }
@@ -480,6 +770,58 @@ public class MerchantMiningService {
 
         List<SubscriptionDetector.TxnPoint> points() {
             return List.copyOf(points);
+        }
+    }
+
+    static final class CategoryMerchantAggregate {
+        private final String token;
+        private final List<SubscriptionDetector.TxnPoint> points = new ArrayList<>();
+        private final Map<String, Integer> rawCounts = new HashMap<>();
+        private String bestRaw = "";
+        private final Set<String> months = new LinkedHashSet<>();
+
+        CategoryMerchantAggregate(String token, String raw) {
+            this.token = token;
+            if (raw != null && !raw.isBlank()) {
+                bestRaw = raw;
+                rawCounts.put(raw, 1);
+            }
+        }
+
+        void add(LocalDate date, double amount, String raw) {
+            points.add(new SubscriptionDetector.TxnPoint(date, amount));
+            months.add(date.getYear() + "-" + String.format("%02d", date.getMonthValue()));
+            if (raw != null && !raw.isBlank()) {
+                rawCounts.merge(raw, 1, Integer::sum);
+                if (rawCounts.get(raw) > rawCounts.getOrDefault(bestRaw, 0)) {
+                    bestRaw = raw;
+                }
+            }
+        }
+
+        String token() {
+            return token;
+        }
+
+        int txnCount() {
+            return points.size();
+        }
+
+        double totalSpend() {
+            return points.stream().mapToDouble(SubscriptionDetector.TxnPoint::amount).sum();
+        }
+
+        int monthSpan() {
+            return Math.max(1, months.size());
+        }
+
+        LocalDate lastSeen() {
+            return points.stream().map(SubscriptionDetector.TxnPoint::date).max(LocalDate::compareTo)
+                    .orElse(LocalDate.now());
+        }
+
+        String displayName() {
+            return MerchantNormalizer.displayName(token, bestRaw);
         }
     }
 }

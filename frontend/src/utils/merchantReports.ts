@@ -14,6 +14,8 @@ export type MerchantSubscription = {
   amountCv?: number
   evidence?: string
   monthlyEquivalent: number
+  periodSpend?: number
+  detectionSource?: 'pattern' | 'category'
   drillDown?: Record<string, string>
 }
 
@@ -24,6 +26,13 @@ export type SubscriptionReport = {
     monthlyTotal: number
     annualizedTotal: number
     optimizableAmount: number
+    patternCount?: number
+    categoryOnlyCount?: number
+    categoryTxnCount?: number
+    categoryTotalSpend?: number
+    categoryMerchantCount?: number
+    periodStart?: string
+    periodEnd?: string
   }
 }
 
@@ -68,9 +77,26 @@ export type MerchantDriftReport = {
 export function buildSubscriptionKpis(report: SubscriptionReport) {
   const s = report.summary
   return [
-    { key: 'count', label: 'Subscriptions', value: String(s.count) },
-    { key: 'monthly', label: 'Monthly total', value: formatMoney(s.monthlyTotal), tone: 'expense' as const },
-    { key: 'annual', label: 'Annualized', value: formatMoney(s.annualizedTotal), tone: 'expense' as const },
+    { key: 'count', label: 'Merchants', value: String(s.count) },
+    {
+      key: 'pattern',
+      label: 'Pattern detected',
+      value: String(s.patternCount ?? 0),
+      hint: 'Recurring cadence + stable amount',
+    },
+    {
+      key: 'category',
+      label: 'Category only',
+      value: String(s.categoryOnlyCount ?? 0),
+      hint: 'Tagged subscription category, no pattern match',
+    },
+    { key: 'monthly', label: 'Monthly eq.', value: formatMoney(s.monthlyTotal), tone: 'expense' as const },
+    {
+      key: 'ledger',
+      label: 'Category ledger',
+      value: `${s.categoryTxnCount ?? 0} txns · ${formatMoney(s.categoryTotalSpend ?? 0)}`,
+      hint: `${s.categoryMerchantCount ?? 0} merchants in period`,
+    },
     {
       key: 'opt',
       label: 'Optimizable / yr',
@@ -78,6 +104,14 @@ export function buildSubscriptionKpis(report: SubscriptionReport) {
       tone: s.optimizableAmount > 0 ? 'warn' as const : 'neutral' as const,
     },
   ]
+}
+
+export function formatSubscriptionPeriodLabel(report: SubscriptionReport): string {
+  const s = report.summary
+  if (s.periodStart && s.periodEnd) {
+    return `${s.periodStart} → ${s.periodEnd}`
+  }
+  return 'Current year'
 }
 
 export function buildConcentrationKpis(report: MerchantConcentrationReport) {
@@ -121,16 +155,36 @@ export function buildDriftChart(report: MerchantDriftReport): EChartsOption {
   }
 }
 
-export function buildSubscriptionInsights(report: SubscriptionReport) {
+export function buildSubscriptionInsights(report: SubscriptionReport, periodLabel?: string) {
   const s = report.summary
+  const period = periodLabel || formatSubscriptionPeriodLabel(report)
   const bullets = [
     {
+      text: `Period: ${period}. Two detection paths — Pattern (≥3 charges, stable cadence/amount) and Category (ledger tagged 订阅/会员).`,
+      warn: false,
+    },
+    {
       text: s.count
-        ? `${s.count} suspected subscription(s) totaling ${formatMoney(s.monthlyTotal)}/month.`
-        : 'No recurring subscriptions detected — refresh merchant profiles after importing transactions.',
+        ? `${s.count} merchant(s) · ${formatMoney(s.monthlyTotal)}/mo equivalent (${s.patternCount ?? 0} pattern, ${s.categoryOnlyCount ?? 0} category-only).`
+        : 'No subscriptions in this period — widen the date range or tag transactions in a subscription category.',
       warn: s.count === 0,
     },
   ]
+  if ((s.categoryTxnCount ?? 0) > 0) {
+    const listed = s.count ?? 0
+    const merchants = s.categoryMerchantCount ?? 0
+    const gap = merchants - listed
+    bullets.push({
+      text: `Category ledger in period: ${s.categoryTxnCount} transactions · ${formatMoney(s.categoryTotalSpend ?? 0)} across ${merchants} merchants.`,
+      warn: false,
+    })
+    if (gap > 0) {
+      bullets.push({
+        text: `${gap} subscription-category merchant(s) may be missing from the table (single charge or below pattern threshold) — review Transactions filtered by subscription category.`,
+        warn: true,
+      })
+    }
+  }
   if (s.optimizableAmount > 0) {
     bullets.push({
       text: `Up to ${formatMoney(s.optimizableAmount)}/year may be optimizable (lower-confidence recurring charges).`,
@@ -148,9 +202,22 @@ export function buildSubscriptionInsights(report: SubscriptionReport) {
 }
 
 export function formatStability(sub: MerchantSubscription): string {
+  if (sub.detectionSource === 'category') {
+    return sub.evidence || 'Tagged in subscription category'
+  }
   const cv = sub.amountCv != null ? `${Math.round(sub.amountCv * 100)}% amount CV` : ''
   const interval = sub.avgIntervalDays ? `~${Math.round(sub.avgIntervalDays)}d interval` : ''
   return [interval, cv].filter(Boolean).join(' · ') || '—'
+}
+
+export function formatCadenceLabel(cadence: string): string {
+  switch (cadence) {
+    case 'category': return 'Category'
+    case 'monthly': return 'Monthly'
+    case 'quarterly': return 'Quarterly'
+    case 'yearly': return 'Yearly'
+    default: return cadence
+  }
 }
 
 export function driftBucketLabel(bucket: 'new' | 'growing' | 'declining'): string {

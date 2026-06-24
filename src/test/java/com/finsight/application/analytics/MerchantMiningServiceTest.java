@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -65,8 +66,7 @@ class MerchantMiningServiceTest {
 
     @Test
     void subscriptionReport_includesSummaryTotals() {
-        when(jdbcTemplate.queryForList(contains("is_subscription = 1"), eq("user1")))
-                .thenReturn(List.of(profileRow()));
+        stubSubscriptionPeriodQueries(netflixRows());
 
         @SuppressWarnings("unchecked")
         Map<String, Object> out = service.subscriptionReport();
@@ -75,6 +75,7 @@ class MerchantMiningServiceTest {
 
         assertNotNull(summary.get("monthlyTotal"));
         assertNotNull(summary.get("optimizableAmount"));
+        assertNotNull(summary.get("periodStart"));
         assertTrue(((Number) summary.get("count")).intValue() >= 1);
     }
 
@@ -105,8 +106,7 @@ class MerchantMiningServiceTest {
 
     @Test
     void subscriptionReport_exposesEvidenceAndDrillDown() {
-        when(jdbcTemplate.queryForList(contains("is_subscription = 1"), eq("user1")))
-                .thenReturn(List.of(profileRowWithEvidence()));
+        stubSubscriptionPeriodQueries(netflixRows());
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> subs = (List<Map<String, Object>>) service.subscriptionReport().get("subscriptions");
@@ -147,12 +147,45 @@ class MerchantMiningServiceTest {
         assertNotNull(newMerchants.get(0).get("drillDown"));
     }
 
+    private void stubSubscriptionPeriodQueries(List<Map<String, Object>> patternRows) {
+        int year = LocalDate.now().getYear();
+        Date periodStart = Date.valueOf(LocalDate.of(year, 1, 1));
+        Date periodEnd = Date.valueOf(LocalDate.of(year + 1, 1, 1));
+
+        when(jdbcTemplate.queryForList(
+                argThat((String sql) -> sql != null && sql.contains("v.txn_date >=") && sql.contains("order by v.txn_date desc")),
+                eq(periodStart),
+                eq(periodEnd),
+                eq("user1"),
+                eq("user1")))
+                .thenReturn(rawList(patternRows));
+        when(jdbcTemplate.queryForList(
+                argThat((String sql) -> sql != null && sql.contains("count(distinct v.id)")),
+                eq(periodStart),
+                eq(periodEnd),
+                eq("user1"),
+                eq("user1")))
+                .thenReturn(rawList(List.of(Map.of("txn_count", 0, "total_spend", 0, "merchant_count", 0))));
+        when(jdbcTemplate.queryForList(
+                argThat((String sql) -> sql != null && sql.contains("v.merchant_token, v.opponent_name")),
+                eq(periodStart),
+                eq(periodEnd),
+                eq("user1"),
+                eq("user1")))
+                .thenReturn(rawList(List.of()));
+    }
+
     private static List<Map<String, Object>> netflixRows() {
         return List.of(
                 txnRow("2026-01-05", 15.99, "Netflix.com"),
                 txnRow("2026-02-04", 15.99, "Netflix Monthly"),
                 txnRow("2026-03-05", 16.00, "Netflix.com 883920"),
                 txnRow("2026-04-04", 15.99, "NETFLIX.COM"));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static List rawList(List<Map<String, Object>> rows) {
+        return rows;
     }
 
     private static Map<String, Object> txnRow(String date, double amount, String desc) {

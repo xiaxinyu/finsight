@@ -10,6 +10,11 @@ import {
   refreshMerchantProfiles,
 } from '../../api/analytics'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
+import { useFilterApply } from '../../hooks/useFilterApply'
+import { FilterToolbar } from '../../components/FilterToolbar'
+import { PeriodRangePicker } from '../../components/PeriodRangePicker'
+import { periodToStrings } from '../../utils/periodStrings'
+import { defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { DataQualityStrip } from '../../components/DataQualityStrip'
@@ -28,7 +33,9 @@ import {
   buildDriftChart,
   buildSubscriptionInsights,
   buildSubscriptionKpis,
+  formatCadenceLabel,
   formatStability,
+  formatSubscriptionPeriodLabel,
   type MerchantConcentrationRow,
   type MerchantDriftRow,
   type MerchantSubscription,
@@ -47,18 +54,39 @@ type DrillableRow = {
   drillDown?: Record<string, string>
 }
 
+type SubscriptionFilters = {
+  period: [dayjs.Dayjs, dayjs.Dayjs]
+}
+
 export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
   const { flags } = useFeatureFlags()
   const qc = useQueryClient()
   const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
   const [year, setYear] = useState(dayjs().year())
   const [refreshing, setRefreshing] = useState(false)
+  const subscriptionInitial: SubscriptionFilters = { period: defaultPeriodRange() }
+  const {
+    draft: subDraft,
+    setDraft: setSubDraft,
+    applied: subApplied,
+    applying: subApplying,
+    isDirty: subDirty,
+    apply: applySub,
+  } = useFilterApply(subscriptionInitial)
 
   const enabled = flags.merchantMining
+  const subPeriodParams = useMemo(() => periodToStrings(subApplied.period), [subApplied.period])
+  const subPeriodLabel = useMemo(
+    () => formatPeriodPreview(subApplied.period[0], subApplied.period[1]),
+    [subApplied.period],
+  )
 
   const subscriptionsQuery = useQuery({
-    queryKey: ['merchant-subscriptions'],
-    queryFn: fetchSubscriptionReport,
+    queryKey: ['merchant-subscriptions', subPeriodParams],
+    queryFn: () => fetchSubscriptionReport({
+      transactionDateStartStr: subPeriodParams.start,
+      transactionDateEndStr: subPeriodParams.end,
+    }),
     enabled: enabled && (mode === 'subscriptions' || mode === 'concentration'),
   })
 
@@ -77,6 +105,7 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
   const loading = subscriptionsQuery.isLoading || subscriptionsQuery.isFetching
     || concentrationQuery.isLoading || concentrationQuery.isFetching
     || driftQuery.isLoading || driftQuery.isFetching
+    || (mode === 'subscriptions' && subApplying)
 
   const error = subscriptionsQuery.error || concentrationQuery.error || driftQuery.error
   const isError = subscriptionsQuery.isError || concentrationQuery.isError || driftQuery.isError
@@ -121,8 +150,10 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
     [subscriptionsQuery.data],
   )
   const subscriptionInsights = useMemo(
-    () => (subscriptionsQuery.data ? buildSubscriptionInsights(subscriptionsQuery.data) : []),
-    [subscriptionsQuery.data],
+    () => (subscriptionsQuery.data
+      ? buildSubscriptionInsights(subscriptionsQuery.data, subPeriodLabel)
+      : []),
+    [subscriptionsQuery.data, subPeriodLabel],
   )
   const concentrationKpis = useMemo(
     () => (concentrationQuery.data ? buildConcentrationKpis(concentrationQuery.data) : []),
@@ -155,7 +186,25 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
     `${row.displayName}: ${formatMoney(row.priorSpend)} → ${formatMoney(row.currentSpend)} (Δ ${formatMoney(row.deltaAmount)}). Click to review underlying transactions.`
   )
 
-  const toolbar = (
+  const toolbar = mode === 'subscriptions' ? (
+    <FilterToolbar
+      loading={loading}
+      dirty={subDirty}
+      onApply={() => applySub(() => qc.invalidateQueries({ queryKey: ['merchant-subscriptions'] }))}
+      actions={(
+        <Button size="small" icon={<ReloadOutlined />} loading={refreshing} onClick={onRefresh}>
+          Refresh merchants
+        </Button>
+      )}
+    >
+      <PeriodRangePicker
+        size="small"
+        disabled={loading}
+        value={subDraft.period}
+        onChange={(range) => setSubDraft((d) => ({ ...d, period: range }))}
+      />
+    </FilterToolbar>
+  ) : (
     <div className="fs-cash-risk-toolbar">
       {mode === 'drift' && (
         <Select
@@ -175,7 +224,9 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
   return (
     <DataPageLayout
       title={title}
-      subtitle={subtitle}
+      subtitle={mode === 'subscriptions'
+        ? `${subtitle ?? 'Recurring charges'} · ${subPeriodLabel}`
+        : subtitle}
       icon={<BarChartOutlined />}
       className="fs-data-page--dense fs-data-page--reports"
       toolbar={toolbar}
@@ -197,25 +248,59 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
       {enabled && mode === 'subscriptions' && subscriptionsQuery.data && (
         <>
           <ReportKpiStrip items={subscriptionKpis} />
-          <InsightPanel bullets={subscriptionInsights} title="Subscriptions" />
+          <InsightPanel bullets={subscriptionInsights} title="How this report works" />
           <FsDataTable
-            title="Suspected subscriptions"
+            title={`Suspected subscriptions · ${subscriptionsQuery.data ? formatSubscriptionPeriodLabel(subscriptionsQuery.data) : subPeriodLabel}`}
             columns={[
-              { title: 'Merchant', dataIndex: 'displayName', sortType: 'text' },
-              { title: 'Cadence', dataIndex: 'cadence', width: 100 },
+              { title: 'Merchant', dataIndex: 'displayName', sortType: 'text', ellipsis: true },
               {
-                title: 'Monthly eq.',
-                dataIndex: 'monthlyEquivalent',
+                title: 'Source',
+                dataIndex: 'detectionSource',
+                width: 92,
+                render: (v: string) => (
+                  <Tag color={v === 'category' ? 'geekblue' : 'blue'}>
+                    {v === 'category' ? 'Category' : 'Pattern'}
+                  </Tag>
+                ),
+              },
+              {
+                title: 'Cadence',
+                dataIndex: 'cadence',
+                width: 92,
+                render: (v: string) => formatCadenceLabel(String(v || 'monthly')),
+              },
+              {
+                title: 'Period spend',
+                dataIndex: 'periodSpend',
+                cellType: 'money',
                 unit: 'CNY',
                 align: 'right',
                 sortType: 'number',
+                width: 108,
               },
-              { title: 'Avg charge', dataIndex: 'avgAmount', unit: 'CNY', align: 'right', sortType: 'number' },
+              {
+                title: 'Monthly eq.',
+                dataIndex: 'monthlyEquivalent',
+                cellType: 'money',
+                unit: 'CNY',
+                align: 'right',
+                sortType: 'number',
+                width: 108,
+              },
+              {
+                title: 'Avg charge',
+                dataIndex: 'avgAmount',
+                cellType: 'money',
+                unit: 'CNY',
+                align: 'right',
+                sortType: 'number',
+                width: 108,
+              },
               {
                 title: 'Last charge',
                 dataIndex: 'lastSeen',
-                width: 110,
-                render: (v: string) => (v ? String(v).slice(0, 10) : '—'),
+                width: 108,
+                sortType: 'date',
               },
               {
                 title: 'Stability',

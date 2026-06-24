@@ -9,9 +9,11 @@ import { rowAmount, rowTxnKind } from '../utils/transactionAmount'
 type Props = {
   row: TransactionRow
   pageMaxAmount?: number
+  /** Relative amount bar behind the figure (off by default for classic ledger layout). */
+  showBar?: boolean
 }
 
-export function TransactionAmountCell({ row, pageMaxAmount = 0 }: Props) {
+export function TransactionAmountCell({ row, pageMaxAmount = 0, showBar = true }: Props) {
   const kind = row.txnKind || rowTxnKind(row)
   const amount = rowAmount(row)
   const intensity = amountIntensity(amount, pageMaxAmount)
@@ -33,7 +35,7 @@ export function TransactionAmountCell({ row, pageMaxAmount = 0 }: Props) {
 
   return (
     <div className="fs-tx-amount-cell">
-      {pageMaxAmount > 0 && (
+      {showBar && pageMaxAmount > 0 && (
         <div className="fs-tx-amount-bar" aria-hidden>
           <div
             className={`fs-tx-amount-bar-fill fs-tx-amount-bar-fill--${kind}`}

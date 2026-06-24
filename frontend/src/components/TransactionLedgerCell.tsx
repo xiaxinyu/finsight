@@ -1,6 +1,7 @@
 import { Space, Tag, Tooltip, Typography } from 'antd'
 import type { TransactionRow } from '../api/transaction'
 import { cellText } from '../utils/cell'
+import { buildTransactionDisplay } from '../utils/transactionDisplay'
 import { detectTransactionRiskTags, riskTagMeta } from '../utils/transactionRisk'
 
 export function TransactionTypeBadge({ kind }: { kind: string }) {
@@ -20,20 +21,21 @@ type Props = {
 }
 
 export function TransactionLedgerCell({ row, pageMaxAmount = 0, showTags = true }: Props) {
-  const desc = cellText(row.transactionDesc) || '—'
-  const memo = cellText(row.demoArea)
+  const { title, subtitle, tooltip } = buildTransactionDisplay(row)
   const category = cellText(row.consumeName)
   const tags = detectTransactionRiskTags(row, { amountMax: pageMaxAmount })
-    .slice(0, 3)
+    .slice(0, 2)
 
   return (
     <div className="fs-tx-ledger-cell">
-      <Typography.Text strong className="fs-tx-ledger-title" ellipsis={{ tooltip: desc }}>
-        {desc}
-      </Typography.Text>
-      {memo ? (
-        <Typography.Text type="secondary" className="fs-tx-ledger-meta" ellipsis={{ tooltip: memo }}>
-          {memo}
+      <Tooltip title={tooltip !== title ? tooltip : undefined}>
+        <Typography.Text strong className="fs-tx-ledger-title" ellipsis>
+          {title}
+        </Typography.Text>
+      </Tooltip>
+      {subtitle ? (
+        <Typography.Text type="secondary" className="fs-tx-ledger-meta" ellipsis={{ tooltip: subtitle }}>
+          {subtitle}
         </Typography.Text>
       ) : null}
       {showTags && (category || tags.length > 0) && (

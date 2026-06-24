@@ -344,7 +344,6 @@ export function TransactionsPage() {
         title: <TableHeader name="Amount" unit="CNY" />,
         dataIndex: 'editAmount',
         width: 112,
-        fixed: 'left',
         align: 'right',
         sorter: true,
         render: (_, r) => <TransactionAmountCell row={r} pageMaxAmount={pageMaxAmount} />,
@@ -498,6 +497,21 @@ export function TransactionsPage() {
           loading={tableLoading || applying}
           onApply={reload}
           dirty={isDirty}
+          summary={(
+            <TransactionKpiStrip
+              variant="compact"
+              total={stats?.total}
+              income={stats?.income}
+              expense={stats?.expense}
+              net={stats?.net}
+              unclassified={stats?.unclassified}
+              transfers={stats?.transfers}
+              truncated={stats?.truncated}
+              loading={statsBusy}
+              unclassifiedActive={applied.unclassified}
+              onUnclassifiedClick={toggleUnclassifiedFilter}
+            />
+          )}
         >
           <PeriodRangePicker
             size="small"
@@ -531,18 +545,6 @@ export function TransactionsPage() {
         </FilterToolbar>
       )}
     >
-      <TransactionKpiStrip
-        total={stats?.total}
-        income={stats?.income}
-        expense={stats?.expense}
-        net={stats?.net}
-        unclassified={stats?.unclassified}
-        transfers={stats?.transfers}
-        truncated={stats?.truncated}
-        loading={statsBusy}
-        unclassifiedActive={applied.unclassified}
-        onUnclassifiedClick={toggleUnclassifiedFilter}
-      />
       <TransactionActiveFilters
         chips={activeFilterChips}
         impact={{
