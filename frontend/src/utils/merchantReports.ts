@@ -125,32 +125,42 @@ export function buildConcentrationKpis(report: MerchantConcentrationReport) {
 
 export function buildConcentrationChart(report: MerchantConcentrationReport): EChartsOption {
   const top = report.merchants.slice(0, 10)
+  const names = top.map((m) => m.displayName)
+  const shares = top.map((m) => m.sharePct)
   return {
-    grid: { left: 48, right: 16, top: 48, bottom: 28 },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: top.map((m) => m.displayName), axisLabel: { fontSize: 10, rotate: 25 } },
-    yAxis: { type: 'value', axisLabel: { formatter: (v: number) => `${v}%` } },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (v) => `${Number(v).toFixed(1)}%`,
+    },
+    xAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
+    yAxis: { type: 'category', data: [...names].reverse() },
     series: [{
       name: 'Share',
       type: 'bar',
-      data: top.map((m) => m.sharePct),
+      data: [...shares].reverse(),
       itemStyle: { color: '#2563eb' },
-      barMaxWidth: 28,
+      barMaxWidth: 22,
     }],
   }
 }
 
 export function buildDriftChart(report: MerchantDriftReport): EChartsOption {
   const movers = report.movers.slice(0, 12)
+  const names = movers.map((m) => m.displayName)
   return {
-    grid: { left: 48, right: 16, top: 48, bottom: 28 },
-    tooltip: { trigger: 'axis' },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (v) => formatMoney(Number(v)),
+    },
     legend: { data: [String(report.priorYear), String(report.year)], top: 4 },
-    xAxis: { type: 'category', data: movers.map((m) => m.displayName), axisLabel: { fontSize: 10, rotate: 25 } },
-    yAxis: { type: 'value' },
+    grid: { left: 8, right: 16, top: 48, bottom: 8, containLabel: true },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: [...names].reverse(), axisLabel: { interval: 0 } },
     series: [
-      { name: String(report.priorYear), type: 'bar', data: movers.map((m) => m.priorSpend), itemStyle: { color: '#94a3b8' } },
-      { name: String(report.year), type: 'bar', data: movers.map((m) => m.currentSpend), itemStyle: { color: '#2563eb' } },
+      { name: String(report.priorYear), type: 'bar', data: [...movers.map((m) => m.priorSpend)].reverse(), itemStyle: { color: '#94a3b8' }, barMaxWidth: 14 },
+      { name: String(report.year), type: 'bar', data: [...movers.map((m) => m.currentSpend)].reverse(), itemStyle: { color: '#2563eb' }, barMaxWidth: 14 },
     ],
   }
 }

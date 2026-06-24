@@ -53,6 +53,8 @@ type Props<T> = {
   onRow?: TableProps<T>['onRow']
   locale?: TableProps<T>['locale']
   rowExplanation?: (record: T) => string | undefined
+  /** Fixed column widths — prevents Change % / Contribution overlap in dense report tables. */
+  fixedLayout?: boolean
 }
 
 function TwoLineTitle({ name, unit }: { name: string; unit?: string }) {
@@ -145,6 +147,7 @@ export function FsDataTable<T extends Record<string, unknown>>({
   onRow,
   locale,
   rowExplanation,
+  fixedLayout = true,
 }: Props<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -215,13 +218,14 @@ export function FsDataTable<T extends Record<string, unknown>>({
   return (
     <ContentCard title={title} className="fs-table-card" size="small">
       <Table<T>
-        className="fs-data-table fs-data-table--encoded"
+        className={`fs-data-table fs-data-table--encoded${fixedLayout ? ' fs-data-table--fixed' : ''}`}
         size={size}
         loading={loading}
         rowKey={rowKey}
         dataSource={sortedData}
         columns={antColumns}
         pagination={false}
+        tableLayout={fixedLayout ? 'fixed' : undefined}
         scroll={scroll ?? { y: 360 }}
         rowClassName={() => 'fs-table-row'}
         onRow={mergedOnRow}

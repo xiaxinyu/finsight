@@ -126,17 +126,28 @@ export function buildTrendInsights(report: TrendChangesReport) {
 }
 
 function contributionBarOption(labels: string[], values: number[], color: string): EChartsOption {
+  const ordered = labels.map((label, i) => ({ label, value: Number(values[i] || 0) }))
   return {
-    grid: { left: 48, right: 16, top: 48, bottom: 28 },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10, rotate: 25 } },
-    yAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (v) => `${Number(v).toFixed(1)}%`,
+    },
+    xAxis: {
+      type: 'value',
+      axisLabel: { formatter: '{value}%' },
+    },
+    yAxis: {
+      type: 'category',
+      data: ordered.map((r) => r.label).reverse(),
+      axisLabel: { interval: 0 },
+    },
     series: [{
       name: 'Contribution',
       type: 'bar',
-      data: values,
+      data: ordered.map((r) => r.value).reverse(),
       itemStyle: { color },
-      barMaxWidth: 28,
+      barMaxWidth: 22,
     }],
   }
 }

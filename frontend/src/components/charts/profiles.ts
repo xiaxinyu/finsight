@@ -2,10 +2,15 @@ import type { EChartsOption, SeriesOption } from 'echarts'
 import {
   axisLabelInterval,
   axisLabelRotation,
+  categoryAxisBottomMargin,
+  categoryLabelRotation,
+  categoryLabelWidth,
   daySpan,
   formatAxisDateLabel,
   formatCategories,
   hidePointMarkers,
+  isDateLikeLabel,
+  truncateCategoryLabel,
 } from './axis'
 
 const FONT_AXIS = 11
@@ -97,7 +102,8 @@ function enhanceSeries(series: SeriesOption[] | undefined, pointCount: number): 
 function categoryXAxis(labels: string[], boundaryGap = true): EChartsOption['xAxis'] {
   const formatted = formatCategories(labels)
   const count = daySpan(formatted)
-  const rotate = axisLabelRotation(count)
+  const categorical = formatted.some((l) => l && !isDateLikeLabel(l))
+  const rotate = categorical ? categoryLabelRotation(formatted) : axisLabelRotation(count)
   return {
     type: 'category',
     boundaryGap,
@@ -105,20 +111,27 @@ function categoryXAxis(labels: string[], boundaryGap = true): EChartsOption['xAx
     axisLabel: {
       fontSize: FONT_AXIS,
       rotate,
-      interval: axisLabelInterval(count),
-      formatter: (v: string) => formatAxisDateLabel(v),
+      interval: categorical ? 0 : axisLabelInterval(count),
+      hideOverlap: true,
+      formatter: (v: string) => (
+        categorical ? truncateCategoryLabel(v, rotate > 0 ? 10 : 14) : formatAxisDateLabel(v)
+      ),
     },
     axisTick: { alignWithLabel: true },
   }
 }
 
-function valueYAxis(): EChartsOption['yAxis'] {
+function valueAxis(): EChartsOption['yAxis'] {
   return {
     type: 'value',
     scale: true,
     axisLabel: { fontSize: FONT_AXIS },
     splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } },
   }
+}
+
+function valueYAxis(): EChartsOption['yAxis'] {
+  return valueAxis()
 }
 
 function optionalDataZoom(count: number): EChartsOption['dataZoom'] {
@@ -141,11 +154,18 @@ export function emptyChartOption(message = 'No data in range'): EChartsOption {
   }
 }
 
+function categoryGridBottom(labels: string[]): number {
+  const formatted = formatCategories(labels)
+  const categorical = formatted.some((l) => l && !isDateLikeLabel(l))
+  const rotate = categorical ? categoryLabelRotation(formatted) : axisLabelRotation(formatted.length)
+  return categoryAxisBottomMargin(rotate)
+}
+
 export function applyProfile(profile: string, option: EChartsOption): EChartsOption {
   const rawCats = ((option.xAxis as { data?: string[] })?.data) || []
   const cats = formatCategories(rawCats)
   const count = cats.length
-  const rotate = axisLabelRotation(count)
+  const gridBottom = rawCats.length ? categoryGridBottom(rawCats) : categoryAxisBottomMargin(axisLabelRotation(count))
 
   const base: EChartsOption = {
     textStyle: { fontFamily: 'inherit' },
@@ -163,7 +183,7 @@ export function applyProfile(profile: string, option: EChartsOption): EChartsOpt
       top: 4,
     },
     tooltip: baseTooltip(),
-    grid: { left: 56, right: 24, top: 52, bottom: rotate ? 88 : 72, containLabel: true },
+    grid: { left: 56, right: 24, top: 52, bottom: gridBottom, containLabel: true },
   }
 
   if (profile === 'donut') {
@@ -173,9 +193,35 @@ export function applyProfile(profile: string, option: EChartsOption): EChartsOpt
     }, option))
   }
 
+  if (profile === 'horizontalBar') {
+    const labels = ((option.yAxis as { data?: string[] })?.data) || []
+    const labelWidth = categoryLabelWidth(labels)
+    return merge(base, merge({
+      grid: { left: 8, right: 20, top: 40, bottom: 8, containLabel: true },
+      tooltip: {
+        ...baseTooltip(),
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+      },
+      xAxis: valueAxis() as EChartsOption['xAxis'],
+      yAxis: {
+        type: 'category',
+        data: labels,
+        axisLabel: {
+          fontSize: FONT_AXIS,
+          width: labelWidth,
+          overflow: 'truncate',
+          interval: 0,
+        },
+      },
+      series: enhanceSeries(option.series as SeriesOption[], labels.length),
+    }, option))
+  }
+
   if (profile === 'categoryBar') {
+    const bottom = rawCats.length ? categoryGridBottom(rawCats) : gridBottom
     const merged = merge(base, merge({
-      grid: { left: 72, right: 24, top: 48, bottom: rotate ? 88 : 72, containLabel: true },
+      grid: { left: 56, right: 24, top: 48, bottom, containLabel: true },
       xAxis: categoryXAxis(cats, true),
       yAxis: valueYAxis(),
       series: enhanceSeries(option.series as SeriesOption[], count),

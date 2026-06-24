@@ -349,7 +349,7 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
             <Col xs={24} lg={14}>
               <ContentCard title="Merchant share" size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
-                  profile="categoryBar"
+                  profile="horizontalBar"
                   height={360}
                   loading={loading}
                   option={concentrationChart}
@@ -408,7 +408,7 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
             <Col xs={24} lg={14}>
               <ContentCard title="Spend change by merchant" size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
-                  profile="compareBars"
+                  profile="horizontalBar"
                   height={360}
                   loading={loading}
                   option={driftChart}

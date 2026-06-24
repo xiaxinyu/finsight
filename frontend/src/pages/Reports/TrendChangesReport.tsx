@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Col, Row, Select } from 'antd'
+import { Alert, Col, Row, Select, Tooltip, Typography } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchTrends } from '../../api/analytics'
@@ -94,10 +94,18 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
       title: 'Name',
       dataIndex: 'label',
       sortType: 'text' as const,
+      width: 148,
       ellipsis: true,
-      render: (_: unknown, row: TrendMover) => row.label || row.categoryName || row.categoryCode,
+      render: (_: unknown, row: TrendMover) => {
+        const name = String(row.label || row.categoryName || row.categoryCode || '—')
+        return (
+          <Tooltip title={name}>
+            <Typography.Text ellipsis>{name}</Typography.Text>
+          </Tooltip>
+        )
+      },
     },
-    ...fromToCols,
+    ...fromToCols.map((col) => ({ ...col, width: 96 })),
     {
       title: 'Delta',
       dataIndex: 'deltaAmount',
@@ -105,17 +113,16 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
       unit: 'CNY',
       align: 'right' as const,
       sortType: 'number' as const,
+      width: 108,
     },
     {
       title: 'Change %',
       dataIndex: 'deltaPercent',
       align: 'right' as const,
       sortType: 'number' as const,
+      width: 80,
       render: (_: unknown, row: TrendMover) => (
-        <DeltaPercentCell
-          value={Number(row.deltaPercent ?? row.pctChange ?? 0)}
-          amount={row.deltaAmount}
-        />
+        <DeltaPercentCell value={Number(row.deltaPercent ?? row.pctChange ?? 0)} />
       ),
     },
     {
@@ -124,6 +131,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
       cellType: 'contribution' as const,
       align: 'right' as const,
       sortType: 'number' as const,
+      width: 124,
     },
   ]
 
@@ -181,7 +189,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
             <Col xs={24} lg={12}>
               <ContentCard title="Category contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
-                  profile="categoryBar"
+                  profile="horizontalBar"
                   height={280}
                   loading={loading}
                   option={categoryChart}
@@ -199,7 +207,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
             <Col xs={24} lg={12}>
               <ContentCard title="Merchant contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
-                  profile="categoryBar"
+                  profile="horizontalBar"
                   height={280}
                   loading={loading}
                   option={merchantChart}
@@ -221,9 +229,18 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
               <FsDataTable
                 title="Trend summary"
                 columns={[
-                  { title: 'Type', dataIndex: 'type', width: 130, render: (t: string) => trendTypeLabel(t) },
-                  { title: 'Label', dataIndex: 'label', sortType: 'text' },
-                  ...fromToCols,
+                  { title: 'Type', dataIndex: 'type', width: 120, render: (t: string) => trendTypeLabel(t) },
+                  {
+                    title: 'Label',
+                    dataIndex: 'label',
+                    sortType: 'text',
+                    ellipsis: true,
+                    render: (v: string) => (
+                      <Tooltip title={v}>
+                        <Typography.Text ellipsis>{v}</Typography.Text>
+                      </Tooltip>
+                    ),
+                  },
                   {
                     title: 'Delta',
                     dataIndex: 'deltaAmount',
@@ -231,14 +248,15 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                     unit: 'CNY',
                     align: 'right',
                     sortType: 'number',
+                    width: 108,
                   },
                   {
                     title: 'Change %',
                     dataIndex: 'deltaPercent',
                     cellType: 'deltaPercent',
-                    deltaAmountKey: 'deltaAmount',
                     align: 'right',
                     sortType: 'number',
+                    width: 80,
                   },
                   {
                     title: 'Contribution',
@@ -246,6 +264,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                     cellType: 'contribution',
                     align: 'right',
                     sortType: 'number',
+                    width: 124,
                   },
                 ]}
                 dataSource={data.trends}
@@ -273,7 +292,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                   ]),
                   style: { cursor: 'pointer' },
                 })}
-                scroll={{ y: 260 }}
+                scroll={{ x: 640, y: 260 }}
               />
             </Col>
 
@@ -289,7 +308,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                   onClick: () => openMoverDrill(record, 'category'),
                   style: { cursor: 'pointer' },
                 })}
-                scroll={{ y: 150 }}
+                scroll={{ x: 620, y: 150 }}
               />
               <FsDataTable
                 title="Top merchant movers"
@@ -302,7 +321,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                   onClick: () => openMoverDrill(record, 'merchant'),
                   style: { cursor: 'pointer' },
                 })}
-                scroll={{ y: 150 }}
+                scroll={{ x: 620, y: 150 }}
               />
             </Col>
           </Row>

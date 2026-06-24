@@ -184,10 +184,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
       sortType: 'number' as const,
       width: 88,
       render: (_: unknown, row: SpendingDriftRow) => (
-        <DeltaPercentCell
-          value={Number(comparable ? row.deltaPct : row.monthlyDeltaPct)}
-          amount={row.delta}
-        />
+        <DeltaPercentCell value={Number(comparable ? row.deltaPct : row.monthlyDeltaPct)} />
       ),
     },
     {
@@ -279,7 +276,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
                 styles={{ body: { padding: '8px 4px 4px' } }}
               >
                 <FsChart
-                  profile="categoryBar"
+                  profile="horizontalBar"
                   height={chartHeight}
                   loading={loading}
                   option={chartOption}
