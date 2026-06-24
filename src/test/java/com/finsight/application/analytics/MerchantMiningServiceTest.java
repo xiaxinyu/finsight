@@ -118,13 +118,15 @@ class MerchantMiningServiceTest {
 
     @Test
     void drift_splitsMerchantBuckets() {
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq(2026), eq("user1"), eq("user1")))
+        when(jdbcTemplate.queryForList(contains("v.txn_date >="),
+                eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2027, 1, 1)), eq("user1"), eq("user1")))
                 .thenReturn(List.of(
                         txnRow("2026-01-05", 100, "NewShop"),
                         txnRow("2026-02-04", 100, "NewShop"),
                         txnRow("2026-03-05", 150, "GrowingCo"),
                         txnRow("2026-04-04", 150, "GrowingCo")));
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq(2025), eq("user1"), eq("user1")))
+        when(jdbcTemplate.queryForList(contains("v.txn_date >="),
+                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2026, 1, 1)), eq("user1"), eq("user1")))
                 .thenReturn(List.of(
                         txnRow("2025-01-05", 50, "GrowingCo"),
                         txnRow("2025-06-04", 50, "GrowingCo"),

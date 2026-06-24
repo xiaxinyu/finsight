@@ -3,15 +3,17 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="$ROOT/src/main/java/com/finsight/application/analytics"
+PATTERN='where[^;]*\byear\s*\(|where[^;]*\bdate_format\s*\('
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "ripgrep (rg) required for analytics SQL gate"
-  exit 1
-fi
+find_violations() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -n -i "$PATTERN" "$TARGET" --glob '*.java' || true
+  else
+    grep -rEni "$PATTERN" "$TARGET" --include='*.java' || true
+  fi
+}
 
-violations=$(rg -n -i \
-  'where[^;]*\byear\s*\(|where[^;]*\bdate_format\s*\(' \
-  "$TARGET" --glob '*.java' || true)
+violations=$(find_violations)
 
 if [[ -n "$violations" ]]; then
   echo "Non-sargable date filter in analytics SQL:"
