@@ -33,7 +33,7 @@ class ClassificationAuditSummaryServiceTest {
                 .thenReturn(1);
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("fin_merchant_profile")))
                 .thenReturn(1);
-        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("v_transaction_analytics")))
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("v_transaction_finance_semantics")))
                 .thenReturn(1);
         when(jdbcTemplate.queryForObject(anyString(), eq(Long.class)))
                 .thenReturn(3L, 1L, 0L, 12L, 8L, 2L, 4L, 1L, 0L, 1L);

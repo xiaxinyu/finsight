@@ -47,4 +47,8 @@ export const REPORT_METRIC_HINTS = {
   cashRiskHighDays: 'Days flagged high when projected outflows exceed inflows and safety buffer.',
   fixedShare: 'Share of spending classified as fixed or essential budget behavior.',
   variableShare: 'Share of variable or discretionary consumption spending.',
+  merchantSpend: 'Consumption-scope expense by merchant (include_in_expense_trend). Excludes transfers, refunds, and investment/debt flows.',
+  merchantConcentration: 'Share of total consumption spend attributed to top merchants.',
+  merchantSubscription: 'Recurring charges detected by pattern or subscription category tags.',
+  merchantDrift: 'Year-over-year merchant spend change using the same consumption scope.',
 } as const

@@ -48,9 +48,9 @@ public class MerchantMiningService {
         String userId = userKey();
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.opponent_name, v.transaction_desc, v.amount, v.txn_date "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
                         + "order by v.txn_date desc",
                 userId, userId);
@@ -297,9 +297,9 @@ public class MerchantMiningService {
         AnalyticsDateRange.HalfOpen range = AnalyticsDateRange.calendarYear(year);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.opponent_name, v.transaction_desc, v.amount "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
                 range.startInclusive(), range.endExclusive(), userId, userId);
@@ -399,9 +399,9 @@ public class MerchantMiningService {
                 "select count(distinct v.id) as txn_count, "
                         + "coalesce(sum(v.amount), 0) as total_spend, "
                         + "count(distinct v.merchant_token) as merchant_count "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and " + subscriptionCategoryPredicate("v")
                         + "and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
@@ -420,9 +420,9 @@ public class MerchantMiningService {
         String userId = userKey();
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.merchant_token, v.opponent_name, v.transaction_desc, v.amount, v.txn_date "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and " + subscriptionCategoryPredicate("v")
                         + "and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
@@ -488,9 +488,9 @@ public class MerchantMiningService {
         String userId = userKey();
         return jdbcTemplate.queryForList(
                 "select v.opponent_name, v.transaction_desc, v.amount, v.txn_date "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null)) "
                         + "order by v.txn_date desc",

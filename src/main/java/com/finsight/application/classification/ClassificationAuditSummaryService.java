@@ -26,7 +26,7 @@ public class ClassificationAuditSummaryService {
                 longVal(sqlCategoryFieldDrift()),
                 longVal(sqlUnclassifiedTxns()),
                 longVal(sqlOtherCategoryTxns()),
-                tableExists("fin_merchant_profile") && viewExists("v_transaction_analytics")
+                tableExists("fin_merchant_profile") && viewExists("v_transaction_finance_semantics")
                         ? longVal(sqlMerchantProfileMismatch()) : 0L,
                 longVal(sqlDuplicatePatternGroups()),
                 longVal(sqlBroadKeywordRules()),
@@ -97,8 +97,8 @@ public class ClassificationAuditSummaryService {
     static String sqlMerchantProfileMismatch() {
         return "select count(*) from ( "
                 + "select mp.merchant_token from fin_merchant_profile mp "
-                + "left join v_transaction_analytics v on v.merchant_token = mp.merchant_token "
-                + "  and v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                + "left join v_transaction_finance_semantics v on v.merchant_token = mp.merchant_token "
+                + "  and v.include_in_expense_trend = 1 "
                 + "group by mp.user_id, mp.merchant_token, mp.display_name, mp.txn_count "
                 + "having count(v.id) = 0) x";
     }

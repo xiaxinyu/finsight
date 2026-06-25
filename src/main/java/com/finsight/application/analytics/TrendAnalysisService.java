@@ -284,9 +284,9 @@ public class TrendAnalysisService {
         AnalyticsDateRange.HalfOpen range = AnalyticsDateRange.calendarYear(year);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.opponent_name, v.transaction_desc, v.amount "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and v.txn_date >= ? and v.txn_date < ? "
                         + "and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))",
                 range.startInclusive(), range.endExclusive(), userId, userId);

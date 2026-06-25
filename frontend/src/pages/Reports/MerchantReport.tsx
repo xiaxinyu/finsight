@@ -25,6 +25,7 @@ import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
+import { REPORT_METRIC_HINTS } from '../../components/MetricExplanation'
 import { formatMoney } from '../../utils/format'
 import {
   buildConcentrationChart,
@@ -398,9 +399,9 @@ export function MerchantReport({ title, subtitle, mode }: MerchantReportProps) {
           <ReportKpiStrip items={[
             { key: 'year', label: 'Year', value: String(driftQuery.data.year) },
             { key: 'prior', label: 'Compare', value: String(driftQuery.data.priorYear) },
-            { key: 'new', label: 'New', value: String(driftQuery.data.newMerchants?.length ?? 0) },
-            { key: 'growing', label: 'Growing', value: String(driftQuery.data.growingMerchants?.length ?? 0) },
-            { key: 'declining', label: 'Declining', value: String(driftQuery.data.decliningMerchants?.length ?? 0) },
+            { key: 'new', label: 'New', value: String(driftQuery.data.newMerchants?.length ?? 0), explain: REPORT_METRIC_HINTS.merchantDrift },
+            { key: 'growing', label: 'Growing', value: String(driftQuery.data.growingMerchants?.length ?? 0), explain: REPORT_METRIC_HINTS.merchantDrift },
+            { key: 'declining', label: 'Declining', value: String(driftQuery.data.decliningMerchants?.length ?? 0), explain: REPORT_METRIC_HINTS.merchantDrift },
           ]} />
           <Row gutter={[12, 12]} className="fs-report-body">
             <Col xs={24} lg={14}>

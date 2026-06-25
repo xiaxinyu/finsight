@@ -205,7 +205,7 @@ class ForecastServiceTest {
     @Test
     void forecast_includesTopCategoryForecasts() throws Exception {
         stubCommon();
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
 
@@ -228,7 +228,7 @@ class ForecastServiceTest {
     @Test
     void categoryForecasts_returnsDedicatedPayload() throws Exception {
         stubCommon();
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
 
@@ -255,7 +255,7 @@ class ForecastServiceTest {
     @Test
     void simulateScenario_persistsAggregateAndCategoryLines() throws Exception {
         stubCommon();
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(sampleCategoryHistory());
         when(jdbcTemplate.queryForObject(contains("information_schema"), eq(Integer.class), eq("fin_forecast_line")))
@@ -337,7 +337,7 @@ class ForecastServiceTest {
     }
 
     private void stubCategoryHistoryEmpty() {
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
     }

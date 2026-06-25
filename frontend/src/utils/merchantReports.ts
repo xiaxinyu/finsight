@@ -1,4 +1,5 @@
 import type { EChartsOption } from 'echarts'
+import { REPORT_METRIC_HINTS } from '../components/MetricExplanation'
 import { formatMoney } from './format'
 
 export type MerchantSubscription = {
@@ -77,7 +78,7 @@ export type MerchantDriftReport = {
 export function buildSubscriptionKpis(report: SubscriptionReport) {
   const s = report.summary
   return [
-    { key: 'count', label: 'Merchants', value: String(s.count) },
+    { key: 'count', label: 'Merchants', value: String(s.count), explain: REPORT_METRIC_HINTS.merchantSubscription },
     {
       key: 'pattern',
       label: 'Pattern detected',
@@ -90,7 +91,7 @@ export function buildSubscriptionKpis(report: SubscriptionReport) {
       value: String(s.categoryOnlyCount ?? 0),
       hint: 'Tagged subscription category, no pattern match',
     },
-    { key: 'monthly', label: 'Monthly eq.', value: formatMoney(s.monthlyTotal), tone: 'expense' as const },
+    { key: 'monthly', label: 'Monthly eq.', value: formatMoney(s.monthlyTotal), tone: 'expense' as const, explain: REPORT_METRIC_HINTS.merchantSubscription },
     {
       key: 'ledger',
       label: 'Category ledger',
@@ -116,10 +117,10 @@ export function formatSubscriptionPeriodLabel(report: SubscriptionReport): strin
 
 export function buildConcentrationKpis(report: MerchantConcentrationReport) {
   return [
-    { key: 'total', label: 'Total spend', value: formatMoney(report.totalSpend), tone: 'expense' as const },
+    { key: 'total', label: 'Total spend', value: formatMoney(report.totalSpend), tone: 'expense' as const, explain: REPORT_METRIC_HINTS.merchantSpend },
     { key: 'merchants', label: 'Merchants', value: String(report.merchantCount) },
-    { key: 'top1', label: 'Top 1 share', value: `${(report.top1SharePct ?? 0).toFixed(1)}%` },
-    { key: 'top5', label: 'Top 5 share', value: `${(report.top5SharePct ?? report.top3SharePct).toFixed(1)}%` },
+    { key: 'top1', label: 'Top 1 share', value: `${(report.top1SharePct ?? 0).toFixed(1)}%`, explain: REPORT_METRIC_HINTS.merchantConcentration },
+    { key: 'top5', label: 'Top 5 share', value: `${(report.top5SharePct ?? report.top3SharePct).toFixed(1)}%`, explain: REPORT_METRIC_HINTS.merchantConcentration },
   ]
 }
 

@@ -47,7 +47,7 @@ class MerchantMiningServiceTest {
 
     @Test
     void refreshProfiles_marksMonthlySubscription() {
-        when(jdbcTemplate.queryForList(contains("v_transaction_analytics"), eq("user1"), eq("user1")))
+        when(jdbcTemplate.queryForList(contains("v_transaction_finance_semantics"), eq("user1"), eq("user1")))
                 .thenReturn(netflixRows());
 
         Map<String, Object> out = service.refreshProfiles();

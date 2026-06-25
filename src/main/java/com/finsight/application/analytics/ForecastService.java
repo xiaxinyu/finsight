@@ -469,9 +469,9 @@ public class ForecastService {
         LocalDate rangeEndExclusive = end.plusMonths(1).atDay(1);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.category_code, v.category_name, v.txn_date, v.amount "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
                         + "and v.category_code != '__UNCLASSIFIED__' "
                         + "and v.txn_date >= ? and v.txn_date < ? "
