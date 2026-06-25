@@ -19,12 +19,14 @@ import {
   sumReportPoints,
 } from '../../utils/reportAnalytics'
 import type dayjs from 'dayjs'
+import { REPORT_METRIC_HINTS } from '../../components/MetricExplanation'
 
 export type ReportKpi = {
   key: string
   label: string
   value: string
   hint?: string
+  explain?: string
   tone?: 'income' | 'expense' | 'neutral' | 'warn'
 }
 
@@ -74,9 +76,9 @@ export function buildReportView(
     return {
       insights: insightsCashflow(rows, periodLabel),
       kpis: [
-        { key: 'inc', label: 'Income', value: formatMoney(incomeTotal), tone: 'income' },
-        { key: 'exp', label: 'Expense', value: formatMoney(expenseTotal), tone: 'expense' },
-        { key: 'net', label: 'Net', value: formatMoney(net), tone: net >= 0 ? 'income' : 'expense', hint: `Savings ${savings}%` },
+        { key: 'inc', label: 'Income', value: formatMoney(incomeTotal), tone: 'income', explain: REPORT_METRIC_HINTS.income },
+        { key: 'exp', label: 'Expense', value: formatMoney(expenseTotal), tone: 'expense', explain: REPORT_METRIC_HINTS.expense },
+        { key: 'net', label: 'Net', value: formatMoney(net), tone: net >= 0 ? 'income' : 'expense', hint: `Savings ${savings}%`, explain: REPORT_METRIC_HINTS.net },
         { key: 'def', label: 'Deficit months', value: String(rows.filter((r) => r.surplus < 0).length), hint: `of ${rows.length} months` },
       ],
       chartTitle: 'Monthly cash flow',

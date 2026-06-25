@@ -25,3 +25,5 @@
 ## 报表一致性
 
 Dashboard、Profile、Forecast 的核心收入/支出口径应对齐语义层。若发现不一致，先检查 metric refresh 与分类 `report_role`。
+
+**数据质量提示**：所有 `/reports/*` 页面在顶部共用一条精简 Data quality 栏（`ReportsDataQualityBar`），不在各报表内重复展示。

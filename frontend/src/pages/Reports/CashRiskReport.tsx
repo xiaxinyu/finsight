@@ -9,7 +9,6 @@ import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
-import { DataQualityStrip } from '../../components/DataQualityStrip'
 import { FsChart } from '../../components/FsChart'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildReportDrillContext, drillParamsForYearMonth } from '../../components/drilldown/buildDrillContext'
@@ -155,7 +154,6 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
         </div>
       )}
     >
-      <DataQualityStrip metricsSource="fin_metric_monthly" compact />
       {!flags.forecast && (
         <EmptyState title="Forecast module disabled" description="Enable finsight.forecast.enabled to use cash risk calendar." />
       )}

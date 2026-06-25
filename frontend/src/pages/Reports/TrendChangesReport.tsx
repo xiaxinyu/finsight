@@ -12,7 +12,6 @@ import { EmptyState } from '../../components/EmptyState'
 import { FsChart } from '../../components/FsChart'
 import { FsDataTable } from '../../components/FsDataTable'
 import { InsightPanel } from '../../components/InsightPanel'
-import { DataQualityStrip } from '../../components/DataQualityStrip'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
@@ -171,7 +170,6 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
         />
       )}
     >
-      <DataQualityStrip metricsSource="report_sql" compact />
       {!flags.forecast && (
         <EmptyState title="Forecast module disabled" description="Enable finsight.forecast.enabled to use trend decomposition." />
       )}
