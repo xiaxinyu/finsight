@@ -25,7 +25,9 @@
 ## Categories（Admin）
 
 - 选中分类后展示 **Finance semantics**：`report_role`、财务本质、是否计入收入/支出/预算趋势。
-- 数据来自 `cls_category.report_role` 与目录推断（与语义合同一致）。
+- **Report role** 可在分类表单中编辑；保存后写入 `cls_category.report_role` 并触发 taxonomy 版本 bump。
+- 未设置 `report_role` 时，表单展示推断默认值；保存后即持久化。
+- 数据与 [finance-semantic-contract.zh-cn.md](./finance-semantic-contract.zh-cn.md) 一致。
 
 ## Reports
 

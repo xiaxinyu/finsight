@@ -13,6 +13,8 @@ import com.finsight.application.analytics.ConfigVersionBump;
 import com.finsight.application.classification.CategoryAliasService;
 import com.finsight.application.classification.CategoryMergeSupport;
 import com.finsight.application.classification.CategoryMergeSupport.MergeMode;
+import com.finsight.application.classification.CategoryReportRoleInference;
+import com.finsight.application.classification.CategoryReportRoles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +76,7 @@ public class ConsumeCategoryAdminFacade {
         if (cat.getTxnTypes() == null || cat.getTxnTypes().trim().isEmpty()) {
             cat.setTxnTypes("expense");
         }
+        applyReportRole(cat);
         String genId = buildId(cat.getLevel(), cat.getCode(), cat.getParentId());
         cat.setId(genId);
         try {
@@ -99,6 +102,7 @@ public class ConsumeCategoryAdminFacade {
         }
         autofillCodeAndSort(cat);
         validateUniqueCode(cat.getCode(), id);
+        applyReportRole(cat);
         String newId = buildId(cat.getLevel(), cat.getCode(), cat.getParentId());
 
         LambdaUpdateWrapper<ConsumeCategory> uwCat = Wrappers.lambdaUpdate();
@@ -110,7 +114,8 @@ public class ConsumeCategoryAdminFacade {
                 .set(ConsumeCategory::getParentId, cat.getParentId())
                 .set(ConsumeCategory::getSortNo, cat.getSortNo())
                 .set(ConsumeCategory::getDeleted, cat.getDeleted())
-                .set(ConsumeCategory::getTxnTypes, cat.getTxnTypes());
+                .set(ConsumeCategory::getTxnTypes, cat.getTxnTypes())
+                .set(ConsumeCategory::getReportRole, cat.getReportRole());
         try {
             categoryService.update(null, uwCat);
         } catch (Exception ex) {
@@ -187,6 +192,7 @@ public class ConsumeCategoryAdminFacade {
             syncAllTransactionConsumeCodes();
         }
         cat.setId(newId);
+        configVersionBump.bumpTaxonomy();
         return cat;
     }
 
@@ -566,12 +572,30 @@ public class ConsumeCategoryAdminFacade {
         cc.setSortNo(raw.getSortNo());
         cc.setDeleted(raw.getDeleted());
         cc.setTxnTypes(raw.getTxnTypes());
+        cc.setReportRole(raw.getReportRole());
         cc.setVersion(raw.getVersion());
         cc.setCreatedAt(raw.getCreatedAt());
         cc.setUpdatedAt(raw.getUpdatedAt());
         cc.setCreatedBy(raw.getCreatedBy());
         cc.setUpdatedBy(raw.getUpdatedBy());
         return cc;
+    }
+
+    private static void applyReportRole(ConsumeCategory cat) {
+        String explicit = CategoryReportRoles.normalize(cat.getReportRole());
+        if (explicit != null) {
+            cat.setReportRole(explicit);
+            return;
+        }
+        String inferred = CategoryReportRoleInference.inferReportRole(
+                new CategoryReportRoleInference.DbCategoryRow(
+                        cat.getCode(),
+                        cat.getName(),
+                        cat.getLevel() == null ? 0 : cat.getLevel(),
+                        cat.getParentId(),
+                        cat.getTxnTypes()))
+                .orElse("other");
+        cat.setReportRole(inferred);
     }
 }
 

@@ -38,6 +38,8 @@ import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
 import {
   economicNatureLabel,
   inclusionSummary,
+  profileCategorySemantics,
+  REPORT_ROLE_OPTIONS,
   reportRoleLabel,
 } from '../../../utils/categorySemantics'
 
@@ -50,7 +52,7 @@ function toMergeCascaderOptions(nodes: CategoryTreeSelectNode[]): CascaderOption
   }))
 }
 
-const EMPTY: ConsumeCategoryRow = { name: '', code: '', parentId: '', sortNo: 1, txnTypes: 'expense' }
+const EMPTY: ConsumeCategoryRow = { name: '', code: '', parentId: '', sortNo: 1, txnTypes: 'expense', reportRole: 'budget' }
 
 type PendingAction = 'delete' | 'rename' | 'merge' | null
 
@@ -108,9 +110,20 @@ export function CategoriesAdminPage() {
       form.setFieldsValue({ ...EMPTY, parentId: selected?.code || '' })
       return
     }
-    if (selected) form.setFieldsValue(selected)
-    else form.resetFields()
-  }, [selected, creating, form])
+    if (selected) {
+      const reportRole = selected.reportRole?.trim()
+        || categoryAsset?.reportRole
+        || 'other'
+      form.setFieldsValue({ ...selected, reportRole })
+    } else form.resetFields()
+  }, [selected, creating, form, categoryAsset?.reportRole])
+
+  const watchedReportRole = Form.useWatch('reportRole', form)
+  const watchedTxnTypes = Form.useWatch('txnTypes', form)
+  const semanticsPreview = useMemo(
+    () => profileCategorySemantics(watchedReportRole, watchedTxnTypes),
+    [watchedReportRole, watchedTxnTypes],
+  )
 
   const reload = () => {
     qc.invalidateQueries({ queryKey: ['admin-categories'] })
@@ -129,6 +142,7 @@ export function CategoriesAdminPage() {
         parentId: selected.code,
         sortNo: candidateDraft.sortNo ?? 99,
         txnTypes: candidateDraft.txnTypes ?? 'expense',
+        reportRole: candidateDraft.reportRole,
       })
       message.success(`Category ${candidateDraft.code} created`)
       setCandidateDraft(null)
@@ -332,18 +346,31 @@ export function CategoriesAdminPage() {
                       { value: 'expense,income', label: 'Both' },
                     ]} />
                   </Form.Item>
-                  {!creating && categoryAsset?.reportRole && (
+                  <Form.Item
+                    name="reportRole"
+                    label="Report role"
+                    tooltip="Controls how transactions in this category appear in income, expense, and budget trends."
+                    rules={[{ required: true, message: 'Report role is required' }]}
+                  >
+                    <Select options={REPORT_ROLE_OPTIONS} placeholder="Select report role" />
+                  </Form.Item>
+                  {(creating || selected) && watchedReportRole && (
                     <div className="fs-admin-category-semantics">
                       <Typography.Text type="secondary" className="fs-admin-category-semantics-label">
-                        Finance semantics
+                        Trend impact preview
                       </Typography.Text>
                       <Space wrap size={[4, 4]}>
-                        <Tag color="blue">{reportRoleLabel(categoryAsset.reportRole)}</Tag>
-                        <Tag>{economicNatureLabel(categoryAsset.economicNature)}</Tag>
+                        <Tag color="blue">{reportRoleLabel(semanticsPreview.reportRole)}</Tag>
+                        <Tag>{economicNatureLabel(semanticsPreview.economicNature)}</Tag>
                       </Space>
                       <Typography.Text type="secondary" className="fs-admin-category-semantics-hint">
-                        {inclusionSummary(categoryAsset)}
+                        {inclusionSummary(semanticsPreview)}
                       </Typography.Text>
+                      {!creating && selected && !selected.reportRole?.trim() && categoryAsset?.reportRole && (
+                        <Typography.Text type="warning" className="fs-admin-category-semantics-hint">
+                          No stored role — showing inferred default. Save to persist.
+                        </Typography.Text>
+                      )}
                     </div>
                   )}
                   <Form.Item name="sortNo" label="Sort order">
