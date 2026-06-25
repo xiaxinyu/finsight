@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Alert, Col, Progress, Row, Tag, Typography } from 'antd'
-import { UserOutlined } from '@ant-design/icons'
-import { fetchProfile } from '../../api/analytics'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Alert, Button, Col, Progress, Row, Tag, Typography, message } from 'antd'
+import { ReloadOutlined, UserOutlined } from '@ant-design/icons'
+import { fetchProfile, fetchProfileRefresh } from '../../api/analytics'
 import type { ProfileDimension } from '../../api/analytics'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -23,12 +23,28 @@ function dimensionIdFromRadarName(name: string): string | undefined {
 
 export function ProfilePage() {
   const { flags } = useFeatureFlags()
+  const queryClient = useQueryClient()
   const [activeDimension, setActiveDimension] = useState<ProfileDimension | null>(null)
   const { data, isLoading, isError, error } = useQuery({
     queryKey: QUERY_KEYS.financialProfile,
     queryFn: fetchProfile,
     enabled: flags.profile,
     staleTime: ANALYTICS_STALE_MS,
+  })
+
+  const refreshMutation = useMutation({
+    mutationFn: fetchProfileRefresh,
+    onSuccess: (result) => {
+      if (result.busy) {
+        message.info(result.message || 'Profile refresh already in progress')
+        return
+      }
+      queryClient.setQueryData(QUERY_KEYS.financialProfile, result)
+      message.success('Profile refreshed')
+    },
+    onError: (err) => {
+      message.error(err instanceof Error ? err.message : 'Profile refresh failed')
+    },
   })
 
   const radarOption = useMemo(
@@ -55,6 +71,10 @@ export function ProfilePage() {
   if (!data) return null
 
   const metricsWarning = data.metricsGate?.gateEnabled && !data.metricsGate.ok
+  const needsGenerate = data.needsRefresh || !data.materialized || data.dimensions.length === 0
+  const computedLabel = data.computedAt
+    ? new Date(data.computedAt).toLocaleString()
+    : null
 
   return (
     <DataPageLayout
@@ -62,7 +82,45 @@ export function ProfilePage() {
       title="Financial Profile"
       subtitle={`Explainable 10-dimension view · ${data.asOf}`}
       icon={<UserOutlined />}
+      actions={(
+        <Button
+          type="primary"
+          icon={<ReloadOutlined />}
+          loading={refreshMutation.isPending}
+          onClick={() => refreshMutation.mutate()}
+        >
+          {needsGenerate ? 'Generate profile' : 'Refresh'}
+        </Button>
+      )}
+      extra={(
+        <>
+          {data.stale && <Tag color="orange">Stale</Tag>}
+          {computedLabel && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Updated {computedLabel}
+            </Typography.Text>
+          )}
+        </>
+      )}
     >
+      {needsGenerate && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="Profile snapshot not ready"
+          description={data.message || 'Click Generate profile to compute your financial profile. Subsequent visits read the saved snapshot.'}
+        />
+      )}
+      {data.stale && !needsGenerate && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message="Profile may be outdated"
+          description="Your data changed since this snapshot was computed. Refresh to update scores and insights."
+        />
+      )}
       {metricsWarning && (
         <Alert
           type="warning"

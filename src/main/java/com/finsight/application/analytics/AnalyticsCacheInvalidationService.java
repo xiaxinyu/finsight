@@ -12,13 +12,16 @@ public class AnalyticsCacheInvalidationService {
     private final AnalyticsCacheService cacheService;
     private final AnalyticsCacheKeySupport cacheKeySupport;
     private final AuthenticationFacade authenticationFacade;
+    private final ProfileCurrentRepository profileCurrentRepository;
 
     public AnalyticsCacheInvalidationService(AnalyticsCacheService cacheService,
                                              AnalyticsCacheKeySupport cacheKeySupport,
-                                             AuthenticationFacade authenticationFacade) {
+                                             AuthenticationFacade authenticationFacade,
+                                             ProfileCurrentRepository profileCurrentRepository) {
         this.cacheService = cacheService;
         this.cacheKeySupport = cacheKeySupport;
         this.authenticationFacade = authenticationFacade;
+        this.profileCurrentRepository = profileCurrentRepository;
     }
 
     public void invalidateForUser(String userId) {
@@ -28,6 +31,9 @@ public class AnalyticsCacheInvalidationService {
         cacheService.invalidateProfile(cacheKeySupport.profileKey(userId));
         cacheService.invalidateAdvisor(cacheKeySupport.advisorKey(userId));
         cacheService.invalidateForecastsForUser(userId);
+        if (profileCurrentRepository.exists(userId)) {
+            profileCurrentRepository.markStale(userId);
+        }
     }
 
     public void invalidateCurrentUser() {

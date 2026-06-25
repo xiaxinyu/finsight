@@ -24,6 +24,10 @@ public class AnalyticsRequestMemo {
         this.profile = profile;
     }
 
+    public void clearProfile() {
+        this.profile = null;
+    }
+
     public Map<String, Object> getForecast(String key) {
         return forecasts.get(key);
     }

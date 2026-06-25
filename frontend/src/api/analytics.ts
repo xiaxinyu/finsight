@@ -50,10 +50,23 @@ export type ProfileData = {
   dimensions: ProfileDimension[]
   metricsGate?: { ok?: boolean; gateEnabled?: boolean; mismatches?: string[]; warning?: string; fallbackBlocked?: boolean }
   metricsSource?: string
+  materialized?: boolean
+  needsRefresh?: boolean
+  stale?: boolean
+  computedAt?: string
+  computeDurationMs?: number
+  profileVersion?: string
+  message?: string
+  refreshed?: boolean
+  busy?: boolean
 }
 
 export async function fetchProfile() {
   return unwrap<ProfileData>(await getJson('/api/v1/analytics/profile'))
+}
+
+export async function fetchProfileRefresh() {
+  return unwrap<ProfileData>(await postJson('/api/v1/analytics/profile/refresh', {}))
 }
 
 export async function fetchProfileHistory(from: string, to: string, dimension?: string) {

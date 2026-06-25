@@ -17,7 +17,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class FinancialProfileService {
@@ -41,6 +44,9 @@ public class FinancialProfileService {
     private final AnalyticsRequestMemo requestMemo;
     private final AnalyticsCacheKeySupport cacheKeySupport;
     private final MetricGateRepairService metricGateRepairService;
+    private final ProfileCurrentRepository profileCurrentRepository;
+
+    private final Set<String> refreshInFlight = ConcurrentHashMap.newKeySet();
 
     public FinancialProfileService(MetricMonthlyRepository metricRepository,
                                    WealthService wealthService,
@@ -52,7 +58,8 @@ public class FinancialProfileService {
                                    AnalyticsCacheService cacheService,
                                    AnalyticsRequestMemo requestMemo,
                                    AnalyticsCacheKeySupport cacheKeySupport,
-                                   MetricGateRepairService metricGateRepairService) {
+                                   MetricGateRepairService metricGateRepairService,
+                                   ProfileCurrentRepository profileCurrentRepository) {
         this.metricRepository = metricRepository;
         this.wealthService = wealthService;
         this.cashflowService = cashflowService;
@@ -64,12 +71,13 @@ public class FinancialProfileService {
         this.requestMemo = requestMemo;
         this.cacheKeySupport = cacheKeySupport;
         this.metricGateRepairService = metricGateRepairService;
+        this.profileCurrentRepository = profileCurrentRepository;
     }
 
     /**
-     * Read-only profile for GET endpoints. Uses request memo + TTL cache; does not write snapshots.
+     * Read-only profile for GET endpoints. Returns materialized fin_profile_current; does not compute.
      */
-    public Map<String, Object> currentProfile() throws Exception {
+    public Map<String, Object> currentProfile() {
         Map<String, Object> memo = requestMemo.getProfile();
         if (memo != null) {
             AnalyticsTiming.logCacheHit("profile", true);
@@ -82,13 +90,65 @@ public class FinancialProfileService {
             requestMemo.setProfile(cached);
             return cached;
         }
-        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("profile", PROFILE_BUDGET_MS)) {
-            Map<String, Object> computed = computeProfile();
-            cacheService.putProfile(cacheKey, computed);
-            requestMemo.setProfile(computed);
-            AnalyticsTiming.logCacheHit("profile", false);
-            return computed;
+        try (AnalyticsTiming.TimedCall ignored = AnalyticsTiming.start("profile-read", PROFILE_BUDGET_MS)) {
+            Optional<Map<String, Object>> materialized = profileCurrentRepository.findPayload(userKey());
+            Map<String, Object> out = materialized.orElseGet(this::degradedProfileState);
+            cacheService.putProfile(cacheKey, out);
+            requestMemo.setProfile(out);
+            AnalyticsTiming.logCacheHit("profile", materialized.isPresent());
+            return out;
         }
+    }
+
+    /**
+     * Explicit materialized refresh — computes profile, persists fin_profile_current and daily snapshots.
+     */
+    public Map<String, Object> refreshProfileCurrent() throws Exception {
+        String userId = userKey();
+        if (!refreshInFlight.add(userId)) {
+            Map<String, Object> busy = new LinkedHashMap<>();
+            busy.put("refreshed", false);
+            busy.put("busy", true);
+            busy.put("message", "Profile refresh already in progress");
+            return busy;
+        }
+        long started = System.currentTimeMillis();
+        try {
+            Map<String, Object> profile = computeProfile();
+            long durationMs = System.currentTimeMillis() - started;
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> dimensions = (List<Map<String, Object>>) profile.get("dimensions");
+            profileCurrentRepository.upsert(userId, profile, durationMs);
+            persistSnapshot(userId, dimensions);
+            cacheService.invalidateProfile(cacheKeySupport.profileKey(userId));
+            requestMemo.clearProfile();
+            Map<String, Object> out = new LinkedHashMap<>(profile);
+            out.put("materialized", true);
+            out.put("stale", false);
+            out.put("refreshed", true);
+            out.put("computeDurationMs", durationMs);
+            return out;
+        } catch (Exception e) {
+            throw e;
+        } finally {
+            refreshInFlight.remove(userId);
+        }
+    }
+
+    private Map<String, Object> degradedProfileState() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("materialized", false);
+        out.put("needsRefresh", true);
+        out.put("stale", true);
+        out.put("overallScore", 0);
+        out.put("confidence", "low");
+        out.put("sampleMonths", 0);
+        out.put("userType", "pending");
+        out.put("userTypeExplanation", "Generate your profile to see personalized analysis.");
+        out.put("dimensions", List.of());
+        out.put("asOf", LocalDate.now().toString());
+        out.put("message", "No profile snapshot yet. Click Refresh to generate your financial profile.");
+        return out;
     }
 
     /**
@@ -101,11 +161,7 @@ public class FinancialProfileService {
     public void refreshProfileSnapshotsForUser(String userId) throws Exception {
         USER_OVERRIDE.set(userId);
         try {
-            Map<String, Object> profile = computeProfile();
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> dimensions = (List<Map<String, Object>>) profile.get("dimensions");
-            persistSnapshot(userId, dimensions);
-            cacheService.invalidateProfile(cacheKeySupport.profileKey(userId));
+            refreshProfileCurrent();
         } finally {
             USER_OVERRIDE.remove();
         }

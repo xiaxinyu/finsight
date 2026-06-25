@@ -25,7 +25,7 @@ public class AnalyticsProfileController {
     }
 
     @GetMapping("/profile")
-    public CommonResult profile() throws Exception {
+    public CommonResult profile() {
         featureFlags.requireProfile();
         return CommonResult.success(profileService.currentProfile());
     }
@@ -38,7 +38,14 @@ public class AnalyticsProfileController {
         return CommonResult.success(profileService.history(from, to, dimension));
     }
 
-    /** Explicit snapshot refresh for scheduled jobs / ops — not invoked on GET profile. */
+    /** Explicit materialized refresh — computes and writes fin_profile_current. */
+    @PostMapping("/profile/refresh")
+    public CommonResult refreshProfile() throws Exception {
+        featureFlags.requireProfile();
+        return CommonResult.success(profileService.refreshProfileCurrent());
+    }
+
+    /** Explicit snapshot refresh for scheduled jobs / ops — delegates to materialized refresh. */
     @PostMapping("/profile/snapshots/refresh")
     public CommonResult refreshProfileSnapshots() throws Exception {
         featureFlags.requireProfile();

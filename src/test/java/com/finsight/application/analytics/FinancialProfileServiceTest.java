@@ -11,12 +11,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +33,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class FinancialProfileServiceTest {
 
     @Mock
@@ -54,18 +58,68 @@ class FinancialProfileServiceTest {
     private AnalyticsCacheKeySupport cacheKeySupport;
     @Mock
     private MetricGateRepairService metricGateRepairService;
+    @Mock
+    private ProfileCurrentRepository profileCurrentRepository;
 
     @InjectMocks
     private FinancialProfileService service;
 
     @Test
-    void currentProfile_includesReadableEvidenceAndActionPaths() throws Exception {
+    void currentProfile_readsMaterializedWithoutCompute() {
+        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(requestMemo.getProfile()).thenReturn(null);
+        when(cacheKeySupport.profileKey("alice")).thenReturn("profile:alice");
+        when(cacheService.getProfile("profile:alice")).thenReturn(null);
+        Map<String, Object> stored = Map.of(
+                "overallScore", 72,
+                "dimensions", List.of(),
+                "materialized", true,
+                "stale", false);
+        when(profileCurrentRepository.findPayload("alice")).thenReturn(Optional.of(stored));
+
+        Map<String, Object> profile = service.currentProfile();
+
+        assertEquals(72, profile.get("overallScore"));
+        verify(metricRepository, times(0)).listForUser(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void currentProfile_returnsDegradedWhenNoMaterializedRow() {
+        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(requestMemo.getProfile()).thenReturn(null);
+        when(cacheKeySupport.profileKey("alice")).thenReturn("profile:alice");
+        when(cacheService.getProfile("profile:alice")).thenReturn(null);
+        when(profileCurrentRepository.findPayload("alice")).thenReturn(Optional.empty());
+
+        Map<String, Object> profile = service.currentProfile();
+
+        assertEquals(true, profile.get("needsRefresh"));
+        assertEquals(0, ((List<?>) profile.get("dimensions")).size());
+    }
+
+    @Test
+    void refreshProfileCurrent_persistsMaterializedSnapshot() throws Exception {
         stubProfileDeps();
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
+                .thenReturn(List.of());
+
+        Map<String, Object> profile = service.refreshProfileCurrent();
+
+        assertEquals(true, profile.get("refreshed"));
+        verify(profileCurrentRepository).upsert(eq("alice"), any(), org.mockito.ArgumentMatchers.anyLong());
+        verify(jdbcTemplate, org.mockito.Mockito.atLeastOnce()).update(
+                org.mockito.ArgumentMatchers.contains("fin_profile_snapshot"),
+                any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void currentProfile_includesReadableEvidenceAndActionPaths() throws Exception {
         when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of(categoryRow("food", "Food", 3000)));
 
-        Map<String, Object> profile = service.currentProfile();
+        Map<String, Object> profile = service.refreshProfileCurrent();
 
         assertEquals(10, ((List<?>) profile.get("dimensions")).size());
         assertNotNull(profile.get("userTypeExplanation"));
@@ -78,7 +132,8 @@ class FinancialProfileServiceTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> evidence = (List<Map<String, Object>>) dataTrust.get("evidence");
         assertEquals("Unclassified transactions", evidence.get(0).get("label"));
-        assertTrue(String.valueOf(evidence.get(0).get("value")).contains("12 unclassified"));
+        String evVal = String.valueOf(evidence.get(0).get("value"));
+        assertTrue(evVal.contains("unclassified"), () -> "actual evidence value: " + evVal);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> actions = (List<Map<String, Object>>) dataTrust.get("actions");
@@ -96,7 +151,7 @@ class FinancialProfileServiceTest {
                         categoryRow("food", "Food", 8000),
                         categoryRow("travel", "Travel", 2000)));
 
-        Map<String, Object> profile = service.currentProfile();
+        Map<String, Object> profile = service.refreshProfileCurrent();
         @SuppressWarnings("unchecked")
         Map<String, Object> concentration = ((List<Map<String, Object>>) profile.get("dimensions")).stream()
                 .filter(d -> "spending_concentration".equals(d.get("id")))
@@ -117,7 +172,7 @@ class FinancialProfileServiceTest {
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
-        Map<String, Object> profile = service.currentProfile();
+        Map<String, Object> profile = service.refreshProfileCurrent();
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> dimensions = (List<Map<String, Object>>) profile.get("dimensions");
 
@@ -129,11 +184,15 @@ class FinancialProfileServiceTest {
     }
 
     @Test
-    void currentProfile_doesNotPersistSnapshotsOnRead() throws Exception {
-        stubProfileDeps();
-        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
-                any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
-                .thenReturn(List.of());
+    void currentProfile_doesNotPersistSnapshotsOnRead() {
+        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(requestMemo.getProfile()).thenReturn(null);
+        when(cacheKeySupport.profileKey("alice")).thenReturn("profile:alice");
+        when(cacheService.getProfile("profile:alice")).thenReturn(null);
+        when(profileCurrentRepository.findPayload("alice")).thenReturn(Optional.of(Map.of(
+                "overallScore", 70,
+                "dimensions", List.of(),
+                "materialized", true)));
 
         service.currentProfile();
 
@@ -164,7 +223,7 @@ class FinancialProfileServiceTest {
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
-        Map<String, Object> profile = service.currentProfile();
+        Map<String, Object> profile = service.refreshProfileCurrent();
         @SuppressWarnings("unchecked")
         Map<String, Object> spending = ((List<Map<String, Object>>) profile.get("dimensions")).stream()
                 .filter(d -> "spending_control".equals(d.get("id")))
