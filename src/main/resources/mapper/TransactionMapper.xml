@@ -462,9 +462,25 @@
         and (income_money is null or income_money = 0)
     </update>
 
-    <delete id="deleteTransaction" parameterType="java.lang.String">
-        delete from transaction where id = #{id,jdbcType=VARCHAR}
-    </delete>
+    <update id="deleteTransaction">
+        update transaction
+        set deleted = 1,
+            version = version + 1,
+            updated_at = current_timestamp,
+            updated_by = #{updateUser,jdbcType=VARCHAR}
+        where id = #{id,jdbcType=VARCHAR}
+          and (deleted is null or deleted = 0)
+    </update>
+
+    <update id="softDeleteByStatementId">
+        update transaction
+        set deleted = 1,
+            version = version + 1,
+            updated_at = current_timestamp,
+            updated_by = #{updateUser,jdbcType=VARCHAR}
+        where statement_id = #{statementId,jdbcType=VARCHAR}
+          and (deleted is null or deleted = 0)
+    </update>
 
     <resultMap type="com.finsight.domain.model.Transaction" id="baseTransactionResultMap">
         <id column="id" property="id" jdbcType="VARCHAR"/>

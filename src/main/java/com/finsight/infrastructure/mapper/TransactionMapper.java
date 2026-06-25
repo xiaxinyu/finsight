@@ -13,7 +13,8 @@ import java.util.List;
 public interface TransactionMapper extends BaseMapper<Transaction> {
     void addTransactionList(@Param("transactions") List<Transaction> transactions);
     void updateTransaction(Transaction transaction);
-    void deleteTransaction(String id);
+    void deleteTransaction(@Param("id") String id, @Param("updateUser") String updateUser);
+    int softDeleteByStatementId(@Param("statementId") String statementId, @Param("updateUser") String updateUser);
     int incomeToExpense(@Param("ids") List<String> ids, @Param("updateUser") String updateUser);
     int expenseToIncome(@Param("ids") List<String> ids, @Param("updateUser") String updateUser);
     int countTransaction(@Param("q") TransactionQuery query);

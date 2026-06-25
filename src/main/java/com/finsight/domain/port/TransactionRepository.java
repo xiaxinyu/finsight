@@ -10,7 +10,7 @@ import java.util.List;
 public interface TransactionRepository {
     void updateTransaction(Transaction transaction);
 
-    void deleteTransaction(String id);
+    void deleteTransaction(String id, String updateUser);
 
     int incomeToExpense(List<String> ids, String updateUser);
 
@@ -24,7 +24,7 @@ public interface TransactionRepository {
 
     void insert(Transaction transaction);
 
-    int deleteByStatementId(String statementId);
+    int deleteByStatementId(String statementId, String updateUser);
 
     List<com.finsight.domain.model.CategoryAggregate> consumeReport(TransactionQuery query);
 

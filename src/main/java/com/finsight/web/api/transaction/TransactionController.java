@@ -61,7 +61,7 @@ public class TransactionController extends ControllerHelper {
     @ResponseBody
     public CommonResult deleteTransaction(String id) {
         return runCommon(logger, "delete transaction", () -> {
-            transactionService.deleteTransaction(id);
+            transactionService.deleteTransaction(id, authenticationFacade.getUserName());
             return CommonResult.success(OPERATION_OK);
         });
     }

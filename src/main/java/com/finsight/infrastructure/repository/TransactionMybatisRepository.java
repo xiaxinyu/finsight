@@ -24,8 +24,8 @@ public class TransactionMybatisRepository implements TransactionRepository {
     }
 
     @Override
-    public void deleteTransaction(String id) {
-        transactionMapper.deleteTransaction(id);
+    public void deleteTransaction(String id, String updateUser) {
+        transactionMapper.deleteTransaction(id, updateUser);
     }
 
     @Override
@@ -59,14 +59,11 @@ public class TransactionMybatisRepository implements TransactionRepository {
     }
 
     @Override
-    public int deleteByStatementId(String statementId) {
+    public int deleteByStatementId(String statementId, String updateUser) {
         if (StringUtils.isBlank(statementId)) {
             return 0;
         }
-        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Transaction> wrapper =
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-        wrapper.eq("statement_id", statementId);
-        return transactionMapper.delete(wrapper);
+        return transactionMapper.softDeleteByStatementId(statementId, updateUser);
     }
 
     @Override

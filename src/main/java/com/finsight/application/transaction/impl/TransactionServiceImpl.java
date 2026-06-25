@@ -160,14 +160,34 @@ public class TransactionServiceImpl implements ITransactionService {
     }
 
     @Override
-    public void deleteTransaction(String id) throws AppServiceException {
+    public void deleteTransaction(String id, String userName) throws AppServiceException {
         try {
-            transactionRepository.deleteTransaction(id);
+            if (StringUtils.isBlank(id)) {
+                throw new AppServiceException("Transaction id is required");
+            }
+            Transaction existing = transactionRepository.selectById(id.trim());
+            if (existing == null || (existing.getDeleted() != null && existing.getDeleted() == 1)) {
+                throw new AppServiceException("Transaction not found");
+            }
+            transactionRepository.deleteTransaction(id.trim(), userName);
             invalidateHomeSummaryCache();
-            metricRefreshTrigger.afterTransactionsChanged(List.of(), null);
+            List<Date> dates = new ArrayList<>();
+            if (existing.getTransactionDate() != null) {
+                dates.add(existing.getTransactionDate());
+            }
+            metricRefreshTrigger.afterTransactionsChanged(dates, userName);
+        } catch (AppServiceException e) {
+            throw e;
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
+    }
+
+    @Override
+    public void deleteByStatementId(String statementId, String userName) {
+        transactionRepository.deleteByStatementId(statementId, userName);
+        invalidateHomeSummaryCache();
+        metricRefreshTrigger.afterTransactionsChanged(List.of(), userName);
     }
 
     @Override
@@ -191,11 +211,6 @@ public class TransactionServiceImpl implements ITransactionService {
             throw new AppServiceException(e);
         }
         return result;
-    }
-
-    @Override
-    public void deleteByStatementId(String statementId) {
-        transactionRepository.deleteByStatementId(statementId);
     }
 
     @Override

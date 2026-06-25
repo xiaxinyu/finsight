@@ -13,13 +13,13 @@ public interface ITransactionService {
 
     int expenseToIncome(List<String> ids, String userName) throws AppServiceException;
 
-    void deleteTransaction(String id) throws AppServiceException;
+    void deleteTransaction(String id, String userName) throws AppServiceException;
 
     List<Transaction> getTransactions(Transaction transaction, Page page) throws AppServiceException;
 
     int countTransaction(Transaction transaction) throws AppServiceException;
 
-    void deleteByStatementId(String statementId);
+    void deleteByStatementId(String statementId, String userName);
 
     void addTransactions(List<String[]> rowDatas, String customerName, String recordID);
 

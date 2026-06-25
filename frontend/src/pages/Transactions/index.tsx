@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Button, Input, Modal, Popconfirm, Select, Space, Tooltip, message } from 'antd'
 import {
-  DeleteOutlined, EditOutlined,
+  DeleteOutlined, EditOutlined, FilterOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
 import { createTransfer } from '../../api/finance'
@@ -92,7 +92,7 @@ export function TransactionsPage() {
   const actionRef = useRef<ActionType>(null)
   const tablePanelRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
   const [selectedRows, setSelectedRows] = useState<TransactionRow[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -107,6 +107,7 @@ export function TransactionsPage() {
   const tableHeight = useFillTableHeight(tablePanelRef)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
+  const semanticUnclassifiedFromUrl = searchParams.get('semantic') === 'unclassified'
   const cardFromUrl = searchParams.get('cardId') || ''
   const consumeFromUrl = searchParams.get('consume') || ''
 
@@ -115,23 +116,11 @@ export function TransactionsPage() {
     card: cardFromUrl,
     consume: consumeFromUrl,
     keyword: '',
-    unclassified: unclassifiedFromUrl,
-    semanticFilter: searchParams.get('semantic') || '',
-  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl, searchParams])
+    unclassified: unclassifiedFromUrl || semanticUnclassifiedFromUrl,
+    semanticFilter: semanticUnclassifiedFromUrl ? 'unclassified' : (searchParams.get('semantic') || ''),
+  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl, semanticUnclassifiedFromUrl, searchParams])
 
   const { draft, setDraft, applied, applying, isDirty, applySync, patchBoth, resetBoth } = useFilterApply(initial)
-
-  useEffect(() => {
-    if (unclassifiedFromUrl) {
-      setDraft((f) => ({ ...f, unclassified: true }))
-    }
-  }, [unclassifiedFromUrl, setDraft])
-
-  useEffect(() => {
-    if (consumeFromUrl) {
-      setDraft((f) => ({ ...f, consume: consumeFromUrl }))
-    }
-  }, [consumeFromUrl, setDraft])
 
   const { treeData } = useConsumeTreeSelect()
   const { tree: cardTree } = useCardTree()
@@ -155,6 +144,36 @@ export function TransactionsPage() {
     patchBoth(patch)
     void reload()
   }, [patchBoth, reload])
+
+  const syncUnclassifiedUrl = useCallback((active: boolean) => {
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      if (active) {
+        params.set('unclassified', '1')
+        params.set('semantic', 'unclassified')
+      } else {
+        params.delete('unclassified')
+        if (params.get('semantic') === 'unclassified') params.delete('semantic')
+      }
+      return params
+    }, { replace: true })
+  }, [setSearchParams])
+
+  useEffect(() => {
+    const wantUnclassified = unclassifiedFromUrl || semanticUnclassifiedFromUrl
+    if (!wantUnclassified || applied.unclassified) return
+    patchBoth({
+      unclassified: true,
+      semanticFilter: 'unclassified',
+    })
+    void reload()
+  }, [unclassifiedFromUrl, semanticUnclassifiedFromUrl, applied.unclassified, patchBoth, reload])
+
+  useEffect(() => {
+    if (consumeFromUrl) {
+      patchBoth({ consume: consumeFromUrl })
+    }
+  }, [consumeFromUrl, patchBoth])
 
   const appliedPeriod = useMemo(
     () => periodFromStrings(applied.start, applied.end),
@@ -194,7 +213,13 @@ export function TransactionsPage() {
       chips.push({
         key: 'unclassified',
         label: 'Unclassified only',
-        onRemove: () => applyFilterPatch({ unclassified: false }),
+        onRemove: () => {
+          applyFilterPatch({
+            unclassified: false,
+            semanticFilter: applied.semanticFilter === 'unclassified' ? '' : applied.semanticFilter,
+          })
+          syncUnclassifiedUrl(false)
+        },
       })
     }
     if (applied.semanticFilter) {
@@ -206,11 +231,18 @@ export function TransactionsPage() {
       })
     }
     return chips
-  }, [applied, cardTree, treeData, applyFilterPatch])
+  }, [applied, cardTree, treeData, applyFilterPatch, syncUnclassifiedUrl])
 
   const toggleUnclassifiedFilter = useCallback(() => {
-    applyFilterPatch({ unclassified: !applied.unclassified })
-  }, [applied.unclassified, applyFilterPatch])
+    const next = !applied.unclassified
+    applyFilterPatch({
+      unclassified: next,
+      semanticFilter: next
+        ? 'unclassified'
+        : (applied.semanticFilter === 'unclassified' ? '' : applied.semanticFilter),
+    })
+    syncUnclassifiedUrl(next)
+  }, [applied.unclassified, applied.semanticFilter, applyFilterPatch, syncUnclassifiedUrl])
 
   const clearAllFilters = useCallback(() => {
     resetBoth(initial)
@@ -554,6 +586,19 @@ export function TransactionsPage() {
             value={draft.consume}
             onChange={(v) => setDraft((f) => ({ ...f, consume: v }))}
           />
+          <Tooltip title="Show only transactions without a category (one click, no Apply needed)">
+            <Button
+              size="small"
+              type={applied.unclassified ? 'primary' : 'default'}
+              icon={<FilterOutlined />}
+              disabled={disabled}
+              className={`fs-tx-quick-filter${applied.unclassified ? ' fs-tx-quick-filter--active' : ''}`}
+              onClick={toggleUnclassifiedFilter}
+            >
+              Unclassified
+              {(stats?.unclassified ?? 0) > 0 && !statsBusy ? ` (${stats?.unclassified})` : ''}
+            </Button>
+          </Tooltip>
           <Select
             className="fs-filter-control fs-filter-control--semantic"
             size="small"

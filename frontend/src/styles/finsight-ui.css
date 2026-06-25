@@ -2818,6 +2818,19 @@
   letter-spacing: 0.01em;
 }
 
+.fs-tx-quick-filter {
+  flex-shrink: 0;
+}
+
+.fs-tx-quick-filter--active {
+  font-weight: 600;
+}
+
+.fs-tx-quick-filter:not(.fs-tx-quick-filter--active):hover {
+  border-color: #d97706;
+  color: #b45309;
+}
+
 .fs-tx-active-filters {
   display: flex;
   align-items: center;
