@@ -100,7 +100,7 @@ class FinancialProfileServiceTest {
     @Test
     void refreshProfileCurrent_persistsMaterializedSnapshot() throws Exception {
         stubProfileDeps();
-        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
@@ -115,7 +115,7 @@ class FinancialProfileServiceTest {
 
     @Test
     void currentProfile_includesReadableEvidenceAndActionPaths() throws Exception {
-        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of(categoryRow("food", "Food", 3000)));
 
@@ -145,7 +145,7 @@ class FinancialProfileServiceTest {
     @Test
     void currentProfile_spendingConcentrationUsesCategoryShare() throws Exception {
         stubProfileDeps();
-        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of(
                         categoryRow("food", "Food", 8000),
@@ -168,7 +168,7 @@ class FinancialProfileServiceTest {
     @Test
     void currentProfile_usesCanonicalReportActionPaths() throws Exception {
         stubProfileDeps();
-        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 
@@ -219,7 +219,7 @@ class FinancialProfileServiceTest {
     @Test
     void currentProfile_spendingControlEvidenceShowsExpenseRatio() throws Exception {
         stubProfileDeps();
-        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_analytics"),
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.contains("v_transaction_finance_semantics"),
                 any(LocalDate.class), any(LocalDate.class), anyString(), anyString()))
                 .thenReturn(List.of());
 

@@ -117,8 +117,10 @@ public class ForecastService {
             metricGateRepairService.scheduleRepairIfGateBlocked(true);
         }
 
-        Map<String, Double> actualIncomeByMonth = monthlyMetricMap(history, MetricCode.INCOME_TOTAL.name());
-        Map<String, Double> actualExpenseByMonth = monthlyMetricMap(history, MetricCode.EXPENSE_TOTAL.name());
+        Map<String, Double> actualIncomeByMonth = monthlyMetricMapPreferring(
+                history, MetricCode.REAL_INCOME.name(), MetricCode.INCOME_TOTAL.name());
+        Map<String, Double> actualExpenseByMonth = monthlyMetricMapPreferring(
+                history, MetricCode.CONSUMPTION_EXPENSE.name(), MetricCode.EXPENSE_TOTAL.name());
         List<ForecastProjection.YearMonthValue> incomeSeries = ForecastProjection.toSeries(actualIncomeByMonth);
         List<ForecastProjection.YearMonthValue> expenseSeries = ForecastProjection.toSeries(actualExpenseByMonth);
         ForecastProjection.Quality projectionQuality = ForecastProjection.assessQuality(incomeSeries.size());
@@ -323,15 +325,32 @@ public class ForecastService {
         return explanation;
     }
 
+    private static Map<String, Double> monthlyMetricMapPreferring(List<Map<String, Object>> history,
+                                                                 String primary,
+                                                                 String fallback) {
+        Map<String, Double> primaryMap = monthlyMetricMap(history, primary);
+        if (!primaryMap.isEmpty()) {
+            return primaryMap;
+        }
+        return monthlyMetricMap(history, fallback);
+    }
+
     private static Map<String, Double> monthlyMetricMap(List<Map<String, Object>> history, String code) {
         Map<String, Double> out = new LinkedHashMap<>();
         for (Map<String, Object> row : history) {
             if (code.equals(String.valueOf(row.get("metricCode")))) {
-                String monthKey = String.valueOf(row.get("monthKey"));
-                out.put(monthKey, ((Number) row.get("metricValue")).doubleValue());
+                out.put(metricMonthKey(row), ((Number) row.get("metricValue")).doubleValue());
             }
         }
         return out;
+    }
+
+    private static String metricMonthKey(Map<String, Object> row) {
+        Object ym = row.get("yearMonth");
+        if (ym != null && !String.valueOf(ym).isBlank() && !"null".equals(String.valueOf(ym))) {
+            return String.valueOf(ym);
+        }
+        return String.valueOf(row.get("monthKey"));
     }
 
     private static boolean isCompletedMonth(YearMonth ym) {

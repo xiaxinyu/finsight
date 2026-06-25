@@ -202,8 +202,8 @@ public class FinancialProfileService {
         Map<String, Object> quality = dataQualityService.summary();
         ProfileScoring.ConcentrationStats concentration = loadConcentrationStats(userId, start, end);
 
-        List<Double> incomes = metricValues(metrics, "INCOME_TOTAL");
-        List<Double> expenses = metricValues(metrics, "EXPENSE_TOTAL");
+        List<Double> incomes = metricValuesPreferring(metrics, "REAL_INCOME", "INCOME_TOTAL");
+        List<Double> expenses = metricValuesPreferring(metrics, "CONSUMPTION_EXPENSE", "EXPENSE_TOTAL");
         List<Double> nets = metricValues(metrics, "NET_CASHFLOW");
         double incomeTotal = sumValues(incomes);
         double expenseTotal = sumValues(expenses);
@@ -302,9 +302,9 @@ public class FinancialProfileService {
         LocalDate rangeEndExclusive = end.plusMonths(1).atDay(1);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.category_code, v.category_name, sum(v.amount) as amount "
-                        + "from v_transaction_analytics v "
+                        + "from v_transaction_finance_semantics v "
                         + "inner join transaction t on t.id = v.id "
-                        + "where v.direction = 'expense' and v.is_transfer = 0 and v.is_refund = 0 "
+                        + "where v.include_in_expense_trend = 1 "
                         + "and v.amount > 0 and v.category_code is not null and v.category_code != '' "
                         + "and v.category_code != '__UNCLASSIFIED__' "
                         + "and v.txn_date >= ? and v.txn_date < ? "
@@ -506,6 +506,16 @@ public class FinancialProfileService {
 
     private static String formatMoney(double amount) {
         return "¥" + BigDecimal.valueOf(amount).setScale(0, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    static List<Double> metricValuesPreferring(List<Map<String, Object>> metrics,
+                                               String primary,
+                                               String fallback) {
+        List<Double> primaryValues = metricValues(metrics, primary);
+        if (!primaryValues.isEmpty()) {
+            return primaryValues;
+        }
+        return metricValues(metrics, fallback);
     }
 
     private static List<Double> metricValues(List<Map<String, Object>> metrics, String code) {

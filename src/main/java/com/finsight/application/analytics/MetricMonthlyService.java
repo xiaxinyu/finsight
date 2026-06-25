@@ -34,17 +34,20 @@ public class MetricMonthlyService {
     private final TransactionQuerySupport querySupport;
     private final FinancialMapper financialMapper;
     private final AuthenticationFacade authenticationFacade;
+    private final FinanceSemanticMetricsRepository semanticMetricsRepository;
 
     public MetricMonthlyService(MetricMonthlyRepository metricRepository,
                                 TransactionRepository transactionRepository,
                                 TransactionQuerySupport querySupport,
                                 FinancialMapper financialMapper,
-                                AuthenticationFacade authenticationFacade) {
+                                AuthenticationFacade authenticationFacade,
+                                FinanceSemanticMetricsRepository semanticMetricsRepository) {
         this.metricRepository = metricRepository;
         this.transactionRepository = transactionRepository;
         this.querySupport = querySupport;
         this.financialMapper = financialMapper;
         this.authenticationFacade = authenticationFacade;
+        this.semanticMetricsRepository = semanticMetricsRepository;
     }
 
     @Async
@@ -103,13 +106,20 @@ public class MetricMonthlyService {
         double expense = sumReport(transactionRepository.monthExpenseReport(q), ym.getMonthValue() - 1);
         double net = income - expense;
         double savingsRate = income > 0 ? net / income : 0;
-        int unclassified = financialMapper.countUnclassified();
         Map<String, BigDecimal> out = new LinkedHashMap<>();
         out.put(MetricCode.INCOME_TOTAL.name(), bd(income));
         out.put(MetricCode.EXPENSE_TOTAL.name(), bd(expense));
         out.put(MetricCode.NET_CASHFLOW.name(), bd(net));
         out.put(MetricCode.SAVINGS_RATE.name(), bd(savingsRate));
-        out.put(MetricCode.UNCLASSIFIED_COUNT.name(), bd(unclassified));
+
+        Map<String, BigDecimal> semantic = semanticMetricsRepository.aggregateMonth(
+                userKey(), start, end);
+        for (Map.Entry<String, BigDecimal> e : semantic.entrySet()) {
+            out.put(e.getKey(), e.getValue());
+        }
+        if (!semantic.containsKey(MetricCode.UNCLASSIFIED_COUNT.name())) {
+            out.put(MetricCode.UNCLASSIFIED_COUNT.name(), bd(financialMapper.countUnclassified()));
+        }
         return out;
     }
 

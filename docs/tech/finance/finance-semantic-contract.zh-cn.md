@@ -40,8 +40,10 @@
 ## 实现位置
 
 - SQL 视图：`src/main/resources/db/migration/V32__transaction_finance_semantics.sql`
+- 月度指标聚合：`FinanceSemanticMetricsRepository` → `fin_metric_monthly`
 - Profile 物化：`fin_profile_current`（`V33__fin_profile_current.sql`）
 - GET `/api/v1/analytics/profile` 只读物化结果；POST `/api/v1/analytics/profile/refresh` 显式重算
+- Profile / Forecast 优先使用 `REAL_INCOME`、`CONSUMPTION_EXPENSE`（缺失时回退 `INCOME_TOTAL` / `EXPENSE_TOTAL`）
 
 ## 变更规则
 

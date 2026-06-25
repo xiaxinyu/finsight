@@ -1,0 +1,106 @@
+package com.finsight.application.analytics;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * Aggregates monthly metrics from {@code v_transaction_finance_semantics} for a single user.
+ */
+@Repository
+public class FinanceSemanticMetricsRepository {
+
+    private static final String AGGREGATE_SQL = """
+            select
+              coalesce(sum(case when s.include_in_income_trend = 1 then s.amount else 0 end), 0) as real_income,
+              coalesce(sum(case when s.economic_nature = 'refund' and s.cash_direction = 'inflow'
+                  then s.amount else 0 end), 0) as refund_inflow,
+              coalesce(sum(case when s.cash_direction = 'inflow'
+                  and (s.category_l1_code = 'REIM' or s.category_code like 'REIM%') then s.amount else 0 end), 0)
+                  as reimbursement_inflow,
+              coalesce(sum(case when s.include_in_expense_trend = 1 then s.amount else 0 end), 0)
+                  as consumption_expense,
+              coalesce(sum(case when s.include_in_budget = 1 and s.budget_behavior = 'fixed'
+                  then s.amount else 0 end), 0) as fixed_expense,
+              coalesce(sum(case when s.include_in_expense_trend = 1 and s.budget_behavior = 'variable'
+                  then s.amount else 0 end), 0) as variable_expense,
+              coalesce(sum(case when s.include_in_expense_trend = 1
+                  and s.budget_behavior not in ('fixed', 'essential', 'unclassified') then s.amount else 0 end), 0)
+                  as discretionary_expense,
+              coalesce(sum(case when s.include_in_expense_trend = 1 and s.budget_behavior = 'essential'
+                  then s.amount else 0 end), 0) as essential_expense,
+              coalesce(sum(case when s.economic_nature = 'investment' and s.cash_direction = 'inflow'
+                  then s.amount else 0 end), 0) as investment_inflow,
+              coalesce(sum(case when s.economic_nature = 'investment' and s.cash_direction = 'outflow'
+                  then s.amount else 0 end), 0) as investment_outflow,
+              coalesce(sum(case when s.economic_nature = 'liability' and s.cash_direction = 'inflow'
+                  then s.amount else 0 end), 0) as liability_inflow,
+              coalesce(sum(case when s.economic_nature = 'liability' and s.cash_direction = 'outflow'
+                  then s.amount else 0 end), 0) as liability_repayment,
+              coalesce(sum(case when s.economic_nature = 'transfer' and s.cash_direction = 'inflow'
+                  then s.amount else 0 end), 0) as transfer_in,
+              coalesce(sum(case when s.economic_nature = 'transfer' and s.cash_direction = 'outflow'
+                  then s.amount else 0 end), 0) as transfer_out,
+              coalesce(sum(case when s.category_l1_code = 'FEE' or s.category_code like 'FEE%'
+                  then s.amount else 0 end), 0) as fee_expense,
+              coalesce(sum(case when s.quality_state = 'unclassified' then s.amount else 0 end), 0)
+                  as unclassified_amount,
+              coalesce(sum(case when s.category_l1_code = 'OTHER' or s.category_code = 'OTHER'
+                  or s.category_code like 'OTHER-%' then s.amount else 0 end), 0) as other_amount,
+              count(*) as txn_count,
+              coalesce(sum(case when s.quality_state = 'unclassified' then 1 else 0 end), 0)
+                  as unclassified_count
+            from v_transaction_finance_semantics s
+            inner join transaction t on t.id = s.id
+            where s.txn_date >= ? and s.txn_date <= ?
+              and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+            """;
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public FinanceSemanticMetricsRepository(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public Map<String, BigDecimal> aggregateMonth(String userId, LocalDate start, LocalDate end) {
+        return jdbcTemplate.query(AGGREGATE_SQL, rs -> {
+            Map<String, BigDecimal> out = new LinkedHashMap<>();
+            if (!rs.next()) {
+                return out;
+            }
+            out.put("REAL_INCOME", bd(rs.getDouble("real_income")));
+            out.put("REFUND_INFLOW", bd(rs.getDouble("refund_inflow")));
+            out.put("REIMBURSEMENT_INFLOW", bd(rs.getDouble("reimbursement_inflow")));
+            out.put("CONSUMPTION_EXPENSE", bd(rs.getDouble("consumption_expense")));
+            out.put("FIXED_EXPENSE", bd(rs.getDouble("fixed_expense")));
+            out.put("VARIABLE_EXPENSE", bd(rs.getDouble("variable_expense")));
+            out.put("DISCRETIONARY_EXPENSE", bd(rs.getDouble("discretionary_expense")));
+            out.put("ESSENTIAL_EXPENSE", bd(rs.getDouble("essential_expense")));
+            out.put("INVESTMENT_INFLOW", bd(rs.getDouble("investment_inflow")));
+            out.put("INVESTMENT_OUTFLOW", bd(rs.getDouble("investment_outflow")));
+            out.put("LIABILITY_INFLOW", bd(rs.getDouble("liability_inflow")));
+            out.put("LIABILITY_REPAYMENT", bd(rs.getDouble("liability_repayment")));
+            out.put("TRANSFER_IN", bd(rs.getDouble("transfer_in")));
+            out.put("TRANSFER_OUT", bd(rs.getDouble("transfer_out")));
+            out.put("FEE_EXPENSE", bd(rs.getDouble("fee_expense")));
+            out.put("UNCLASSIFIED_AMOUNT", bd(rs.getDouble("unclassified_amount")));
+            out.put("OTHER_AMOUNT", bd(rs.getDouble("other_amount")));
+            int txnCount = rs.getInt("txn_count");
+            int uncls = rs.getInt("unclassified_count");
+            double qualityScore = txnCount == 0 ? 100.0 : (100.0 * (txnCount - uncls) / txnCount);
+            out.put("DATA_QUALITY_SCORE", bd(qualityScore));
+            out.put("TRANSACTION_COUNT", bd(txnCount));
+            out.put("UNCLASSIFIED_COUNT", bd(uncls));
+            return out;
+        }, start, end, userId, userId);
+    }
+
+    private static BigDecimal bd(double value) {
+        return BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP);
+    }
+}
