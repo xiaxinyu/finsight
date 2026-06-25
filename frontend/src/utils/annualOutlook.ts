@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import type { ForecastCategory, ForecastData, ForecastMonth } from '../api/analytics'
+import { REPORT_METRIC_HINTS } from '../components/MetricExplanation'
 import { formatMoney } from './format'
 
 export const FORECAST_SCENARIOS = [
@@ -52,8 +53,8 @@ export function buildAnnualOutlookKpis(forecast: ForecastData) {
   return [
     { key: 'year', label: 'Year', value: String(forecast.year) },
     { key: 'scenario', label: 'Scenario', value: scenarioLabel(forecast.scenario) },
-    { key: 'inc', label: 'Forecast income', value: formatMoney(forecast.yearIncome), tone: 'income' as const },
-    { key: 'exp', label: 'Forecast expense', value: formatMoney(forecast.yearExpense), tone: 'expense' as const },
+    { key: 'inc', label: 'Forecast income', value: formatMoney(forecast.yearIncome), tone: 'income' as const, explain: REPORT_METRIC_HINTS.forecastIncome },
+    { key: 'exp', label: 'Forecast expense', value: formatMoney(forecast.yearExpense), tone: 'expense' as const, explain: REPORT_METRIC_HINTS.forecastExpense },
     {
       key: 'net',
       label: 'Forecast net',
@@ -61,6 +62,7 @@ export function buildAnnualOutlookKpis(forecast: ForecastData) {
         ? `${formatMoney(net)} (${formatMoney(forecast.yearNetLower)} – ${formatMoney(forecast.yearNetUpper)})`
         : formatMoney(net),
       tone: net >= 0 ? 'income' as const : 'expense' as const,
+      explain: REPORT_METRIC_HINTS.forecastNet,
     },
     {
       key: 'conf',
@@ -73,6 +75,7 @@ export function buildAnnualOutlookKpis(forecast: ForecastData) {
       label: 'Deficit months',
       value: String(deficits.length),
       tone: deficits.length ? 'warn' as const : 'neutral' as const,
+      explain: REPORT_METRIC_HINTS.deficitMonths,
     },
   ]
 }

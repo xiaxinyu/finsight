@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import type { ReportPoint } from '../api/report'
+import { REPORT_METRIC_HINTS } from '../components/MetricExplanation'
 import { formatMoney } from './format'
 import { formatPeriodPreview, type PeriodRange } from './periodPresets'
 
@@ -20,6 +21,7 @@ export type SpendingDriftKpi = {
   label: string
   value: string
   hint?: string
+  explain?: string
   tone?: 'income' | 'expense' | 'neutral' | 'warn'
 }
 
@@ -125,12 +127,14 @@ export function buildSpendingDriftKpis(
       label: 'Current period',
       value: formatMoney(totalA),
       hint: `${labelA} · ${periodSpanLabel(spanA)}`,
+      explain: REPORT_METRIC_HINTS.spendingDriftCompare,
     },
     {
       key: 'compare',
       label: 'Compare period',
       value: formatMoney(totalB),
       hint: `${labelB} · ${periodSpanLabel(spanB)}`,
+      explain: REPORT_METRIC_HINTS.spendingDriftCompare,
     },
     {
       key: 'delta',
@@ -138,6 +142,7 @@ export function buildSpendingDriftKpis(
       value: `${delta >= 0 ? '+' : ''}${formatMoney(delta)}`,
       hint: comparable ? `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%` : 'Use monthly pace below',
       tone: delta > 0 ? 'expense' : delta < 0 ? 'income' : 'neutral',
+      explain: REPORT_METRIC_HINTS.compare,
     },
     {
       key: 'pace',
@@ -145,6 +150,7 @@ export function buildSpendingDriftKpis(
       value: `${monthlyDeltaPct >= 0 ? '+' : ''}${monthlyDeltaPct.toFixed(1)}%`,
       hint: `${formatMoney(monthlyA)}/mo → ${formatMoney(monthlyB)}/mo`,
       tone: monthlyDeltaPct > 10 ? 'expense' : monthlyDeltaPct < -10 ? 'income' : 'neutral',
+      explain: REPORT_METRIC_HINTS.monthlyPace,
     },
     {
       key: 'cats',

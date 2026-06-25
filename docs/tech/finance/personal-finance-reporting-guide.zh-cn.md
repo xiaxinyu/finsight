@@ -27,6 +27,11 @@
 - 选中分类后展示 **Finance semantics**：`report_role`、财务本质、是否计入收入/支出/预算趋势。
 - 数据来自 `cls_category.report_role` 与目录推断（与语义合同一致）。
 
+## Reports
+
+- 各报表 KPI 标签旁 **?** 图标展示口径说明（与 Dashboard 一致）。
+- 预算、消费结构、支出漂移、预测、趋势变化、现金风险等报表均已挂载 `REPORT_METRIC_HINTS`。
+
 ## 报表一致性
 
 Dashboard、Profile、Forecast 的核心收入/支出口径应对齐语义层。若发现不一致，先检查 metric refresh 与分类 `report_role`。

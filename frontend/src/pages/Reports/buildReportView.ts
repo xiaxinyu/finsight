@@ -120,10 +120,10 @@ export function buildReportView(
     return {
       insights: insightsBudget(lines, totalActual, totalLimit),
       kpis: [
-        { key: 'actual', label: 'Spent (period)', value: formatMoney(totalActual), tone: 'expense' },
-        { key: 'limit', label: 'Budget', value: formatMoney(totalLimit) },
+        { key: 'actual', label: 'Spent (period)', value: formatMoney(totalActual), tone: 'expense', explain: REPORT_METRIC_HINTS.budgetSpent },
+        { key: 'limit', label: 'Budget', value: formatMoney(totalLimit), explain: REPORT_METRIC_HINTS.budgetLimit },
         { key: 'rem', label: 'Remaining', value: formatMoney(Math.max(0, totalLimit - totalActual)), tone: totalLimit - totalActual < totalLimit * 0.2 ? 'warn' : 'neutral' },
-        { key: 'util', label: 'Utilization', value: `${util}%`, tone: Number(util) >= 80 ? 'warn' : 'neutral' },
+        { key: 'util', label: 'Utilization', value: `${util}%`, tone: Number(util) >= 80 ? 'warn' : 'neutral', explain: REPORT_METRIC_HINTS.budgetUtilization },
       ],
       chartTitle: 'Budget vs actual by bucket',
       chartOption: {
@@ -155,9 +155,9 @@ export function buildReportView(
     return {
       insights: insightsFixedVariable(buckets, weekRows, periodLabel),
       kpis: [
-        { key: 'fixed', label: 'Fixed %', value: `${buckets.fixed ?? 0}%` },
-        { key: 'var', label: 'Variable %', value: `${buckets.variable ?? buckets.life ?? 0}%` },
-        { key: 'week', label: 'Weekday spend', value: formatMoney(weekTotal), hint: periodLabel },
+        { key: 'fixed', label: 'Fixed %', value: `${buckets.fixed ?? 0}%`, explain: REPORT_METRIC_HINTS.fixedShare },
+        { key: 'var', label: 'Variable %', value: `${buckets.variable ?? buckets.life ?? 0}%`, explain: REPORT_METRIC_HINTS.variableShare },
+        { key: 'week', label: 'Weekday spend', value: formatMoney(weekTotal), hint: periodLabel, explain: REPORT_METRIC_HINTS.consumptionSpend },
       ],
       chartTitle: 'Fixed vs variable structure',
       chartOption: {
@@ -195,9 +195,9 @@ export function buildReportView(
     return {
       insights: insightsSpendingDrift(ptsA, ptsB, labelA, labelB),
       kpis: [
-        { key: 'y1', label: labelA, value: formatMoney(totalA) },
-        { key: 'y2', label: labelB, value: formatMoney(totalB) },
-        { key: 'delta', label: 'Change', value: `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%`, tone: deltaPct > 0 ? 'expense' : 'income' },
+        { key: 'y1', label: labelA, value: formatMoney(totalA), explain: REPORT_METRIC_HINTS.spendingDriftCompare },
+        { key: 'y2', label: labelB, value: formatMoney(totalB), explain: REPORT_METRIC_HINTS.spendingDriftCompare },
+        { key: 'delta', label: 'Change', value: `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(1)}%`, tone: deltaPct > 0 ? 'expense' : 'income', explain: REPORT_METRIC_HINTS.compare },
         { key: 'cats', label: 'Categories', value: String(keys.length) },
       ],
       chartTitle: `Spending drift · ${labelA} vs ${labelB}`,
@@ -237,7 +237,7 @@ export function buildReportView(
       return {
         insights: insightsCategoryRows(catRows, periodLabel),
         kpis: [
-          { key: 'total', label: 'Total', value: formatMoney(weekTotal) },
+          { key: 'total', label: 'Total', value: formatMoney(weekTotal), explain: REPORT_METRIC_HINTS.consumptionSpend },
           { key: 'peak', label: 'Peak day', value: week.sort((a, b) => b.value - a.value)[0]?.label ?? '—' },
         ],
         chartTitle: 'Spend by weekday',
@@ -266,7 +266,7 @@ export function buildReportView(
           peak ? { text: `Peak month: ${peak.label} (${formatMoney(peak.value)}).` } : { text: 'No monthly values in range.' },
         ],
         kpis: [
-          { key: 'yt', label: 'Period total', value: formatMoney(yearTotal) },
+          { key: 'yt', label: 'Period total', value: formatMoney(yearTotal), explain: cfg.txnType === 'income' ? REPORT_METRIC_HINTS.income : REPORT_METRIC_HINTS.consumptionSpend },
           { key: 'avg', label: 'Monthly avg', value: formatMoney(series.length ? yearTotal / series.length : 0) },
         ],
         chartTitle: cfg.title,
@@ -296,7 +296,7 @@ export function buildReportView(
     return {
       insights: insightsCategoryRows(catRows, periodLabel),
       kpis: [
-        { key: 'total', label: 'Total spend', value: formatMoney(total), tone: 'expense' },
+        { key: 'total', label: 'Total spend', value: formatMoney(total), tone: 'expense', explain: REPORT_METRIC_HINTS.consumptionSpend },
         { key: 'cats', label: 'Categories', value: String(catRows.length) },
         { key: 'top', label: 'Top share', value: `${catRows[0]?.share.toFixed(1) ?? 0}%`, hint: catRows[0]?.key },
       ],
@@ -336,10 +336,10 @@ export function buildReportView(
     return {
       insights: [{ text: deficits.length ? `Projected deficit in ${deficits.length} month(s).` : 'No projected deficit months in base scenario.' }],
       kpis: [
-        { key: 'inc', label: 'Forecast income', value: formatMoney(incomeTotal), tone: 'income' },
-        { key: 'exp', label: 'Forecast expense', value: formatMoney(expenseTotal), tone: 'expense' },
-        { key: 'net', label: 'Forecast net', value: formatMoney(net), tone: net >= 0 ? 'income' : 'expense' },
-        { key: 'def', label: 'Deficit months', value: String(deficits.length), tone: deficits.length ? 'warn' : 'neutral' },
+        { key: 'inc', label: 'Forecast income', value: formatMoney(incomeTotal), tone: 'income', explain: REPORT_METRIC_HINTS.forecastIncome },
+        { key: 'exp', label: 'Forecast expense', value: formatMoney(expenseTotal), tone: 'expense', explain: REPORT_METRIC_HINTS.forecastExpense },
+        { key: 'net', label: 'Forecast net', value: formatMoney(net), tone: net >= 0 ? 'income' : 'expense', explain: REPORT_METRIC_HINTS.forecastNet },
+        { key: 'def', label: 'Deficit months', value: String(deficits.length), tone: deficits.length ? 'warn' : 'neutral', explain: REPORT_METRIC_HINTS.deficitMonths },
       ],
       chartTitle: 'Forecast cash flow (dashed = projected)',
       chartOption: {
@@ -374,7 +374,7 @@ export function buildReportView(
       kpis: [
         { key: 'from', label: 'From year', value: String(trends.fromYear || '') },
         { key: 'to', label: 'To year', value: String(trends.toYear || '') },
-        { key: 'n', label: 'Significant shifts', value: String(growth.length) },
+        { key: 'n', label: 'Significant shifts', value: String(growth.length), explain: REPORT_METRIC_HINTS.compare },
       ],
       chartTitle: 'Top category growth',
       chartOption: {

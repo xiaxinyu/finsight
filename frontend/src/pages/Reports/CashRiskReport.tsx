@@ -14,6 +14,7 @@ import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
 import { buildReportDrillContext, drillParamsForYearMonth } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
+import { REPORT_METRIC_HINTS } from '../../components/MetricExplanation'
 import type { EChartsOption } from 'echarts'
 import { formatMoney } from '../../utils/format'
 import {
@@ -120,12 +121,14 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
       label: 'Deficit months',
       value: String(data?.deficitMonths?.length || 0),
       tone: (data?.deficitMonths?.length || 0) > 0 ? 'warn' as const : 'neutral' as const,
+      explain: REPORT_METRIC_HINTS.cashRiskDeficit,
     },
     {
       key: 'high',
       label: 'High-risk days',
       value: String((data?.days || []).filter((d) => d.riskLevel === 'high').length),
       tone: 'warn' as const,
+      explain: REPORT_METRIC_HINTS.cashRiskHighDays,
     },
   ]
 

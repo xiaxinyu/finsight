@@ -1,4 +1,5 @@
 import type { EChartsOption } from 'echarts'
+import { REPORT_METRIC_HINTS } from '../components/MetricExplanation'
 import { formatMoney } from './format'
 
 export type TrendDeltaMetric = {
@@ -68,12 +69,14 @@ export function buildTrendKpis(report: TrendChangesReport) {
       label: 'Expense Δ',
       value: formatMoney(exp.deltaAmount),
       tone: exp.deltaAmount > 0 ? 'expense' as const : 'income' as const,
+      explain: REPORT_METRIC_HINTS.trendExpenseDelta,
     },
     {
       key: 'sav',
       label: 'Savings rate Δ',
       value: `${sav.deltaAmount >= 0 ? '+' : ''}${sav.deltaAmount.toFixed(1)} pts`,
       tone: sav.deltaAmount < 0 ? 'warn' as const : 'income' as const,
+      explain: REPORT_METRIC_HINTS.savingsRateDelta,
     },
     {
       key: 'incGrowth',
