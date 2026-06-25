@@ -60,14 +60,16 @@ public class ClassificationAuditSummaryService {
     static String sqlActiveOrphanRules() {
         return "select count(*) from cls_rule r "
                 + "left join cls_category c on c.code = r.category_id or c.id = r.category_id "
-                + "where coalesce(r.category_id, '') <> '' "
+                + "where coalesce(r.deleted, 0) = 0 "
+                + "and coalesce(r.category_id, '') <> '' "
                 + "and (c.id is null or coalesce(c.deleted, 0) = 1) "
                 + "and coalesce(r.active, 1) = 1";
     }
 
     static String sqlActiveInvalidPatterns() {
         return "select count(*) from cls_rule r "
-                + "where (r.pattern is null or trim(r.pattern) = '') "
+                + "where coalesce(r.deleted, 0) = 0 "
+                + "and (r.pattern is null or trim(r.pattern) = '') "
                 + "and coalesce(r.active, 1) = 1";
     }
 
@@ -106,20 +108,23 @@ public class ClassificationAuditSummaryService {
     static String sqlDuplicatePatternGroups() {
         return "select count(*) from ( "
                 + "select lower(trim(r.pattern)) as p from cls_rule r "
-                + "where coalesce(r.active, 1) = 1 and r.pattern is not null and trim(r.pattern) <> '' "
+                + "where coalesce(r.deleted, 0) = 0 "
+                + "and coalesce(r.active, 1) = 1 and r.pattern is not null and trim(r.pattern) <> '' "
                 + "group by lower(trim(r.pattern)) having count(*) > 1) x";
     }
 
     static String sqlBroadKeywordRules() {
         return "select count(*) from cls_rule r "
-                + "where coalesce(r.active, 1) = 1 "
+                + "where coalesce(r.deleted, 0) = 0 "
+                + "and coalesce(r.active, 1) = 1 "
                 + "and lower(trim(coalesce(r.pattern, ''))) in ("
                 + "'支付','消费','转账','付款','收款','交易','代扣','快捷','微信','支付宝')";
     }
 
     static String sqlRulesWithoutCategory() {
         return "select count(*) from cls_rule r "
-                + "where r.category_id is null or trim(r.category_id) = ''";
+                + "where coalesce(r.deleted, 0) = 0 "
+                + "and (r.category_id is null or trim(r.category_id) = '')";
     }
 
     static String sqlTxnMissingCategoryGroups() {

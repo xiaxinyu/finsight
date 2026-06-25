@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Button, Input, Modal, Popconfirm, Select, Space, Tooltip, message } from 'antd'
 import {
-  DeleteOutlined, EditOutlined, FilterOutlined,
+  DeleteOutlined, EditOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
 import { createTransfer } from '../../api/finance'
@@ -62,6 +62,31 @@ type TxFilters = {
   semanticFilter: string
 }
 
+function defaultTxFilters(): TxFilters {
+  return {
+    ...defaultPeriodStrings(),
+    card: '',
+    consume: '',
+    keyword: '',
+    unclassified: false,
+    semanticFilter: '',
+  }
+}
+
+function txFiltersDiffer(a: TxFilters, b: TxFilters): boolean {
+  return a.start !== b.start
+    || a.end !== b.end
+    || a.card !== b.card
+    || a.consume !== b.consume
+    || a.keyword.trim() !== b.keyword.trim()
+    || a.unclassified !== b.unclassified
+    || a.semanticFilter !== b.semanticFilter
+}
+
+const SEMANTIC_DROPDOWN_OPTIONS = SEMANTIC_FILTER_OPTIONS.filter(
+  (o) => o.value && o.value !== 'unclassified',
+)
+
 function findTreeTitle(nodes: { title: string; value: string; children?: typeof nodes }[], value: string): string {
   for (const n of nodes) {
     if (n.value === value) return n.title
@@ -107,9 +132,10 @@ export function TransactionsPage() {
   const tableHeight = useFillTableHeight(tablePanelRef)
 
   const unclassifiedFromUrl = searchParams.get('unclassified') === '1'
-  const semanticUnclassifiedFromUrl = searchParams.get('semantic') === 'unclassified'
   const cardFromUrl = searchParams.get('cardId') || ''
   const consumeFromUrl = searchParams.get('consume') || ''
+  const semanticFromUrl = searchParams.get('semantic') || ''
+  const semanticUnclassifiedFromUrl = semanticFromUrl === 'unclassified'
 
   const initial: TxFilters = useMemo(() => ({
     ...defaultPeriodStrings(),
@@ -117,8 +143,8 @@ export function TransactionsPage() {
     consume: consumeFromUrl,
     keyword: '',
     unclassified: unclassifiedFromUrl || semanticUnclassifiedFromUrl,
-    semanticFilter: semanticUnclassifiedFromUrl ? 'unclassified' : (searchParams.get('semantic') || ''),
-  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl, semanticUnclassifiedFromUrl, searchParams])
+    semanticFilter: semanticUnclassifiedFromUrl ? '' : semanticFromUrl,
+  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl, semanticUnclassifiedFromUrl, semanticFromUrl])
 
   const { draft, setDraft, applied, applying, isDirty, applySync, patchBoth, resetBoth } = useFilterApply(initial)
 
@@ -150,10 +176,9 @@ export function TransactionsPage() {
       const params = new URLSearchParams(prev)
       if (active) {
         params.set('unclassified', '1')
-        params.set('semantic', 'unclassified')
+        params.delete('semantic')
       } else {
         params.delete('unclassified')
-        if (params.get('semantic') === 'unclassified') params.delete('semantic')
       }
       return params
     }, { replace: true })
@@ -162,10 +187,7 @@ export function TransactionsPage() {
   useEffect(() => {
     const wantUnclassified = unclassifiedFromUrl || semanticUnclassifiedFromUrl
     if (!wantUnclassified || applied.unclassified) return
-    patchBoth({
-      unclassified: true,
-      semanticFilter: 'unclassified',
-    })
+    patchBoth({ unclassified: true, semanticFilter: '' })
     void reload()
   }, [unclassifiedFromUrl, semanticUnclassifiedFromUrl, applied.unclassified, patchBoth, reload])
 
@@ -184,8 +206,23 @@ export function TransactionsPage() {
     return formatPeriodPreview(appliedPeriod[0], appliedPeriod[1])
   }, [applied.start, applied.end, appliedPeriod])
 
+  const defaultFilters = useMemo(() => defaultTxFilters(), [])
+
+  const hasActiveFilters = useMemo(
+    () => txFiltersDiffer(applied, defaultFilters),
+    [applied, defaultFilters],
+  )
+
   const activeFilterChips: ActiveFilterChip[] = useMemo(() => {
     const chips: ActiveFilterChip[] = []
+    const defPeriod = defaultPeriodStrings()
+    if (applied.start !== defPeriod.start || applied.end !== defPeriod.end) {
+      chips.push({
+        key: 'period',
+        label: periodLabel,
+        onRemove: () => applyFilterPatch({ ...defaultPeriodStrings() }),
+      })
+    }
     if (applied.card) {
       const label = findCardTitle(cardTree, applied.card) || applied.card
       chips.push({
@@ -214,15 +251,12 @@ export function TransactionsPage() {
         key: 'unclassified',
         label: 'Unclassified only',
         onRemove: () => {
-          applyFilterPatch({
-            unclassified: false,
-            semanticFilter: applied.semanticFilter === 'unclassified' ? '' : applied.semanticFilter,
-          })
+          applyFilterPatch({ unclassified: false })
           syncUnclassifiedUrl(false)
         },
       })
     }
-    if (applied.semanticFilter) {
+    if (applied.semanticFilter && applied.semanticFilter !== 'unclassified') {
       const opt = SEMANTIC_FILTER_OPTIONS.find((o) => o.value === applied.semanticFilter)
       chips.push({
         key: 'semantic',
@@ -231,23 +265,19 @@ export function TransactionsPage() {
       })
     }
     return chips
-  }, [applied, cardTree, treeData, applyFilterPatch, syncUnclassifiedUrl])
+  }, [applied, cardTree, treeData, periodLabel, applyFilterPatch, syncUnclassifiedUrl])
 
   const toggleUnclassifiedFilter = useCallback(() => {
     const next = !applied.unclassified
-    applyFilterPatch({
-      unclassified: next,
-      semanticFilter: next
-        ? 'unclassified'
-        : (applied.semanticFilter === 'unclassified' ? '' : applied.semanticFilter),
-    })
+    applyFilterPatch({ unclassified: next })
     syncUnclassifiedUrl(next)
-  }, [applied.unclassified, applied.semanticFilter, applyFilterPatch, syncUnclassifiedUrl])
+  }, [applied.unclassified, applyFilterPatch, syncUnclassifiedUrl])
 
   const clearAllFilters = useCallback(() => {
-    resetBoth(initial)
+    resetBoth(defaultFilters)
+    setSearchParams({}, { replace: true })
     void reload()
-  }, [initial, resetBoth, reload])
+  }, [defaultFilters, resetBoth, setSearchParams, reload])
 
   const clearSelection = useCallback(() => {
     setSelectedRowKeys([])
@@ -261,7 +291,9 @@ export function TransactionsPage() {
     consumeID: applied.consume || undefined,
     demoArea: applied.keyword || undefined,
     emptyConsume: applied.unclassified ? '1' : undefined,
-    semanticFilter: applied.semanticFilter || undefined,
+    semanticFilter: applied.semanticFilter && applied.semanticFilter !== 'unclassified'
+      ? applied.semanticFilter
+      : undefined,
   }), [applied])
 
   const { data: stats, isFetching: statsLoading } = useQuery({
@@ -547,11 +579,56 @@ export function TransactionsPage() {
       icon={<UnorderedListOutlined />}
       className={`fs-data-page--dense fs-data-page--fill fs-data-page--transactions${editingId ? ' fs-data-page--editing' : ''}`}
       toolbar={(
-        <FilterToolbar
-          loading={tableLoading || applying}
-          onApply={reload}
-          dirty={isDirty}
-          summary={(
+        <div className="fs-tx-filter-shell">
+          <FilterToolbar
+            loading={tableLoading || applying}
+            onApply={reload}
+            dirty={isDirty}
+            canReset={hasActiveFilters}
+            onReset={clearAllFilters}
+            resetLabel="Reset"
+          >
+            <PeriodRangePicker
+              size="small"
+              disabled={disabled}
+              value={periodFromStrings(draft.start, draft.end)}
+              onChange={(range, presetId) => {
+                const { start, end } = periodToStrings(range, presetId)
+                setDraft((f) => ({ ...f, start, end }))
+              }}
+            />
+            <CardFilterSelect
+              disabled={disabled}
+              value={draft.card}
+              onChange={(v) => setDraft((f) => ({ ...f, card: v }))}
+            />
+            <CategoryFilterSelect
+              disabled={disabled}
+              value={draft.consume}
+              onChange={(v) => setDraft((f) => ({ ...f, consume: v }))}
+            />
+            <Select
+              className="fs-filter-control fs-filter-control--semantic"
+              size="small"
+              disabled={disabled}
+              value={draft.semanticFilter || undefined}
+              placeholder="Semantic"
+              allowClear
+              options={SEMANTIC_DROPDOWN_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              onChange={(v) => setDraft((f) => ({ ...f, semanticFilter: v || '' }))}
+            />
+            <Input.Search
+              className="fs-filter-control fs-filter-control--keyword"
+              size="small"
+              placeholder="Search…"
+              allowClear
+              disabled={disabled}
+              value={draft.keyword}
+              onChange={(e) => setDraft((f) => ({ ...f, keyword: e.target.value }))}
+              onSearch={(v) => { setDraft((f) => ({ ...f, keyword: v })); reload() }}
+            />
+          </FilterToolbar>
+          <div className="fs-tx-stats-row">
             <TransactionKpiStrip
               variant="compact"
               total={stats?.total}
@@ -565,74 +642,15 @@ export function TransactionsPage() {
               unclassifiedActive={applied.unclassified}
               onUnclassifiedClick={toggleUnclassifiedFilter}
             />
-          )}
-        >
-          <PeriodRangePicker
-            size="small"
-            disabled={disabled}
-            value={periodFromStrings(draft.start, draft.end)}
-            onChange={(range, presetId) => {
-              const { start, end } = periodToStrings(range, presetId)
-              setDraft((f) => ({ ...f, start, end }))
-            }}
+          </div>
+          <TransactionActiveFilters
+            chips={activeFilterChips}
+            onClearAll={clearAllFilters}
+            showClearAll={hasActiveFilters}
           />
-          <CardFilterSelect
-            disabled={disabled}
-            value={draft.card}
-            onChange={(v) => setDraft((f) => ({ ...f, card: v }))}
-          />
-          <CategoryFilterSelect
-            disabled={disabled}
-            value={draft.consume}
-            onChange={(v) => setDraft((f) => ({ ...f, consume: v }))}
-          />
-          <Tooltip title="Show only transactions without a category (one click, no Apply needed)">
-            <Button
-              size="small"
-              type={applied.unclassified ? 'primary' : 'default'}
-              icon={<FilterOutlined />}
-              disabled={disabled}
-              className={`fs-tx-quick-filter${applied.unclassified ? ' fs-tx-quick-filter--active' : ''}`}
-              onClick={toggleUnclassifiedFilter}
-            >
-              Unclassified
-              {(stats?.unclassified ?? 0) > 0 && !statsBusy ? ` (${stats?.unclassified})` : ''}
-            </Button>
-          </Tooltip>
-          <Select
-            className="fs-filter-control fs-filter-control--semantic"
-            size="small"
-            disabled={disabled}
-            value={draft.semanticFilter || undefined}
-            placeholder="Semantic view"
-            allowClear
-            options={SEMANTIC_FILTER_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))}
-            onChange={(v) => setDraft((f) => ({ ...f, semanticFilter: v || '' }))}
-          />
-          <Input.Search
-            className="fs-filter-control fs-filter-control--keyword"
-            size="small"
-            placeholder="Search description or memo"
-            allowClear
-            disabled={disabled}
-            value={draft.keyword}
-            onChange={(e) => setDraft((f) => ({ ...f, keyword: e.target.value }))}
-            onSearch={(v) => { setDraft((f) => ({ ...f, keyword: v })); reload() }}
-          />
-        </FilterToolbar>
+        </div>
       )}
     >
-      <TransactionActiveFilters
-        chips={activeFilterChips}
-        impact={{
-          total: stats?.total,
-          income: stats?.income,
-          expense: stats?.expense,
-          net: stats?.net,
-          loading: statsBusy,
-        }}
-        onClearAll={clearAllFilters}
-      />
       <div
         ref={tablePanelRef}
         className={`fs-table-panel fs-table-panel--editable fs-table-panel--transactions fs-table-panel--tx-overlay${selectedRowKeys.length > 0 ? ' fs-table-panel--has-selection' : ''}`}
@@ -702,7 +720,9 @@ export function TransactionsPage() {
                 consumeID: filters.consume,
                 demoArea: filters.keyword,
                 emptyConsume: filters.unclassified ? '1' : undefined,
-                semanticFilter: filters.semanticFilter || undefined,
+                semanticFilter: filters.semanticFilter && filters.semanticFilter !== 'unclassified'
+                  ? filters.semanticFilter
+                  : undefined,
                 sortField,
                 sortOrder,
               })

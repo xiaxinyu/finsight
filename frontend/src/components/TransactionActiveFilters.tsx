@@ -20,10 +20,11 @@ type Props = {
   chips: ActiveFilterChip[]
   impact?: FilterImpact
   onClearAll?: () => void
+  showClearAll?: boolean
 }
 
-export function TransactionActiveFilters({ chips, impact, onClearAll }: Props) {
-  if (chips.length === 0) return null
+export function TransactionActiveFilters({ chips, impact, onClearAll, showClearAll = false }: Props) {
+  if (chips.length === 0 && !showClearAll) return null
   const busy = impact?.loading
   return (
     <div className="fs-tx-active-filters">
@@ -57,7 +58,7 @@ export function TransactionActiveFilters({ chips, impact, onClearAll }: Props) {
           )}
         </span>
       )}
-      {chips.length > 1 && onClearAll && (
+      {onClearAll && (showClearAll || chips.length > 0) && (
         <button type="button" className="fs-tx-clear-filters" onClick={onClearAll}>
           Clear all
         </button>

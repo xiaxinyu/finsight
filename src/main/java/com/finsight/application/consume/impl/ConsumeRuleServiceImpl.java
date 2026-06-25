@@ -6,12 +6,15 @@ import com.finsight.infrastructure.mapper.ConsumeRuleTagMapper;
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.domain.model.ConsumeRuleTag;
 import com.finsight.application.consume.ConsumeRuleService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +34,21 @@ public class ConsumeRuleServiceImpl extends ServiceImpl<ConsumeRuleMapper, Consu
         List<ConsumeRule> list = super.list(qw);
         loadTags(list);
         return list;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void softDeleteById(String id, String updateUser) {
+        if (StringUtils.isBlank(id)) {
+            return;
+        }
+        LambdaUpdateWrapper<ConsumeRule> uw = Wrappers.lambdaUpdate();
+        uw.eq(ConsumeRule::getId, id.trim())
+                .set(ConsumeRule::getDeleted, 1)
+                .set(ConsumeRule::getActive, 0)
+                .set(ConsumeRule::getUpdatedBy, updateUser)
+                .set(ConsumeRule::getUpdatedAt, new Date());
+        update(uw);
     }
 
     @Override

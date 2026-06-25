@@ -10,6 +10,9 @@ type Props = {
   summary?: ReactNode
   dirty?: boolean
   selectedCount?: number
+  onReset?: () => void
+  resetLabel?: string
+  canReset?: boolean
 }
 
 export function FilterToolbar({
@@ -21,6 +24,9 @@ export function FilterToolbar({
   summary,
   dirty = false,
   selectedCount,
+  onReset,
+  resetLabel = 'Reset',
+  canReset = false,
 }: Props) {
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !loading) {
@@ -44,16 +50,21 @@ export function FilterToolbar({
         <div className="fs-toolbar-filters">
           <Space wrap size="small" className={loading ? 'fs-filter-disabled' : undefined}>
             {children}
-            <Badge dot={dirty && !loading}>
-              <Button type="primary" htmlType="submit" size="small" loading={loading} disabled={loading}>
-                {loading ? 'Loading…' : applyLabel}
-              </Button>
-            </Badge>
-            {dirty && !loading && <Tag className="fs-filter-dirty-tag">Filters changed</Tag>}
           </Space>
         </div>
         {summary ? <div className="fs-toolbar-summary">{summary}</div> : null}
         <div className="fs-toolbar-actions">
+          {canReset && onReset && (
+            <Button size="small" disabled={loading} onClick={onReset}>
+              {resetLabel}
+            </Button>
+          )}
+          <Badge dot={dirty && !loading}>
+            <Button type="primary" htmlType="submit" size="small" loading={loading} disabled={loading}>
+              {loading ? 'Loading…' : applyLabel}
+            </Button>
+          </Badge>
+          {dirty && !loading && <Tag className="fs-filter-dirty-tag">Filters changed</Tag>}
           {selectedCount != null && selectedCount > 0 && (
             <Tag color="blue">{selectedCount} selected</Tag>
           )}

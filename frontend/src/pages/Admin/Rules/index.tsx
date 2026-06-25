@@ -485,7 +485,7 @@ export function RulesAdminPage() {
 
   const onDelete = async (id: string) => {
     await deleteRule(id)
-    message.success('Deleted')
+    message.success('Rule removed')
     refetch()
     qc.invalidateQueries({ queryKey: ['admin-rules-risk'] })
   }

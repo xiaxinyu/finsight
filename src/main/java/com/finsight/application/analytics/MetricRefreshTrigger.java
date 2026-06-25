@@ -47,8 +47,9 @@ public class MetricRefreshTrigger {
             }
         }
         dirtyMonthService.markDirty(months);
+        String userKey = (userId != null && !userId.isBlank()) ? userId : null;
         for (String month : months) {
-            metricMonthlyService.refreshAsync(month);
+            metricMonthlyService.refreshAsync(month, userKey);
         }
         if (userId != null && !userId.isBlank()) {
             cacheInvalidation.invalidateForUser(userId);

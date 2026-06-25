@@ -3,6 +3,7 @@ package com.finsight.web.api.classification;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.application.analytics.ConfigVersionBump;
+import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.classification.ClassificationRuleHygieneService;
 import com.finsight.application.classification.ClassificationRuleValidator;
 import com.finsight.application.classification.RuleImpactPreviewService;
@@ -42,6 +43,7 @@ public class ClassificationRuleController {
     private final RuleRiskAnalysisService ruleRiskAnalysisService;
     private final RuleImpactPreviewService ruleImpactPreviewService;
     private final ConfigVersionBump configVersionBump;
+    private final AuthenticationFacade authenticationFacade;
 
     public ClassificationRuleController(ConsumeRuleService ruleService,
                                         ClassificationService classificationService,
@@ -49,7 +51,8 @@ public class ClassificationRuleController {
                                         ClassificationRuleHygieneService ruleHygieneService,
                                         RuleRiskAnalysisService ruleRiskAnalysisService,
                                         RuleImpactPreviewService ruleImpactPreviewService,
-                                        ConfigVersionBump configVersionBump) {
+                                        ConfigVersionBump configVersionBump,
+                                        AuthenticationFacade authenticationFacade) {
         this.ruleService = ruleService;
         this.classificationService = classificationService;
         this.ruleValidator = ruleValidator;
@@ -57,6 +60,7 @@ public class ClassificationRuleController {
         this.ruleRiskAnalysisService = ruleRiskAnalysisService;
         this.ruleImpactPreviewService = ruleImpactPreviewService;
         this.configVersionBump = configVersionBump;
+        this.authenticationFacade = authenticationFacade;
     }
 
     @GetMapping
@@ -114,7 +118,7 @@ public class ClassificationRuleController {
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable String id) {
-        ruleService.removeById(id);
+        ruleService.softDeleteById(id, authenticationFacade.getUserName());
         classificationService.reload();
         configVersionBump.bumpRuleSet();
     }

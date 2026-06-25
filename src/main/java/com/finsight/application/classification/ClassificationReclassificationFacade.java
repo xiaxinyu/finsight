@@ -81,7 +81,9 @@ public class ClassificationReclassificationFacade {
         }
         for (Map<String, Object> row : preview.getPreview()) {
             ClassificationMigrationDetail d = new ClassificationMigrationDetail();
-            d.setTransactionId(String.valueOf(row.getOrDefault("transactionId", row.get("id"))));
+            d.setTransactionId(stringVal(row.get("id")) != null
+                    ? stringVal(row.get("id"))
+                    : stringVal(row.get("transactionId")));
             d.setOldConsumeCode(stringVal(row.get("beforeCategoryCode")));
             d.setNewConsumeCode(stringVal(row.get("categoryCode")));
             d.setOldConsumeName(stringVal(row.get("beforeCategoryName")));

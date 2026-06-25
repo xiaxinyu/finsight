@@ -1,5 +1,6 @@
 package com.finsight.web.api.consume;
 
+import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.domain.model.ConsumeRule;
 import com.finsight.application.consume.ClassificationService;
 import com.finsight.application.consume.ConsumeRuleService;
@@ -32,6 +33,8 @@ public class ConsumeRuleController {
     private ClassificationService classificationService;
     @Autowired
     private TransactionRepository transactionRepository;
+    @Autowired
+    private AuthenticationFacade authenticationFacade;
 
     @GetMapping
     public List<ConsumeRule> list(@RequestParam(value = "categoryId", required = false) String categoryId,
@@ -107,7 +110,7 @@ public class ConsumeRuleController {
                 r == null ? null : r.getPattern(),
                 r == null ? null : r.getPatternType(),
                 r == null ? null : r.getPriority());
-        ruleService.removeById(id);
+        ruleService.softDeleteById(id, authenticationFacade.getUserName());
         classificationService.reload();
     }
 

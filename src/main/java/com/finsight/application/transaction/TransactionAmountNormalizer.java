@@ -62,4 +62,42 @@ public final class TransactionAmountNormalizer {
             }
         }
     }
+
+    /** Display / edit magnitude — income column first, else absolute balance. */
+    public static double canonicalMagnitude(Transaction t) {
+        if (t == null) {
+            return 0;
+        }
+        double income = t.getIncomeMoney() == null ? 0.0 : t.getIncomeMoney();
+        double balance = t.getBalanceMoney() == null ? 0.0 : t.getBalanceMoney();
+        if (income > 0) {
+            return Math.abs(income);
+        }
+        if (balance != 0) {
+            return Math.abs(balance);
+        }
+        return 0;
+    }
+
+    /** Reassign income/expense type without changing magnitude. */
+    public static void applyTxnKind(Transaction t, String kind) {
+        if (t == null || kind == null || kind.isBlank()) {
+            return;
+        }
+        double amt = canonicalMagnitude(t);
+        if (amt <= 0) {
+            return;
+        }
+        if ("income".equalsIgnoreCase(kind)) {
+            t.setIncomeMoney(amt);
+            t.setBalanceMoney(0.0);
+            t.setTxnKind("income");
+            return;
+        }
+        if ("expense".equalsIgnoreCase(kind)) {
+            t.setBalanceMoney(amt);
+            t.setIncomeMoney(0.0);
+            t.setTxnKind("expense");
+        }
+    }
 }

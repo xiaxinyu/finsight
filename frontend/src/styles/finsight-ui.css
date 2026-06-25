@@ -2667,8 +2667,107 @@
 }
 
 .fs-data-page--transactions .fs-toolbar-bar {
-  padding: 5px 10px;
-  margin-bottom: 4px;
+  padding: 6px 10px;
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.fs-data-page--transactions .fs-toolbar-form {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.fs-data-page--transactions .fs-toolbar-filters {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fs-data-page--transactions .fs-toolbar-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.fs-data-page--transactions .fs-filter-control--card {
+  min-width: 128px;
+  max-width: 168px;
+}
+
+.fs-data-page--transactions .fs-filter-control--category {
+  min-width: 136px;
+  max-width: 176px;
+}
+
+.fs-data-page--transactions .fs-filter-control--semantic {
+  min-width: 108px;
+  max-width: 132px;
+}
+
+.fs-data-page--transactions .fs-filter-control--keyword {
+  flex: 1 1 140px;
+  width: auto;
+  max-width: 240px;
+}
+
+.fs-tx-stats-row {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #eef2f6;
+  padding: 4px 10px;
+  min-height: 28px;
+  overflow: hidden;
+}
+
+.fs-tx-stats-row .fs-tx-kpi-strip--compact {
+  border: none;
+  background: transparent;
+  padding: 0;
+  min-height: auto;
+  width: 100%;
+}
+
+.fs-tx-filter-shell .fs-tx-active-filters {
+  border: none;
+  border-top: 1px solid #eef2f6;
+  border-radius: 0;
+  background: #fafbfc;
+  padding: 3px 10px 5px;
+  margin: 0;
+}
+
+.fs-tx-filter-shell {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.fs-tx-filter-shell .fs-toolbar-bar {
+  position: static;
+}
+
+@media (max-width: 1280px) {
+  .fs-data-page--transactions .fs-toolbar-form {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .fs-data-page--transactions .fs-toolbar-filters {
+    flex: 1 1 100%;
+  }
+
+  .fs-data-page--transactions .fs-toolbar-actions {
+    margin-left: auto;
+  }
 }
 
 .fs-data-page--transactions .fs-toolbar-bar--with-summary .fs-tx-kpi-strip--compact {
@@ -2837,6 +2936,7 @@
   flex-wrap: wrap;
   gap: 6px;
   flex-shrink: 0;
+  min-height: 26px;
 }
 
 .fs-tx-active-filters-label {

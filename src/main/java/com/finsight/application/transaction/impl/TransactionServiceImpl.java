@@ -136,27 +136,57 @@ public class TransactionServiceImpl implements ITransactionService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int incomeToExpense(List<String> ids, String userName) throws AppServiceException {
+        return reassignTxnKind(ids, userName, "expense");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int expenseToIncome(List<String> ids, String userName) throws AppServiceException {
+        return reassignTxnKind(ids, userName, "income");
+    }
+
+    private int reassignTxnKind(List<String> ids, String userName, String kind) throws AppServiceException {
         try {
             if (ids == null || ids.isEmpty()) {
                 return 0;
             }
-            return transactionRepository.incomeToExpense(ids, userName);
+            int updated = 0;
+            List<Date> changedDates = new ArrayList<>();
+            for (String rawId : ids) {
+                String id = StringUtils.trimToNull(rawId);
+                if (id == null) {
+                    continue;
+                }
+                Transaction tx = transactionRepository.selectById(id);
+                if (tx == null || isDeleted(tx) || "transfer".equalsIgnoreCase(StringUtils.trimToEmpty(tx.getTxnKind()))) {
+                    continue;
+                }
+                double before = TransactionAmountNormalizer.canonicalMagnitude(tx);
+                TransactionAmountNormalizer.applyTxnKind(tx, kind);
+                if (before <= 0) {
+                    continue;
+                }
+                tx.setUpdateUser(userName);
+                transactionRepository.updateTransaction(tx);
+                updated++;
+                if (tx.getTransactionDate() != null) {
+                    changedDates.add(tx.getTransactionDate());
+                }
+            }
+            if (updated > 0) {
+                invalidateHomeSummaryCache();
+                metricRefreshTrigger.afterTransactionsChanged(changedDates, userName);
+            }
+            return updated;
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
     }
 
-    @Override
-    public int expenseToIncome(List<String> ids, String userName) throws AppServiceException {
-        try {
-            if (ids == null || ids.isEmpty()) {
-                return 0;
-            }
-            return transactionRepository.expenseToIncome(ids, userName);
-        } catch (Exception e) {
-            throw new AppServiceException(e);
-        }
+    private static boolean isDeleted(Transaction tx) {
+        return tx.getDeleted() != null && tx.getDeleted() == 1;
     }
 
     @Override

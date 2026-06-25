@@ -34,4 +34,36 @@ class TransactionAmountNormalizerTest {
         assertEquals(88.0, t.getBalanceMoney());
         assertEquals(0.0, t.getIncomeMoney());
     }
+
+    @Test
+    void applyTxnKind_expenseToIncome_preservesMagnitude() {
+        Transaction t = new Transaction();
+        t.setBalanceMoney(1500.0);
+        t.setTxnKind("expense");
+        TransactionAmountNormalizer.applyTxnKind(t, "income");
+        assertEquals(1500.0, t.getIncomeMoney());
+        assertEquals(0.0, t.getBalanceMoney());
+        assertEquals("income", t.getTxnKind());
+    }
+
+    @Test
+    void applyTxnKind_incomeToExpense_preservesMagnitude() {
+        Transaction t = new Transaction();
+        t.setIncomeMoney(1500.0);
+        t.setTxnKind("income");
+        TransactionAmountNormalizer.applyTxnKind(t, "expense");
+        assertEquals(1500.0, t.getBalanceMoney());
+        assertEquals(0.0, t.getIncomeMoney());
+        assertEquals("expense", t.getTxnKind());
+    }
+
+    @Test
+    void applyTxnKind_doesNotSumBothColumns() {
+        Transaction t = new Transaction();
+        t.setIncomeMoney(1500.0);
+        t.setBalanceMoney(500.0);
+        TransactionAmountNormalizer.applyTxnKind(t, "expense");
+        assertEquals(1500.0, t.getBalanceMoney());
+        assertEquals(0.0, t.getIncomeMoney());
+    }
 }

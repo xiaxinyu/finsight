@@ -2,6 +2,7 @@ package com.finsight.domain.model;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,6 +24,8 @@ public class ClassificationRule extends BaseEntity {
     private String patternType;
     private Integer priority;
     private Integer active;
+    @TableLogic
+    private Integer deleted;
     private String bankCode;
     private String cardTypeCode;
     private String remark;

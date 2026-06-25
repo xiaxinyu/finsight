@@ -51,17 +51,26 @@ public class MetricMonthlyService {
     }
 
     @Async
-    public void refreshAsync(String yearMonth) {
+    public void refreshAsync(String yearMonth, String userId) {
+        String userKey = normalizeUserKey(userId);
         try {
-            refresh(yearMonth);
+            refreshForUser(yearMonth, userKey);
         } catch (AppServiceException ex) {
             throw new IllegalStateException("Metric refresh failed for " + yearMonth, ex);
         }
     }
 
+    /** Schedules refresh using the current security principal (call from request thread). */
+    public void refreshAsync(String yearMonth) {
+        refreshAsync(yearMonth, resolveUserKeyOrAnonymous());
+    }
+
     public Map<String, BigDecimal> refresh(String yearMonth) throws AppServiceException {
-        String userId = userKey();
-        Map<String, BigDecimal> computed = computeMonth(yearMonth);
+        return refreshForUser(yearMonth, resolveUserKeyOrAnonymous());
+    }
+
+    private Map<String, BigDecimal> refreshForUser(String yearMonth, String userId) throws AppServiceException {
+        Map<String, BigDecimal> computed = computeMonth(yearMonth, userId);
         Map<String, BigDecimal> written = new LinkedHashMap<>();
         for (Map.Entry<String, BigDecimal> e : computed.entrySet()) {
             metricRepository.upsert(userId, yearMonth, e.getKey(), e.getValue());
@@ -71,7 +80,7 @@ public class MetricMonthlyService {
     }
 
     public List<Map<String, Object>> history(String fromYm, String toYm) {
-        return metricRepository.listForUser(userKey(), fromYm, toYm);
+        return metricRepository.listForUser(resolveUserKeyOrAnonymous(), fromYm, toYm);
     }
 
     /** @deprecated Diagnostic-only — do not use on user read paths; prefer {@link #history}. */
@@ -82,7 +91,7 @@ public class MetricMonthlyService {
         List<Map<String, Object>> out = new ArrayList<>();
         for (YearMonth ym = start; !ym.isAfter(end); ym = ym.plusMonths(1)) {
             String label = ym.format(YM);
-            for (Map.Entry<String, BigDecimal> e : computeMonth(label).entrySet()) {
+            for (Map.Entry<String, BigDecimal> e : computeMonth(label, resolveUserKeyOrAnonymous()).entrySet()) {
                 Map<String, Object> row = new LinkedHashMap<>();
                 row.put("yearMonth", label);
                 row.put("metricCode", e.getKey());
@@ -93,7 +102,7 @@ public class MetricMonthlyService {
         return out;
     }
 
-    private Map<String, BigDecimal> computeMonth(String yearMonth) throws AppServiceException {
+    private Map<String, BigDecimal> computeMonth(String yearMonth, String userId) throws AppServiceException {
         YearMonth ym = YearMonth.parse(yearMonth, YM);
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
@@ -113,7 +122,7 @@ public class MetricMonthlyService {
         out.put(MetricCode.SAVINGS_RATE.name(), bd(savingsRate));
 
         Map<String, BigDecimal> semantic = semanticMetricsRepository.aggregateMonth(
-                userKey(), start, end);
+                userId, start, end);
         for (Map.Entry<String, BigDecimal> e : semantic.entrySet()) {
             out.put(e.getKey(), e.getValue());
         }
@@ -139,8 +148,15 @@ public class MetricMonthlyService {
         }
     }
 
-    private String userKey() {
-        String user = authenticationFacade.getUserName();
-        return user == null || user.isBlank() ? "_anonymous" : user;
+    private static String normalizeUserKey(String userId) {
+        return userId == null || userId.isBlank() ? "_anonymous" : userId;
+    }
+
+    private String resolveUserKeyOrAnonymous() {
+        try {
+            return normalizeUserKey(authenticationFacade.getUserName());
+        } catch (RuntimeException ex) {
+            return "_anonymous";
+        }
     }
 }
