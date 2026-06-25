@@ -6,6 +6,7 @@ import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.transaction.TransactionReclassificationResult;
 import com.finsight.application.transaction.TransactionReclassificationService;
 import com.finsight.domain.model.ClassificationMigrationDetail;
+import com.finsight.web.api.dto.ReclassificationAssignmentDto;
 import com.finsight.web.api.dto.TransactionParam;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,19 @@ public class ClassificationReclassificationFacade {
 
     public TransactionReclassificationResult previewUnclassified(TransactionParam param) throws Exception {
         return reclassificationService.reclassifyUnclassified(param, false, false, userName());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> applyAssignments(List<ReclassificationAssignmentDto> assignments, String reason) {
+        TransactionReclassificationResult applied = reclassificationService.applyAssignments(assignments, userName());
+        List<ClassificationMigrationDetail> details = toDetails(applied);
+        var batch = batchService.createBatch("RECLASSIFY", reason, userName(), details);
+        batchService.markApplied(batch.getId());
+        configVersionBump.bumpMetricRefresh();
+        return Map.of(
+                "batchId", batch.getId(),
+                "result", applied,
+                "dirtyMonths", dirtyMonthService.listDirty());
     }
 
     @Transactional(rollbackFor = Exception.class)

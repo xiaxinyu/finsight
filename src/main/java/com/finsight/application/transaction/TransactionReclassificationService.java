@@ -14,6 +14,7 @@ import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.Page;
 import com.finsight.domain.model.Transaction;
 import com.finsight.domain.port.TransactionRepository;
+import com.finsight.web.api.dto.ReclassificationAssignmentDto;
 import com.finsight.web.api.dto.TransactionParam;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -129,6 +130,67 @@ public class TransactionReclassificationService {
             }
         }
         if (persist && result.getClassified() > 0) {
+            metricRefreshTrigger.afterTransactionsChanged(changedDates, userName);
+        }
+        return result;
+    }
+
+    /**
+     * Applies user-confirmed categories from the Review auto-classify modal (does not re-run rules).
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public TransactionReclassificationResult applyAssignments(
+            List<ReclassificationAssignmentDto> assignments,
+            String userName) {
+        TransactionReclassificationResult result = new TransactionReclassificationResult();
+        result.setDryRun(false);
+        result.setRequested(assignments == null ? 0 : assignments.size());
+        List<Date> changedDates = new ArrayList<>();
+        if (assignments == null) {
+            return result;
+        }
+        for (ReclassificationAssignmentDto assignment : assignments) {
+            if (assignment == null) {
+                result.setSkipped(result.getSkipped() + 1);
+                continue;
+            }
+            String id = StringUtils.trimToNull(assignment.getTransactionId());
+            String code = StringUtils.trimToNull(assignment.getCategoryCode());
+            if (id == null || code == null) {
+                result.setSkipped(result.getSkipped() + 1);
+                continue;
+            }
+            Transaction tx = transactionRepository.selectById(id);
+            if (tx == null || isDeleted(tx)) {
+                result.setSkipped(result.getSkipped() + 1);
+                continue;
+            }
+            if ("transfer".equalsIgnoreCase(StringUtils.trimToEmpty(tx.getTxnKind()))) {
+                result.setSkipped(result.getSkipped() + 1);
+                continue;
+            }
+            String name = StringUtils.trimToNull(assignment.getCategoryName());
+            ClassificationService.Result match = new ClassificationService.Result();
+            match.id = code;
+            match.name = name != null ? name : code;
+            String beforeCode = TransactionCategoryFieldSync.resolveCanonicalCode(tx);
+            String beforeName = StringUtils.defaultIfBlank(tx.getConsumeName(), tx.getCategoryName());
+            applyCategory(tx, match, userName);
+            if (tx.getTransactionDate() != null) {
+                changedDates.add(tx.getTransactionDate());
+            }
+            result.addPreview(tx.getId(), code, match.name, "APPLY",
+                    tx.getTransactionDesc(), tx.getTransactionDate(),
+                    "USER", null, "User confirmed in auto-classify review", null);
+            if (StringUtils.isNotBlank(beforeCode)) {
+                result.getPreview().get(result.getPreview().size() - 1).put("beforeCategoryCode", beforeCode);
+            }
+            if (StringUtils.isNotBlank(beforeName)) {
+                result.getPreview().get(result.getPreview().size() - 1).put("beforeCategoryName", beforeName);
+            }
+            result.setClassified(result.getClassified() + 1);
+        }
+        if (result.getClassified() > 0) {
             metricRefreshTrigger.afterTransactionsChanged(changedDates, userName);
         }
         return result;

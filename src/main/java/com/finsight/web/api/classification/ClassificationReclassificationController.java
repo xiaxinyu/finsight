@@ -4,10 +4,12 @@ import com.finsight.application.classification.ClassificationMigrationBatchServi
 import com.finsight.application.classification.ClassificationReclassificationFacade;
 import com.finsight.application.classification.ConfigVersionService;
 import com.finsight.application.transaction.TransactionReclassificationResult;
+import com.finsight.web.api.dto.ReclassificationAssignmentDto;
 import com.finsight.web.api.dto.TransactionParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,9 +45,17 @@ public class ClassificationReclassificationController {
 
     @PostMapping("/apply")
     public Map<String, Object> apply(
-            @RequestParam String ids,
+            @RequestParam(value = "ids", required = false) String ids,
             @RequestParam(value = "overrideExisting", defaultValue = "false") boolean overrideExisting,
-            @RequestParam(value = "reason", required = false) String reason) {
+            @RequestParam(value = "reason", required = false) String reason,
+            @RequestBody(required = false) java.util.List<ReclassificationAssignmentDto> assignments) {
+        if (assignments != null && !assignments.isEmpty()) {
+            return facade.applyAssignments(assignments, reason);
+        }
+        if (ids == null || ids.isBlank()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "ids or assignments required");
+        }
         return facade.applyByIds(ids, overrideExisting, reason);
     }
 

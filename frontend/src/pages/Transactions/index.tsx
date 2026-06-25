@@ -467,9 +467,19 @@ export function TransactionsPage() {
     if (!editRows.length) return
     setClassifyBusy(true)
     try {
-      const ids = editRows.map((r) => r.id).join(',')
-      const applied = await applyReclassification(ids, false, 'Transactions auto-classify confirm')
-      const count = applied.result?.classified ?? editRows.length
+      const applied = await applyReclassification(
+        editRows.map((r) => ({
+          transactionId: r.id,
+          categoryCode: r.categoryCode,
+          categoryName: r.categoryName,
+        })),
+        'Transactions auto-classify confirm',
+      )
+      const count = applied.result?.classified ?? 0
+      if (count === 0) {
+        message.error('No categories were saved — check selection and try again')
+        return
+      }
       const batchHint = applied.batchId ? ` (batch ${applied.batchId})` : ''
       message.success(`Applied ${count} categor${count === 1 ? 'y' : 'ies'}${batchHint}`)
       setClassifyPreviewOpen(false)

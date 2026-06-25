@@ -37,16 +37,19 @@ export type ReclassificationApplyResult = {
   dirtyMonths?: Array<{ monthKey?: string }>
 }
 
+export type ReclassificationAssignment = {
+  transactionId: string
+  categoryCode: string
+  categoryName?: string
+}
+
 export async function applyReclassification(
-  ids: string,
-  overrideExisting = false,
+  assignments: ReclassificationAssignment[],
   reason?: string,
 ): Promise<ReclassificationApplyResult> {
   const params = new URLSearchParams()
-  params.set('ids', ids)
-  params.set('overrideExisting', String(overrideExisting))
   if (reason) params.set('reason', reason)
-  return postJson(`/api/v1/classification/reclassification/apply?${params.toString()}`, {}) as Promise<ReclassificationApplyResult>
+  return postJson(`/api/v1/classification/reclassification/apply?${params.toString()}`, assignments) as Promise<ReclassificationApplyResult>
 }
 
 export async function fetchReclassificationBatches(limit = 20) {
