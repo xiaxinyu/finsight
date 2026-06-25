@@ -196,6 +196,42 @@
   min-height: 0;
 }
 
+.fs-category-semantics-card .fs-category-semantics-tags {
+  margin-bottom: 8px;
+}
+
+.fs-category-semantics-inclusion {
+  font-size: 12px;
+  margin-bottom: 8px !important;
+}
+
+.fs-category-semantics-flags .ant-tag {
+  font-size: 11px;
+}
+
+.fs-admin-category-semantics {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--fs-radius, 8px);
+}
+
+.fs-admin-category-semantics-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.fs-admin-category-semantics-hint {
+  display: block;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
 .fs-category-asset-card .ant-card-head {
   min-height: 36px;
   padding: 0 14px;

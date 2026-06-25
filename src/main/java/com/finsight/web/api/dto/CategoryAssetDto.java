@@ -26,6 +26,60 @@ public class CategoryAssetDto {
     private List<String> affectedReports = new ArrayList<>();
     private List<String> qualityFlags = new ArrayList<>();
     private List<CategoryChildCandidateDto> childCandidates = new ArrayList<>();
+    private String reportRole;
+    private String economicNature;
+    private String budgetBehavior;
+    private boolean includeInIncomeTrend;
+    private boolean includeInExpenseTrend;
+    private boolean includeInBudget;
+
+    public String getReportRole() {
+        return reportRole;
+    }
+
+    public void setReportRole(String reportRole) {
+        this.reportRole = reportRole;
+    }
+
+    public String getEconomicNature() {
+        return economicNature;
+    }
+
+    public void setEconomicNature(String economicNature) {
+        this.economicNature = economicNature;
+    }
+
+    public String getBudgetBehavior() {
+        return budgetBehavior;
+    }
+
+    public void setBudgetBehavior(String budgetBehavior) {
+        this.budgetBehavior = budgetBehavior;
+    }
+
+    public boolean isIncludeInIncomeTrend() {
+        return includeInIncomeTrend;
+    }
+
+    public void setIncludeInIncomeTrend(boolean includeInIncomeTrend) {
+        this.includeInIncomeTrend = includeInIncomeTrend;
+    }
+
+    public boolean isIncludeInExpenseTrend() {
+        return includeInExpenseTrend;
+    }
+
+    public void setIncludeInExpenseTrend(boolean includeInExpenseTrend) {
+        this.includeInExpenseTrend = includeInExpenseTrend;
+    }
+
+    public boolean isIncludeInBudget() {
+        return includeInBudget;
+    }
+
+    public void setIncludeInBudget(boolean includeInBudget) {
+        this.includeInBudget = includeInBudget;
+    }
 
     public String getCategoryId() {
         return categoryId;

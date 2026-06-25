@@ -10,6 +10,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import type { CategoryAsset, CategoryChildCandidate } from '../api/admin'
+import { economicNatureLabel, inclusionSummary, reportRoleLabel } from '../utils/categorySemantics'
 import { ContentCard } from './ContentCard'
 import { EmptyState } from './EmptyState'
 import { formatMoney } from '../utils/format'
@@ -94,6 +95,24 @@ export function CategoryAssetPanel({
 
   return (
     <div className="fs-category-asset-panel">
+      <ContentCard title="Finance semantics" size="small" className="fs-category-asset-card fs-category-semantics-card">
+        <div className="fs-category-semantics-tags">
+          <Tag color="blue">{reportRoleLabel(asset.reportRole)}</Tag>
+          <Tag>{economicNatureLabel(asset.economicNature)}</Tag>
+          {asset.budgetBehavior && asset.budgetBehavior !== 'variable' ? (
+            <Tag color="purple">{asset.budgetBehavior}</Tag>
+          ) : null}
+        </div>
+        <Typography.Paragraph type="secondary" className="fs-category-semantics-inclusion">
+          {inclusionSummary(asset)}
+        </Typography.Paragraph>
+        <div className="fs-category-semantics-flags">
+          <Tag color={asset.includeInIncomeTrend ? 'green' : 'default'}>Income trend</Tag>
+          <Tag color={asset.includeInExpenseTrend ? 'orange' : 'default'}>Expense trend</Tag>
+          <Tag color={asset.includeInBudget ? 'geekblue' : 'default'}>Budget</Tag>
+        </div>
+      </ContentCard>
+
       <ContentCard title="Usage & coverage" size="small" className="fs-category-asset-card">
         {asset.qualityFlags?.length ? (
           <Space wrap size={[6, 6]} className="fs-category-quality-flags">
@@ -233,6 +252,12 @@ export function CategoryAssetPanel({
               { title: 'Code', dataIndex: 'code', width: 110, render: (v: string) => <span className="fs-mono">{v}</span> },
               { title: 'Name', dataIndex: 'name', ellipsis: true },
               {
+                title: 'Role',
+                dataIndex: 'reportRole',
+                width: 100,
+                render: (v: string) => <Tag>{reportRoleLabel(v)}</Tag>,
+              },
+              {
                 title: '',
                 key: 'action',
                 width: 88,
@@ -287,6 +312,9 @@ export function CategoryCandidateConfirmModal({
             <div><dt>Code</dt><dd className="fs-mono">{candidate.code}</dd></div>
             <div><dt>Name</dt><dd>{candidate.name}</dd></div>
             <div><dt>Txn types</dt><dd>{candidate.txnTypes}</dd></div>
+            {candidate.reportRole ? (
+              <div><dt>Report role</dt><dd>{reportRoleLabel(candidate.reportRole)}</dd></div>
+            ) : null}
           </dl>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
             {candidate.reason}

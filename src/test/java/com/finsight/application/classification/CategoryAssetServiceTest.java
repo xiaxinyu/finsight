@@ -67,6 +67,9 @@ class CategoryAssetServiceTest {
         assertEquals(2, asset.getChildCategoryCount());
         assertTrue(asset.getAffectedReports().size() >= 5);
         assertFalse(asset.getQualityFlags().contains("empty"));
+        assertEquals("budget", asset.getReportRole());
+        assertEquals("expense", asset.getEconomicNature());
+        assertTrue(asset.isIncludeInBudget() || asset.isIncludeInExpenseTrend() || !asset.isIncludeInIncomeTrend());
     }
 
     @Test

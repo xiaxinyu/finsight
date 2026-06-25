@@ -74,6 +74,7 @@ public class CategoryAssetService {
         }
         out.setAffectedReports(CategoryImpactSupport.REPORT_SURFACES);
         out.setQualityFlags(buildQualityFlags(out));
+        applyFinanceSemantics(out, cat);
         if (CategoryMergeSupport.isLevelOne(cat)) {
             out.setChildCandidates(listChildCandidates(cat, loadAllCategoryCodes()));
         }
@@ -120,6 +121,27 @@ public class CategoryAssetService {
             candidates.add(dto);
         }
         return candidates;
+    }
+
+    private static void applyFinanceSemantics(CategoryAssetDto out, ConsumeCategory cat) {
+        String role = StringUtils.trimToNull(cat.getReportRole());
+        if (role == null) {
+            role = CategoryReportRoleInference.inferReportRole(
+                    new CategoryReportRoleInference.DbCategoryRow(
+                            cat.getCode(),
+                            cat.getName(),
+                            cat.getLevel() == null ? 0 : cat.getLevel(),
+                            cat.getParentId(),
+                            cat.getTxnTypes()))
+                    .orElse("other");
+        }
+        CategoryFinanceSemantics.SemanticProfile sem = CategoryFinanceSemantics.profile(role, cat.getTxnTypes());
+        out.setReportRole(sem.reportRole());
+        out.setEconomicNature(sem.economicNature());
+        out.setBudgetBehavior(sem.budgetBehavior());
+        out.setIncludeInIncomeTrend(sem.includeInIncomeTrend());
+        out.setIncludeInExpenseTrend(sem.includeInExpenseTrend());
+        out.setIncludeInBudget(sem.includeInBudget());
     }
 
     private List<String> buildQualityFlags(CategoryAssetDto asset) {

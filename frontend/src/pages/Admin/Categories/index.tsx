@@ -35,6 +35,11 @@ import {
   toAntTreeNodesWithCounts,
 } from '../../../utils/categoryTree'
 import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
+import {
+  economicNatureLabel,
+  inclusionSummary,
+  reportRoleLabel,
+} from '../../../utils/categorySemantics'
 
 function toMergeCascaderOptions(nodes: CategoryTreeSelectNode[]): CascaderOption[] {
   return nodes.map((n) => ({
@@ -327,6 +332,20 @@ export function CategoriesAdminPage() {
                       { value: 'expense,income', label: 'Both' },
                     ]} />
                   </Form.Item>
+                  {!creating && categoryAsset?.reportRole && (
+                    <div className="fs-admin-category-semantics">
+                      <Typography.Text type="secondary" className="fs-admin-category-semantics-label">
+                        Finance semantics
+                      </Typography.Text>
+                      <Space wrap size={[4, 4]}>
+                        <Tag color="blue">{reportRoleLabel(categoryAsset.reportRole)}</Tag>
+                        <Tag>{economicNatureLabel(categoryAsset.economicNature)}</Tag>
+                      </Space>
+                      <Typography.Text type="secondary" className="fs-admin-category-semantics-hint">
+                        {inclusionSummary(categoryAsset)}
+                      </Typography.Text>
+                    </div>
+                  )}
                   <Form.Item name="sortNo" label="Sort order">
                     <InputNumber min={1} style={{ width: '100%' }} />
                   </Form.Item>

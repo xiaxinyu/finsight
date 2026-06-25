@@ -22,6 +22,11 @@
 - 语义标签与筛选基于 `v_transaction_finance_semantics`。
 - 筛选只改变查看范围，不修改交易本身。
 
+## Categories（Admin）
+
+- 选中分类后展示 **Finance semantics**：`report_role`、财务本质、是否计入收入/支出/预算趋势。
+- 数据来自 `cls_category.report_role` 与目录推断（与语义合同一致）。
+
 ## 报表一致性
 
 Dashboard、Profile、Forecast 的核心收入/支出口径应对齐语义层。若发现不一致，先检查 metric refresh 与分类 `report_role`。
