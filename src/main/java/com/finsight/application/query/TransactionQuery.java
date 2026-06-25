@@ -21,7 +21,10 @@ public class TransactionQuery {
     private String sortField;
     private String sortOrder;
     private String merchantToken;
+    private String semanticFilter;
 
+    public String getSemanticFilter() { return semanticFilter; }
+    public void setSemanticFilter(String semanticFilter) { this.semanticFilter = semanticFilter; }
     public String getTxnTypes() { return txnTypes; }
     public void setTxnTypes(String txnTypes) { this.txnTypes = txnTypes; }
     public Date getTransactionDateStart() { return transactionDateStart; }

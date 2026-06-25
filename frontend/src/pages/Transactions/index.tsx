@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { Button, Input, Modal, Popconfirm, Space, Tooltip, message } from 'antd'
+import { Button, Input, Modal, Popconfirm, Select, Space, Tooltip, message } from 'antd'
 import {
   DeleteOutlined, EditOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
@@ -50,6 +50,7 @@ import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPre
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { mapTransactionTableSort } from '../../utils/transactionTableSort'
 import { summarizeSelection } from '../../utils/transactionSelection'
+import { SEMANTIC_FILTER_OPTIONS, detectTransactionSemanticTag, semanticInclusionHint } from '../../utils/transactionSemantic'
 
 type TxFilters = {
   start: string
@@ -58,6 +59,7 @@ type TxFilters = {
   consume: string
   keyword: string
   unclassified: boolean
+  semanticFilter: string
 }
 
 function findTreeTitle(nodes: { title: string; value: string; children?: typeof nodes }[], value: string): string {
@@ -114,7 +116,8 @@ export function TransactionsPage() {
     consume: consumeFromUrl,
     keyword: '',
     unclassified: unclassifiedFromUrl,
-  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl])
+    semanticFilter: searchParams.get('semantic') || '',
+  }), [cardFromUrl, consumeFromUrl, unclassifiedFromUrl, searchParams])
 
   const { draft, setDraft, applied, applying, isDirty, applySync, patchBoth, resetBoth } = useFilterApply(initial)
 
@@ -194,6 +197,14 @@ export function TransactionsPage() {
         onRemove: () => applyFilterPatch({ unclassified: false }),
       })
     }
+    if (applied.semanticFilter) {
+      const opt = SEMANTIC_FILTER_OPTIONS.find((o) => o.value === applied.semanticFilter)
+      chips.push({
+        key: 'semantic',
+        label: opt?.label || applied.semanticFilter,
+        onRemove: () => applyFilterPatch({ semanticFilter: '' }),
+      })
+    }
     return chips
   }, [applied, cardTree, treeData, applyFilterPatch])
 
@@ -218,6 +229,7 @@ export function TransactionsPage() {
     consumeID: applied.consume || undefined,
     demoArea: applied.keyword || undefined,
     emptyConsume: applied.unclassified ? '1' : undefined,
+    semanticFilter: applied.semanticFilter || undefined,
   }), [applied])
 
   const { data: stats, isFetching: statsLoading } = useQuery({
@@ -532,6 +544,16 @@ export function TransactionsPage() {
             value={draft.consume}
             onChange={(v) => setDraft((f) => ({ ...f, consume: v }))}
           />
+          <Select
+            className="fs-filter-control fs-filter-control--semantic"
+            size="small"
+            disabled={disabled}
+            value={draft.semanticFilter || undefined}
+            placeholder="Semantic view"
+            allowClear
+            options={SEMANTIC_FILTER_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))}
+            onChange={(v) => setDraft((f) => ({ ...f, semanticFilter: v || '' }))}
+          />
           <Input.Search
             className="fs-filter-control fs-filter-control--keyword"
             size="small"
@@ -593,12 +615,15 @@ export function TransactionsPage() {
               const cardSummary = [cellText(record.bankCode), cellText(record.cardTypeName), cellText(record.bankCardName)]
                 .filter(Boolean)
                 .join(' · ')
+              const semanticTag = detectTransactionSemanticTag(record)
+              const semanticHint = semanticInclusionHint(semanticTag)
               return (
                 <TransactionEditPanel
                   draft={editDraft}
                   onChange={setEditDraft}
                   treeData={treeData}
                   cardSummary={cardSummary}
+                  semanticHint={semanticHint || undefined}
                   saving={editSaving}
                   onSave={() => void saveEdit()}
                   onCancel={cancelEdit}
@@ -622,6 +647,7 @@ export function TransactionsPage() {
                 consumeID: filters.consume,
                 demoArea: filters.keyword,
                 emptyConsume: filters.unclassified ? '1' : undefined,
+                semanticFilter: filters.semanticFilter || undefined,
                 sortField,
                 sortOrder,
               })

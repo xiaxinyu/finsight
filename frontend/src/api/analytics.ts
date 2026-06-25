@@ -69,6 +69,36 @@ export async function fetchProfileRefresh() {
   return unwrap<ProfileData>(await postJson('/api/v1/analytics/profile/refresh', {}))
 }
 
+export type PeriodMetricMonth = {
+  yearMonth: string
+  month: string
+  realIncome: number
+  consumptionExpense: number
+  net: number
+}
+
+export type PeriodMetricSummary = {
+  realIncome: number
+  consumptionExpense: number
+  netCashflow: number
+  refundInflow?: number
+  investmentOutflow?: number
+  unclassifiedAmount?: number
+  dataQualityScore?: number
+  months: PeriodMetricMonth[]
+  metricsSource: string
+  periodStart?: string
+  periodEnd?: string
+}
+
+export async function fetchMetricPeriodSummary(from?: string, to?: string) {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return unwrap<PeriodMetricSummary>(await getJson(`/api/v1/analytics/metrics/period-summary${suffix}`))
+}
+
 export async function fetchProfileHistory(from: string, to: string, dimension?: string) {
   const params = new URLSearchParams({ from, to })
   if (dimension) params.set('dimension', dimension)

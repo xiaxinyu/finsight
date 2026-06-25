@@ -3192,6 +3192,17 @@
   min-width: 0;
 }
 
+.fs-metric-explanation-icon {
+  color: var(--fs-text-muted, #94a3b8);
+  font-size: 11px;
+  margin-left: 2px;
+  cursor: help;
+}
+
+.fs-filter-control--semantic {
+  min-width: 148px;
+}
+
 .fs-dash-kpi-label {
   font-size: 11px;
   font-weight: 600;

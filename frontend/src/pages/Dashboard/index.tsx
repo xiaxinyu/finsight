@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons'
 import { homeSummary, fetchReport } from '../../api/report'
 import { cashflowMetrics, decisionCards, financialPulse } from '../../api/finance'
-import { advisorFeedback, advisorRecommendations } from '../../api/analytics'
+import { advisorFeedback, advisorRecommendations, fetchMetricPeriodSummary } from '../../api/analytics'
 import type { AdvisorCard } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
@@ -36,6 +36,8 @@ import { rollupToLevel1 } from '../../utils/reportAnalytics'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
+import { DASHBOARD_METRIC_HINTS, MetricExplanation } from '../../components/MetricExplanation'
+import { mergeDashboardPeriodTotals } from '../../utils/dashboardMetrics'
 
 function savingsRateLabel(income: number, net: number): string {
   if (income <= 0) return '—'
@@ -87,6 +89,17 @@ export function DashboardPage() {
     },
   })
 
+  const { data: semanticPeriod, isFetching: semanticLoading } = useQuery({
+    queryKey: ['dash-semantic', periodKey.start, periodKey.end],
+    queryFn: () => fetchMetricPeriodSummary(periodKey.start || undefined, periodKey.end || undefined),
+    staleTime: ANALYTICS_STALE_MS,
+  })
+
+  const periodTotals = useMemo(
+    () => mergeDashboardPeriodTotals(semanticPeriod, periodReport),
+    [semanticPeriod, periodReport],
+  )
+
   const { data: pulse, isError: pulseError, error: pulseErr } = useQuery({
     queryKey: ['financial-pulse'],
     queryFn: financialPulse,
@@ -107,9 +120,9 @@ export function DashboardPage() {
     enabled: !flags.advisor || !advisorCards?.length,
   })
 
-  const income = Number(periodReport?.income ?? 0)
-  const expense = Number(periodReport?.expense ?? 0)
-  const net = income - expense
+  const income = periodTotals.realIncome
+  const expense = periodTotals.consumptionExpense
+  const net = periodTotals.net
   const savingsLabel = savingsRateLabel(income, net)
   const healthScore = (summary?.health_score || summary?.healthScore) as Record<string, number> | undefined
 
@@ -123,31 +136,31 @@ export function DashboardPage() {
   )
 
   const cashflowOption = useMemo(() => {
-    const months = periodReport?.months || []
+    const months = periodTotals.months
     return {
       title: { text: `Cash flow · ${formatPeriodPreview(period[0], period[1])}`, left: 0, textStyle: { fontSize: 13, fontWeight: 600 } },
-      legend: { data: ['Income', 'Expense', 'Net'], top: 4, right: 0, textStyle: { fontSize: 11 } },
+      legend: { data: ['Real income', 'Consumption', 'Net'], top: 4, right: 0, textStyle: { fontSize: 11 } },
       grid: { left: 48, right: 16, top: 48, bottom: 28 },
       tooltip: { trigger: 'axis' as const },
       xAxis: { type: 'category' as const, data: months.map((m) => m.month), axisLabel: { fontSize: 10 } },
       yAxis: { type: 'value' as const, axisLabel: { fontSize: 10 } },
       series: [
-        { name: 'Income', type: 'bar' as const, data: months.map((m) => m.income), itemStyle: { color: '#16a34a' }, barMaxWidth: 18 },
-        { name: 'Expense', type: 'bar' as const, data: months.map((m) => m.expense), itemStyle: { color: '#ea580c' }, barMaxWidth: 18 },
+        { name: 'Real income', type: 'bar' as const, data: months.map((m) => m.realIncome), itemStyle: { color: '#16a34a' }, barMaxWidth: 18 },
+        { name: 'Consumption', type: 'bar' as const, data: months.map((m) => m.consumptionExpense), itemStyle: { color: '#ea580c' }, barMaxWidth: 18 },
         {
           name: 'Net',
           type: 'line' as const,
           smooth: true,
-          data: months.map((m) => m.income - m.expense),
+          data: months.map((m) => m.net),
           itemStyle: { color: '#2563eb' },
           lineStyle: { width: 2 },
         },
       ],
     }
-  }, [period, periodReport?.months])
+  }, [period, periodTotals.months])
 
   const loadError = isError ? error : pulseError ? pulseErr : cardsError ? cardsErr : null
-  const loading = isLoading || totalsLoading
+  const loading = isLoading || totalsLoading || semanticLoading
   const periodLabel = formatPeriodPreview(period[0], period[1])
   const needsOnboarding = income === 0 && expense === 0 && Number(pulse?.liquidAssets || 0) === 0
 
@@ -243,17 +256,17 @@ export function DashboardPage() {
 
           <div className="fs-dash-kpi-strip">
             <div className="fs-dash-kpi-card">
-              <span className="fs-dash-kpi-label">Income</span>
+              <MetricExplanation className="fs-dash-kpi-label" label="Real income" hint={DASHBOARD_METRIC_HINTS.realIncome} />
               <span className="fs-dash-kpi-value fs-dash-kpi-value--income">{formatMoney(income)}</span>
-              <span className="fs-dash-kpi-hint">{periodLabel}</span>
+              <span className="fs-dash-kpi-hint">{periodLabel}{periodTotals.usedSemantic ? ' · semantic' : ''}</span>
             </div>
             <div className="fs-dash-kpi-card">
-              <span className="fs-dash-kpi-label">Expense</span>
+              <MetricExplanation className="fs-dash-kpi-label" label="Consumption" hint={DASHBOARD_METRIC_HINTS.consumptionExpense} />
               <span className="fs-dash-kpi-value fs-dash-kpi-value--expense">{formatMoney(expense)}</span>
               <span className="fs-dash-kpi-hint">{periodLabel}</span>
             </div>
             <div className="fs-dash-kpi-card">
-              <span className="fs-dash-kpi-label">Net</span>
+              <MetricExplanation className="fs-dash-kpi-label" label="Net cashflow" hint={DASHBOARD_METRIC_HINTS.netCashflow} />
               <span className={`fs-dash-kpi-value${net >= 0 ? ' fs-dash-kpi-value--income' : ' fs-dash-kpi-value--expense'}`}>
                 {formatMoney(net)}
               </span>

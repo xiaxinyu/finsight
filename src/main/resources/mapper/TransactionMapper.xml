@@ -67,6 +67,47 @@
             )
         </if>
     </sql>
+    <sql id="excludeTransferUnlessSemanticT">
+        <if test="q == null or q.semanticFilter == null or q.semanticFilter == '' or q.semanticFilter != 'transfer'">
+            <include refid="excludeTransferT"/>
+        </if>
+    </sql>
+    <sql id="filterSemanticT">
+        <if test="q != null and q.semanticFilter != null and q.semanticFilter != ''">
+            and exists (
+                select 1 from v_transaction_finance_semantics sem
+                where sem.id = t.id
+                <choose>
+                    <when test="q.semanticFilter == 'real_income'">
+                        and sem.include_in_income_trend = 1
+                    </when>
+                    <when test="q.semanticFilter == 'consumption'">
+                        and sem.include_in_expense_trend = 1
+                    </when>
+                    <when test="q.semanticFilter == 'refund'">
+                        and sem.economic_nature = 'refund'
+                    </when>
+                    <when test="q.semanticFilter == 'transfer'">
+                        and sem.economic_nature = 'transfer'
+                    </when>
+                    <when test="q.semanticFilter == 'investment'">
+                        and sem.economic_nature = 'investment'
+                    </when>
+                    <when test="q.semanticFilter == 'liability'">
+                        and sem.economic_nature = 'liability'
+                    </when>
+                    <when test="q.semanticFilter == 'unclassified'">
+                        and sem.quality_state = 'unclassified'
+                    </when>
+                    <when test="q.semanticFilter == 'data_quality'">
+                        and (sem.quality_state = 'unclassified'
+                            or sem.category_l1_code = 'OTHER'
+                            or sem.category_code = 'OTHER')
+                    </when>
+                </choose>
+            )
+        </if>
+    </sql>
     <sql id="filterCategoryCodesT">
         <if test="q != null and q.consumes != null">
             and (
@@ -152,7 +193,7 @@
     </sql>
     <sql id="transactionDrillFilterT">
         <include refid="activeTransactionT"/>
-        <include refid="excludeTransferT"/>
+        <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
                 <include refid="filterTxnTypeIncomeT"/>
@@ -201,6 +242,7 @@
                 )
             </if>
             <include refid="filterMerchantTokenT"/>
+            <include refid="filterSemanticT"/>
             <if test="q.weekName != null">
                 and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>
@@ -483,7 +525,7 @@
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="activeTransactionT"/>
-        <include refid="excludeTransferT"/>
+        <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
                 <include refid="filterTxnTypeIncomeT"/>
@@ -532,6 +574,7 @@
                 )
             </if>
             <include refid="filterMerchantTokenT"/>
+            <include refid="filterSemanticT"/>
             <if test="q.weekName != null">
                 and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>
@@ -553,7 +596,7 @@
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="activeTransactionT"/>
-        <include refid="excludeTransferT"/>
+        <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
                 <include refid="filterTxnTypeIncomeT"/>
@@ -600,6 +643,7 @@
                 or t.transaction_desc like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%') )
             </if>
             <include refid="filterMerchantTokenT"/>
+            <include refid="filterSemanticT"/>
             <if test="q.weekName != null">
                 and weekday(t.bookkeeping_date) = #{q.weekName,jdbcType=VARCHAR}
             </if>

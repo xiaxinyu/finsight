@@ -20,6 +20,15 @@ public class TransactionParam extends PageParam {
     private String sortField;
     private String sortOrder;
     private String merchantToken;
+    private String semanticFilter;
+
+    public String getSemanticFilter() {
+        return semanticFilter;
+    }
+
+    public void setSemanticFilter(String semanticFilter) {
+        this.semanticFilter = semanticFilter;
+    }
 
 	public String getTransactionDateStartStr() {
 		return transactionDateStartStr;

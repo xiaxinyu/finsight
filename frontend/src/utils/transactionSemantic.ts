@@ -122,6 +122,20 @@ export function detectTransactionSemanticTag(row: {
   return 'real_consumption'
 }
 
+export const SEMANTIC_FILTER_OPTIONS = [
+  { value: '', label: 'All semantics' },
+  { value: 'consumption', label: 'Real consumption' },
+  { value: 'real_income', label: 'Real income' },
+  { value: 'refund', label: 'Refunds' },
+  { value: 'transfer', label: 'Transfers' },
+  { value: 'investment', label: 'Investment flow' },
+  { value: 'liability', label: 'Debt / liability' },
+  { value: 'unclassified', label: 'Unclassified' },
+  { value: 'data_quality', label: 'Data quality issues' },
+] as const
+
+export type TransactionSemanticFilter = typeof SEMANTIC_FILTER_OPTIONS[number]['value']
+
 export function semanticTagMeta(tag: TransactionSemanticTag): TransactionSemanticMeta {
   return TAG_META[tag]
 }

@@ -40,6 +40,8 @@ export interface TransactionQuery {
   merchantToken?: string
   sortField?: 'transactionDate' | 'amount' | 'card' | 'type'
   sortOrder?: 'asc' | 'desc'
+  /** v2.0.2 semantic view filter: real_income | consumption | refund | transfer | investment | liability | unclassified | data_quality */
+  semanticFilter?: string
 }
 
 export async function listTransactions(params: TransactionQuery) {

@@ -18,6 +18,7 @@ type Props = {
   onChange: (draft: TransactionEditDraft) => void
   treeData: TreeSelectNode[]
   cardSummary?: string
+  semanticHint?: string
   saving?: boolean
   onSave: () => void
   onCancel: () => void
@@ -34,6 +35,7 @@ export function TransactionEditPanel({
   onChange,
   treeData,
   cardSummary,
+  semanticHint,
   saving,
   onSave,
   onCancel,
@@ -45,7 +47,9 @@ export function TransactionEditPanel({
       <div className="fs-tx-edit-panel__header">
         <div className="fs-tx-edit-panel__intro">
           <span className="fs-tx-edit-panel__title">Edit transaction</span>
-          <span className="fs-tx-edit-panel__hint">Review and update details before saving</span>
+          <span className="fs-tx-edit-panel__hint">
+            {semanticHint || 'Review and update details before saving'}
+          </span>
         </div>
         {cardSummary ? <span className="fs-tx-edit-panel__card">{cardSummary}</span> : null}
       </div>

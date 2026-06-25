@@ -60,6 +60,9 @@ public final class TransactionQueryAssembler {
         if (!StringTool.isNullOrEmpty(param.getMerchantToken())) {
             q.setMerchantToken(StringUtils.trim(param.getMerchantToken()).toLowerCase());
         }
+        if (!StringTool.isNullOrEmpty(param.getSemanticFilter())) {
+            q.setSemanticFilter(StringUtils.trim(param.getSemanticFilter()));
+        }
         TransactionSort.apply(param, q);
         return q;
     }
