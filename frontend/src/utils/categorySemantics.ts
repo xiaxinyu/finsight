@@ -17,6 +17,7 @@ export type SemanticTagId =
   | 'other_income'
   | 'refund_reimbursement'
   | 'daily_spending'
+  | 'social_spending'
   | 'other_expense'
   | 'fixed_spending'
   | 'subscription_spending'
@@ -41,47 +42,48 @@ export type TxnTypeFilter = 'income' | 'expense' | 'both' | 'capital'
 
 /** User-facing semantic tag labels — fallback when catalog API unavailable. */
 export const SEMANTIC_TAG_LABELS: Record<SemanticTagId, string> = {
-  real_income: 'Real Income',
-  investment_income: 'Investment Income',
-  other_income: 'Other Income',
-  refund_reimbursement: 'Refund And Reimbursement',
-  daily_spending: 'Variable Spending',
-  other_expense: 'Other Expense',
-  fixed_spending: 'Fixed Cost',
+  real_income: 'Earned',
+  investment_income: 'Portfolio',
+  other_income: 'MiscIncome',
+  refund_reimbursement: 'Refund',
+  daily_spending: 'Discretionary',
+  social_spending: 'Social',
+  other_expense: 'MiscExpense',
+  fixed_spending: 'Fixed',
   subscription_spending: 'Subscription',
-  essential_spending: 'Essential Expense',
+  essential_spending: 'Essential',
   transfer: 'Transfer',
-  investment: 'Investment Activity',
-  liability: 'Debt And Repayment',
-  asset_adjustment: 'Asset Adjustment',
+  investment: 'Investment',
+  liability: 'Debt',
+  asset_adjustment: 'Rebalance',
   other: 'Unset',
 }
 
 export const FIXED_COST_KIND_LABELS: Record<FixedCostKind, string> = {
-  rent: 'Rent And Mortgage',
+  rent: 'Housing',
   utilities: 'Utilities',
-  telecom: 'Telecom And Internet',
+  telecom: 'Telecom',
   insurance: 'Insurance',
   subscription: 'Subscription',
-  education: 'Education Fixed',
-  repayment: 'Loan Repayment',
-  other: 'Other Fixed',
+  education: 'Education',
+  repayment: 'Repayment',
+  other: 'Other',
 }
 
 export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilter; tags: SemanticTagId[] }> = [
   {
-    title: 'Income Statement · Income',
+    title: 'Income',
     appliesTo: 'income',
     tags: ['real_income', 'investment_income', 'refund_reimbursement', 'other_income'],
   },
   {
-    title: 'Income Statement · Expense',
+    title: 'Expense',
     appliesTo: 'expense',
-    tags: ['daily_spending', 'subscription_spending', 'essential_spending', 'other_expense'],
+    tags: ['daily_spending', 'social_spending', 'subscription_spending', 'essential_spending', 'other_expense'],
   },
-  { title: 'Fixed Commitments', appliesTo: 'expense', tags: ['fixed_spending'] },
+  { title: 'Fixed', appliesTo: 'expense', tags: ['fixed_spending'] },
   {
-    title: 'Capital And Transfers',
+    title: 'Capital',
     appliesTo: 'capital',
     tags: ['transfer', 'investment', 'liability', 'asset_adjustment'],
   },
@@ -104,11 +106,11 @@ const NATURE_LABELS: Record<string, string> = {
 }
 
 const BUDGET_BEHAVIOR_LABELS: Record<string, string> = {
-  fixed: 'Fixed Cost',
-  variable: 'Variable Spending',
-  essential: 'Essential Expense',
+  fixed: 'Fixed',
+  variable: 'Discretionary',
+  essential: 'Essential',
   unclassified: 'Unclassified',
-  none: 'Not Applicable',
+  none: 'N/A',
 }
 
 export function semanticTagLabel(tag?: SemanticTagId): string {
@@ -135,6 +137,13 @@ export function isFixedCategory(parentId?: string, categoryCode?: string): boole
   if ((parentId ?? '').trim().toUpperCase() === 'FIXED') return true
   const code = (categoryCode ?? '').trim().toUpperCase()
   return code.startsWith('FIXED-') || code === 'FIXED'
+}
+
+export function isSocialCategory(parentId?: string, categoryCode?: string): boolean {
+  const parent = (parentId ?? '').trim().toUpperCase()
+  if (parent === 'GIFT' || parent === 'SOCIAL') return true
+  const code = (categoryCode ?? '').trim().toUpperCase()
+  return code.startsWith('GIFT-') || code.startsWith('SOCIAL-')
 }
 
 export function inferFixedCostKind(parentId?: string, categoryCode?: string): FixedCostKind | null {
@@ -244,6 +253,7 @@ export function semanticTagFromReportRole(
     const kind = inferFixedCostKind(parentId, categoryCode)
     if (kind === 'subscription') return 'subscription_spending'
     if (isFixedCategory(parentId, categoryCode)) return 'fixed_spending'
+    if (isSocialCategory(parentId, categoryCode)) return 'social_spending'
     if (code.startsWith('OTHER') || code === 'OTHER') return 'other_expense'
     return 'daily_spending'
   }
@@ -262,6 +272,7 @@ export function reportRoleFromSemanticSelection(
       return tag === 'investment_income' ? 'investment' : 'income'
     case 'refund_reimbursement': return 'refund'
     case 'daily_spending':
+    case 'social_spending':
     case 'other_expense':
       return 'budget'
     case 'subscription_spending': return 'budget'
@@ -280,12 +291,12 @@ export function reportRoleFromSemanticSelection(
 
 export function inclusionSummary(p: CategorySemanticProfile): string {
   const parts: string[] = []
-  if (p.includeInIncomeTrend) parts.push('Income Trend')
-  if (p.includeInExpenseTrend) parts.push('Expense Trend')
+  if (p.includeInIncomeTrend) parts.push('IncomeTrend')
+  if (p.includeInExpenseTrend) parts.push('ExpenseTrend')
   if (p.includeInBudget) parts.push('Budget')
-  if (p.includeInFixedCostReport) parts.push('Fixed Cost Report')
-  if (p.includeInCashflow) parts.push('Cash Flow')
-  if (!parts.length) parts.push('Excluded From Core Reports')
+  if (p.includeInFixedCostReport) parts.push('FixedCost')
+  if (p.includeInCashflow) parts.push('CashFlow')
+  if (!parts.length) parts.push('Excluded')
   return parts.join(' · ')
 }
 
@@ -295,7 +306,7 @@ export function profileCategorySemantics(
   parentId?: string,
   categoryCode?: string,
 ): CategorySemanticProfile {
-  const role = (reportRole?.trim() || inferDefaultReportRole(parentId, categoryCode, txnTypes)).toLowerCase()
+  const role = effectiveReportRole(reportRole, txnTypes, parentId, categoryCode).toLowerCase()
   const txn = (txnTypes ?? '').toLowerCase()
   let economicNature = 'other'
   if (role === 'income') economicNature = 'income'
@@ -317,6 +328,7 @@ export function profileCategorySemantics(
     && txn.includes('expense')
     && (role === 'budget' || role === 'cashflow')
   const includeInCashflow = role !== 'transfer'
+    && (includeInIncomeTrend || includeInExpenseTrend || role === 'investment' || role === 'liability')
 
   let budgetBehavior = 'variable'
   if (role === 'income' || excluded) budgetBehavior = 'none'
@@ -349,6 +361,106 @@ export function profileCategorySemantics(
 export function isFixedCostCategoryCode(categoryCode?: string): boolean {
   const code = (categoryCode ?? '').trim().toUpperCase()
   return code.startsWith('FIXED-') || code === 'FIXED'
+}
+
+export function effectiveReportRole(
+  reportRole?: string,
+  txnTypes?: string,
+  parentId?: string,
+  categoryCode?: string,
+): string {
+  return coerceCategoryFormFields({
+    parentId,
+    code: categoryCode,
+    txnTypes,
+    reportRole,
+  }).reportRole
+}
+
+export function parentTxnMismatchWarning(parentId?: string, txnTypes?: string): string | null {
+  const parent = (parentId ?? '').trim().toUpperCase()
+  const filter = txnTypeFilter(txnTypes)
+  if ((parent === 'INC' || parent === 'INCOME') && filter === 'expense') {
+    return 'Parent is an income group but transaction type is Expense — verify the parent category.'
+  }
+  if (parent === 'FIXED' && filter === 'income') {
+    return 'Fixed categories should use Transaction Type Expense.'
+  }
+  return null
+}
+
+/** Short group titles for admin UI (no "Income Statement" prefix on expense side). */
+export function compactGroupTitle(title: string, txnFilter: ReturnType<typeof txnTypeFilter>): string {
+  if (txnFilter === 'expense') {
+    return title
+      .replace(/^Income Statement · Expense$/i, 'Expense')
+      .replace(/^Fixed Commitments$/i, 'Fixed')
+      .replace(/^Capital And Transfers$/i, 'Capital')
+  }
+  if (txnFilter === 'income') {
+    return title.replace(/^Income Statement · Income$/i, 'Income')
+  }
+  return title
+    .replace(/^Income Statement · Income$/i, 'Income')
+    .replace(/^Income Statement · Expense$/i, 'Expense')
+    .replace(/^Fixed Commitments$/i, 'Fixed')
+    .replace(/^Capital And Transfers$/i, 'Capital')
+}
+
+export type CoercedCategoryFields = {
+  txnTypes: string
+  reportRole: string
+  warnings: string[]
+}
+
+/** Align txn type + report role with parent/category conventions before save or display. */
+export function coerceCategoryFormFields(fields: {
+  parentId?: string
+  code?: string
+  txnTypes?: string
+  reportRole?: string
+}): CoercedCategoryFields {
+  const warnings: string[] = []
+  let txnTypes = (fields.txnTypes ?? 'expense').trim() || 'expense'
+  const parentId = fields.parentId
+  const code = fields.code
+
+  if (isFixedCategory(parentId, code) && !txnTypes.includes('expense')) {
+    txnTypes = 'expense'
+    warnings.push('Fixed categories use Transaction Type Expense — adjusted automatically.')
+  }
+
+  let reportRole = fields.reportRole?.trim()
+    || inferDefaultReportRole(parentId, code, txnTypes)
+
+  if (isFixedCategory(parentId, code)) {
+    const kind = inferFixedCostKind(parentId, code) ?? 'rent'
+    if (kind === 'subscription') {
+      reportRole = reportRoleFromSemanticSelection('subscription_spending', 'subscription')
+    } else if (kind === 'insurance') {
+      reportRole = reportRoleFromSemanticSelection('fixed_spending', 'insurance')
+    } else if (kind === 'repayment') {
+      reportRole = reportRoleFromSemanticSelection('fixed_spending', 'repayment')
+    } else {
+      reportRole = reportRoleFromSemanticSelection('fixed_spending', kind)
+    }
+  } else if (txnTypes === 'income' && !txnTypes.includes('expense')) {
+    const incompatible = ['budget', 'cashflow', 'asset', 'transfer', 'liability', 'investment']
+    if (incompatible.includes(reportRole) && !(code ?? '').startsWith('INC-04')) {
+      reportRole = inferDefaultReportRole(parentId, code, txnTypes)
+      warnings.push('Reporting classification aligned with Income transaction type.')
+    }
+  } else if (txnTypes === 'expense' && !txnTypes.includes('income')) {
+    const incomeRoles = ['income', 'refund']
+    const tag = semanticTagFromReportRole(reportRole, parentId, code, txnTypes)
+    const incomeTags: SemanticTagId[] = ['real_income', 'investment_income', 'other_income', 'refund_reimbursement']
+    if (incomeRoles.includes(reportRole) || incomeTags.includes(tag)) {
+      reportRole = inferDefaultReportRole(parentId, code, txnTypes)
+      warnings.push('Classification aligned with Expense transaction type.')
+    }
+  }
+
+  return { txnTypes, reportRole, warnings }
 }
 
 /** @deprecated Use catalog API */

@@ -37,15 +37,15 @@ public final class FinanceSemanticsCatalog {
     }
 
     public static TransactionDisplayTag investment() {
-        return tag("investment", "Investment Activity", "purple", "Investment Cash Flow, Not Consumption");
+        return tag("investment", "Investment", "purple", "Investment Cash Flow, Not Consumption");
     }
 
     public static TransactionDisplayTag investmentIncome() {
-        return tag("investment_income", "Investment Income", "purple", "Dividends, Interest, And Investment Gains");
+        return tag("investment_income", "Portfolio", "purple", "Dividends, Interest, And Investment Gains");
     }
 
     public static TransactionDisplayTag liability() {
-        return tag("liability", "Debt And Repayment", "volcano", "Borrowing Or Repayment, Not Consumption");
+        return tag("liability", "Debt", "volcano", "Borrowing Or Repayment, Not Consumption");
     }
 
     public static TransactionDisplayTag fee() {
@@ -57,7 +57,7 @@ public final class FinanceSemanticsCatalog {
     }
 
     public static TransactionDisplayTag fixedCost() {
-        return tag("fixed_cost", "Fixed Cost", "purple", "Rent, Utilities, Insurance, Or Similar");
+        return tag("fixed_cost", "Fixed", "purple", "Rent, Utilities, Insurance, Or Similar");
     }
 
     public static TransactionDisplayTag subscription() {
@@ -69,7 +69,11 @@ public final class FinanceSemanticsCatalog {
     }
 
     public static TransactionDisplayTag essential() {
-        return tag("essential", "Essential Expense", "cyan", "Required Cash Flow Expense");
+        return tag("essential", "Essential", "cyan", "Required Cash Flow Expense");
+    }
+
+    public static TransactionDisplayTag social() {
+        return tag("social", "Social", "magenta", "Gifts, Red Envelopes, Donations, And Social Giving");
     }
 
     public static TransactionDisplayTag subscriptionHint() {
@@ -89,37 +93,38 @@ public final class FinanceSemanticsCatalog {
             return "";
         }
         return switch (kind) {
-            case "rent" -> "Rent And Mortgage";
+            case "rent" -> "Housing";
             case "utilities" -> "Utilities";
-            case "telecom" -> "Telecom And Internet";
+            case "telecom" -> "Telecom";
             case "insurance" -> "Insurance";
             case "subscription" -> "Subscription";
-            case "education" -> "Education Fixed";
-            case "repayment" -> "Loan Repayment";
-            case "other" -> "Other Fixed";
+            case "education" -> "Education";
+            case "repayment" -> "Repayment";
+            case "other" -> "Other";
             default -> kind;
         };
     }
 
     private static String fixedCostKindHint(String kind) {
-        return "Fixed Cost · " + fixedCostKindLabel(kind);
+        return "Fixed · " + fixedCostKindLabel(kind);
     }
 
     public static String semanticTagLabel(String tagId) {
         return switch (tagId) {
-            case "real_income" -> "Real Income";
-            case "investment_income" -> "Investment Income";
-            case "other_income" -> "Other Income";
-            case "refund_reimbursement" -> "Refund And Reimbursement";
-            case "daily_spending" -> "Variable Spending";
-            case "other_expense" -> "Other Expense";
-            case "fixed_spending" -> "Fixed Cost";
+            case "real_income" -> "Earned";
+            case "investment_income" -> "Portfolio";
+            case "other_income" -> "MiscIncome";
+            case "refund_reimbursement" -> "Refund";
+            case "daily_spending" -> "Discretionary";
+            case "social_spending" -> "Social";
+            case "other_expense" -> "MiscExpense";
+            case "fixed_spending" -> "Fixed";
             case "subscription_spending" -> "Subscription";
-            case "essential_spending" -> "Essential Expense";
+            case "essential_spending" -> "Essential";
             case "transfer" -> "Transfer";
-            case "investment" -> "Investment Activity";
-            case "liability" -> "Debt And Repayment";
-            case "asset_adjustment" -> "Asset Adjustment";
+            case "investment" -> "Investment";
+            case "liability" -> "Debt";
+            case "asset_adjustment" -> "Rebalance";
             case "other" -> "Unset";
             default -> titleCaseWords(tagId.replace('_', ' '));
         };
@@ -127,22 +132,22 @@ public final class FinanceSemanticsCatalog {
 
     public static String budgetBehaviorLabel(String behavior) {
         return switch (behavior) {
-            case "fixed" -> "Fixed Cost";
-            case "variable" -> "Variable Spending";
-            case "essential" -> "Essential Expense";
+            case "fixed" -> "Fixed";
+            case "variable" -> "Discretionary";
+            case "essential" -> "Essential";
             case "unclassified" -> "Unclassified";
-            case "none" -> "Not Applicable";
+            case "none" -> "N/A";
             default -> behavior;
         };
     }
 
     public static String inclusionTrendLabel(String key) {
         return switch (key) {
-            case "income" -> "Income Trend";
-            case "expense" -> "Expense Trend";
+            case "income" -> "IncomeTrend";
+            case "expense" -> "ExpenseTrend";
             case "budget" -> "Budget";
-            case "fixed_cost" -> "Fixed Cost Report";
-            case "cashflow" -> "Cash Flow";
+            case "fixed_cost" -> "FixedCost";
+            case "cashflow" -> "CashFlow";
             default -> key;
         };
     }
@@ -154,20 +159,20 @@ public final class FinanceSemanticsCatalog {
                 "Defines how this category rolls into Income, Expense, Budget, Fixed Cost, And Cash Flow Reports.");
 
         List<Map<String, Object>> groups = new ArrayList<>();
-        groups.add(tagGroup("Income Statement · Income", "income",
+        groups.add(tagGroup("Income", "income",
                 List.of("real_income", "investment_income", "refund_reimbursement", "other_income")));
-        groups.add(tagGroup("Income Statement · Expense", "expense",
-                List.of("daily_spending", "subscription_spending", "essential_spending", "other_expense")));
-        groups.add(tagGroup("Fixed Commitments", "expense",
+        groups.add(tagGroup("Expense", "expense",
+                List.of("daily_spending", "social_spending", "subscription_spending", "essential_spending", "other_expense")));
+        groups.add(tagGroup("Fixed", "expense",
                 List.of("fixed_spending")));
-        groups.add(tagGroup("Capital And Transfers", "capital",
+        groups.add(tagGroup("Capital", "capital",
                 List.of("transfer", "investment", "liability", "asset_adjustment")));
         out.put("semanticTagGroups", groups);
 
         Map<String, Object> semanticTags = new LinkedHashMap<>();
         for (String id : List.of(
                 "real_income", "investment_income", "other_income", "refund_reimbursement",
-                "daily_spending", "other_expense", "fixed_spending", "subscription_spending", "essential_spending",
+                "daily_spending", "social_spending", "other_expense", "fixed_spending", "subscription_spending", "essential_spending",
                 "transfer", "investment", "liability", "asset_adjustment", "other")) {
             semanticTags.put(id, Map.of(
                     "id", id,
@@ -183,7 +188,7 @@ public final class FinanceSemanticsCatalog {
             fixedCostKinds.put(kind, Map.of("id", kind, "label", fixedCostKindLabel(kind)));
         }
         out.put("fixedCostKinds", fixedCostKinds);
-        out.put("fixedCostKindSectionLabel", "Fixed Cost Type");
+        out.put("fixedCostKindSectionLabel", "FixedType");
 
         out.put("budgetBehaviors", Map.of(
                 "fixed", budgetBehaviorLabel("fixed"),
@@ -191,13 +196,13 @@ public final class FinanceSemanticsCatalog {
                 "essential", budgetBehaviorLabel("essential")));
 
         out.put("reportSurfaces", List.of(
-                surface("income", "Income Trend"),
-                surface("expense", "Expense Trend"),
+                surface("income", "IncomeTrend"),
+                surface("expense", "ExpenseTrend"),
                 surface("budget", "Budget"),
-                surface("fixed_cost", "Fixed Cost Report"),
-                surface("cashflow", "Cash Flow")));
+                surface("fixed_cost", "FixedCost"),
+                surface("cashflow", "CashFlow")));
 
-        out.put("previewSectionLabel", "Report Impact Preview");
+        out.put("previewSectionLabel", "ReportPreview");
         return out;
     }
 
@@ -208,6 +213,7 @@ public final class FinanceSemanticsCatalog {
             case "other_income" -> "Miscellaneous Inflow Not In Core Income";
             case "refund_reimbursement" -> "Refund Or Expense Reimbursement Inflow";
             case "daily_spending" -> "Discretionary Day-To-Day Consumption";
+            case "social_spending" -> "Gifts, Red Envelopes, Donations, And Family Support";
             case "other_expense" -> "Miscellaneous Expense Not In Core Buckets";
             case "fixed_spending" -> "Recurring Fixed Obligations";
             case "subscription_spending" -> "Recurring Subscriptions And Memberships";
@@ -224,7 +230,7 @@ public final class FinanceSemanticsCatalog {
     private static String reportBucket(String tagId) {
         return switch (tagId) {
             case "real_income", "investment_income", "other_income", "refund_reimbursement" -> "income_statement";
-            case "daily_spending", "other_expense", "subscription_spending", "essential_spending" -> "expense";
+            case "daily_spending", "social_spending", "other_expense", "subscription_spending", "essential_spending" -> "expense";
             case "fixed_spending" -> "fixed_commitment";
             case "transfer", "investment", "liability", "asset_adjustment" -> "capital_flow";
             default -> "unset";

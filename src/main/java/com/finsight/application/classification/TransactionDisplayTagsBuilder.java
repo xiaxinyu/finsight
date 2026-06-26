@@ -75,6 +75,9 @@ public final class TransactionDisplayTagsBuilder {
             }
         } else if ("essential".equals(budget)) {
             tags.add(FinanceSemanticsCatalog.essential());
+        } else if ("variable".equals(budget) && CategoryFinanceSemantics.isSocialCategory(parentId, categoryCode)
+                && "expense".equals(economic)) {
+            tags.add(FinanceSemanticsCatalog.social());
         }
 
         if (!classified || "inferred".equals(quality)) {

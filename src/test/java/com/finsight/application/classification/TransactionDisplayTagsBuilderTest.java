@@ -24,6 +24,20 @@ class TransactionDisplayTagsBuilderTest {
     }
 
     @Test
+    void giftCategory_getsSocialTag() {
+        Transaction row = baseExpense();
+        row.setConsumeCode("GIFT-01");
+        row.setConsumeName("Red envelope");
+        row.setCategoryParentId("GIFT");
+        row.setBudgetBehavior("variable");
+        row.setEconomicNature("expense");
+        row.setQualityState("classified");
+
+        var tags = TransactionDisplayTagsBuilder.build(row);
+        assertTrue(tags.stream().anyMatch(t -> "social".equals(t.getId())));
+    }
+
+    @Test
     void dailySpending_noFixedCostTag() {
         Transaction row = baseExpense();
         row.setConsumeCode("DAILY-01");

@@ -18,7 +18,7 @@ import {
   type ConsumeCategoryRow,
 } from '../../../api/admin'
 import { CategoryAssetPanel, CategoryCandidateConfirmModal } from '../../../components/CategoryAssetPanel'
-import { CategorySemanticPicker } from '../../../components/CategorySemanticPicker'
+import { CategoryReportRoleControl } from '../../../components/CategorySemanticPicker'
 import { CategoryImpactPreviewModal } from '../../../components/CategoryImpactPreviewModal'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
@@ -38,9 +38,11 @@ import {
 } from '../../../utils/categoryTree'
 import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
 import {
+  coerceCategoryFormFields,
   inferDefaultReportRole,
   inferFixedCostKind,
   isFixedCategory,
+  isSocialCategory,
   reportRoleFromSemanticSelection,
 } from '../../../utils/categorySemantics'
 
@@ -116,16 +118,22 @@ export function CategoriesAdminPage() {
       const parentId = selected?.code || ''
       const defaultRole = isFixedCategory(parentId)
         ? reportRoleFromSemanticSelection('fixed_spending', inferFixedCostKind(parentId) ?? 'other')
-        : 'budget'
+        : isSocialCategory(parentId)
+          ? reportRoleFromSemanticSelection('social_spending')
+          : 'budget'
       form.setFieldsValue({ ...EMPTY, parentId, reportRole: defaultRole })
       return
     }
     if (selected) {
-      const stored = selected.reportRole?.trim()
-      const reportRole = stored
-        || categoryAsset?.reportRole
-        || inferDefaultReportRole(selected.parentId, selected.code, selected.txnTypes)
-      form.setFieldsValue({ ...selected, reportRole })
+      const coerced = coerceCategoryFormFields({
+        parentId: selected.parentId,
+        code: selected.code,
+        txnTypes: selected.txnTypes,
+        reportRole: selected.reportRole?.trim()
+          || categoryAsset?.reportRole
+          || inferDefaultReportRole(selected.parentId, selected.code, selected.txnTypes),
+      })
+      form.setFieldsValue({ ...selected, txnTypes: coerced.txnTypes, reportRole: coerced.reportRole })
     } else form.resetFields()
   }, [selected, creating, form, categoryAsset?.reportRole])
 
@@ -133,6 +141,25 @@ export function CategoriesAdminPage() {
   const watchedTxnTypes = Form.useWatch('txnTypes', form)
   const watchedParentId = Form.useWatch('parentId', form)
   const watchedCode = Form.useWatch('code', form)
+
+  useEffect(() => {
+    const parentId = watchedParentId
+    const code = watchedCode || selected?.code
+    if (!parentId && !code && !watchedTxnTypes) return
+
+    const coerced = coerceCategoryFormFields({
+      parentId,
+      code,
+      txnTypes: watchedTxnTypes,
+      reportRole: watchedReportRole,
+    })
+    const patch: Partial<ConsumeCategoryRow> = {}
+    if (coerced.txnTypes !== watchedTxnTypes) patch.txnTypes = coerced.txnTypes
+    if (coerced.reportRole !== watchedReportRole) patch.reportRole = coerced.reportRole
+    if (Object.keys(patch).length) {
+      form.setFieldsValue(patch)
+    }
+  }, [watchedParentId, watchedTxnTypes, watchedCode, selected?.code, form])
 
   const reload = () => {
     qc.invalidateQueries({ queryKey: ['admin-categories'] })
@@ -198,8 +225,34 @@ export function CategoriesAdminPage() {
     }
   }, [selected?.id])
 
+  const classificationMismatch = useMemo(() => {
+    const coerced = coerceCategoryFormFields({
+      parentId: watchedParentId,
+      code: watchedCode || selected?.code,
+      txnTypes: watchedTxnTypes,
+      reportRole: watchedReportRole,
+    })
+    if (coerced.warnings.length) return coerced.warnings[0]
+    return null
+  }, [watchedParentId, watchedCode, watchedTxnTypes, watchedReportRole, selected?.code])
+
+  const normalizeFormValues = (raw: ConsumeCategoryRow): ConsumeCategoryRow => {
+    const coerced = coerceCategoryFormFields({
+      parentId: raw.parentId,
+      code: raw.code || selected?.code,
+      txnTypes: raw.txnTypes,
+      reportRole: raw.reportRole,
+    })
+    coerced.warnings.forEach((w) => message.warning(w))
+    return { ...raw, txnTypes: coerced.txnTypes, reportRole: coerced.reportRole }
+  }
+
   const onSave = async () => {
-    const values = await form.validateFields()
+    const raw = await form.validateFields()
+    const values = normalizeFormValues(raw)
+    if (values.txnTypes !== raw.txnTypes || values.reportRole !== raw.reportRole) {
+      form.setFieldsValue({ txnTypes: values.txnTypes, reportRole: values.reportRole })
+    }
     if (creating) {
       try {
         await createCategory(values)
@@ -272,7 +325,7 @@ export function CategoriesAdminPage() {
         message.success('Category deleted')
         setSelectedId(null)
       } else if (pendingAction === 'rename' && pendingValues) {
-        await updateCategory(selected.id, pendingValues, true)
+        await updateCategory(selected.id, normalizeFormValues(pendingValues), true)
         message.success('Category updated')
       } else if (pendingAction === 'merge' && mergeTargetCode) {
         await migrateCategory(selected.id, mergeTargetCode, true, true)
@@ -339,41 +392,41 @@ export function CategoriesAdminPage() {
             <div className="fs-admin-category-detail-inner">
               <Form form={form} layout="vertical" size="small" className="fs-admin-category-form">
                 <div className="fs-admin-category-form-fields">
-                  <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="code" label="Code" tooltip="Leave blank to auto-generate">
-                    <Input placeholder="Auto-generated if empty" disabled={!creating && Boolean(selected?.id)} />
-                  </Form.Item>
-                  <Form.Item name="parentId" label="Parent category">
-                    <Select allowClear options={parentOptions} placeholder="Root category (no parent)" />
-                  </Form.Item>
-                  <Form.Item name="txnTypes" label="Transaction types">
-                    <Select options={[
-                      { value: 'expense', label: 'Expense' },
-                      { value: 'income', label: 'Income' },
-                      { value: 'expense,income', label: 'Both' },
-                    ]} />
-                  </Form.Item>
+                  <div className="fs-admin-category-basics-grid">
+                    <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="code" label="Code" tooltip="Leave blank to auto-generate">
+                      <Input placeholder="Auto-generated if empty" disabled={!creating && Boolean(selected?.id)} />
+                    </Form.Item>
+                    <Form.Item name="parentId" label="Parent category">
+                      <Select allowClear options={parentOptions} placeholder="Root category (no parent)" />
+                    </Form.Item>
+                    <Form.Item name="txnTypes" label="Transaction types">
+                      <Select options={[
+                        { value: 'expense', label: 'Expense' },
+                        { value: 'income', label: 'Income' },
+                        { value: 'expense,income', label: 'Both' },
+                      ]} />
+                    </Form.Item>
+                    <Form.Item name="sortNo" label="Sort order">
+                      <InputNumber min={1} style={{ width: '100%' }} />
+                    </Form.Item>
+                  </div>
                   <Form.Item
+                    name="reportRole"
                     label={catalogFieldLabel}
                     tooltip={catalogFieldHint}
-                    required
+                    className="fs-admin-category-classification-item"
+                    rules={[{ required: true, message: 'Reporting classification is required' }]}
                   >
-                    <Form.Item name="reportRole" hidden rules={[{ required: true, message: 'Reporting classification is required' }]}>
-                      <Input type="hidden" />
-                    </Form.Item>
-                    <CategorySemanticPicker
-                      reportRole={watchedReportRole}
+                    <CategoryReportRoleControl
                       txnTypes={watchedTxnTypes}
                       parentId={watchedParentId}
                       categoryCode={watchedCode || selected?.code}
-                      onReportRoleChange={(role) => form.setFieldValue('reportRole', role)}
                       inferred={!creating && Boolean(selected && !selected.reportRole?.trim())}
+                      mismatchWarning={classificationMismatch}
                     />
-                  </Form.Item>
-                  <Form.Item name="sortNo" label="Sort order">
-                    <InputNumber min={1} style={{ width: '100%' }} />
                   </Form.Item>
                 </div>
                 <div className="fs-admin-category-form-actions">

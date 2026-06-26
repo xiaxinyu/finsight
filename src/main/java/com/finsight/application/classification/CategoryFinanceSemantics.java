@@ -64,6 +64,15 @@ public final class CategoryFinanceSemantics {
         return code.startsWith("FIXED-") || "FIXED".equals(code);
     }
 
+    static boolean isSocialCategory(String parentId, String categoryCode) {
+        String parent = StringUtils.trimToEmpty(parentId).toUpperCase(Locale.ROOT);
+        if ("GIFT".equals(parent) || "SOCIAL".equals(parent)) {
+            return true;
+        }
+        String code = StringUtils.trimToEmpty(categoryCode).toUpperCase(Locale.ROOT);
+        return code.startsWith("GIFT-") || code.startsWith("SOCIAL-");
+    }
+
     public static String inferFixedCostKind(String parentId, String categoryCode) {
         if (!isFixedCategory(parentId, categoryCode)) {
             return null;
