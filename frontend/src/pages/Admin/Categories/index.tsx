@@ -18,6 +18,7 @@ import {
   type ConsumeCategoryRow,
 } from '../../../api/admin'
 import { CategoryAssetPanel, CategoryCandidateConfirmModal } from '../../../components/CategoryAssetPanel'
+import { CategorySemanticPicker } from '../../../components/CategorySemanticPicker'
 import { CategoryImpactPreviewModal } from '../../../components/CategoryImpactPreviewModal'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { EmptyState } from '../../../components/EmptyState'
@@ -28,6 +29,7 @@ import {
   type CascaderOption,
 } from '../../../components/filters/treeToCascader'
 import { useConsumeTreeSelect } from '../../../hooks/useConsumeTree'
+import { useSemanticsCatalog } from '../../../hooks/useSemanticsCatalog'
 import {
   applyMergeTargetConstraints,
   buildCategoryTree,
@@ -36,11 +38,10 @@ import {
 } from '../../../utils/categoryTree'
 import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
 import {
-  economicNatureLabel,
-  inclusionSummary,
-  profileCategorySemantics,
-  REPORT_ROLE_OPTIONS,
-  reportRoleLabel,
+  inferDefaultReportRole,
+  inferFixedCostKind,
+  isFixedCategory,
+  reportRoleFromSemanticSelection,
 } from '../../../utils/categorySemantics'
 
 function toMergeCascaderOptions(nodes: CategoryTreeSelectNode[]): CascaderOption[] {
@@ -90,6 +91,11 @@ export function CategoriesAdminPage() {
     staleTime: 30_000,
   })
 
+  const { data: semanticsCatalog } = useSemanticsCatalog()
+  const catalogFieldLabel = semanticsCatalog?.fieldLabel ?? 'Reporting Classification'
+  const catalogFieldHint = semanticsCatalog?.fieldHint
+    ?? 'How Transactions In This Category Count Toward Trends, Budget, And Fixed-Cost Reports.'
+
   const treeData = useMemo(
     () => toAntTreeNodesWithCounts(buildCategoryTree(categories), assetSummary, categories),
     [categories, assetSummary],
@@ -107,23 +113,26 @@ export function CategoriesAdminPage() {
 
   useEffect(() => {
     if (creating) {
-      form.setFieldsValue({ ...EMPTY, parentId: selected?.code || '' })
+      const parentId = selected?.code || ''
+      const defaultRole = isFixedCategory(parentId)
+        ? reportRoleFromSemanticSelection('fixed_spending', inferFixedCostKind(parentId) ?? 'other')
+        : 'budget'
+      form.setFieldsValue({ ...EMPTY, parentId, reportRole: defaultRole })
       return
     }
     if (selected) {
-      const reportRole = selected.reportRole?.trim()
+      const stored = selected.reportRole?.trim()
+      const reportRole = stored
         || categoryAsset?.reportRole
-        || 'other'
+        || inferDefaultReportRole(selected.parentId, selected.code, selected.txnTypes)
       form.setFieldsValue({ ...selected, reportRole })
     } else form.resetFields()
   }, [selected, creating, form, categoryAsset?.reportRole])
 
   const watchedReportRole = Form.useWatch('reportRole', form)
   const watchedTxnTypes = Form.useWatch('txnTypes', form)
-  const semanticsPreview = useMemo(
-    () => profileCategorySemantics(watchedReportRole, watchedTxnTypes),
-    [watchedReportRole, watchedTxnTypes],
-  )
+  const watchedParentId = Form.useWatch('parentId', form)
+  const watchedCode = Form.useWatch('code', form)
 
   const reload = () => {
     qc.invalidateQueries({ queryKey: ['admin-categories'] })
@@ -347,32 +356,22 @@ export function CategoriesAdminPage() {
                     ]} />
                   </Form.Item>
                   <Form.Item
-                    name="reportRole"
-                    label="Report role"
-                    tooltip="Controls how transactions in this category appear in income, expense, and budget trends."
-                    rules={[{ required: true, message: 'Report role is required' }]}
+                    label={catalogFieldLabel}
+                    tooltip={catalogFieldHint}
+                    required
                   >
-                    <Select options={REPORT_ROLE_OPTIONS} placeholder="Select report role" />
+                    <Form.Item name="reportRole" hidden rules={[{ required: true, message: 'Reporting classification is required' }]}>
+                      <Input type="hidden" />
+                    </Form.Item>
+                    <CategorySemanticPicker
+                      reportRole={watchedReportRole}
+                      txnTypes={watchedTxnTypes}
+                      parentId={watchedParentId}
+                      categoryCode={watchedCode || selected?.code}
+                      onReportRoleChange={(role) => form.setFieldValue('reportRole', role)}
+                      inferred={!creating && Boolean(selected && !selected.reportRole?.trim())}
+                    />
                   </Form.Item>
-                  {(creating || selected) && watchedReportRole && (
-                    <div className="fs-admin-category-semantics">
-                      <Typography.Text type="secondary" className="fs-admin-category-semantics-label">
-                        Trend impact preview
-                      </Typography.Text>
-                      <Space wrap size={[4, 4]}>
-                        <Tag color="blue">{reportRoleLabel(semanticsPreview.reportRole)}</Tag>
-                        <Tag>{economicNatureLabel(semanticsPreview.economicNature)}</Tag>
-                      </Space>
-                      <Typography.Text type="secondary" className="fs-admin-category-semantics-hint">
-                        {inclusionSummary(semanticsPreview)}
-                      </Typography.Text>
-                      {!creating && selected && !selected.reportRole?.trim() && categoryAsset?.reportRole && (
-                        <Typography.Text type="warning" className="fs-admin-category-semantics-hint">
-                          No stored role — showing inferred default. Save to persist.
-                        </Typography.Text>
-                      )}
-                    </div>
-                  )}
                   <Form.Item name="sortNo" label="Sort order">
                     <InputNumber min={1} style={{ width: '100%' }} />
                   </Form.Item>

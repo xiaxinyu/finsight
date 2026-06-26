@@ -50,7 +50,7 @@ import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPre
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { mapTransactionTableSort } from '../../utils/transactionTableSort'
 import { summarizeSelection } from '../../utils/transactionSelection'
-import { SEMANTIC_FILTER_OPTIONS, detectTransactionSemanticTag, semanticInclusionHint } from '../../utils/transactionSemantic'
+import { SEMANTIC_FILTER_OPTIONS } from '../../utils/transactionSemantic'
 
 type TxFilters = {
   start: string
@@ -399,7 +399,7 @@ export function TransactionsPage() {
         width: 280,
         fixed: 'left',
         ellipsis: true,
-        render: (_, r) => <TransactionLedgerCell row={r} pageMaxAmount={pageMaxAmount} showTags={false} />,
+        render: (_, r) => <TransactionLedgerCell row={r} showTags={false} />,
       },
       {
         title: <TableHeader name="Merchant" />,
@@ -414,7 +414,7 @@ export function TransactionsPage() {
         dataIndex: 'consumeName',
         width: 148,
         ellipsis: true,
-        render: (_, r) => <TransactionCategoryCell row={r} pageMaxAmount={pageMaxAmount} />,
+        render: (_, r) => <TransactionCategoryCell row={r} />,
       },
       {
         title: <TableHeader name="Amount" unit="CNY" />,
@@ -688,15 +688,14 @@ export function TransactionsPage() {
               const cardSummary = [cellText(record.bankCode), cellText(record.cardTypeName), cellText(record.bankCardName)]
                 .filter(Boolean)
                 .join(' · ')
-              const semanticTag = detectTransactionSemanticTag(record)
-              const semanticHint = semanticInclusionHint(semanticTag)
+              const semanticHint = record.semanticsSummary || undefined
               return (
                 <TransactionEditPanel
                   draft={editDraft}
                   onChange={setEditDraft}
                   treeData={treeData}
                   cardSummary={cardSummary}
-                  semanticHint={semanticHint || undefined}
+                  semanticHint={semanticHint}
                   saving={editSaving}
                   onSave={() => void saveEdit()}
                   onCancel={cancelEdit}

@@ -27,9 +27,16 @@ describe('transactionRisk', () => {
     expect(detectTransactionRiskTags({
       ...base,
       transactionDesc: 'Rent payment',
-      consumeCode: 'HOME',
+      consumeCode: 'FIXED-01',
       consumeName: 'Housing',
     })).toContain('fixed_cost')
+
+    expect(detectTransactionRiskTags({
+      ...base,
+      transactionDesc: 'Coffee shop',
+      consumeCode: 'DAILY-01',
+      consumeName: 'Food',
+    })).not.toContain('fixed_cost')
   })
 
   it('flags transfer and refund candidates', () => {

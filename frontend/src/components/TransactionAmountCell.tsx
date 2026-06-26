@@ -3,7 +3,8 @@ import { ArrowDownOutlined, ArrowUpOutlined, SwapOutlined } from '@ant-design/ic
 import type { TransactionRow } from '../api/transaction'
 import { formatNumber } from '../utils/format'
 import { finsightColors } from '../styles/finsight-tokens'
-import { amountIntensity, detectTransactionRiskTags } from '../utils/transactionRisk'
+import { isAnomalyAmount } from '../utils/transactionDisplayTags'
+import { amountIntensity } from '../utils/transactionRisk'
 import { rowAmount, rowTxnKind } from '../utils/transactionAmount'
 
 type Props = {
@@ -17,8 +18,7 @@ export function TransactionAmountCell({ row, pageMaxAmount = 0, showBar = true }
   const kind = row.txnKind || rowTxnKind(row)
   const amount = rowAmount(row)
   const intensity = amountIntensity(amount, pageMaxAmount)
-  const tags = detectTransactionRiskTags(row, { amountMax: pageMaxAmount })
-  const isAnomaly = tags.includes('anomaly')
+  const isAnomaly = isAnomalyAmount(amount, pageMaxAmount)
 
   const color = kind === 'income'
     ? finsightColors.income

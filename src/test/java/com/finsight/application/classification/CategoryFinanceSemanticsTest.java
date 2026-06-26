@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CategoryFinanceSemanticsTest {
@@ -29,5 +30,28 @@ class CategoryFinanceSemanticsTest {
         assertEquals("investment", p.economicNature());
         assertFalse(p.includeInExpenseTrend());
         assertFalse(p.includeInBudget());
+    }
+
+    @Test
+    void dailyBudgetCategory_isVariableNotFixed() {
+        var p = CategoryFinanceSemantics.profile("budget", "expense", "LIVING", "DAILY-01");
+        assertEquals("variable", p.budgetBehavior());
+        assertNull(p.fixedCostKind());
+        assertTrue(p.includeInExpenseTrend());
+        assertTrue(p.includeInBudget());
+    }
+
+    @Test
+    void fixedCategory_isFixedCost() {
+        var p = CategoryFinanceSemantics.profile("budget", "expense", "FIXED", "FIXED-01");
+        assertEquals("fixed", p.budgetBehavior());
+        assertEquals("rent", p.fixedCostKind());
+    }
+
+    @Test
+    void fixedInsuranceUsesCashflowRole() {
+        var p = CategoryFinanceSemantics.profile("cashflow", "expense", "FIXED", "FIXED-04");
+        assertEquals("fixed", p.budgetBehavior());
+        assertEquals("insurance", p.fixedCostKind());
     }
 }

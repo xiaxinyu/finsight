@@ -2,7 +2,7 @@ import { Space, Tag, Tooltip, Typography } from 'antd'
 import type { TransactionRow } from '../api/transaction'
 import { cellText } from '../utils/cell'
 import { buildTransactionDisplay } from '../utils/transactionDisplay'
-import { detectTransactionRiskTags, riskTagMeta } from '../utils/transactionRisk'
+import { transactionDisplayTags } from '../utils/transactionDisplayTags'
 
 export function TransactionTypeBadge({ kind }: { kind: string }) {
   if (kind === 'transfer') {
@@ -16,15 +16,13 @@ export function TransactionTypeBadge({ kind }: { kind: string }) {
 
 type Props = {
   row: TransactionRow
-  pageMaxAmount?: number
   showTags?: boolean
 }
 
-export function TransactionLedgerCell({ row, pageMaxAmount = 0, showTags = true }: Props) {
+export function TransactionLedgerCell({ row, showTags = true }: Props) {
   const { title, subtitle, tooltip } = buildTransactionDisplay(row)
   const category = cellText(row.consumeName)
-  const tags = detectTransactionRiskTags(row, { amountMax: pageMaxAmount })
-    .slice(0, 2)
+  const tags = transactionDisplayTags(row).slice(0, 3)
 
   return (
     <div className="fs-tx-ledger-cell">
@@ -43,14 +41,11 @@ export function TransactionLedgerCell({ row, pageMaxAmount = 0, showTags = true 
           {category && (
             <Tag bordered={false} className="fs-tx-ledger-tag">{category}</Tag>
           )}
-          {tags.map((tag) => {
-            const meta = riskTagMeta(tag)
-            return (
-              <Tooltip key={tag} title={meta.hint}>
-                <Tag bordered={false} color={meta.color} className="fs-tx-ledger-tag">{meta.label}</Tag>
-              </Tooltip>
-            )
-          })}
+          {tags.map((tag) => (
+            <Tooltip key={tag.id} title={tag.hint}>
+              <Tag bordered={false} color={tag.color || 'default'} className="fs-tx-ledger-tag">{tag.label}</Tag>
+            </Tooltip>
+          ))}
         </Space>
       )}
     </div>

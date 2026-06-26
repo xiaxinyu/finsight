@@ -29,6 +29,7 @@ public class CategoryAssetDto {
     private String reportRole;
     private String economicNature;
     private String budgetBehavior;
+    private String fixedCostKind;
     private boolean includeInIncomeTrend;
     private boolean includeInExpenseTrend;
     private boolean includeInBudget;
@@ -55,6 +56,14 @@ public class CategoryAssetDto {
 
     public void setBudgetBehavior(String budgetBehavior) {
         this.budgetBehavior = budgetBehavior;
+    }
+
+    public String getFixedCostKind() {
+        return fixedCostKind;
+    }
+
+    public void setFixedCostKind(String fixedCostKind) {
+        this.fixedCostKind = fixedCostKind;
     }
 
     public boolean isIncludeInIncomeTrend() {

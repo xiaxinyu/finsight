@@ -10,7 +10,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import type { CategoryAsset, CategoryChildCandidate } from '../api/admin'
-import { economicNatureLabel, inclusionSummary, reportRoleLabel } from '../utils/categorySemantics'
+import { budgetBehaviorLabel, economicNatureLabel, fixedCostKindLabel, inclusionSummary, profileCategorySemantics, semanticTagFromReportRole, semanticTagLabel } from '../utils/categorySemantics'
 import { ContentCard } from './ContentCard'
 import { EmptyState } from './EmptyState'
 import { formatMoney } from '../utils/format'
@@ -95,12 +95,20 @@ export function CategoryAssetPanel({
 
   return (
     <div className="fs-category-asset-panel">
-      <ContentCard title="Finance semantics" size="small" className="fs-category-asset-card fs-category-semantics-card">
+      <ContentCard title="Reporting Classification" size="small" className="fs-category-asset-card fs-category-semantics-card">
         <div className="fs-category-semantics-tags">
-          <Tag color="blue">{reportRoleLabel(asset.reportRole)}</Tag>
+          <Tag color="blue">{semanticTagLabel(profileCategorySemantics(
+            asset.reportRole,
+            undefined,
+            asset.parentId,
+            asset.categoryCode,
+          ).semanticTag)}</Tag>
+          {asset.fixedCostKind ? (
+            <Tag color="purple">{fixedCostKindLabel(asset.fixedCostKind)}</Tag>
+          ) : null}
           <Tag>{economicNatureLabel(asset.economicNature)}</Tag>
-          {asset.budgetBehavior && asset.budgetBehavior !== 'variable' ? (
-            <Tag color="purple">{asset.budgetBehavior}</Tag>
+          {asset.budgetBehavior && asset.budgetBehavior !== 'variable' && asset.budgetBehavior !== 'none' ? (
+            <Tag color="purple">{budgetBehaviorLabel(asset.budgetBehavior)}</Tag>
           ) : null}
         </div>
         <Typography.Paragraph type="secondary" className="fs-category-semantics-inclusion">
@@ -252,10 +260,12 @@ export function CategoryAssetPanel({
               { title: 'Code', dataIndex: 'code', width: 110, render: (v: string) => <span className="fs-mono">{v}</span> },
               { title: 'Name', dataIndex: 'name', ellipsis: true },
               {
-                title: 'Role',
+                title: 'Semantics',
                 dataIndex: 'reportRole',
-                width: 100,
-                render: (v: string) => <Tag>{reportRoleLabel(v)}</Tag>,
+                width: 120,
+                render: (v: string, row: CategoryChildCandidate) => (
+                  <Tag>{semanticTagLabel(semanticTagFromReportRole(v, row.parentL1Code, row.code))}</Tag>
+                ),
               },
               {
                 title: '',
@@ -313,7 +323,7 @@ export function CategoryCandidateConfirmModal({
             <div><dt>Name</dt><dd>{candidate.name}</dd></div>
             <div><dt>Txn types</dt><dd>{candidate.txnTypes}</dd></div>
             {candidate.reportRole ? (
-              <div><dt>Report role</dt><dd>{reportRoleLabel(candidate.reportRole)}</dd></div>
+              <div><dt>Reporting Classification</dt><dd>{semanticTagLabel(semanticTagFromReportRole(candidate.reportRole, candidate.parentL1Code, candidate.code))}</dd></div>
             ) : null}
           </dl>
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>

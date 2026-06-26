@@ -22,6 +22,12 @@ export interface TransactionRow {
   txnKind?: string
   createuser?: string
   updateuser?: string
+  /** Server-built finance semantic tags (v_transaction_finance_semantics). */
+  displayTags?: Array<{ id: string; label: string; color?: string; hint?: string }>
+  semanticsSummary?: string
+  economicNature?: string
+  budgetBehavior?: string
+  qualityState?: string
 }
 
 export interface TransactionQuery {

@@ -15,6 +15,7 @@ public final class CategoryFinanceSemantics {
             String reportRole,
             String economicNature,
             String budgetBehavior,
+            String fixedCostKind,
             boolean includeInIncomeTrend,
             boolean includeInExpenseTrend,
             boolean includeInBudget) {
@@ -24,14 +25,20 @@ public final class CategoryFinanceSemantics {
     }
 
     public static SemanticProfile profile(String reportRole, String txnTypes) {
+        return profile(reportRole, txnTypes, null, null);
+    }
+
+    public static SemanticProfile profile(String reportRole, String txnTypes, String parentId, String categoryCode) {
         String role = StringUtils.defaultIfBlank(StringUtils.trimToEmpty(reportRole), "other").toLowerCase(Locale.ROOT);
         String txn = StringUtils.defaultString(txnTypes).toLowerCase(Locale.ROOT);
         String economic = economicNature(role);
-        String budget = budgetBehavior(role, txn);
+        String budget = budgetBehavior(role, txn, parentId, categoryCode);
+        String fixedKind = inferFixedCostKind(parentId, categoryCode);
         return new SemanticProfile(
                 role,
                 economic,
                 budget,
+                fixedKind,
                 includeIncome(role, txn),
                 includeExpense(role, txn),
                 includeBudget(role, txn));
@@ -42,10 +49,37 @@ public final class CategoryFinanceSemantics {
         m.put("reportRole", p.reportRole());
         m.put("economicNature", p.economicNature());
         m.put("budgetBehavior", p.budgetBehavior());
+        m.put("fixedCostKind", p.fixedCostKind());
         m.put("includeInIncomeTrend", p.includeInIncomeTrend());
         m.put("includeInExpenseTrend", p.includeInExpenseTrend());
         m.put("includeInBudget", p.includeInBudget());
         return m;
+    }
+
+    static boolean isFixedCategory(String parentId, String categoryCode) {
+        if ("FIXED".equalsIgnoreCase(StringUtils.trimToEmpty(parentId))) {
+            return true;
+        }
+        String code = StringUtils.trimToEmpty(categoryCode).toUpperCase(Locale.ROOT);
+        return code.startsWith("FIXED-") || "FIXED".equals(code);
+    }
+
+    public static String inferFixedCostKind(String parentId, String categoryCode) {
+        if (!isFixedCategory(parentId, categoryCode)) {
+            return null;
+        }
+        String code = StringUtils.trimToEmpty(categoryCode).toUpperCase(Locale.ROOT);
+        return switch (code) {
+            case "FIXED-01" -> "rent";
+            case "FIXED-02" -> "utilities";
+            case "FIXED-03" -> "telecom";
+            case "FIXED-04" -> "insurance";
+            case "FIXED-05" -> "subscription";
+            case "FIXED-06" -> "education";
+            case "FIXED-07" -> "repayment";
+            case "FIXED-99" -> "other";
+            default -> code.startsWith("FIXED-") ? "other" : null;
+        };
     }
 
     private static String economicNature(String role) {
@@ -61,18 +95,23 @@ public final class CategoryFinanceSemantics {
         };
     }
 
-    private static String budgetBehavior(String role, String txn) {
-        if ("budget".equals(role) || role.equals("fixed")) {
+    private static String budgetBehavior(String role, String txn, String parentId, String categoryCode) {
+        if ("transfer".equals(role) || "refund".equals(role) || "investment".equals(role)
+                || "liability".equals(role) || "asset".equals(role)) {
+            return "none";
+        }
+        if (isFixedCategory(parentId, categoryCode)
+                && ("budget".equals(role) || "cashflow".equals(role))) {
             return "fixed";
         }
         if ("cashflow".equals(role)) {
             return "essential";
         }
-        if (role.equals("other") || role.isBlank()) {
-            return "unclassified";
-        }
-        if (txn.contains("expense") && ("budget".equals(role) || "cashflow".equals(role))) {
+        if ("budget".equals(role) && txn.contains("expense")) {
             return "variable";
+        }
+        if ("other".equals(role) || role.isBlank()) {
+            return "unclassified";
         }
         return "variable";
     }
@@ -86,7 +125,7 @@ public final class CategoryFinanceSemantics {
                 || "liability".equals(role) || "asset".equals(role)) {
             return false;
         }
-        return txn.contains("expense") && ("budget".equals(role) || "cashflow".equals(role) || role.equals("other"));
+        return txn.contains("expense") && ("budget".equals(role) || "cashflow".equals(role) || "other".equals(role));
     }
 
     private static boolean includeBudget(String role, String txn) {

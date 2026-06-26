@@ -173,6 +173,22 @@ export type CategoryChildCandidate = {
   reason?: string
 }
 
+export type SemanticsCatalog = {
+  fieldLabel?: string
+  fieldHint?: string
+  previewSectionLabel?: string
+  fixedCostKindSectionLabel?: string
+  semanticTagGroups?: Array<{ title: string; appliesTo?: string; tags: string[] }>
+  semanticTags?: Record<string, { id: string; label: string; description?: string; reportBucket?: string }>
+  fixedCostKinds?: Record<string, { id: string; label: string }>
+  budgetBehaviors?: Record<string, string>
+  reportSurfaces?: Array<{ id: string; label: string }>
+}
+
+export async function fetchSemanticsCatalog(): Promise<SemanticsCatalog> {
+  return getJson('/api/v1/classification/semantics/catalog') as Promise<SemanticsCatalog>
+}
+
 export type CategoryAsset = {
   categoryId?: string
   categoryCode?: string
@@ -193,6 +209,7 @@ export type CategoryAsset = {
   reportRole?: string
   economicNature?: string
   budgetBehavior?: string
+  fixedCostKind?: string | null
   includeInIncomeTrend?: boolean
   includeInExpenseTrend?: boolean
   includeInBudget?: boolean

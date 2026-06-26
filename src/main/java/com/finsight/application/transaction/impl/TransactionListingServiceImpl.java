@@ -1,5 +1,6 @@
 package com.finsight.application.transaction.impl;
 
+import com.finsight.application.classification.TransactionDisplayTagsBuilder;
 import com.finsight.application.transaction.ITransactionListingService;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.port.TransactionRepository;
@@ -42,6 +43,7 @@ public class TransactionListingServiceImpl implements ITransactionListingService
         stopWatch.start("查询列表数据");
         result.setRows(transactionRepository.getTransactions(query, page));
         enrichTransactionDateTime(result.getRows());
+        enrichFinanceSemantics(result.getRows());
         stopWatch.stop();
 
         stopWatch.start("查询统计数据");
@@ -50,6 +52,16 @@ public class TransactionListingServiceImpl implements ITransactionListingService
 
         log.info("耗时打印：{}", stopWatch.prettyPrint());
         return result;
+    }
+
+    private static void enrichFinanceSemantics(List<Transaction> rows) {
+        if (rows == null) {
+            return;
+        }
+        for (Transaction t : rows) {
+            t.setDisplayTags(TransactionDisplayTagsBuilder.build(t));
+            t.setSemanticsSummary(TransactionDisplayTagsBuilder.inclusionSummary(t));
+        }
     }
 
     private static void enrichTransactionDateTime(List<Transaction> rows) {

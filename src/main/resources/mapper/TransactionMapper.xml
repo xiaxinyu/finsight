@@ -519,6 +519,15 @@
         <result column="account_balance" property="accountBalance" jdbcType="NUMERIC"/>
         <result column="bank_code" property="bankCode" jdbcType="VARCHAR"/>
         <result column="card_type_code" property="cardTypeCode" jdbcType="VARCHAR"/>
+        <result column="txn_kind" property="txnKind" jdbcType="VARCHAR"/>
+        <result column="sem_economic_nature" property="economicNature" jdbcType="VARCHAR"/>
+        <result column="sem_budget_behavior" property="budgetBehavior" jdbcType="VARCHAR"/>
+        <result column="sem_report_role" property="financeReportRole" jdbcType="VARCHAR"/>
+        <result column="sem_quality_state" property="qualityState" jdbcType="VARCHAR"/>
+        <result column="category_parent_id" property="categoryParentId" jdbcType="VARCHAR"/>
+        <result column="sem_include_in_income_trend" property="includeInIncomeTrend" jdbcType="BOOLEAN"/>
+        <result column="sem_include_in_expense_trend" property="includeInExpenseTrend" jdbcType="BOOLEAN"/>
+        <result column="sem_include_in_budget" property="includeInBudget" jdbcType="BOOLEAN"/>
     </resultMap>
 
     <select id="getTransactions" resultMap="baseTransactionResultMap">
@@ -546,12 +555,22 @@
         t.opponent_name,
         t.transaction_time,
         t.account_balance,
+        t.txn_kind,
         coalesce(nullif(trim(bc.bank_code), ''), nullif(trim(st.source_bank_code), '')) as bank_code,
-        bc.card_type_code
+        bc.card_type_code,
+        sem.economic_nature as sem_economic_nature,
+        sem.budget_behavior as sem_budget_behavior,
+        sem.report_role as sem_report_role,
+        sem.quality_state as sem_quality_state,
+        sem.include_in_income_trend as sem_include_in_income_trend,
+        sem.include_in_expense_trend as sem_include_in_expense_trend,
+        sem.include_in_budget as sem_include_in_budget,
+        coalesce(cat.parent_id, sem.category_l1_code) as category_parent_id
         from transaction t
         left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
-        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        left join cls_category cat on cat.code = coalesce(nullif(trim(t.consume_code), ''), nullif(trim(t.category_code), '')) and cat.deleted != 1
+        left join v_transaction_finance_semantics sem on sem.id = t.id
         where 1 = 1
         <include refid="activeTransactionT"/>
         <include refid="excludeTransferUnlessSemanticT"/>

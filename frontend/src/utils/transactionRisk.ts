@@ -1,4 +1,5 @@
 import type { TransactionRow } from '../api/transaction'
+import { isFixedCostCategoryCode } from './categorySemantics'
 import { cellText } from './cell'
 import { rowAmount, rowTxnKind } from './transactionAmount'
 
@@ -51,6 +52,13 @@ function includesAny(text: string, hints: string[]): boolean {
   return hints.some((h) => text.includes(h))
 }
 
+function isFixedCostRow(row: TransactionRow): boolean {
+  const code = (row.consumeCode || row.consumeID || '').trim()
+  if (isFixedCostCategoryCode(code)) return true
+  const text = haystack(row)
+  return includesAny(text, FIXED_COST_HINTS)
+}
+
 export function detectTransactionRiskTags(
   row: TransactionRow,
   options?: { amountMax?: number; anomalyRatio?: number },
@@ -61,7 +69,7 @@ export function detectTransactionRiskTags(
 
   if (isUnclassifiedRow(row)) tags.push('unclassified')
   if (kind !== 'income' && includesAny(text, SUBSCRIPTION_HINTS)) tags.push('subscription')
-  if (kind === 'expense' && includesAny(text, FIXED_COST_HINTS)) tags.push('fixed_cost')
+  if (kind === 'expense' && isFixedCostRow(row)) tags.push('fixed_cost')
   if (includesAny(text, TRANSFER_HINTS)) tags.push('transfer_candidate')
   if (includesAny(text, REFUND_HINTS)) tags.push('refund_candidate')
 

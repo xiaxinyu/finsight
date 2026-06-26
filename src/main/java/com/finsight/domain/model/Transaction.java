@@ -111,6 +111,37 @@ public class Transaction extends BaseEntity {
     @TableField(exist = false)
     private String cardTypeCode;
 
+    /** From {@code v_transaction_finance_semantics} — not persisted. */
+    @TableField(exist = false)
+    private String economicNature;
+
+    @TableField(exist = false)
+    private String budgetBehavior;
+
+    @TableField(exist = false)
+    private String financeReportRole;
+
+    @TableField(exist = false)
+    private String qualityState;
+
+    @TableField(exist = false)
+    private String categoryParentId;
+
+    @TableField(exist = false)
+    private Boolean includeInIncomeTrend;
+
+    @TableField(exist = false)
+    private Boolean includeInExpenseTrend;
+
+    @TableField(exist = false)
+    private Boolean includeInBudget;
+
+    @TableField(exist = false)
+    private String semanticsSummary;
+
+    @TableField(exist = false)
+    private java.util.List<com.finsight.web.api.dto.TransactionDisplayTag> displayTags;
+
     public Double getBalanceMoney() { return balanceMoney; }
     public String getConsumeID() { return consumeID != null ? consumeID : categoryId; }
     public void setConsumeID(String consumeID) {
