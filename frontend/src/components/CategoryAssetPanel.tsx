@@ -88,6 +88,13 @@ export function CategoryAssetPanel({
   }
 
   const code = asset.categoryCode
+  const semantics = profileCategorySemantics(
+    asset.reportRole,
+    asset.txnTypes,
+    asset.parentId,
+    asset.categoryCode,
+    asset.semanticTag,
+  )
   const txnLink = `/transactions?consume=${encodeURIComponent(code)}`
   const rulesLink = `/admin/rules?category=${encodeURIComponent(code)}`
   const unclassifiedLink = '/transactions?unclassified=1'
@@ -97,12 +104,7 @@ export function CategoryAssetPanel({
     <div className="fs-category-asset-panel">
       <ContentCard title="Reporting Classification" size="small" className="fs-category-asset-card fs-category-semantics-card">
         <div className="fs-category-semantics-tags">
-          <Tag color="blue">{semanticTagLabel(profileCategorySemantics(
-            asset.reportRole,
-            undefined,
-            asset.parentId,
-            asset.categoryCode,
-          ).semanticTag)}</Tag>
+          <Tag color="blue">{semanticTagLabel(semantics.semanticTag)}</Tag>
           {asset.fixedCostKind ? (
             <Tag color="purple">{fixedCostKindLabel(asset.fixedCostKind)}</Tag>
           ) : null}
@@ -112,7 +114,7 @@ export function CategoryAssetPanel({
           ) : null}
         </div>
         <Typography.Paragraph type="secondary" className="fs-category-semantics-inclusion">
-          {inclusionSummary(asset)}
+          {inclusionSummary(semantics)}
         </Typography.Paragraph>
         <div className="fs-category-semantics-flags">
           <Tag color={asset.includeInIncomeTrend ? 'green' : 'default'}>Income trend</Tag>

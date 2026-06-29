@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  categoryFieldsFromSemanticTag,
   coerceCategoryFormFields,
   fixedCostKindLabel,
   inferDefaultReportRole,
@@ -7,6 +8,7 @@ import {
   isFixedCostCategoryCode,
   profileCategorySemantics,
   reportRoleFromSemanticSelection,
+  resolveSemanticTag,
   semanticTagFromReportRole,
   semanticTagLabel,
   filterSemanticTagGroups,
@@ -95,5 +97,22 @@ describe('categorySemantics', () => {
     expect(preview.semanticTag).toBe('daily_spending')
     expect(preview.includeInIncomeTrend).toBe(false)
     expect(preview.includeInExpenseTrend).toBe(true)
+  })
+
+  it('keeps stored semantic tag over report_role inference', () => {
+    expect(resolveSemanticTag('social_spending', 'budget', 'TRANSPORT', 'TRANS-01', 'expense')).toBe('social_spending')
+    const preview = profileCategorySemantics('budget', 'expense', 'TRANSPORT', 'TRANS-01', 'social_spending')
+    expect(preview.semanticTag).toBe('social_spending')
+  })
+
+  it('persists earned income from semantic tag selection', () => {
+    const derived = categoryFieldsFromSemanticTag('real_income', {
+      parentId: 'INC',
+      code: 'INC-01',
+      txnTypes: 'income',
+    })
+    expect(derived.semanticTag).toBe('real_income')
+    expect(derived.reportRole).toBe('income')
+    expect(derived.txnTypes).toBe('income')
   })
 })

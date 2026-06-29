@@ -17,10 +17,12 @@ export function useFillTableHeight(panelRef: RefObject<HTMLElement | null>) {
 
     const measure = () => {
       const toolbar = panel.querySelector<HTMLElement>('.ant-pro-table-list-toolbar')
+      const listHead = panel.querySelector<HTMLElement>('.fs-rule-engine-list-head, .fs-admin-category-form-actions')
       const thead = panel.querySelector<HTMLElement>('.ant-table-thead')
       const pagination = panel.querySelector<HTMLElement>('.ant-pagination')
       const chrome =
         (toolbar?.offsetHeight ?? 0) +
+        (listHead?.offsetHeight ?? 0) +
         (thead?.offsetHeight ?? 0) +
         (pagination?.offsetHeight ?? 0) +
         2

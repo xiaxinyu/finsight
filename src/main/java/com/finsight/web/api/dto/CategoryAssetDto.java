@@ -27,6 +27,8 @@ public class CategoryAssetDto {
     private List<String> qualityFlags = new ArrayList<>();
     private List<CategoryChildCandidateDto> childCandidates = new ArrayList<>();
     private String reportRole;
+    private String semanticTag;
+    private String txnTypes;
     private String economicNature;
     private String budgetBehavior;
     private String fixedCostKind;
@@ -40,6 +42,22 @@ public class CategoryAssetDto {
 
     public void setReportRole(String reportRole) {
         this.reportRole = reportRole;
+    }
+
+    public String getSemanticTag() {
+        return semanticTag;
+    }
+
+    public void setSemanticTag(String semanticTag) {
+        this.semanticTag = semanticTag;
+    }
+
+    public String getTxnTypes() {
+        return txnTypes;
+    }
+
+    public void setTxnTypes(String txnTypes) {
+        this.txnTypes = txnTypes;
     }
 
     public String getEconomicNature() {

@@ -13,8 +13,8 @@ import com.finsight.application.analytics.ConfigVersionBump;
 import com.finsight.application.classification.CategoryAliasService;
 import com.finsight.application.classification.CategoryMergeSupport;
 import com.finsight.application.classification.CategoryMergeSupport.MergeMode;
-import com.finsight.application.classification.CategoryReportRoleInference;
-import com.finsight.application.classification.CategoryReportRoles;
+import com.finsight.application.classification.CategorySemanticDefaults;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +76,10 @@ public class ConsumeCategoryAdminFacade {
         if (cat.getTxnTypes() == null || cat.getTxnTypes().trim().isEmpty()) {
             cat.setTxnTypes("expense");
         }
-        applyReportRole(cat);
+        if (cat.getDeleted() == null) {
+            cat.setDeleted(0);
+        }
+        applyClassificationDefaults(cat);
         String genId = buildId(cat.getLevel(), cat.getCode(), cat.getParentId());
         cat.setId(genId);
         try {
@@ -102,7 +105,13 @@ public class ConsumeCategoryAdminFacade {
         }
         autofillCodeAndSort(cat);
         validateUniqueCode(cat.getCode(), id);
-        applyReportRole(cat);
+        applyClassificationDefaults(cat);
+        if (cat.getDeleted() == null) {
+            cat.setDeleted(old != null && old.getDeleted() != null ? old.getDeleted() : 0);
+        }
+        if (cat.getSemanticTag() == null && old != null && StringUtils.isNotBlank(old.getSemanticTag())) {
+            cat.setSemanticTag(old.getSemanticTag());
+        }
         String newId = buildId(cat.getLevel(), cat.getCode(), cat.getParentId());
 
         LambdaUpdateWrapper<ConsumeCategory> uwCat = Wrappers.lambdaUpdate();
@@ -115,7 +124,8 @@ public class ConsumeCategoryAdminFacade {
                 .set(ConsumeCategory::getSortNo, cat.getSortNo())
                 .set(ConsumeCategory::getDeleted, cat.getDeleted())
                 .set(ConsumeCategory::getTxnTypes, cat.getTxnTypes())
-                .set(ConsumeCategory::getReportRole, cat.getReportRole());
+                .set(ConsumeCategory::getReportRole, cat.getReportRole())
+                .set(ConsumeCategory::getSemanticTag, cat.getSemanticTag());
         try {
             categoryService.update(null, uwCat);
         } catch (Exception ex) {
@@ -573,6 +583,7 @@ public class ConsumeCategoryAdminFacade {
         cc.setDeleted(raw.getDeleted());
         cc.setTxnTypes(raw.getTxnTypes());
         cc.setReportRole(raw.getReportRole());
+        cc.setSemanticTag(raw.getSemanticTag());
         cc.setVersion(raw.getVersion());
         cc.setCreatedAt(raw.getCreatedAt());
         cc.setUpdatedAt(raw.getUpdatedAt());
@@ -581,21 +592,20 @@ public class ConsumeCategoryAdminFacade {
         return cc;
     }
 
-    private static void applyReportRole(ConsumeCategory cat) {
-        String explicit = CategoryReportRoles.normalize(cat.getReportRole());
-        if (explicit != null) {
-            cat.setReportRole(explicit);
-            return;
-        }
-        String inferred = CategoryReportRoleInference.inferReportRole(
-                new CategoryReportRoleInference.DbCategoryRow(
+    private static void applyClassificationDefaults(ConsumeCategory cat) {
+        CategorySemanticDefaults.ResolvedDefaults defaults = CategorySemanticDefaults.fillMissing(
+                new CategorySemanticDefaults.CategoryInput(
                         cat.getCode(),
                         cat.getName(),
                         cat.getLevel() == null ? 0 : cat.getLevel(),
                         cat.getParentId(),
-                        cat.getTxnTypes()))
-                .orElse("other");
-        cat.setReportRole(inferred);
+                        cat.getTxnTypes(),
+                        cat.getReportRole(),
+                        cat.getSemanticTag()));
+        cat.setReportRole(defaults.reportRole());
+        if (StringUtils.isBlank(cat.getSemanticTag())) {
+            cat.setSemanticTag(defaults.semanticTag());
+        }
     }
 }
 

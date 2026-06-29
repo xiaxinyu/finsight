@@ -3,6 +3,7 @@ package com.finsight.application.classification;
 import com.finsight.domain.model.Transaction;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -19,8 +20,9 @@ class TransactionDisplayTagsBuilderTest {
         row.setQualityState("classified");
 
         var tags = TransactionDisplayTagsBuilder.build(row);
-        assertTrue(tags.stream().anyMatch(t -> "fixed_cost".equals(t.getId())));
+        assertTrue(tags.stream().anyMatch(t -> "semantic_fixed_spending".equals(t.getId())));
         assertTrue(tags.stream().anyMatch(t -> "fixed_cost_rent".equals(t.getId())));
+        assertFalse(tags.stream().anyMatch(t -> "fixed_cost".equals(t.getId())));
     }
 
     @Test
@@ -34,21 +36,39 @@ class TransactionDisplayTagsBuilderTest {
         row.setQualityState("classified");
 
         var tags = TransactionDisplayTagsBuilder.build(row);
-        assertTrue(tags.stream().anyMatch(t -> "social".equals(t.getId())));
+        assertTrue(tags.stream().anyMatch(t -> "semantic_social_spending".equals(t.getId())));
+        assertFalse(tags.stream().anyMatch(t -> "social".equals(t.getId())));
     }
 
     @Test
-    void dailySpending_noFixedCostTag() {
+    void dailySpending_getsDiscretionaryTag() {
         Transaction row = baseExpense();
         row.setConsumeCode("DAILY-01");
         row.setConsumeName("Dining");
         row.setCategoryParentId("LIVING");
+        row.setCategoryL1Name("日常生活");
         row.setBudgetBehavior("variable");
         row.setEconomicNature("expense");
         row.setQualityState("classified");
 
         var tags = TransactionDisplayTagsBuilder.build(row);
-        assertFalse(tags.stream().anyMatch(t -> "fixed_cost".equals(t.getId())));
+        assertTrue(tags.stream().anyMatch(t -> "semantic_daily_spending".equals(t.getId())));
+        assertTrue(tags.stream().anyMatch(t -> "Discretionary".equals(t.getLabel())));
+        assertTrue(tags.stream().anyMatch(t -> "category_l1".equals(t.getId()) && "日常生活".equals(t.getLabel())));
+    }
+
+    @Test
+    void storedSemanticTag_overridesInference() {
+        Transaction row = baseExpense();
+        row.setConsumeCode("LIVING-01");
+        row.setConsumeName("Dining");
+        row.setCategorySemanticTag("social_spending");
+        row.setBudgetBehavior("variable");
+        row.setEconomicNature("expense");
+        row.setQualityState("classified");
+
+        var tags = TransactionDisplayTagsBuilder.build(row);
+        assertTrue(tags.stream().anyMatch(t -> "semantic_social_spending".equals(t.getId())));
     }
 
     @Test
@@ -58,6 +78,14 @@ class TransactionDisplayTagsBuilderTest {
 
         var tags = TransactionDisplayTagsBuilder.build(row);
         assertTrue(tags.stream().anyMatch(t -> "unclassified".equals(t.getId())));
+    }
+
+    @Test
+    void resolver_prefersStoredSemanticTag() {
+        Transaction row = baseExpense();
+        row.setCategorySemanticTag("real_income");
+        row.setEconomicNature("expense");
+        assertEquals("real_income", TransactionSemanticTagResolver.resolve(row));
     }
 
     private static Transaction baseExpense() {

@@ -547,47 +547,51 @@ export function RulesAdminPage() {
 
         <section ref={listPanelRef} className="fs-admin-split-form fs-table-panel fs-rule-engine-list-panel">
           <header className="fs-rule-engine-list-head">
-            <div className="fs-rule-main-title-block">
-              <Typography.Title level={5} className="fs-rule-main-title">{panelTitle}</Typography.Title>
-              {panelHint && (
-                <Typography.Text type="secondary" className="fs-rule-main-hint">{panelHint}</Typography.Text>
-              )}
-              <div className="fs-rule-stats">
-                <span className="fs-rule-stat fs-rule-stat--on">{stats.active} active</span>
-                <span className="fs-rule-stat">{stats.disabled} off</span>
-                {stats.orphaned > 0 && (
-                  <span className="fs-rule-stat fs-rule-stat--warn">{stats.orphaned} orphaned</span>
-                )}
-                {stats.highRisk > 0 && (
-                  <span className="fs-rule-stat fs-rule-stat--warn">{stats.highRisk} high risk</span>
-                )}
-                {stats.duplicateGroups > 0 && (
-                  <span className="fs-rule-stat fs-rule-stat--warn">{stats.duplicateGroups} duplicate groups</span>
-                )}
+            <div className="fs-rule-engine-list-head-row">
+              <div className="fs-rule-engine-list-head-left">
+                <Typography.Title level={5} className="fs-rule-main-title">{panelTitle}</Typography.Title>
+                <div className="fs-rule-stats">
+                  <span className="fs-rule-stat fs-rule-stat--on">{stats.active} active</span>
+                  <span className="fs-rule-stat">{stats.disabled} off</span>
+                  {stats.orphaned > 0 && (
+                    <span className="fs-rule-stat fs-rule-stat--warn">{stats.orphaned} orphaned</span>
+                  )}
+                  {stats.highRisk > 0 && (
+                    <span className="fs-rule-stat fs-rule-stat--warn">{stats.highRisk} high risk</span>
+                  )}
+                  {stats.duplicateGroups > 0 && (
+                    <span className="fs-rule-stat fs-rule-stat--warn">{stats.duplicateGroups} duplicate groups</span>
+                  )}
+                </div>
               </div>
+              <Space size="small" wrap className="fs-rule-main-actions">
+                <Input.Search
+                  allowClear
+                  size="small"
+                  placeholder="Search keyword or tag…"
+                  className="fs-rule-keyword-search"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                />
+                <Button size="small" icon={<BulbOutlined />} onClick={openSuggestKeywords}>
+                  Suggest keywords
+                </Button>
+                <Button
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  disabled={!riskReport?.remediation?.length}
+                  onClick={exportRemediation}
+                >
+                  Export remediation
+                </Button>
+                <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => openCreate()}>
+                  Add rule
+                </Button>
+              </Space>
             </div>
-            <Space size="small" wrap className="fs-rule-main-actions">
-              <Input.Search
-                allowClear
-                placeholder="Search keyword or tag…"
-                className="fs-rule-keyword-search"
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-              />
-              <Button icon={<BulbOutlined />} onClick={openSuggestKeywords}>
-                Suggest keywords
-              </Button>
-              <Button
-                icon={<DownloadOutlined />}
-                disabled={!riskReport?.remediation?.length}
-                onClick={exportRemediation}
-              >
-                Export remediation
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreate()}>
-                Add rule
-              </Button>
-            </Space>
+            {panelHint && (
+              <Typography.Text type="secondary" className="fs-rule-main-hint">{panelHint}</Typography.Text>
+            )}
           </header>
 
           <Table<ConsumeRuleRow>

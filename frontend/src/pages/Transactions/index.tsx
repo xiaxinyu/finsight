@@ -412,7 +412,7 @@ export function TransactionsPage() {
       {
         title: <TableHeader name="Category" />,
         dataIndex: 'consumeName',
-        width: 148,
+        width: 168,
         ellipsis: true,
         render: (_, r) => <TransactionCategoryCell row={r} />,
       },

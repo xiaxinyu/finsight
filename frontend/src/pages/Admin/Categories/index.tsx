@@ -33,15 +33,19 @@ import { useSemanticsCatalog } from '../../../hooks/useSemanticsCatalog'
 import {
   applyMergeTargetConstraints,
   buildCategoryTree,
+  categoryPathLabel,
   collectSubtreeCodesFromTree,
   toAntTreeNodesWithCounts,
 } from '../../../utils/categoryTree'
 import type { CategoryTreeSelectNode } from '../../../utils/categoryTree'
+import type { SemanticTagId } from '../../../utils/categorySemantics'
 import {
+  categoryFieldsFromSemanticTag,
   coerceCategoryFormFields,
-  inferDefaultReportRole,
+  initialCategoryFormValues,
   inferFixedCostKind,
   isFixedCategory,
+  isKnownSemanticTag,
   isSocialCategory,
   reportRoleFromSemanticSelection,
 } from '../../../utils/categorySemantics'
@@ -55,7 +59,9 @@ function toMergeCascaderOptions(nodes: CategoryTreeSelectNode[]): CascaderOption
   }))
 }
 
-const EMPTY: ConsumeCategoryRow = { name: '', code: '', parentId: '', sortNo: 1, txnTypes: 'expense', reportRole: 'budget' }
+const EMPTY: ConsumeCategoryRow = {
+  name: '', code: '', parentId: '', sortNo: 1, txnTypes: 'expense', reportRole: 'budget', semanticTag: 'daily_spending',
+}
 
 type PendingAction = 'delete' | 'rename' | 'merge' | null
 
@@ -96,7 +102,7 @@ export function CategoriesAdminPage() {
   const { data: semanticsCatalog } = useSemanticsCatalog()
   const catalogFieldLabel = semanticsCatalog?.fieldLabel ?? 'Reporting Classification'
   const catalogFieldHint = semanticsCatalog?.fieldHint
-    ?? 'How Transactions In This Category Count Toward Trends, Budget, And Fixed-Cost Reports.'
+    ?? 'Left tree = what you bought (Transport/Dining/Shopping). Here = how it counts in reports (Discretionary/Fixed/Social).'
 
   const treeData = useMemo(
     () => toAntTreeNodesWithCounts(buildCategoryTree(categories), assetSummary, categories),
@@ -105,6 +111,10 @@ export function CategoriesAdminPage() {
   const selected = useMemo(
     () => categories.find((c) => c.id === selectedId) || null,
     [categories, selectedId],
+  )
+  const categoryPath = useMemo(
+    () => categoryPathLabel(categories, selected),
+    [categories, selected],
   )
   const parentOptions = useMemo(
     () => categories
@@ -116,26 +126,28 @@ export function CategoriesAdminPage() {
   useEffect(() => {
     if (creating) {
       const parentId = selected?.code || ''
-      const defaultRole = isFixedCategory(parentId)
-        ? reportRoleFromSemanticSelection('fixed_spending', inferFixedCostKind(parentId) ?? 'other')
+      const semanticTag = isFixedCategory(parentId)
+        ? 'fixed_spending'
         : isSocialCategory(parentId)
-          ? reportRoleFromSemanticSelection('social_spending')
-          : 'budget'
-      form.setFieldsValue({ ...EMPTY, parentId, reportRole: defaultRole })
+          ? 'social_spending'
+          : 'daily_spending'
+      const reportRole = reportRoleFromSemanticSelection(
+        semanticTag,
+        isFixedCategory(parentId) ? inferFixedCostKind(parentId) ?? 'other' : null,
+      )
+      form.setFieldsValue({ ...EMPTY, parentId, semanticTag, reportRole })
       return
     }
     if (selected) {
-      const coerced = coerceCategoryFormFields({
-        parentId: selected.parentId,
-        code: selected.code,
-        txnTypes: selected.txnTypes,
-        reportRole: selected.reportRole?.trim()
-          || categoryAsset?.reportRole
-          || inferDefaultReportRole(selected.parentId, selected.code, selected.txnTypes),
+      const derived = initialCategoryFormValues(selected)
+      form.setFieldsValue({
+        ...selected,
+        txnTypes: derived.txnTypes,
+        semanticTag: derived.semanticTag,
+        reportRole: derived.reportRole,
       })
-      form.setFieldsValue({ ...selected, txnTypes: coerced.txnTypes, reportRole: coerced.reportRole })
     } else form.resetFields()
-  }, [selected, creating, form, categoryAsset?.reportRole])
+  }, [selected?.id, creating, form])
 
   const watchedReportRole = Form.useWatch('reportRole', form)
   const watchedTxnTypes = Form.useWatch('txnTypes', form)
@@ -145,19 +157,10 @@ export function CategoriesAdminPage() {
   useEffect(() => {
     const parentId = watchedParentId
     const code = watchedCode || selected?.code
-    if (!parentId && !code && !watchedTxnTypes) return
+    if (!parentId && !code) return
 
-    const coerced = coerceCategoryFormFields({
-      parentId,
-      code,
-      txnTypes: watchedTxnTypes,
-      reportRole: watchedReportRole,
-    })
-    const patch: Partial<ConsumeCategoryRow> = {}
-    if (coerced.txnTypes !== watchedTxnTypes) patch.txnTypes = coerced.txnTypes
-    if (coerced.reportRole !== watchedReportRole) patch.reportRole = coerced.reportRole
-    if (Object.keys(patch).length) {
-      form.setFieldsValue(patch)
+    if (isFixedCategory(parentId, code) && watchedTxnTypes && !watchedTxnTypes.includes('expense')) {
+      form.setFieldValue('txnTypes', 'expense')
     }
   }, [watchedParentId, watchedTxnTypes, watchedCode, selected?.code, form])
 
@@ -237,21 +240,41 @@ export function CategoriesAdminPage() {
   }, [watchedParentId, watchedCode, watchedTxnTypes, watchedReportRole, selected?.code])
 
   const normalizeFormValues = (raw: ConsumeCategoryRow): ConsumeCategoryRow => {
-    const coerced = coerceCategoryFormFields({
+    const code = raw.code || selected?.code
+    const tag: SemanticTagId = isKnownSemanticTag(raw.semanticTag)
+      ? raw.semanticTag.trim() as SemanticTagId
+      : initialCategoryFormValues({ ...raw, code }).semanticTag
+    const derived = categoryFieldsFromSemanticTag(tag, {
       parentId: raw.parentId,
-      code: raw.code || selected?.code,
-      txnTypes: raw.txnTypes,
-      reportRole: raw.reportRole,
+      code,
+      txnTypes: raw.txnTypes ?? selected?.txnTypes,
     })
-    coerced.warnings.forEach((w) => message.warning(w))
-    return { ...raw, txnTypes: coerced.txnTypes, reportRole: coerced.reportRole }
+    derived.warnings.forEach((w) => message.warning(w))
+    return {
+      ...raw,
+      deleted: raw.deleted ?? selected?.deleted ?? 0,
+      txnTypes: derived.txnTypes,
+      semanticTag: derived.semanticTag,
+      reportRole: derived.reportRole,
+    }
+  }
+
+  const needsCascadeUpdate = (values: ConsumeCategoryRow) => {
+    if (!selected) return false
+    return (values.name ?? '').trim() !== (selected.name ?? '').trim()
+      || (values.code ?? '').trim() !== (selected.code ?? '').trim()
+      || (values.parentId ?? '') !== (selected.parentId ?? '')
   }
 
   const onSave = async () => {
     const raw = await form.validateFields()
     const values = normalizeFormValues(raw)
-    if (values.txnTypes !== raw.txnTypes || values.reportRole !== raw.reportRole) {
-      form.setFieldsValue({ txnTypes: values.txnTypes, reportRole: values.reportRole })
+    if (values.txnTypes !== raw.txnTypes || values.reportRole !== raw.reportRole || values.semanticTag !== raw.semanticTag) {
+      form.setFieldsValue({
+        txnTypes: values.txnTypes,
+        reportRole: values.reportRole,
+        semanticTag: values.semanticTag,
+      })
     }
     if (creating) {
       try {
@@ -271,7 +294,7 @@ export function CategoriesAdminPage() {
       return
     }
     try {
-      await updateCategory(selected.id, values, true)
+      await updateCategory(selected.id, values, needsCascadeUpdate(values))
       message.success('Category updated')
       reload()
     } catch (e) {
@@ -325,7 +348,7 @@ export function CategoriesAdminPage() {
         message.success('Category deleted')
         setSelectedId(null)
       } else if (pendingAction === 'rename' && pendingValues) {
-        await updateCategory(selected.id, normalizeFormValues(pendingValues), true)
+        await updateCategory(selected.id, normalizeFormValues(pendingValues), needsCascadeUpdate(normalizeFormValues(pendingValues)))
         message.success('Category updated')
       } else if (pendingAction === 'merge' && mergeTargetCode) {
         await migrateCategory(selected.id, mergeTargetCode, true, true)
@@ -413,19 +436,31 @@ export function CategoriesAdminPage() {
                       <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
                   </div>
+                  <Form.Item name="reportRole" hidden>
+                    <Input type="hidden" />
+                  </Form.Item>
                   <Form.Item
-                    name="reportRole"
+                    name="semanticTag"
                     label={catalogFieldLabel}
                     tooltip={catalogFieldHint}
                     className="fs-admin-category-classification-item"
+                    extra={categoryPath ? (
+                      <Typography.Text type="secondary" className="fs-category-path-hint">
+                        分类路径：{categoryPath}
+                        {' · '}
+                        左侧树决定消费类型（交通/餐饮/购物）；此处仅设置报表口径（弹性/固定/人情等）。
+                      </Typography.Text>
+                    ) : undefined}
                     rules={[{ required: true, message: 'Reporting classification is required' }]}
                   >
                     <CategoryReportRoleControl
+                      reportRole={watchedReportRole}
                       txnTypes={watchedTxnTypes}
                       parentId={watchedParentId}
                       categoryCode={watchedCode || selected?.code}
-                      inferred={!creating && Boolean(selected && !selected.reportRole?.trim())}
+                      inferred={!creating && Boolean(selected && !selected.semanticTag?.trim() && !selected.reportRole?.trim())}
                       mismatchWarning={classificationMismatch}
+                      onReportRoleSync={(role) => form.setFieldValue('reportRole', role)}
                     />
                   </Form.Item>
                 </div>

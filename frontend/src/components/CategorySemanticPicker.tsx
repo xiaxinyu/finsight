@@ -5,6 +5,7 @@ import {
   useSemanticsCatalog,
 } from '../hooks/useSemanticsCatalog'
 import type { FixedCostKind, SemanticTagId } from '../utils/categorySemantics'
+import { categorySpendingDomainLabel } from '../utils/categoryTree'
 import {
   FIXED_COST_KIND_OPTIONS,
   compactGroupTitle,
@@ -13,17 +14,20 @@ import {
   isFixedCategory,
   parentTxnMismatchWarning,
   profileCategorySemantics,
+  reportRoleForSemanticTag,
   reportRoleFromSemanticSelection,
+  resolveSemanticTag,
   semanticTagLabel,
   txnTypeFilter,
 } from '../utils/categorySemantics'
 
 type PickerProps = {
+  semanticTag?: string
   reportRole?: string
   txnTypes?: string
   parentId?: string
   categoryCode?: string
-  onReportRoleChange: (reportRole: string) => void
+  onSemanticTagChange: (tag: SemanticTagId, reportRole: string) => void
   showPreview?: boolean
   inferred?: boolean
   mismatchWarning?: string | null
@@ -78,18 +82,19 @@ function SelectableTag({
 }
 
 export function CategorySemanticPicker({
+  semanticTag,
   reportRole,
   txnTypes,
   parentId,
   categoryCode,
-  onReportRoleChange,
+  onSemanticTagChange,
   showPreview = true,
   inferred = false,
   mismatchWarning = null,
 }: PickerProps) {
   const { data: catalog } = useSemanticsCatalog()
-  const preview = profileCategorySemantics(reportRole, txnTypes, parentId, categoryCode)
-  const activeTag = preview.semanticTag ?? 'other'
+  const activeTag = resolveSemanticTag(semanticTag, reportRole, parentId, categoryCode, txnTypes)
+  const preview = profileCategorySemantics(reportRole, txnTypes, parentId, categoryCode, activeTag)
   const activeFixedKind = preview.fixedCostKind as FixedCostKind | null | undefined
   const allGroups = (catalog?.semanticTagGroups ?? []).map((g) => ({
     title: g.title,
@@ -100,10 +105,11 @@ export function CategorySemanticPicker({
   const reportSurfaces = (catalog?.reportSurfaces ?? []) as ReportSurface[]
   const txnFilter = txnTypeFilter(txnTypes)
   const parentWarning = parentTxnMismatchWarning(parentId, txnTypes)
+  const domainLabel = categorySpendingDomainLabel(parentId, categoryCode)
 
   const selectTag = (tag: SemanticTagId) => {
     if (tag === 'subscription_spending') {
-      onReportRoleChange(reportRoleFromSemanticSelection(tag, 'subscription'))
+      onSemanticTagChange(tag, reportRoleFromSemanticSelection(tag, 'subscription'))
       return
     }
     let fixedKind = activeFixedKind
@@ -113,11 +119,11 @@ export function CategorySemanticPicker({
     if (tag !== 'fixed_spending') {
       fixedKind = null
     }
-    onReportRoleChange(reportRoleFromSemanticSelection(tag, fixedKind))
+    onSemanticTagChange(tag, reportRoleForSemanticTag(tag, parentId, categoryCode, fixedKind))
   }
 
   const selectFixedKind = (kind: FixedCostKind) => {
-    onReportRoleChange(reportRoleFromSemanticSelection('fixed_spending', kind))
+    onSemanticTagChange('fixed_spending', reportRoleFromSemanticSelection('fixed_spending', kind))
   }
 
   const primaryLabel = catalogSemanticTagLabel(catalog, activeTag) || semanticTagLabel(activeTag)
@@ -136,6 +142,9 @@ export function CategorySemanticPicker({
         <span className={`fs-category-txn-badge fs-category-txn-badge--${txnFilter}`}>
           {txnBadgeLabel(txnFilter)}
         </span>
+        {domainLabel && (
+          <span className="fs-category-domain-badge">{domainLabel}</span>
+        )}
         {showPreview && (
           <div className="fs-category-classification-selection">
             <Tag color={tagColor(activeTag)} bordered={false} className="fs-category-selection-tag">
@@ -228,31 +237,39 @@ function inferDefaultFixedKind(parentId?: string, categoryCode?: string): FixedC
   return 'rent'
 }
 
-/** Ant Design Form control — binds reportRole field directly. */
+/** Ant Design Form control — binds semanticTag; syncs reportRole via callback. */
 export function CategoryReportRoleControl({
   value,
   onChange,
+  reportRole,
   txnTypes,
   parentId,
   categoryCode,
   inferred,
   mismatchWarning,
+  onReportRoleSync,
 }: {
   value?: string
   onChange?: (value: string) => void
+  reportRole?: string
   txnTypes?: string
   parentId?: string
   categoryCode?: string
   inferred?: boolean
   mismatchWarning?: string | null
+  onReportRoleSync?: (reportRole: string) => void
 }) {
   return (
     <CategorySemanticPicker
-      reportRole={value}
+      semanticTag={value}
+      reportRole={reportRole}
       txnTypes={txnTypes}
       parentId={parentId}
       categoryCode={categoryCode}
-      onReportRoleChange={(role) => onChange?.(role)}
+      onSemanticTagChange={(tag, role) => {
+        onChange?.(tag)
+        onReportRoleSync?.(role)
+      }}
       inferred={inferred}
       mismatchWarning={mismatchWarning}
     />

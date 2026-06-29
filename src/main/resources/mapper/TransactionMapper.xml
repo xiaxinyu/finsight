@@ -525,6 +525,8 @@
         <result column="sem_report_role" property="financeReportRole" jdbcType="VARCHAR"/>
         <result column="sem_quality_state" property="qualityState" jdbcType="VARCHAR"/>
         <result column="category_parent_id" property="categoryParentId" jdbcType="VARCHAR"/>
+        <result column="category_semantic_tag" property="categorySemanticTag" jdbcType="VARCHAR"/>
+        <result column="category_l1_name" property="categoryL1Name" jdbcType="VARCHAR"/>
         <result column="sem_include_in_income_trend" property="includeInIncomeTrend" jdbcType="BOOLEAN"/>
         <result column="sem_include_in_expense_trend" property="includeInExpenseTrend" jdbcType="BOOLEAN"/>
         <result column="sem_include_in_budget" property="includeInBudget" jdbcType="BOOLEAN"/>
@@ -565,7 +567,9 @@
         sem.include_in_income_trend as sem_include_in_income_trend,
         sem.include_in_expense_trend as sem_include_in_expense_trend,
         sem.include_in_budget as sem_include_in_budget,
-        coalesce(cat.parent_id, sem.category_l1_code) as category_parent_id
+        coalesce(cat.parent_id, sem.category_l1_code) as category_parent_id,
+        cat.semantic_tag as category_semantic_tag,
+        sem.category_l1_name as category_l1_name
         from transaction t
         left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)

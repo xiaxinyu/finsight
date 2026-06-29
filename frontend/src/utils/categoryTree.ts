@@ -21,7 +21,7 @@ function parentCodeOf(
 }
 
 function indexCategories(categories: ConsumeCategoryRow[]) {
-  const active = categories.filter((c) => c.deleted !== 1 && c.code)
+  const active = categories.filter((c) => (c.deleted == null || c.deleted !== 1) && c.code)
   const byCode = new Map(active.map((c) => [c.code!, c]))
   const byId = new Map(active.filter((c) => c.id).map((c) => [c.id!, c]))
   return { active, byCode, byId }
@@ -61,6 +61,30 @@ export function buildCategoryTree(categories: ConsumeCategoryRow[]): CategoryTre
   })
 
   return roots.map(toNode)
+}
+
+/** L1 spending domain hint for admin UI (category type, not report semantics). */
+export function categorySpendingDomainLabel(parentId?: string, categoryCode?: string): string | null {
+  const l1 = (parentId ?? categoryCode?.split('-')[0] ?? '').trim().toUpperCase()
+  if (l1 === 'TRANSPORT' || l1 === 'TRAVEL' || l1 === 'TRANS') return 'Transport'
+  if (l1 === 'LIVING' || l1 === 'DAILY' || l1 === 'FOOD') return 'Dining'
+  if (l1 === 'SHOPPING' || l1 === 'SHOP') return 'Shopping'
+  if (l1 === 'FIXED') return 'Fixed'
+  if (l1 === 'ENT') return 'Entertainment'
+  if (l1 === 'EDU') return 'Education'
+  if (l1 === 'GIFT') return 'Social'
+  if (l1 === 'INC' || l1 === 'INCOME') return 'Income'
+  return null
+}
+
+export function categoryPathLabel(
+  categories: ConsumeCategoryRow[],
+  selected?: ConsumeCategoryRow | null,
+): string | null {
+  if (!selected?.code) return null
+  const parent = categories.find((c) => c.code === selected.parentId || c.id === selected.parentId)
+  if (parent?.name) return `${parent.name} → ${selected.name || selected.code}`
+  return selected.name || selected.code
 }
 
 export function toAntTreeNodes(nodes: CategoryTreeNode[]): { key: string; title: string; children?: ReturnType<typeof toAntTreeNodes> }[] {

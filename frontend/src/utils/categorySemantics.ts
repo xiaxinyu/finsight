@@ -118,6 +118,93 @@ export function semanticTagLabel(tag?: SemanticTagId): string {
   return SEMANTIC_TAG_LABELS[tag] ?? tag
 }
 
+export function isKnownSemanticTag(tag?: string | null): tag is SemanticTagId {
+  if (!tag?.trim()) return false
+  return tag.trim() in SEMANTIC_TAG_LABELS
+}
+
+/** Prefer stored semantic tag; fall back to report_role + category tree inference. */
+export function resolveSemanticTag(
+  storedTag?: string | null,
+  reportRole?: string,
+  parentId?: string,
+  categoryCode?: string,
+  txnTypes?: string,
+): SemanticTagId {
+  if (isKnownSemanticTag(storedTag)) return storedTag.trim() as SemanticTagId
+  const role = effectiveReportRole(reportRole, txnTypes, parentId, categoryCode)
+  return semanticTagFromReportRole(role, parentId, categoryCode, txnTypes)
+}
+
+export function reportRoleForSemanticTag(
+  tag: SemanticTagId,
+  parentId?: string,
+  categoryCode?: string,
+  fixedKind?: FixedCostKind | null,
+): string {
+  let kind = fixedKind
+  if (tag === 'fixed_spending' && !kind) {
+    kind = inferFixedCostKind(parentId, categoryCode)
+  }
+  return reportRoleFromSemanticSelection(tag, kind)
+}
+
+/** Build persisted category fields from explicit semantic tag selection. */
+export function categoryFieldsFromSemanticTag(
+  semanticTag: SemanticTagId,
+  fields: {
+    parentId?: string
+    code?: string
+    txnTypes?: string
+  },
+): { semanticTag: SemanticTagId; reportRole: string; txnTypes: string; warnings: string[] } {
+  const warnings: string[] = []
+  let txnTypes = (fields.txnTypes ?? 'expense').trim() || 'expense'
+  const parentId = fields.parentId
+  const code = fields.code
+
+  if (isFixedCategory(parentId, code) && !txnTypes.includes('expense')) {
+    txnTypes = 'expense'
+    warnings.push('Fixed categories use Transaction Type Expense — adjusted automatically.')
+  }
+
+  const fixedKind = semanticTag === 'fixed_spending'
+    ? inferFixedCostKind(parentId, code)
+    : null
+  const reportRole = reportRoleForSemanticTag(semanticTag, parentId, code, fixedKind)
+  return { semanticTag, reportRole, txnTypes, warnings }
+}
+
+/** Initial form values when loading a category row from API. */
+export function initialCategoryFormValues(
+  row: {
+    parentId?: string
+    code?: string
+    txnTypes?: string
+    reportRole?: string
+    semanticTag?: string
+  },
+): { semanticTag: SemanticTagId; reportRole: string; txnTypes: string } {
+  const txnTypes = (row.txnTypes ?? 'expense').trim() || 'expense'
+  const semanticTag = resolveSemanticTag(
+    row.semanticTag,
+    row.reportRole,
+    row.parentId,
+    row.code,
+    txnTypes,
+  )
+  const derived = categoryFieldsFromSemanticTag(semanticTag, {
+    parentId: row.parentId,
+    code: row.code,
+    txnTypes,
+  })
+  return {
+    semanticTag,
+    reportRole: derived.reportRole,
+    txnTypes: derived.txnTypes,
+  }
+}
+
 export function fixedCostKindLabel(kind?: string | null): string {
   if (!kind) return ''
   return FIXED_COST_KIND_LABELS[kind as FixedCostKind] ?? kind
@@ -305,6 +392,7 @@ export function profileCategorySemantics(
   txnTypes?: string,
   parentId?: string,
   categoryCode?: string,
+  storedSemanticTag?: string | null,
 ): CategorySemanticProfile {
   const role = effectiveReportRole(reportRole, txnTypes, parentId, categoryCode).toLowerCase()
   const txn = (txnTypes ?? '').toLowerCase()
@@ -319,7 +407,7 @@ export function profileCategorySemantics(
 
   const excluded = role === 'transfer' || role === 'refund' || role === 'investment'
     || role === 'liability' || role === 'asset'
-  const semanticTag = semanticTagFromReportRole(role, parentId, categoryCode, txnTypes)
+  const semanticTag = resolveSemanticTag(storedSemanticTag, role, parentId, categoryCode, txnTypes)
   const includeInIncomeTrend = role === 'income' && txn.includes('income')
   const includeInExpenseTrend = !excluded
     && txn.includes('expense')

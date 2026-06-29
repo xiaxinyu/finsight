@@ -43,12 +43,12 @@ public final class TransactionDisplayTagsBuilder {
             tags.add(FinanceSemanticsCatalog.unclassified());
         }
 
+        if (classified) {
+            appendPrimaryClassification(row, tags);
+            appendCategoryGroup(row, tags);
+        }
+
         switch (economic) {
-            case "refund" -> tags.add(FinanceSemanticsCatalog.refund());
-            case "transfer" -> tags.add(FinanceSemanticsCatalog.transfer());
-            case "investment" -> tags.add(FinanceSemanticsCatalog.investment());
-            case "liability" -> tags.add(FinanceSemanticsCatalog.liability());
-            case "asset_adjustment" -> tags.add(FinanceSemanticsCatalog.transfer());
             case "other" -> {
                 if (classified) {
                     tags.add(FinanceSemanticsCatalog.other());
@@ -64,20 +64,8 @@ public final class TransactionDisplayTagsBuilder {
             }
         }
 
-        if ("fixed".equals(budget)) {
-            if ("subscription".equals(fixedKind)) {
-                tags.add(FinanceSemanticsCatalog.subscription());
-            } else {
-                tags.add(FinanceSemanticsCatalog.fixedCost());
-                if (StringUtils.isNotBlank(fixedKind)) {
-                    tags.add(FinanceSemanticsCatalog.fixedCostKind(fixedKind));
-                }
-            }
-        } else if ("essential".equals(budget)) {
-            tags.add(FinanceSemanticsCatalog.essential());
-        } else if ("variable".equals(budget) && CategoryFinanceSemantics.isSocialCategory(parentId, categoryCode)
-                && "expense".equals(economic)) {
-            tags.add(FinanceSemanticsCatalog.social());
+        if ("fixed".equals(budget) && StringUtils.isNotBlank(fixedKind) && !"subscription".equals(fixedKind)) {
+            tags.add(FinanceSemanticsCatalog.fixedCostKind(fixedKind));
         }
 
         if (!classified || "inferred".equals(quality)) {
@@ -105,6 +93,29 @@ public final class TransactionDisplayTagsBuilder {
             return "Excluded From Income, Expense, And Budget Trends";
         }
         return String.join(" · ", parts);
+    }
+
+    private static void appendPrimaryClassification(Transaction row, List<TransactionDisplayTag> tags) {
+        String tagId = TransactionSemanticTagResolver.resolve(row);
+        TransactionDisplayTag primary = FinanceSemanticsCatalog.semanticClassification(tagId);
+        if (primary != null) {
+            tags.add(primary);
+        }
+    }
+
+    private static void appendCategoryGroup(Transaction row, List<TransactionDisplayTag> tags) {
+        String l1 = StringUtils.trimToEmpty(row.getCategoryL1Name());
+        if (l1.isEmpty()) {
+            return;
+        }
+        String consume = StringUtils.trimToEmpty(row.getConsumeName());
+        if (l1.equals(consume) || consume.startsWith(l1)) {
+            return;
+        }
+        TransactionDisplayTag group = FinanceSemanticsCatalog.categoryGroup(l1);
+        if (group != null) {
+            tags.add(group);
+        }
     }
 
     private static void appendTextHints(Transaction row, List<TransactionDisplayTag> tags) {

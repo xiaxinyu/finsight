@@ -26,6 +26,7 @@ export type ConsumeCategoryRow = {
   deleted?: number
   txnTypes?: string
   reportRole?: string
+  semanticTag?: string
 }
 
 export async function listUsers() {
@@ -207,6 +208,8 @@ export type CategoryAsset = {
   qualityFlags?: string[]
   childCandidates?: CategoryChildCandidate[]
   reportRole?: string
+  semanticTag?: string
+  txnTypes?: string
   economicNature?: string
   budgetBehavior?: string
   fixedCostKind?: string | null

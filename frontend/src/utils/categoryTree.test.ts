@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCategoryTree,
+  categoryPathLabel,
+  categorySpendingDomainLabel,
   collectSubtreeCodes,
   collectSubtreeCodesFromTree,
   toAntTreeNodesWithCounts,
@@ -10,12 +12,13 @@ import type { ConsumeCategoryRow } from '../api/admin'
 
 /** Post-dedup income tree: single INC root, legacy INC-* + retained INCOME-02. */
 const postDedupIncome: ConsumeCategoryRow[] = [
-  { id: 'INC', code: 'INC', name: '收入', level: 1, parentId: '', sortNo: 1 },
-  { id: 'INC-01', code: 'INC-01', name: '工资薪金', level: 2, parentId: 'INC', sortNo: 1 },
-  { id: 'INC-99', code: 'INC-99', name: '其他收入', level: 2, parentId: 'INC', sortNo: 99 },
-  { id: 'INCOME-02', code: 'INCOME-02', name: '副业经营', level: 2, parentId: 'INC', sortNo: 2 },
-  { id: 'TRANSPORT', code: 'TRANSPORT', name: '交通与车辆', level: 1, parentId: '', sortNo: 2 },
-  { id: 'TRANS-02', code: 'TRANS-02', name: '打车/网约车', level: 2, parentId: 'TRANSPORT', sortNo: 2 },
+  { id: 'INC', code: 'INC', name: '收入', level: 1, parentId: '', sortNo: 1, txnTypes: 'income' },
+  { id: 'INC-01', code: 'INC-01', name: '工资薪金', level: 2, parentId: 'INC', sortNo: 1, txnTypes: 'income' },
+  { id: 'INC-99', code: 'INC-99', name: '其他收入', level: 2, parentId: 'INC', sortNo: 99, txnTypes: 'income' },
+  { id: 'INCOME-02', code: 'INCOME-02', name: '副业经营', level: 2, parentId: 'INC', sortNo: 2, txnTypes: 'income' },
+  { id: 'TRANSPORT', code: 'TRANSPORT', name: '交通与车辆', level: 1, parentId: '', sortNo: 2, txnTypes: 'expense' },
+  { id: 'TRANS-02', code: 'TRANS-02', name: '打车/网约车', level: 2, parentId: 'TRANSPORT', sortNo: 2, txnTypes: 'expense' },
+  { id: 'LIVING', code: 'LIVING', name: '日常生活', level: 1, parentId: '', sortNo: 3, txnTypes: 'expense' },
 ]
 
 describe('buildCategoryTree', () => {
@@ -101,5 +104,20 @@ describe('toAntTreeNodesWithCounts', () => {
     expect(inc.title).toContain('(8)')
     const transport = nodes.find((n) => n.key === 'TRANSPORT')!
     expect(transport.title).toContain('(8)')
+  })
+})
+
+describe('categorySpendingDomainLabel', () => {
+  it('maps L1 codes to spending domain hints', () => {
+    expect(categorySpendingDomainLabel('TRANSPORT', 'TRANS-02')).toBe('Transport')
+    expect(categorySpendingDomainLabel('LIVING', 'LIVING-01')).toBe('Dining')
+    expect(categorySpendingDomainLabel(undefined, 'SHOP-01')).toBe('Shopping')
+  })
+})
+
+describe('categoryPathLabel', () => {
+  it('shows parent and child names', () => {
+    const path = categoryPathLabel(postDedupIncome, postDedupIncome.find((c) => c.code === 'TRANS-02'))
+    expect(path).toBe('交通与车辆 → 打车/网约车')
   })
 })

@@ -83,7 +83,9 @@ public final class L2CategorySeedSqlRenderer {
     }
 
     private static String renderInsert(L2CategorySeedPlanner.SeedItem item) {
-        return "insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, report_role, "
+        String semanticTag = CategorySemanticDefaults.inferFromCatalog(
+                ClassificationL2TargetCatalog.byCode(item.code()).orElseThrow());
+        return "insert into cls_category (id, code, name, level, parent_id, sort_no, txn_types, report_role, semantic_tag, "
                 + "deleted, version, created_at, updated_at) "
                 + "select '"
                 + escapeSql(item.code()) + "', '"
@@ -92,7 +94,8 @@ public final class L2CategorySeedSqlRenderer {
                 + escapeSql(item.parentL1Code()) + "', "
                 + item.sortNo() + ", '"
                 + escapeSql(item.txnTypes()) + "', '"
-                + escapeSql(item.reportRole()) + "', "
+                + escapeSql(item.reportRole()) + "', '"
+                + escapeSql(semanticTag) + "', "
                 + "0, 0, now(), now() "
                 + "from dual where not exists ("
                 + "select 1 from cls_category where code = '"

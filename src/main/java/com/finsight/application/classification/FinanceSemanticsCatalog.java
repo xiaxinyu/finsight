@@ -88,6 +88,42 @@ public final class FinanceSemanticsCatalog {
         return tag("refund_candidate", "Refund Candidate", "blue", "Possible Refund Or Reversal");
     }
 
+    /** Primary reporting classification chip (Discretionary, Fixed, Earned, …). */
+    public static TransactionDisplayTag semanticClassification(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return null;
+        }
+        String id = tagId.trim();
+        return tag("semantic_" + id, semanticTagLabel(id), semanticTagColor(id), semanticTagDescription(id));
+    }
+
+    public static TransactionDisplayTag categoryGroup(String l1Name) {
+        if (l1Name == null || l1Name.isBlank()) {
+            return null;
+        }
+        return tag("category_l1", l1Name.trim(), "default", "Top-Level Category Group");
+    }
+
+    private static String semanticTagColor(String tagId) {
+        return switch (tagId) {
+            case "real_income" -> "green";
+            case "investment_income" -> "purple";
+            case "other_income" -> "lime";
+            case "refund_reimbursement" -> "blue";
+            case "daily_spending" -> "orange";
+            case "social_spending" -> "magenta";
+            case "other_expense" -> "default";
+            case "fixed_spending" -> "purple";
+            case "subscription_spending" -> "geekblue";
+            case "essential_spending" -> "cyan";
+            case "transfer" -> "geekblue";
+            case "investment" -> "purple";
+            case "liability" -> "volcano";
+            case "asset_adjustment" -> "gold";
+            default -> "default";
+        };
+    }
+
     public static String fixedCostKindLabel(String kind) {
         if (kind == null) {
             return "";
@@ -156,7 +192,8 @@ public final class FinanceSemanticsCatalog {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("fieldLabel", "Reporting Classification");
         out.put("fieldHint",
-                "Defines how this category rolls into Income, Expense, Budget, Fixed Cost, And Cash Flow Reports.");
+                "Left tree = spending type (Transport/Dining/Shopping). "
+                        + "Here = report behavior (Discretionary/Fixed/Social/Earned).");
 
         List<Map<String, Object>> groups = new ArrayList<>();
         groups.add(tagGroup("Income", "income",

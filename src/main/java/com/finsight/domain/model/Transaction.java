@@ -128,6 +128,12 @@ public class Transaction extends BaseEntity {
     private String categoryParentId;
 
     @TableField(exist = false)
+    private String categorySemanticTag;
+
+    @TableField(exist = false)
+    private String categoryL1Name;
+
+    @TableField(exist = false)
     private Boolean includeInIncomeTrend;
 
     @TableField(exist = false)

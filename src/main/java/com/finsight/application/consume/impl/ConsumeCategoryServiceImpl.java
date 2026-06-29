@@ -19,7 +19,7 @@ public class ConsumeCategoryServiceImpl extends ServiceImpl<ConsumeCategoryMappe
     @Override
     public List<ConsumeCategory> listAll() {
         LambdaQueryWrapper<ConsumeCategory> qw = Wrappers.lambdaQuery();
-        qw.ne(ConsumeCategory::getDeleted, 1)
+        qw.and(w -> w.isNull(ConsumeCategory::getDeleted).or().ne(ConsumeCategory::getDeleted, 1))
           .orderByAsc(ConsumeCategory::getLevel)
           .orderByAsc(ConsumeCategory::getSortNo);
         return super.list(qw);

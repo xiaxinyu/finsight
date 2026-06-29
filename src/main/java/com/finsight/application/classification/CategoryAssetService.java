@@ -138,6 +138,8 @@ public class CategoryAssetService {
         CategoryFinanceSemantics.SemanticProfile sem = CategoryFinanceSemantics.profile(
                 role, cat.getTxnTypes(), cat.getParentId(), cat.getCode());
         out.setReportRole(sem.reportRole());
+        out.setSemanticTag(StringUtils.trimToNull(cat.getSemanticTag()));
+        out.setTxnTypes(cat.getTxnTypes());
         out.setEconomicNature(sem.economicNature());
         out.setBudgetBehavior(sem.budgetBehavior());
         out.setFixedCostKind(sem.fixedCostKind());
