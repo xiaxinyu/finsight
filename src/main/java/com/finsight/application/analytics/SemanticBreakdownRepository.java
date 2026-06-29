@@ -37,20 +37,21 @@ public class SemanticBreakdownRepository {
         args.add(query.userId());
 
         if (StringUtils.hasText(query.cardId())) {
-            sql.append("""
-                     AND (
-                         t.bank_card_id = ?
-                         OR (
-                             (t.bank_card_id IS NULL OR TRIM(t.bank_card_id) = '')
-                             AND EXISTS (
-                                 SELECT 1 FROM fin_bank_account fc
-                                 WHERE fc.id = ?
-                                   AND (fc.deleted IS NULL OR fc.deleted != 1)
-                                   AND UPPER(TRIM(COALESCE(st.source_bank_code, ''))) = UPPER(TRIM(COALESCE(fc.bank_code, '')))
+            sql.append(
+                    """
+                             AND (
+                                 t.bank_card_id = ?
+                                 OR (
+                                     (t.bank_card_id IS NULL OR TRIM(t.bank_card_id) = '')
+                                     AND EXISTS (
+                                         SELECT 1 FROM fin_bank_account fc
+                                         WHERE fc.id = ?
+                                           AND (fc.deleted IS NULL OR fc.deleted != 1)
+                                           AND UPPER(TRIM(COALESCE(st.source_bank_code, ''))) = UPPER(TRIM(COALESCE(fc.bank_code, '')))
+                                     )
+                                 )
                              )
-                         )
-                     )
-                    """);
+                            """);
             args.add(query.cardId().trim());
             args.add(query.cardId().trim());
         }

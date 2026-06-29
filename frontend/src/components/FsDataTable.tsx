@@ -226,7 +226,7 @@ export function FsDataTable<T extends Record<string, unknown>>({
         columns={antColumns}
         pagination={false}
         tableLayout={fixedLayout ? 'fixed' : undefined}
-        scroll={scroll ?? { y: 360 }}
+        scroll={scroll}
         rowClassName={() => 'fs-table-row'}
         onRow={mergedOnRow}
         locale={locale ?? {

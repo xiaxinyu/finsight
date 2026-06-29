@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Col, Row } from 'antd'
+import { Alert } from 'antd'
 import { BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { reportConfigs } from '../../config/reports'
@@ -109,11 +109,12 @@ export function ReportsPage() {
       }
       if (cfg.type === 'homeBuckets') {
         const r = periodToStrings(applied.period)
-        const [semanticBreakdown, week] = await Promise.all([
+        const [semanticBreakdown, week, categoryRows] = await Promise.all([
           fetchSemanticBreakdown(r.start, r.end, semanticFilters),
           fetchReport('/transaction-report/week-consume', baseParams),
+          fetchReport('/transaction-report/consume', baseParams),
         ])
-        return { semanticBreakdown, week }
+        return { semanticBreakdown, week, categoryRows }
       }
       if (cfg.type === 'incomeVsExpense') {
         const r = periodToStrings(applied.period)
@@ -150,14 +151,16 @@ export function ReportsPage() {
 
   const chartLoading = isLoading || isFetching || applying
   const viewportH = useViewportTableHeight(320)
-  const chartHeight = Math.min(viewportH, 400)
+  const chartHeight = 340
 
   const view = useMemo(
     () => (cfg ? buildReportView(cfg, data ?? undefined, applied) : null),
     [cfg, data, applied],
   )
 
-  const usesSemanticDrill = cfg?.type === 'homeBuckets'
+  const tableScrollY = view?.tableData && view.tableData.length > 10 ? 280 : undefined
+
+  const usesSemanticChartDrill = cfg?.type === 'homeBuckets'
 
   const openDrillDown = (
     categorySlice?: string | CategoryDrillSlice,
@@ -208,7 +211,7 @@ export function ReportsPage() {
       seriesIndex?: number
       data?: { tagId?: string; level1Code?: string; level1Name?: string; code?: string }
     }
-    if (usesSemanticDrill && p.data?.tagId) {
+    if (usesSemanticChartDrill && p.data?.tagId) {
       if (!isDrillableSemanticTag(p.data.tagId)) return
       openDrillDown(undefined, p.seriesIndex, { tagId: p.data.tagId, label: p.name || p.data.tagId })
       return
@@ -355,7 +358,7 @@ export function ReportsPage() {
       title={cfg.title}
       subtitle={`${cfg.subtitle ?? 'Analysis'} · ${periodLabel}`}
       icon={<BarChartOutlined />}
-      className="fs-data-page--dense fs-data-page--fill fs-data-page--reports"
+      className="fs-data-page--dense fs-data-page--reports"
       toolbar={(
         <FilterToolbar loading={chartLoading} onApply={handleApply} dirty={isDirty}>
           <PeriodRangePicker
@@ -400,8 +403,8 @@ export function ReportsPage() {
           <ReportKpiStrip items={view.kpis} />
           <InsightPanel bullets={view.insights} title="Analysis" />
 
-          <Row gutter={[12, 12]} className="fs-report-body">
-            <Col xs={24} lg={view.tableData.length ? 14 : 24}>
+          <div className={`fs-report-split${view.tableData.length ? ' fs-report-split--with-table' : ''}`}>
+            <section className="fs-report-split__chart">
               <ContentCard title={view.chartTitle || cfg.title} size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
                   profile={cfg.chartProfile || 'timeSeries'}
@@ -412,9 +415,9 @@ export function ReportsPage() {
                   empty={<EmptyState compact title="No chart data" description="Adjust filters and click Apply." />}
                 />
               </ContentCard>
-            </Col>
+            </section>
             {view.tableData.length > 0 && (
-              <Col xs={24} lg={10}>
+              <section className="fs-report-split__table">
                 <FsDataTable
                   title="Breakdown"
                   columns={view.tableCols}
@@ -422,18 +425,22 @@ export function ReportsPage() {
                   rowKey={(r) => String(r.key ?? r.month ?? r.label ?? r.bucketKey ?? '')}
                   loading={chartLoading}
                   summary={view.tableSummary}
-                  scroll={{ y: chartHeight - 24 }}
+                  scroll={tableScrollY != null ? { y: tableScrollY } : undefined}
+                  fixedLayout={false}
                   onRow={(record) => ({
                     onClick: () => {
-                      if (usesSemanticDrill) {
-                        const tagId = String(record.tagId ?? record.key ?? '')
-                        const label = String(record.label ?? tagId)
-                        if (isDrillableSemanticTag(tagId)) {
-                          openDrillDown(undefined, undefined, { tagId, label })
-                        }
+                      if (usesSemanticChartDrill) {
+                        const name = String(record.categoryName ?? record.classification ?? record.key ?? '')
+                        if (!name || name === 'Total') return
+                        openDrillDown({
+                          key: name,
+                          level1Code: record.level1Code as string | undefined,
+                          level1Name: record.level1Name as string | undefined,
+                          code: record.categoryCode as string | undefined,
+                        })
                         return
                       }
-                      const name = String(record.key || record.label || '')
+                      const name = String(record.key || record.label || record.classification || '')
                       if (name && name !== 'Total') {
                         openDrillDown({
                           key: name,
@@ -446,9 +453,9 @@ export function ReportsPage() {
                     style: { cursor: 'pointer' },
                   })}
                 />
-              </Col>
+              </section>
             )}
-          </Row>
+          </div>
         </>
       )}
 

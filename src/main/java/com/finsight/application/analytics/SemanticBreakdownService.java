@@ -23,7 +23,7 @@ public class SemanticBreakdownService {
     private final AuthenticationFacade authenticationFacade;
 
     public SemanticBreakdownService(SemanticBreakdownRepository breakdownRepository,
-                                    AuthenticationFacade authenticationFacade) {
+            AuthenticationFacade authenticationFacade) {
         this.breakdownRepository = breakdownRepository;
         this.authenticationFacade = authenticationFacade;
     }
