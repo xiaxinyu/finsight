@@ -19,8 +19,20 @@ class CategorySpendingDomainTest {
     }
 
     @Test
-    void transportUnderLiving_isTransport() {
-        assertEquals("transport_spending",
-                CategorySpendingDomain.inferDomainTag("LIVING-05", "LIVING", "公共交通 (公交、地铁)").orElseThrow());
+    void medicalName_isMedical() {
+        assertEquals("medical_spending",
+                CategorySpendingDomain.inferDomainTag("LIVING-10", "LIVING", "基础医疗").orElseThrow());
+    }
+
+    @Test
+    void dailyMedicalCode_isMedical() {
+        assertEquals("medical_spending",
+                CategorySpendingDomain.inferDomainTag("DAILY-05", "LIVING", "医疗药品").orElseThrow());
+    }
+
+    @Test
+    void petName_isGeneral() {
+        assertEquals("daily_spending",
+                CategorySpendingDomain.inferDomainTag("LIVING-11", "LIVING", "宠物").orElseThrow());
     }
 }

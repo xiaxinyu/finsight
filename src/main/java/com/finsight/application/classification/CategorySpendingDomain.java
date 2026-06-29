@@ -16,6 +16,15 @@ public final class CategorySpendingDomain {
         String parent = StringUtils.trimToEmpty(parentId).toUpperCase(Locale.ROOT);
         String n = StringUtils.defaultString(name);
 
+        if (matchesMedical(c, parent, n)) {
+            return Optional.of("medical_spending");
+        }
+        if (matchesEssential(c, parent, n)) {
+            return Optional.of("essential_spending");
+        }
+        if (matchesGeneral(c, parent, n)) {
+            return Optional.of("daily_spending");
+        }
         if (matchesShopping(c, parent, n)) {
             return Optional.of("shopping_spending");
         }
@@ -32,6 +41,21 @@ public final class CategorySpendingDomain {
             return Optional.of("education_spending");
         }
         return Optional.empty();
+    }
+
+    static boolean matchesEssential(String code, String parent, String name) {
+        return false;
+    }
+
+    static boolean matchesMedical(String code, String parent, String name) {
+        if (code.equals("DAILY-05") || code.startsWith("LIVING-06") || code.startsWith("MED-")) {
+            return true;
+        }
+        return containsAny(name, "医疗", "医院", "药", "体检", "挂号", "牙科", "疫苗");
+    }
+
+    static boolean matchesGeneral(String code, String parent, String name) {
+        return containsAny(name, "宠物", "家政", "快递", "保洁", "维修");
     }
 
     static boolean matchesDining(String code, String parent, String name) {

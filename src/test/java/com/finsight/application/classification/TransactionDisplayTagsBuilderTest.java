@@ -20,7 +20,7 @@ class TransactionDisplayTagsBuilderTest {
         row.setQualityState("classified");
 
         var tags = TransactionDisplayTagsBuilder.build(row);
-        assertTrue(tags.stream().anyMatch(t -> "semantic_fixed_spending".equals(t.getId())));
+        assertTrue(tags.stream().anyMatch(t -> "semantic_fixed_housing".equals(t.getId())));
         assertTrue(tags.stream().anyMatch(t -> "fixed_cost_rent".equals(t.getId())));
         assertFalse(tags.stream().anyMatch(t -> "fixed_cost".equals(t.getId())));
     }

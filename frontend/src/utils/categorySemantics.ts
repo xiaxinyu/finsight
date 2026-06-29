@@ -1,3 +1,21 @@
+import {
+  type FixedCostKind,
+  fixedKindFromFlatTag,
+  flatFixedTagForKind,
+  isAnyFixedSemanticTag,
+  isFlatFixedSemanticTag,
+  normalizeFixedSemanticTag,
+} from './categoryFixedTags'
+
+export type { FixedCostKind } from './categoryFixedTags'
+export {
+  isAnyFixedSemanticTag,
+  isFlatFixedSemanticTag,
+  normalizeFixedSemanticTag,
+  flatFixedTagForKind,
+  fixedKindFromFlatTag,
+} from './categoryFixedTags'
+
 export type CategorySemanticProfile = {
   reportRole?: string
   economicNature?: string
@@ -22,25 +40,23 @@ export type SemanticTagId =
   | 'transport_spending'
   | 'entertainment_spending'
   | 'education_spending'
+  | 'medical_spending'
   | 'social_spending'
   | 'other_expense'
   | 'fixed_spending'
+  | 'fixed_housing'
+  | 'fixed_utilities'
+  | 'fixed_telecom'
+  | 'fixed_insurance'
+  | 'fixed_tuition'
+  | 'fixed_repayment'
+  | 'fixed_misc'
   | 'subscription_spending'
   | 'essential_spending'
   | 'transfer'
   | 'investment'
   | 'liability'
   | 'asset_adjustment'
-  | 'other'
-
-export type FixedCostKind =
-  | 'rent'
-  | 'utilities'
-  | 'telecom'
-  | 'insurance'
-  | 'subscription'
-  | 'education'
-  | 'repayment'
   | 'other'
 
 export type TxnTypeFilter = 'income' | 'expense' | 'both' | 'capital'
@@ -57,9 +73,17 @@ export const SEMANTIC_TAG_LABELS: Record<SemanticTagId, string> = {
   transport_spending: 'Transport',
   entertainment_spending: 'Entertainment',
   education_spending: 'Education',
+  medical_spending: 'Medical',
   social_spending: 'Social',
   other_expense: 'MiscExpense',
   fixed_spending: 'Fixed',
+  fixed_housing: 'Housing',
+  fixed_utilities: 'Utilities',
+  fixed_telecom: 'Telecom',
+  fixed_insurance: 'Insurance',
+  fixed_tuition: 'Tuition',
+  fixed_repayment: 'Repayment',
+  fixed_misc: 'FixedOther',
   subscription_spending: 'Subscription',
   essential_spending: 'Essential',
   transfer: 'Transfer',
@@ -95,6 +119,7 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
       'transport_spending',
       'entertainment_spending',
       'education_spending',
+      'medical_spending',
       'social_spending',
       'subscription_spending',
       'essential_spending',
@@ -102,7 +127,19 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
       'other_expense',
     ],
   },
-  { title: 'Fixed', appliesTo: 'expense', tags: ['fixed_spending'] },
+  {
+    title: 'Fixed',
+    appliesTo: 'expense',
+    tags: [
+      'fixed_housing',
+      'fixed_utilities',
+      'fixed_telecom',
+      'fixed_insurance',
+      'fixed_tuition',
+      'fixed_repayment',
+      'fixed_misc',
+    ],
+  },
   {
     title: 'Capital',
     appliesTo: 'capital',
@@ -153,7 +190,13 @@ export function resolveSemanticTag(
   txnTypes?: string,
   categoryName?: string,
 ): SemanticTagId {
-  if (isKnownSemanticTag(storedTag)) return storedTag.trim() as SemanticTagId
+  if (isKnownSemanticTag(storedTag)) {
+    const raw = storedTag.trim() as SemanticTagId
+    if (raw === 'fixed_spending') {
+      return normalizeFixedSemanticTag(raw, inferFixedCostKind(parentId, categoryCode)) as SemanticTagId
+    }
+    return raw
+  }
   const role = effectiveReportRole(reportRole, txnTypes, parentId, categoryCode)
   return semanticTagFromReportRole(role, parentId, categoryCode, txnTypes, categoryName)
 }
@@ -164,6 +207,10 @@ export function reportRoleForSemanticTag(
   categoryCode?: string,
   fixedKind?: FixedCostKind | null,
 ): string {
+  const flatKind = fixedKindFromFlatTag(tag)
+  if (flatKind) {
+    return reportRoleFromSemanticSelection(tag, flatKind)
+  }
   let kind = fixedKind
   if (tag === 'fixed_spending' && !kind) {
     kind = inferFixedCostKind(parentId, categoryCode)
@@ -190,9 +237,11 @@ export function categoryFieldsFromSemanticTag(
     warnings.push('Fixed categories use Transaction Type Expense — adjusted automatically.')
   }
 
-  const fixedKind = semanticTag === 'fixed_spending'
-    ? inferFixedCostKind(parentId, code)
-    : null
+  const fixedKind = isFlatFixedSemanticTag(semanticTag)
+    ? fixedKindFromFlatTag(semanticTag)
+    : semanticTag === 'fixed_spending'
+      ? inferFixedCostKind(parentId, code)
+      : null
   const reportRole = reportRoleForSemanticTag(semanticTag, parentId, code, fixedKind)
   return { semanticTag, reportRole, txnTypes, warnings }
 }
@@ -267,6 +316,7 @@ export function inferExpenseDomainTag(
   const code = (categoryCode ?? '').trim().toUpperCase()
   const name = categoryName ?? ''
 
+  if (code.startsWith('DAILY-05') || code.startsWith('LIVING-06')) return 'medical_spending'
   if (code.startsWith('DAILY-01') || code.startsWith('DAILY-02')) return 'dining_spending'
   if (code.startsWith('DAILY-03') || code.startsWith('DAILY-04') || code.startsWith('SHOP-')) return 'shopping_spending'
   if (code.startsWith('TRANS-') || code.startsWith('TRAVEL-')) return 'transport_spending'
@@ -280,12 +330,14 @@ export function inferExpenseDomainTag(
   if (/餐饮|外卖|堂食|早餐|咖啡|饭店|吃饭|小吃/.test(name)) return 'dining_spending'
   if (/娱乐|旅行|旅游|酒店|景点|门票|电影|演出|游戏|健身|运动/.test(name)) return 'entertainment_spending'
   if (/培训|书籍|资料|课程/.test(name)) return 'education_spending'
+  if (/医疗|医院|药|体检|挂号|牙科|疫苗/.test(name)) return 'medical_spending'
+  if (/宠物|家政|快递|保洁|维修/.test(name)) return 'daily_spending'
 
   if (parent === 'SHOPPING' || parent === 'SHOP') return 'shopping_spending'
   if (parent === 'TRANSPORT' || parent === 'TRAVEL') return 'transport_spending'
   if (parent === 'ENT') return 'entertainment_spending'
   if (parent === 'EDU') return 'education_spending'
-  if (parent === 'LIVING') return 'dining_spending'
+  if (parent === 'LIVING') return 'daily_spending'
   return 'daily_spending'
 }
 
@@ -352,8 +404,27 @@ export function txnTypeFilter(txnTypes?: string): TxnTypeFilter {
 export function filterSemanticTagGroups(
   groups: Array<{ title: string; appliesTo?: string; tags: SemanticTagId[] }>,
   txnTypes?: string,
+  parentId?: string,
+  categoryCode?: string,
 ) {
   const filter = txnTypeFilter(txnTypes)
+  const parent = (parentId ?? '').trim().toUpperCase()
+  const code = (categoryCode ?? '').trim().toUpperCase()
+
+  if (parent === 'REIM' || parent === 'REIMB' || code.startsWith('REIM-')) {
+    return groups.filter((g) => g.appliesTo === 'income')
+  }
+  if (parent === 'FIXED' || code.startsWith('FIXED-')) {
+    return groups.filter((g) => g.title === 'Fixed' || g.appliesTo === 'capital')
+  }
+  if ((parent === 'INC' || parent === 'INCOME') && filter === 'income') {
+    return groups.filter((g) => g.appliesTo === 'income')
+  }
+  if ((parent === 'ASSET' || parent === 'LIABILITY' || parent === 'INVEST' || parent === 'WEALTH')
+    && filter === 'capital') {
+    return groups.filter((g) => g.appliesTo === 'capital')
+  }
+
   return groups.filter((g) => {
     const applies = g.appliesTo ?? 'both'
     if (filter === 'both') return true
@@ -387,16 +458,26 @@ export function semanticTagFromReportRole(
     return 'investment'
   }
   if (role === 'liability') {
-    return isFixedCategory(parentId, categoryCode) ? 'fixed_spending' : 'liability'
+    if (isFixedCategory(parentId, categoryCode)) {
+      return flatFixedTagForKind(inferFixedCostKind(parentId, categoryCode) ?? 'repayment')
+    }
+    return 'liability'
   }
   if (role === 'asset') return 'asset_adjustment'
   if (role === 'cashflow') {
-    return isFixedCategory(parentId, categoryCode) ? 'fixed_spending' : 'essential_spending'
+    if (isFixedCategory(parentId, categoryCode)) {
+      const kind = inferFixedCostKind(parentId, categoryCode)
+      if (kind === 'insurance') return 'fixed_insurance'
+      return flatFixedTagForKind(kind)
+    }
+    return 'essential_spending'
   }
   if (role === 'budget') {
     const kind = inferFixedCostKind(parentId, categoryCode)
     if (kind === 'subscription') return 'subscription_spending'
-    if (isFixedCategory(parentId, categoryCode)) return 'fixed_spending'
+    if (isFixedCategory(parentId, categoryCode)) {
+      return flatFixedTagForKind(kind)
+    }
     if (isSocialCategory(parentId, categoryCode)) return 'social_spending'
     if (code.startsWith('OTHER') || code === 'OTHER') return 'other_expense'
     return inferExpenseDomainTag(parentId, categoryCode, categoryName)
@@ -421,10 +502,21 @@ export function reportRoleFromSemanticSelection(
     case 'transport_spending':
     case 'entertainment_spending':
     case 'education_spending':
+    case 'medical_spending':
     case 'social_spending':
     case 'other_expense':
       return 'budget'
     case 'subscription_spending': return 'budget'
+    case 'fixed_housing':
+    case 'fixed_utilities':
+    case 'fixed_telecom':
+    case 'fixed_tuition':
+    case 'fixed_misc':
+      return 'budget'
+    case 'fixed_insurance':
+      return 'cashflow'
+    case 'fixed_repayment':
+      return 'liability'
     case 'fixed_spending':
       if (fixedKind === 'insurance') return 'cashflow'
       if (fixedKind === 'repayment') return 'liability'
@@ -483,16 +575,17 @@ export function profileCategorySemantics(
   let budgetBehavior = 'variable'
   if (role === 'income' || excluded) budgetBehavior = 'none'
   else if (semanticTag === 'subscription_spending') budgetBehavior = 'fixed'
-  else if (isFixedCategory(parentId, categoryCode) && (role === 'budget' || role === 'cashflow')) {
+  else if (isAnyFixedSemanticTag(semanticTag) && (role === 'budget' || role === 'cashflow' || role === 'liability')) {
     budgetBehavior = 'fixed'
   } else if (role === 'cashflow') budgetBehavior = 'essential'
   else if (role === 'budget' && txn.includes('expense')) budgetBehavior = 'variable'
   else if (role === 'other') budgetBehavior = 'unclassified'
 
-  const fixedCostKind = inferFixedCostKind(parentId, categoryCode)
+  const fixedCostKind = fixedKindFromFlatTag(semanticTag)
+    ?? inferFixedCostKind(parentId, categoryCode)
     ?? (semanticTag === 'subscription_spending' ? 'subscription' as FixedCostKind : null)
 
-  const isFixedTag = semanticTag === 'fixed_spending' || semanticTag === 'subscription_spending'
+  const isFixedTag = isAnyFixedSemanticTag(semanticTag) || semanticTag === 'subscription_spending'
 
   return {
     reportRole: role,
@@ -587,12 +680,8 @@ export function coerceCategoryFormFields(fields: {
     const kind = inferFixedCostKind(parentId, code) ?? 'rent'
     if (kind === 'subscription') {
       reportRole = reportRoleFromSemanticSelection('subscription_spending', 'subscription')
-    } else if (kind === 'insurance') {
-      reportRole = reportRoleFromSemanticSelection('fixed_spending', 'insurance')
-    } else if (kind === 'repayment') {
-      reportRole = reportRoleFromSemanticSelection('fixed_spending', 'repayment')
     } else {
-      reportRole = reportRoleFromSemanticSelection('fixed_spending', kind)
+      reportRole = reportRoleFromSemanticSelection(flatFixedTagForKind(kind), kind)
     }
   } else if (txnTypes === 'income' && !txnTypes.includes('expense')) {
     const incompatible = ['budget', 'cashflow', 'asset', 'transfer', 'liability', 'investment']

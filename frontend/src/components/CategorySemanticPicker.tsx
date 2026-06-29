@@ -1,16 +1,14 @@
 import { Alert, Tag, Typography } from 'antd'
 import {
-  catalogFixedCostKindLabel,
   catalogSemanticTagLabel,
   useSemanticsCatalog,
 } from '../hooks/useSemanticsCatalog'
-import type { FixedCostKind, SemanticTagId } from '../utils/categorySemantics'
+import type { SemanticTagId } from '../utils/categorySemantics'
 import {
-  FIXED_COST_KIND_OPTIONS,
   compactGroupTitle,
   filterSemanticTagGroups,
   inclusionSummary,
-  isFixedCategory,
+  isFlatFixedSemanticTag,
   parentTxnMismatchWarning,
   profileCategorySemantics,
   reportRoleForSemanticTag,
@@ -34,13 +32,14 @@ type PickerProps = {
 }
 
 function tagColor(tag: SemanticTagId): string {
-  if (tag === 'fixed_spending') return 'purple'
+  if (isFlatFixedSemanticTag(tag) || tag === 'fixed_spending') return 'purple'
   if (tag === 'subscription_spending') return 'geekblue'
   if (tag === 'dining_spending' || tag === 'daily_spending' || tag === 'other_expense') return 'orange'
   if (tag === 'shopping_spending') return 'gold'
   if (tag === 'transport_spending') return 'blue'
   if (tag === 'entertainment_spending') return 'volcano'
   if (tag === 'education_spending') return 'cyan'
+  if (tag === 'medical_spending') return 'green'
   if (tag === 'social_spending') return 'magenta'
   if (tag === 'real_income' || tag === 'other_income') return 'green'
   if (tag === 'investment_income') return 'purple'
@@ -57,6 +56,10 @@ function txnBadgeLabel(filter: ReturnType<typeof txnTypeFilter>): string {
   if (filter === 'income') return 'Income'
   if (filter === 'expense') return 'Expense'
   return 'Mixed'
+}
+
+function isFixedTagGroup(title: string): boolean {
+  return title === 'Fixed' || title === 'Fixed Commitments'
 }
 
 function SelectableTag({
@@ -100,13 +103,17 @@ export function CategorySemanticPicker({
   const { data: catalog } = useSemanticsCatalog()
   const activeTag = resolveSemanticTag(semanticTag, reportRole, parentId, categoryCode, txnTypes, categoryName)
   const preview = profileCategorySemantics(reportRole, txnTypes, parentId, categoryCode, activeTag)
-  const activeFixedKind = preview.fixedCostKind as FixedCostKind | null | undefined
   const allGroups = (catalog?.semanticTagGroups ?? []).map((g) => ({
     title: g.title,
     appliesTo: g.appliesTo,
     tags: g.tags as SemanticTagId[],
   }))
-  const tagGroups = filterSemanticTagGroups(allGroups.length ? allGroups : [], txnTypes)
+  const tagGroups = filterSemanticTagGroups(
+    allGroups.length ? allGroups : [],
+    txnTypes,
+    parentId,
+    categoryCode,
+  )
   const reportSurfaces = (catalog?.reportSurfaces ?? []) as ReportSurface[]
   const txnFilter = txnTypeFilter(txnTypes)
   const parentWarning = parentTxnMismatchWarning(parentId, txnTypes)
@@ -116,18 +123,7 @@ export function CategorySemanticPicker({
       onSemanticTagChange(tag, reportRoleFromSemanticSelection(tag, 'subscription'))
       return
     }
-    let fixedKind = activeFixedKind
-    if (tag === 'fixed_spending' && !fixedKind) {
-      fixedKind = inferDefaultFixedKind(parentId, categoryCode)
-    }
-    if (tag !== 'fixed_spending') {
-      fixedKind = null
-    }
-    onSemanticTagChange(tag, reportRoleForSemanticTag(tag, parentId, categoryCode, fixedKind))
-  }
-
-  const selectFixedKind = (kind: FixedCostKind) => {
-    onSemanticTagChange('fixed_spending', reportRoleFromSemanticSelection('fixed_spending', kind))
+    onSemanticTagChange(tag, reportRoleForSemanticTag(tag, parentId, categoryCode))
   }
 
   const primaryLabel = catalogSemanticTagLabel(catalog, activeTag) || semanticTagLabel(activeTag)
@@ -151,11 +147,6 @@ export function CategorySemanticPicker({
             <Tag color={tagColor(activeTag)} bordered={false} className="fs-category-selection-tag">
               {primaryLabel}
             </Tag>
-            {activeFixedKind && activeTag === 'fixed_spending' && (
-              <Tag color="purple" bordered={false}>
-                {catalogFixedCostKindLabel(catalog, activeFixedKind)}
-              </Tag>
-            )}
             {activeSurfaces.length > 0 && (
               <Typography.Text type="secondary" className="fs-category-selection-reports">
                 → {activeSurfaces.map((s) => s.label).join(' · ')}
@@ -175,8 +166,13 @@ export function CategorySemanticPicker({
       )}
 
       <div className="fs-category-classification-body">
-        {tagGroups.map((group) => (
-          <div key={group.title} className="fs-category-semantic-group fs-category-semantic-group--inline">
+        {tagGroups.map((group) => {
+          const fixedRow = isFixedTagGroup(group.title)
+          return (
+          <div
+            key={group.title}
+            className={`fs-category-semantic-group fs-category-semantic-group--inline${fixedRow ? ' fs-category-semantic-group--fixed' : ''}`}
+          >
             <span className="fs-category-semantic-group-label">
               {compactGroupTitle(group.title, txnFilter)}
             </span>
@@ -189,32 +185,15 @@ export function CategorySemanticPicker({
                     selected={activeTag === tag}
                     label={catalogSemanticTagLabel(catalog, tag)}
                     description={meta?.description}
+                    tone={fixedRow ? 'fixed' : 'default'}
                     onSelect={() => selectTag(tag)}
                   />
                 )
               })}
             </div>
           </div>
-        ))}
-
-        {activeTag === 'fixed_spending' && (
-          <div className="fs-category-semantic-group fs-category-semantic-group--inline fs-category-semantic-group--fixed">
-            <span className="fs-category-semantic-group-label">
-              {catalog?.fixedCostKindSectionLabel ?? 'Type'}
-            </span>
-            <div className="fs-category-semantic-tag-row">
-              {FIXED_COST_KIND_OPTIONS.filter(({ value }) => value !== 'subscription').map(({ value }) => (
-                <SelectableTag
-                  key={value}
-                  selected={(activeFixedKind ?? 'rent') === value}
-                  label={catalogFixedCostKindLabel(catalog, value)}
-                  tone="fixed"
-                  onSelect={() => selectFixedKind(value)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+          )
+        })}
       </div>
 
       {showPreview && (
@@ -225,17 +204,6 @@ export function CategorySemanticPicker({
       )}
     </div>
   )
-}
-
-function inferDefaultFixedKind(parentId?: string, categoryCode?: string): FixedCostKind {
-  if (isFixedCategory(parentId, categoryCode)) {
-    const code = (categoryCode ?? '').trim().toUpperCase()
-    if (code === 'FIXED-02') return 'utilities'
-    if (code === 'FIXED-03') return 'telecom'
-    if (code === 'FIXED-04') return 'insurance'
-    return 'rent'
-  }
-  return 'rent'
 }
 
 /** Ant Design Form control — binds semanticTag; syncs reportRole via callback. */

@@ -212,6 +212,13 @@
   padding-bottom: 4px;
   border-bottom: 1px solid #eef2f7;
   margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fs-admin-category-save-banner {
+  margin: 0;
 }
 
 .fs-admin-category-detail-inner {

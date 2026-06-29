@@ -53,7 +53,12 @@ export function catalogFixedCostKindLabel(
   return catalog?.fixedCostKinds?.[kind]?.label ?? FIXED_COST_KIND_LABELS[kind] ?? kind
 }
 
-export function catalogSemanticTagGroups(catalog: SemanticsCatalog | undefined, txnTypes?: string) {
+export function catalogSemanticTagGroups(
+  catalog: SemanticsCatalog | undefined,
+  txnTypes?: string,
+  parentId?: string,
+  categoryCode?: string,
+) {
   const groups = catalog?.semanticTagGroups?.length
     ? catalog.semanticTagGroups.map((g) => ({
       title: g.title,
@@ -61,5 +66,5 @@ export function catalogSemanticTagGroups(catalog: SemanticsCatalog | undefined, 
       tags: g.tags as SemanticTagId[],
     }))
     : SEMANTIC_TAG_GROUPS
-  return filterSemanticTagGroups(groups, txnTypes)
+  return filterSemanticTagGroups(groups, txnTypes, parentId, categoryCode)
 }

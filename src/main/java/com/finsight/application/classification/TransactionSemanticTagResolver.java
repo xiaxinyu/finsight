@@ -17,7 +17,11 @@ public final class TransactionSemanticTagResolver {
         }
         String stored = StringUtils.trimToEmpty(row.getCategorySemanticTag());
         if (StringUtils.isNotBlank(stored)) {
-            return stored.toLowerCase(Locale.ROOT);
+            String normalized = CategoryFlatFixedTags.normalize(
+                    stored,
+                    row.getCategoryParentId(),
+                    row.getConsumeCode());
+            return StringUtils.defaultIfBlank(normalized, stored).toLowerCase(Locale.ROOT);
         }
         return infer(row);
     }
@@ -44,7 +48,14 @@ public final class TransactionSemanticTagResolver {
 
     private static String expenseTag(String budget, String parentId, String categoryCode, String fixedKind, String name) {
         if ("fixed".equals(budget)) {
-            return "subscription".equals(fixedKind) ? "subscription_spending" : "fixed_spending";
+            if ("subscription".equals(fixedKind)) {
+                return "subscription_spending";
+            }
+            String flat = CategoryFlatFixedTags.fromCategoryCode(parentId, categoryCode);
+            if (flat != null) {
+                return flat;
+            }
+            return CategoryFlatFixedTags.fromFixedKind(fixedKind);
         }
         if ("essential".equals(budget)) {
             return "essential_spending";

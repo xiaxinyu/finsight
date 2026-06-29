@@ -21,6 +21,7 @@ describe('categorySemantics', () => {
     expect(semanticTagLabel('shopping_spending')).toBe('Shopping')
     expect(semanticTagLabel('dining_spending')).toBe('Dining')
     expect(semanticTagLabel('transport_spending')).toBe('Transport')
+    expect(semanticTagLabel('medical_spending')).toBe('Medical')
     expect(semanticTagLabel('daily_spending')).toBe('General')
     expect(fixedCostKindLabel('rent')).toBe('Housing')
   })
@@ -28,6 +29,13 @@ describe('categorySemantics', () => {
   it('infers default report role for salary income', () => {
     expect(inferDefaultReportRole('INC', 'INC-01', 'income')).toBe('income')
     expect(semanticTagFromReportRole(undefined, 'INC', 'INC-01', 'income')).toBe('real_income')
+  })
+
+  it('shows only income tags for reimbursement categories', () => {
+    const reim = filterSemanticTagGroups(SEMANTIC_TAG_GROUPS, 'income,expense', 'REIM', 'REIM-01')
+    expect(reim).toHaveLength(1)
+    expect(reim[0]?.title).toBe('Income')
+    expect(reim[0]?.tags).toContain('refund_reimbursement')
   })
 
   it('filters groups by transaction type', () => {
@@ -38,10 +46,18 @@ describe('categorySemantics', () => {
 
   it('maps semantic tags to stored report roles', () => {
     expect(reportRoleFromSemanticSelection('daily_spending')).toBe('budget')
-    expect(reportRoleFromSemanticSelection('social_spending')).toBe('budget')
+    expect(reportRoleFromSemanticSelection('medical_spending')).toBe('budget')
     expect(reportRoleFromSemanticSelection('subscription_spending', 'subscription')).toBe('budget')
+    expect(reportRoleFromSemanticSelection('fixed_insurance')).toBe('cashflow')
+    expect(reportRoleFromSemanticSelection('fixed_repayment')).toBe('liability')
+    expect(reportRoleFromSemanticSelection('fixed_housing')).toBe('budget')
     expect(reportRoleFromSemanticSelection('fixed_spending', 'insurance')).toBe('cashflow')
     expect(reportRoleFromSemanticSelection('fixed_spending', 'repayment')).toBe('liability')
+  })
+
+  it('infers medical from category name', () => {
+    expect(semanticTagFromReportRole('budget', 'LIVING', 'DAILY-05', 'expense', '医疗药品')).toBe('medical_spending')
+    expect(semanticTagFromReportRole('budget', 'LIVING', 'LIVING-06', 'expense', '基础医疗')).toBe('medical_spending')
   })
 
   it('derives semantic tag from report role and category tree', () => {
@@ -49,7 +65,7 @@ describe('categorySemantics', () => {
     expect(semanticTagFromReportRole('budget', 'GIFT', 'GIFT-01', 'expense')).toBe('social_spending')
     expect(semanticTagFromReportRole('budget', 'LIVING', 'DAILY-01', 'expense')).toBe('dining_spending')
     expect(semanticTagFromReportRole('budget', 'LIVING', 'LIVING-03', 'expense', '超市购物 (食材、粮油、日用品)')).toBe('shopping_spending')
-    expect(semanticTagFromReportRole('budget', 'FIXED', 'FIXED-01', 'expense')).toBe('fixed_spending')
+    expect(semanticTagFromReportRole('budget', 'FIXED', 'FIXED-01', 'expense')).toBe('fixed_housing')
     expect(semanticTagFromReportRole('income', 'INC', 'INC-01', 'income')).toBe('real_income')
   })
 
@@ -83,7 +99,7 @@ describe('categorySemantics', () => {
     expect(coerced.reportRole).toBe('budget')
     expect(coerced.warnings.length).toBeGreaterThan(0)
     const preview = profileCategorySemantics(coerced.reportRole, coerced.txnTypes, 'FIXED', 'FIXED-01')
-    expect(preview.semanticTag).toBe('fixed_spending')
+    expect(preview.semanticTag).toBe('fixed_housing')
     expect(preview.includeInFixedCostReport).toBe(true)
   })
 

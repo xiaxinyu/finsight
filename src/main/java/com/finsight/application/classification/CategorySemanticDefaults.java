@@ -58,9 +58,15 @@ public final class CategorySemanticDefaults {
 
     static String inferFromCatalog(ClassificationL2TargetCatalog target) {
         return switch (target.code()) {
+            case "FIXED-01" -> "fixed_housing";
+            case "FIXED-02" -> "fixed_utilities";
+            case "FIXED-03" -> "fixed_telecom";
+            case "FIXED-04" -> "fixed_insurance";
             case "FIXED-05" -> "subscription_spending";
-            case "FIXED-04", "TRANS-06", "DEBT-05" -> "essential_spending";
-            case "FIXED-07" -> "fixed_spending";
+            case "FIXED-06" -> "fixed_tuition";
+            case "FIXED-07" -> "fixed_repayment";
+            case "FIXED-99" -> "fixed_misc";
+            case "TRANS-06", "DEBT-05" -> "essential_spending";
             case "EDU-01" -> "essential_spending";
             case "GIFT-02", "ASSET-02", "INVEST-05" -> "transfer";
             case "INC-04", "INCOME-03", "INV-04", "INV-06", "WEALTH-02" -> "investment_income";
@@ -70,6 +76,7 @@ public final class CategorySemanticDefaults {
             case "OTHER-01", "OTHER-02", "OTHER-03" -> "other_expense";
             case "DAILY-01", "DAILY-02" -> "dining_spending";
             case "DAILY-03", "DAILY-04" -> "shopping_spending";
+            case "DAILY-05" -> "medical_spending";
             case "SHOP-01", "SHOP-02", "SHOP-03", "SHOP-04", "SHOP-05", "SHOP-06" -> "shopping_spending";
             case "TRAVEL-01", "TRANS-02", "TRANS-03", "TRANS-04", "TRANS-05", "TRANS-07" -> "transport_spending";
             case "ENT-01", "ENT-02", "ENT-03", "ENT-04", "ENT-05", "ENT-06" -> "entertainment_spending";
@@ -90,8 +97,8 @@ public final class CategorySemanticDefaults {
         String c = code.trim().toUpperCase(Locale.ROOT);
         return switch (c) {
             case "INC", "INCOME" -> "real_income";
-            case "FIXED" -> "fixed_spending";
-            case "LIVING" -> "dining_spending";
+            case "FIXED" -> "fixed_housing";
+            case "LIVING" -> "daily_spending";
             case "SHOPPING" -> "shopping_spending";
             case "TRANSPORT", "TRAVEL" -> "transport_spending";
             case "ENT" -> "entertainment_spending";
@@ -137,14 +144,12 @@ public final class CategorySemanticDefaults {
         String txn = StringUtils.defaultString(txnTypes).toLowerCase(Locale.ROOT);
         String role = StringUtils.defaultIfBlank(StringUtils.trimToEmpty(reportRole), "other").toLowerCase(Locale.ROOT);
 
-        if (c.equals("FIXED-05") || n.contains("订阅") || n.contains("会员")) {
-            return "subscription_spending";
-        }
         if (parent.equals("FIXED") || c.startsWith("FIXED-")) {
-            if (c.equals("FIXED-04") || n.contains("保险")) {
-                return "essential_spending";
+            if (c.equals("FIXED-05") || n.contains("订阅") || n.contains("会员")) {
+                return "subscription_spending";
             }
-            return "fixed_spending";
+            String flat = CategoryFlatFixedTags.fromCategoryCode(parent, c);
+            return flat != null ? flat : "fixed_misc";
         }
         if (parent.equals("FEE") || parent.equals("FE") || c.startsWith("FEE-")) {
             return "essential_spending";
@@ -181,7 +186,7 @@ public final class CategorySemanticDefaults {
                 return "essential_spending";
             }
             if (c.equals("FIXED-07") || n.contains("还款")) {
-                return "fixed_spending";
+                return "fixed_repayment";
             }
             return "liability";
         }
@@ -223,7 +228,7 @@ public final class CategorySemanticDefaults {
             return "education_spending";
         }
         if (parent.equals("LIVING")) {
-            return "dining_spending";
+            return "daily_spending";
         }
         return inferFromReportRole(role, parent, c, txn, n);
     }
@@ -236,17 +241,28 @@ public final class CategorySemanticDefaults {
             case "transfer" -> "transfer";
             case "investment" -> (parent.equals("INC") || parent.equals("INCOME") || code.startsWith("INC-04"))
                     ? "investment_income" : "investment";
-            case "liability" -> (parent.equals("FIXED") || code.startsWith("FIXED-"))
-                    ? "fixed_spending" : "liability";
+            case "liability" -> {
+                if (parent.equals("FIXED") || code.startsWith("FIXED-")) {
+                    String flat = CategoryFlatFixedTags.fromCategoryCode(parent, code);
+                    yield flat != null ? flat : "fixed_repayment";
+                }
+                yield "liability";
+            }
             case "asset" -> "asset_adjustment";
-            case "cashflow" -> (parent.equals("FIXED") || code.startsWith("FIXED-"))
-                    ? "fixed_spending" : "essential_spending";
+            case "cashflow" -> {
+                if (parent.equals("FIXED") || code.startsWith("FIXED-")) {
+                    String flat = CategoryFlatFixedTags.fromCategoryCode(parent, code);
+                    yield flat != null ? flat : "fixed_misc";
+                }
+                yield "essential_spending";
+            }
             case "budget" -> {
                 if (code.equals("FIXED-05")) {
                     yield "subscription_spending";
                 }
                 if (parent.equals("FIXED") || code.startsWith("FIXED-")) {
-                    yield "fixed_spending";
+                    String flat = CategoryFlatFixedTags.fromCategoryCode(parent, code);
+                    yield flat != null ? flat : "fixed_misc";
                 }
                 if (parent.equals("GIFT") || parent.equals("SOCIAL") || code.startsWith("GIFT-")) {
                     yield "social_spending";

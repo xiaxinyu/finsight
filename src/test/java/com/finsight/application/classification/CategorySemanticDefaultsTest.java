@@ -13,8 +13,8 @@ class CategorySemanticDefaultsTest {
     }
 
     @Test
-    void catalogFixedRent_isFixed() {
-        assertEquals("fixed_spending", CategorySemanticDefaults.inferFromCatalog(
+    void catalogFixedRent_isFixedHousing() {
+        assertEquals("fixed_housing", CategorySemanticDefaults.inferFromCatalog(
                 ClassificationL2TargetCatalog.FIXED_RENT));
     }
 

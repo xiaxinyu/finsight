@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Alert, Button, Cascader, Form, Input, InputNumber, Modal, message, Select, Space, Tag, Tree, Typography,
+  Alert, App, Button, Cascader, Form, Input, InputNumber, Modal, Select, Space, Tag, Tree, Typography,
 } from 'antd'
 import { ClusterOutlined, PlusOutlined } from '@ant-design/icons'
 import {
@@ -42,6 +42,7 @@ import type { SemanticTagId } from '../../../utils/categorySemantics'
 import {
   categoryFieldsFromSemanticTag,
   coerceCategoryFormFields,
+  flatFixedTagForKind,
   initialCategoryFormValues,
   inferFixedCostKind,
   isFixedCategory,
@@ -65,7 +66,10 @@ const EMPTY: ConsumeCategoryRow = {
 
 type PendingAction = 'delete' | 'rename' | 'merge' | null
 
+type SaveBanner = { tone: 'success' | 'error' | 'warning'; text: string }
+
 export function CategoriesAdminPage() {
+  const { message } = App.useApp()
   const qc = useQueryClient()
   const [form] = Form.useForm<ConsumeCategoryRow>()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -80,6 +84,8 @@ export function CategoriesAdminPage() {
   const [reportImpactOpen, setReportImpactOpen] = useState(false)
   const [candidateDraft, setCandidateDraft] = useState<CategoryChildCandidate | null>(null)
   const [candidateSaving, setCandidateSaving] = useState(false)
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [saveBanner, setSaveBanner] = useState<SaveBanner | null>(null)
 
   const { data: categories = [], isLoading, isError, error } = useQuery({
     queryKey: ['admin-categories'],
@@ -129,14 +135,11 @@ export function CategoriesAdminPage() {
     if (creating) {
       const parentId = selected?.code || ''
       const semanticTag = isFixedCategory(parentId)
-        ? 'fixed_spending'
+        ? flatFixedTagForKind(inferFixedCostKind(parentId) ?? 'rent')
         : isSocialCategory(parentId)
           ? 'social_spending'
           : 'daily_spending'
-      const reportRole = reportRoleFromSemanticSelection(
-        semanticTag,
-        isFixedCategory(parentId) ? inferFixedCostKind(parentId) ?? 'other' : null,
-      )
+      const reportRole = reportRoleFromSemanticSelection(semanticTag)
       form.setFieldsValue({ ...EMPTY, parentId, semanticTag, reportRole })
       return
     }
@@ -165,6 +168,24 @@ export function CategoriesAdminPage() {
       form.setFieldValue('txnTypes', 'expense')
     }
   }, [watchedParentId, watchedTxnTypes, watchedCode, selected?.code, form])
+
+  const showSaveFeedback = useCallback((tone: SaveBanner['tone'], text: string) => {
+    setSaveBanner({ tone, text })
+    if (tone === 'success') message.success(text)
+    else if (tone === 'error') message.error(text)
+    else message.warning(text)
+    window.setTimeout(() => setSaveBanner(null), 6000)
+  }, [message])
+
+  const syncFormFromCategory = useCallback((row: ConsumeCategoryRow) => {
+    const derived = initialCategoryFormValues(row)
+    form.setFieldsValue({
+      ...row,
+      txnTypes: derived.txnTypes,
+      semanticTag: derived.semanticTag,
+      reportRole: derived.reportRole,
+    })
+  }, [form])
 
   const reload = () => {
     qc.invalidateQueries({ queryKey: ['admin-categories'] })
@@ -269,7 +290,14 @@ export function CategoriesAdminPage() {
   }
 
   const onSave = async () => {
-    const raw = await form.validateFields()
+    let raw: ConsumeCategoryRow
+    try {
+      raw = await form.validateFields()
+    } catch {
+      showSaveFeedback('warning', 'Please complete required fields before saving.')
+      return
+    }
+
     const values = normalizeFormValues(raw)
     if (values.txnTypes !== raw.txnTypes || values.reportRole !== raw.reportRole || values.semanticTag !== raw.semanticTag) {
       form.setFieldsValue({
@@ -278,29 +306,50 @@ export function CategoriesAdminPage() {
         semanticTag: values.semanticTag,
       })
     }
+
+    setSaveLoading(true)
+    setSaveBanner(null)
+
     if (creating) {
       try {
         await createCategory(values)
-        message.success('Category created')
+        showSaveFeedback('success', 'Category created successfully.')
         setCreating(false)
         reload()
       } catch (e) {
-        message.error(e instanceof Error ? e.message : 'Save failed')
+        showSaveFeedback('error', e instanceof Error ? e.message : 'Save failed')
+      } finally {
+        setSaveLoading(false)
       }
       return
     }
-    if (!selected?.id) return
+
+    if (!selected?.id) {
+      setSaveLoading(false)
+      return
+    }
+
     const nameChanged = (values.name ?? '').trim() !== (selected.name ?? '').trim()
     if (nameChanged) {
+      setSaveLoading(false)
       await openImpactPreview('rename', values)
       return
     }
+
     try {
       await updateCategory(selected.id, values, needsCascadeUpdate(values))
-      message.success('Category updated')
+      const refreshed = await qc.fetchQuery({
+        queryKey: ['admin-categories'],
+        queryFn: () => listCategoriesAdmin(),
+      })
+      const saved = refreshed.find((c) => c.id === selected.id)
+      if (saved) syncFormFromCategory(saved)
+      showSaveFeedback('success', 'Category saved successfully.')
       reload()
     } catch (e) {
-      message.error(e instanceof Error ? e.message : 'Save failed')
+      showSaveFeedback('error', e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setSaveLoading(false)
     }
   }
 
@@ -466,8 +515,20 @@ export function CategoriesAdminPage() {
                   </Form.Item>
                 </div>
                 <div className="fs-admin-category-form-actions">
+                  {saveBanner && (
+                    <Alert
+                      type={saveBanner.tone}
+                      message={saveBanner.text}
+                      showIcon
+                      closable
+                      onClose={() => setSaveBanner(null)}
+                      className="fs-admin-category-save-banner"
+                    />
+                  )}
                   <Space wrap size="small">
-                    <Button type="primary" onClick={onSave}>{creating ? 'Create' : 'Save'}</Button>
+                    <Button type="primary" loading={saveLoading} onClick={onSave}>
+                      {creating ? 'Create' : 'Save'}
+                    </Button>
                     {!creating && selected?.id && (
                       <>
                         <Button danger onClick={onDeleteClick}>Delete</Button>
