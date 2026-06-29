@@ -4014,6 +4014,52 @@
   overflow: hidden;
 }
 
+.fs-chart-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.fs-chart-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 64px;
+}
+
+.fs-chart-summary-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.fs-chart-summary-item--expense .fs-chart-summary-value {
+  color: #ea580c;
+}
+
+.fs-chart-summary-item--income .fs-chart-summary-value {
+  color: #16a34a;
+}
+
+.fs-chart-summary-item--warn .fs-chart-summary-value {
+  color: #d97706;
+}
+
+.fs-chart-summary-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .fs-report-body {
   flex: 1;
   min-height: 0;

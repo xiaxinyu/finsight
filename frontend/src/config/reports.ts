@@ -39,7 +39,7 @@ export const reportConfigs: Record<string, ReportConfig> = {
     title: 'Fixed vs Variable',
     subtitle: 'Semantic expense structure — Dining, Medical, Housing, and fixed costs',
     type: 'homeBuckets',
-    chartProfile: 'categoryBar',
+    chartProfile: 'donut',
     legacyIds: ['weekly-summary'],
   },
   'spending-drift': {

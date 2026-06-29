@@ -150,7 +150,7 @@ export function ReportsPage() {
 
   const chartLoading = isLoading || isFetching || applying
   const viewportH = useViewportTableHeight(320)
-  const chartHeight = 340
+  const defaultChartHeight = 340
 
   const view = useMemo(
     () => (cfg ? buildReportView(cfg, data ?? undefined, applied) : null),
@@ -405,9 +405,22 @@ export function ReportsPage() {
           <div className={`fs-report-split${view.tableData.length ? ' fs-report-split--with-table' : ''}`}>
             <section className="fs-report-split__chart">
               <ContentCard title={view.chartTitle || cfg.title} size="small" styles={{ body: { padding: 8 } }}>
+                {view.chartSummary && view.chartSummary.length > 0 && (
+                  <div className="fs-chart-summary-strip" role="group" aria-label="Chart summary">
+                    {view.chartSummary.map((s) => (
+                      <div
+                        key={s.key}
+                        className={`fs-chart-summary-item${s.tone ? ` fs-chart-summary-item--${s.tone}` : ''}`}
+                      >
+                        <span className="fs-chart-summary-value">{s.value}</span>
+                        <span className="fs-chart-summary-label">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <FsChart
-                  profile={cfg.chartProfile || 'timeSeries'}
-                  height={chartHeight}
+                  profile={view.chartProfile || cfg.chartProfile || 'timeSeries'}
+                  height={view.chartHeight ?? defaultChartHeight}
                   loading={chartLoading}
                   option={view.chartOption}
                   onEvents={{ click: onChartClick }}

@@ -19,8 +19,10 @@ import {
   sumReportPoints,
 } from '../../utils/reportAnalytics'
 import {
+  buildSemanticClassificationChartOption,
   insightsSemanticStructure,
   topSemanticRows,
+  type ChartSummaryItem,
   type SemanticBreakdown,
 } from '../../utils/semanticBreakdownReport'
 import type dayjs from 'dayjs'
@@ -39,6 +41,9 @@ export type ReportView = {
   insights: InsightBullet[]
   kpis: ReportKpi[]
   chartOption: Record<string, unknown>
+  chartSummary?: ChartSummaryItem[]
+  chartHeight?: number
+  chartProfile?: string
   tableData: Record<string, unknown>[]
   tableCols: FsColumn<Record<string, unknown>>[]
   tableSummary?: Record<string, number | string>
@@ -158,6 +163,7 @@ export function buildReportView(
     const weekRows = ('week' in data && data.week) ? buildWeekdaySeries(data.week as ReportPoint[]) : []
     const weekTotal = weekRows.reduce((s, d) => s + d.value, 0)
     const topRows = topSemanticRows(breakdown.rows)
+    const chart = buildSemanticClassificationChartOption(breakdown, topRows)
     return {
       insights: insightsSemanticStructure(breakdown, periodLabel),
       kpis: [
@@ -167,32 +173,10 @@ export function buildReportView(
         { key: 'week', label: 'Weekday spend', value: formatMoney(weekTotal), hint: periodLabel, explain: REPORT_METRIC_HINTS.consumptionSpend },
       ],
       chartTitle: 'Expense by classification',
-      chartOption: {
-        tooltip: {
-          trigger: 'item',
-          formatter: (p: { name?: string; value?: number; percent?: number }) =>
-            `${p.name ?? ''}<br/>${formatMoney(Number(p.value ?? 0))} (${Number(p.percent ?? 0).toFixed(1)}%)`,
-        },
-        legend: {
-          type: 'scroll',
-          orient: 'vertical',
-          right: 0,
-          top: 'middle',
-          textStyle: { fontSize: 11 },
-        },
-        series: [{
-          type: 'pie',
-          radius: ['40%', '62%'],
-          center: ['36%', '50%'],
-          data: topRows.map((r) => ({
-            name: r.classification || r.label,
-            value: r.amount,
-            tagId: r.tagId,
-          })),
-          label: { show: false },
-          labelLine: { show: false },
-        }],
-      },
+      chartProfile: 'donut',
+      chartHeight: 400,
+      chartSummary: chart.summary,
+      chartOption: chart.option,
       tableCols: [
         { title: 'Classification', dataIndex: 'classification', sortType: 'text', ellipsis: true },
         { title: 'Type', dataIndex: 'txnType', sortType: 'text', width: 88 },

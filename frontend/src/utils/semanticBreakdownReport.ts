@@ -1,4 +1,17 @@
 import type { ReportPoint } from '../api/report'
+import { formatMoney } from './format'
+
+const PIE_COLORS = [
+  '#2563eb', '#16a34a', '#ea580c', '#7c3aed', '#0891b2',
+  '#db2777', '#ca8a04', '#64748b', '#dc2626', '#0d9488',
+]
+
+export type ChartSummaryItem = {
+  key: string
+  label: string
+  value: string
+  tone?: 'expense' | 'income' | 'neutral' | 'warn'
+}
 
 export type SemanticBreakdownRow = {
   tagId: string
@@ -38,6 +51,133 @@ export function semanticBreakdownToReportPoints(
     code: r.tagId,
     name: r.classification || r.label,
   }))
+}
+
+export function buildSemanticClassificationChartOption(
+  breakdown: SemanticBreakdown,
+  topRows: SemanticBreakdownRow[],
+): { option: Record<string, unknown>; summary: ChartSummaryItem[] } {
+  const sorted = [...breakdown.rows].sort((a, b) => b.amount - a.amount)
+  const top = sorted[0]
+  const top3Share = sorted.slice(0, 3).reduce((s, r) => s + r.sharePct, 0)
+
+  const data = topRows.map((r) => ({
+    name: r.classification || r.label,
+    value: r.amount,
+    tagId: r.tagId,
+    sharePct: r.sharePct,
+    classL2: r.classL2 || r.label,
+  }))
+  const metaByName = new Map(data.map((d) => [d.name, d]))
+
+  const summary: ChartSummaryItem[] = [
+    { key: 'total', label: 'Total expense', value: formatMoney(breakdown.expenseTotal), tone: 'expense' },
+    { key: 'items', label: 'Classifications', value: String(breakdown.rows.length) },
+    ...(top ? [{ key: 'top', label: 'Largest', value: `${top.classL2} · ${top.sharePct.toFixed(1)}%` }] : []),
+    { key: 'top3', label: 'Top 3 share', value: `${top3Share.toFixed(1)}%` },
+    { key: 'fixed', label: 'Fixed', value: `${breakdown.fixedSharePct.toFixed(1)}%` },
+    { key: 'var', label: 'Variable', value: `${breakdown.variableSharePct.toFixed(1)}%` },
+  ]
+
+  return {
+    summary,
+    option: {
+      color: PIE_COLORS,
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: '#ffffff',
+        borderColor: '#e2e8f0',
+        borderWidth: 1,
+        padding: [10, 14],
+        extraCssText: 'box-shadow: 0 4px 16px rgba(15,23,42,0.08); border-radius: 8px;',
+        confine: true,
+        formatter: (p: { name?: string; value?: number; percent?: number; data?: { sharePct?: number } }) => {
+          const share = p.data?.sharePct ?? p.percent ?? 0
+          return `<div style="font-size:12px;line-height:1.55"><b>${p.name ?? ''}</b><br/>${formatMoney(Number(p.value ?? 0))}<br/><span style="color:#64748b">${Number(share).toFixed(1)}% of total</span></div>`
+        },
+      },
+      legend: {
+        type: 'scroll',
+        orient: 'horizontal',
+        bottom: 4,
+        left: 'center',
+        width: '94%',
+        itemGap: 14,
+        itemWidth: 8,
+        itemHeight: 8,
+        pageIconSize: 10,
+        textStyle: { fontSize: 11, color: '#475569' },
+        formatter: (name: string) => {
+          const item = metaByName.get(name)
+          if (!item) return name
+          return `${item.classL2}  ${item.sharePct.toFixed(1)}%`
+        },
+      },
+      graphic: breakdown.expenseTotal > 0 ? [{
+        type: 'group',
+        left: 'center',
+        top: '36%',
+        children: [
+          {
+            type: 'text',
+            left: 'center',
+            top: 0,
+            style: {
+              text: formatMoney(breakdown.expenseTotal),
+              textAlign: 'center',
+              fill: '#0f172a',
+              fontSize: 18,
+              fontWeight: 600,
+              fontFamily: 'inherit',
+            },
+          },
+          {
+            type: 'text',
+            left: 'center',
+            top: 24,
+            style: {
+              text: 'Total expense',
+              textAlign: 'center',
+              fill: '#64748b',
+              fontSize: 11,
+              fontFamily: 'inherit',
+            },
+          },
+          {
+            type: 'text',
+            left: 'center',
+            top: 40,
+            style: {
+              text: `${breakdown.rows.length} classifications`,
+              textAlign: 'center',
+              fill: '#94a3b8',
+              fontSize: 10,
+              fontFamily: 'inherit',
+            },
+          },
+        ],
+      }] : [],
+      series: [{
+        type: 'pie',
+        radius: ['44%', '66%'],
+        center: ['50%', '40%'],
+        avoidLabelOverlap: true,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: '#fff',
+          borderWidth: 2,
+        },
+        emphasis: {
+          scale: true,
+          scaleSize: 5,
+          itemStyle: { shadowBlur: 10, shadowColor: 'rgba(15,23,42,0.12)' },
+        },
+        data,
+        label: { show: false },
+        labelLine: { show: false },
+      }],
+    },
+  }
 }
 
 export function topSemanticRows(rows: SemanticBreakdownRow[], topN = 10): SemanticBreakdownRow[] {
