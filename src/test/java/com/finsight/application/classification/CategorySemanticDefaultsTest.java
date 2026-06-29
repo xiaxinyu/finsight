@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class CategorySemanticDefaultsTest {
 
     @Test
-    void catalogLivingDining_isDiscretionary() {
-        assertEquals("daily_spending", CategorySemanticDefaults.inferFromCatalog(
+    void catalogLivingDining_isDining() {
+        assertEquals("dining_spending", CategorySemanticDefaults.inferFromCatalog(
                 ClassificationL2TargetCatalog.DAILY_DINE_IN));
     }
 
@@ -37,11 +37,22 @@ class CategorySemanticDefaultsTest {
     }
 
     @Test
-    void customLivingChild_infersDiscretionary() {
-        assertEquals("daily_spending", CategorySemanticDefaults.inferSemanticTag(
+    void customLivingChild_infersDiningByName() {
+        assertEquals("dining_spending", CategorySemanticDefaults.inferSemanticTag(
                 "LIVING-99",
                 "LIVING",
                 "餐饮 (含外卖、早餐、咖啡)",
+                "expense",
+                "budget",
+                2));
+    }
+
+    @Test
+    void customSupermarket_infersShopping() {
+        assertEquals("shopping_spending", CategorySemanticDefaults.inferSemanticTag(
+                "LIVING-03",
+                "LIVING",
+                "超市购物 (食材、粮油、日用品)",
                 "expense",
                 "budget",
                 2));
@@ -61,7 +72,7 @@ class CategorySemanticDefaultsTest {
         CategorySemanticDefaults.ResolvedDefaults d = CategorySemanticDefaults.fillMissing(
                 new CategorySemanticDefaults.CategoryInput(
                         "TRANS-02", "打车/网约车", 2, "TRANSPORT", "expense", "budget", null));
-        assertEquals("daily_spending", d.semanticTag());
+        assertEquals("transport_spending", d.semanticTag());
     }
 
     @Test

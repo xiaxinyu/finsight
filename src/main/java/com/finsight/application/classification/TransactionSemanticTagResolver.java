@@ -37,12 +37,12 @@ public final class TransactionSemanticTagResolver {
             case "liability" -> "liability";
             case "asset_adjustment" -> "asset_adjustment";
             case "income" -> "investment".equals(role) ? "investment_income" : "real_income";
-            case "expense" -> expenseTag(budget, parentId, categoryCode, fixedKind);
+            case "expense" -> expenseTag(budget, parentId, categoryCode, fixedKind, row.getConsumeName());
             default -> "other";
         };
     }
 
-    private static String expenseTag(String budget, String parentId, String categoryCode, String fixedKind) {
+    private static String expenseTag(String budget, String parentId, String categoryCode, String fixedKind, String name) {
         if ("fixed".equals(budget)) {
             return "subscription".equals(fixedKind) ? "subscription_spending" : "fixed_spending";
         }
@@ -52,7 +52,8 @@ public final class TransactionSemanticTagResolver {
         if (CategoryFinanceSemantics.isSocialCategory(parentId, categoryCode)) {
             return "social_spending";
         }
-        return "daily_spending";
+        return CategorySemanticDefaults.inferSemanticTag(
+                categoryCode, parentId, name, "expense", "budget", 2);
     }
 
     private static String lower(String value) {

@@ -41,7 +41,7 @@ class TransactionDisplayTagsBuilderTest {
     }
 
     @Test
-    void dailySpending_getsDiscretionaryTag() {
+    void diningCategory_getsDiningTag() {
         Transaction row = baseExpense();
         row.setConsumeCode("DAILY-01");
         row.setConsumeName("Dining");
@@ -52,9 +52,23 @@ class TransactionDisplayTagsBuilderTest {
         row.setQualityState("classified");
 
         var tags = TransactionDisplayTagsBuilder.build(row);
-        assertTrue(tags.stream().anyMatch(t -> "semantic_daily_spending".equals(t.getId())));
-        assertTrue(tags.stream().anyMatch(t -> "Discretionary".equals(t.getLabel())));
+        assertTrue(tags.stream().anyMatch(t -> "semantic_dining_spending".equals(t.getId())));
+        assertTrue(tags.stream().anyMatch(t -> "Dining".equals(t.getLabel())));
         assertTrue(tags.stream().anyMatch(t -> "category_l1".equals(t.getId()) && "日常生活".equals(t.getLabel())));
+    }
+
+    @Test
+    void supermarket_getsShoppingTag() {
+        Transaction row = baseExpense();
+        row.setConsumeCode("LIVING-03");
+        row.setConsumeName("超市购物 (食材、粮油、日用品)");
+        row.setCategoryParentId("LIVING");
+        row.setBudgetBehavior("variable");
+        row.setEconomicNature("expense");
+        row.setQualityState("classified");
+
+        var tags = TransactionDisplayTagsBuilder.build(row);
+        assertTrue(tags.stream().anyMatch(t -> "semantic_shopping_spending".equals(t.getId())));
     }
 
     @Test

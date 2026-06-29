@@ -102,7 +102,9 @@ export function CategoriesAdminPage() {
   const { data: semanticsCatalog } = useSemanticsCatalog()
   const catalogFieldLabel = semanticsCatalog?.fieldLabel ?? 'Reporting Classification'
   const catalogFieldHint = semanticsCatalog?.fieldHint
-    ?? 'Left tree = what you bought (Transport/Dining/Shopping). Here = how it counts in reports (Discretionary/Fixed/Social).'
+    ?? 'Pick expense type: Dining, Shopping, Transport, Entertainment, Education, Social, Fixed, Essential.'
+
+  const watchedName = Form.useWatch('name', form)
 
   const treeData = useMemo(
     () => toAntTreeNodesWithCounts(buildCategoryTree(categories), assetSummary, categories),
@@ -447,8 +449,6 @@ export function CategoriesAdminPage() {
                     extra={categoryPath ? (
                       <Typography.Text type="secondary" className="fs-category-path-hint">
                         分类路径：{categoryPath}
-                        {' · '}
-                        左侧树决定消费类型（交通/餐饮/购物）；此处仅设置报表口径（弹性/固定/人情等）。
                       </Typography.Text>
                     ) : undefined}
                     rules={[{ required: true, message: 'Reporting classification is required' }]}
@@ -458,6 +458,7 @@ export function CategoriesAdminPage() {
                       txnTypes={watchedTxnTypes}
                       parentId={watchedParentId}
                       categoryCode={watchedCode || selected?.code}
+                      categoryName={watchedName || selected?.name}
                       inferred={!creating && Boolean(selected && !selected.semanticTag?.trim() && !selected.reportRole?.trim())}
                       mismatchWarning={classificationMismatch}
                       onReportRoleSync={(role) => form.setFieldValue('reportRole', role)}

@@ -18,9 +18,10 @@ import {
 describe('categorySemantics', () => {
   it('labels semantic tags', () => {
     expect(semanticTagLabel('fixed_spending')).toBe('Fixed')
-    expect(semanticTagLabel('subscription_spending')).toBe('Subscription')
-    expect(semanticTagLabel('social_spending')).toBe('Social')
-    expect(semanticTagLabel('daily_spending')).toBe('Discretionary')
+    expect(semanticTagLabel('shopping_spending')).toBe('Shopping')
+    expect(semanticTagLabel('dining_spending')).toBe('Dining')
+    expect(semanticTagLabel('transport_spending')).toBe('Transport')
+    expect(semanticTagLabel('daily_spending')).toBe('General')
     expect(fixedCostKindLabel('rent')).toBe('Housing')
   })
 
@@ -46,7 +47,8 @@ describe('categorySemantics', () => {
   it('derives semantic tag from report role and category tree', () => {
     expect(semanticTagFromReportRole('budget', 'FIXED', 'FIXED-05', 'expense')).toBe('subscription_spending')
     expect(semanticTagFromReportRole('budget', 'GIFT', 'GIFT-01', 'expense')).toBe('social_spending')
-    expect(semanticTagFromReportRole('budget', 'LIVING', 'DAILY-01', 'expense')).toBe('daily_spending')
+    expect(semanticTagFromReportRole('budget', 'LIVING', 'DAILY-01', 'expense')).toBe('dining_spending')
+    expect(semanticTagFromReportRole('budget', 'LIVING', 'LIVING-03', 'expense', '超市购物 (食材、粮油、日用品)')).toBe('shopping_spending')
     expect(semanticTagFromReportRole('budget', 'FIXED', 'FIXED-01', 'expense')).toBe('fixed_spending')
     expect(semanticTagFromReportRole('income', 'INC', 'INC-01', 'income')).toBe('real_income')
   })
@@ -56,7 +58,7 @@ describe('categorySemantics', () => {
     expect(p.includeInExpenseTrend).toBe(true)
     expect(p.includeInBudget).toBe(true)
     expect(p.budgetBehavior).toBe('variable')
-    expect(p.semanticTag).toBe('daily_spending')
+    expect(p.semanticTag).toBe('dining_spending')
   })
 
   it('previews salary as real income', () => {
@@ -94,7 +96,7 @@ describe('categorySemantics', () => {
     })
     expect(coerced.reportRole).toBe('budget')
     const preview = profileCategorySemantics('income', 'expense', 'INC', 'DAILY-01')
-    expect(preview.semanticTag).toBe('daily_spending')
+    expect(preview.semanticTag).toBe('dining_spending')
     expect(preview.includeInIncomeTrend).toBe(false)
     expect(preview.includeInExpenseTrend).toBe(true)
   })

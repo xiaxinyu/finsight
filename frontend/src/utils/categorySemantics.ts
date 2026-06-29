@@ -17,6 +17,11 @@ export type SemanticTagId =
   | 'other_income'
   | 'refund_reimbursement'
   | 'daily_spending'
+  | 'dining_spending'
+  | 'shopping_spending'
+  | 'transport_spending'
+  | 'entertainment_spending'
+  | 'education_spending'
   | 'social_spending'
   | 'other_expense'
   | 'fixed_spending'
@@ -46,7 +51,12 @@ export const SEMANTIC_TAG_LABELS: Record<SemanticTagId, string> = {
   investment_income: 'Portfolio',
   other_income: 'MiscIncome',
   refund_reimbursement: 'Refund',
-  daily_spending: 'Discretionary',
+  daily_spending: 'General',
+  dining_spending: 'Dining',
+  shopping_spending: 'Shopping',
+  transport_spending: 'Transport',
+  entertainment_spending: 'Entertainment',
+  education_spending: 'Education',
   social_spending: 'Social',
   other_expense: 'MiscExpense',
   fixed_spending: 'Fixed',
@@ -79,7 +89,18 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
   {
     title: 'Expense',
     appliesTo: 'expense',
-    tags: ['daily_spending', 'social_spending', 'subscription_spending', 'essential_spending', 'other_expense'],
+    tags: [
+      'dining_spending',
+      'shopping_spending',
+      'transport_spending',
+      'entertainment_spending',
+      'education_spending',
+      'social_spending',
+      'subscription_spending',
+      'essential_spending',
+      'daily_spending',
+      'other_expense',
+    ],
   },
   { title: 'Fixed', appliesTo: 'expense', tags: ['fixed_spending'] },
   {
@@ -130,10 +151,11 @@ export function resolveSemanticTag(
   parentId?: string,
   categoryCode?: string,
   txnTypes?: string,
+  categoryName?: string,
 ): SemanticTagId {
   if (isKnownSemanticTag(storedTag)) return storedTag.trim() as SemanticTagId
   const role = effectiveReportRole(reportRole, txnTypes, parentId, categoryCode)
-  return semanticTagFromReportRole(role, parentId, categoryCode, txnTypes)
+  return semanticTagFromReportRole(role, parentId, categoryCode, txnTypes, categoryName)
 }
 
 export function reportRoleForSemanticTag(
@@ -178,6 +200,7 @@ export function categoryFieldsFromSemanticTag(
 /** Initial form values when loading a category row from API. */
 export function initialCategoryFormValues(
   row: {
+    name?: string
     parentId?: string
     code?: string
     txnTypes?: string
@@ -192,6 +215,7 @@ export function initialCategoryFormValues(
     row.parentId,
     row.code,
     txnTypes,
+    row.name,
   )
   const derived = categoryFieldsFromSemanticTag(semanticTag, {
     parentId: row.parentId,
@@ -231,6 +255,38 @@ export function isSocialCategory(parentId?: string, categoryCode?: string): bool
   if (parent === 'GIFT' || parent === 'SOCIAL') return true
   const code = (categoryCode ?? '').trim().toUpperCase()
   return code.startsWith('GIFT-') || code.startsWith('SOCIAL-')
+}
+
+/** Expense domain tag from category tree (name/code/parent). */
+export function inferExpenseDomainTag(
+  parentId?: string,
+  categoryCode?: string,
+  categoryName?: string,
+): SemanticTagId {
+  const parent = (parentId ?? '').trim().toUpperCase()
+  const code = (categoryCode ?? '').trim().toUpperCase()
+  const name = categoryName ?? ''
+
+  if (code.startsWith('DAILY-01') || code.startsWith('DAILY-02')) return 'dining_spending'
+  if (code.startsWith('DAILY-03') || code.startsWith('DAILY-04') || code.startsWith('SHOP-')) return 'shopping_spending'
+  if (code.startsWith('TRANS-') || code.startsWith('TRAVEL-')) return 'transport_spending'
+  if (code.startsWith('ENT-')) return 'entertainment_spending'
+  if (code.startsWith('EDU-') && code !== 'EDU-01') return 'education_spending'
+
+  if (/超市|购物|网上|电商|服饰|美妆|母婴|家居|耐用品|日用品|百货/.test(name)) return 'shopping_spending'
+  if (/交通|地铁|公交|打车|网约车|滴滴|停车|油费|充电|过路|车辆|机票|火车|租车|代驾|保养|洗车/.test(name)) {
+    return 'transport_spending'
+  }
+  if (/餐饮|外卖|堂食|早餐|咖啡|饭店|吃饭|小吃/.test(name)) return 'dining_spending'
+  if (/娱乐|旅行|旅游|酒店|景点|门票|电影|演出|游戏|健身|运动/.test(name)) return 'entertainment_spending'
+  if (/培训|书籍|资料|课程/.test(name)) return 'education_spending'
+
+  if (parent === 'SHOPPING' || parent === 'SHOP') return 'shopping_spending'
+  if (parent === 'TRANSPORT' || parent === 'TRAVEL') return 'transport_spending'
+  if (parent === 'ENT') return 'entertainment_spending'
+  if (parent === 'EDU') return 'education_spending'
+  if (parent === 'LIVING') return 'dining_spending'
+  return 'daily_spending'
 }
 
 export function inferFixedCostKind(parentId?: string, categoryCode?: string): FixedCostKind | null {
@@ -313,6 +369,7 @@ export function semanticTagFromReportRole(
   parentId?: string,
   categoryCode?: string,
   txnTypes?: string,
+  categoryName?: string,
 ): SemanticTagId {
   const role = (reportRole?.trim() || inferDefaultReportRole(parentId, categoryCode, txnTypes)).toLowerCase()
   const parent = (parentId ?? '').trim().toUpperCase()
@@ -342,7 +399,7 @@ export function semanticTagFromReportRole(
     if (isFixedCategory(parentId, categoryCode)) return 'fixed_spending'
     if (isSocialCategory(parentId, categoryCode)) return 'social_spending'
     if (code.startsWith('OTHER') || code === 'OTHER') return 'other_expense'
-    return 'daily_spending'
+    return inferExpenseDomainTag(parentId, categoryCode, categoryName)
   }
   if (role === 'other') return 'other'
   return 'other'
@@ -359,6 +416,11 @@ export function reportRoleFromSemanticSelection(
       return tag === 'investment_income' ? 'investment' : 'income'
     case 'refund_reimbursement': return 'refund'
     case 'daily_spending':
+    case 'dining_spending':
+    case 'shopping_spending':
+    case 'transport_spending':
+    case 'entertainment_spending':
+    case 'education_spending':
     case 'social_spending':
     case 'other_expense':
       return 'budget'

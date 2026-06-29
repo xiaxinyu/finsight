@@ -111,6 +111,11 @@ public final class FinanceSemanticsCatalog {
             case "other_income" -> "lime";
             case "refund_reimbursement" -> "blue";
             case "daily_spending" -> "orange";
+            case "dining_spending" -> "orange";
+            case "shopping_spending" -> "gold";
+            case "transport_spending" -> "blue";
+            case "entertainment_spending" -> "volcano";
+            case "education_spending" -> "cyan";
             case "social_spending" -> "magenta";
             case "other_expense" -> "default";
             case "fixed_spending" -> "purple";
@@ -151,7 +156,12 @@ public final class FinanceSemanticsCatalog {
             case "investment_income" -> "Portfolio";
             case "other_income" -> "MiscIncome";
             case "refund_reimbursement" -> "Refund";
-            case "daily_spending" -> "Discretionary";
+            case "daily_spending" -> "General";
+            case "dining_spending" -> "Dining";
+            case "shopping_spending" -> "Shopping";
+            case "transport_spending" -> "Transport";
+            case "entertainment_spending" -> "Entertainment";
+            case "education_spending" -> "Education";
             case "social_spending" -> "Social";
             case "other_expense" -> "MiscExpense";
             case "fixed_spending" -> "Fixed";
@@ -191,15 +201,17 @@ public final class FinanceSemanticsCatalog {
     public static Map<String, Object> catalogPayload() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("fieldLabel", "Reporting Classification");
-        out.put("fieldHint",
-                "Left tree = spending type (Transport/Dining/Shopping). "
-                        + "Here = report behavior (Discretionary/Fixed/Social/Earned).");
+        out.put("fieldHint", "Pick expense type (Dining/Shopping/Transport) and report behavior (Social/Fixed/Essential).");
 
         List<Map<String, Object>> groups = new ArrayList<>();
         groups.add(tagGroup("Income", "income",
                 List.of("real_income", "investment_income", "refund_reimbursement", "other_income")));
         groups.add(tagGroup("Expense", "expense",
-                List.of("daily_spending", "social_spending", "subscription_spending", "essential_spending", "other_expense")));
+                List.of(
+                        "dining_spending", "shopping_spending", "transport_spending",
+                        "entertainment_spending", "education_spending",
+                        "social_spending", "subscription_spending", "essential_spending",
+                        "daily_spending", "other_expense")));
         groups.add(tagGroup("Fixed", "expense",
                 List.of("fixed_spending")));
         groups.add(tagGroup("Capital", "capital",
@@ -209,6 +221,7 @@ public final class FinanceSemanticsCatalog {
         Map<String, Object> semanticTags = new LinkedHashMap<>();
         for (String id : List.of(
                 "real_income", "investment_income", "other_income", "refund_reimbursement",
+                "dining_spending", "shopping_spending", "transport_spending", "entertainment_spending", "education_spending",
                 "daily_spending", "social_spending", "other_expense", "fixed_spending", "subscription_spending", "essential_spending",
                 "transfer", "investment", "liability", "asset_adjustment", "other")) {
             semanticTags.put(id, Map.of(
@@ -249,7 +262,12 @@ public final class FinanceSemanticsCatalog {
             case "investment_income" -> "Dividends, Interest, And Portfolio Income";
             case "other_income" -> "Miscellaneous Inflow Not In Core Income";
             case "refund_reimbursement" -> "Refund Or Expense Reimbursement Inflow";
-            case "daily_spending" -> "Discretionary Day-To-Day Consumption";
+            case "daily_spending" -> "General Discretionary Expense";
+            case "dining_spending" -> "Restaurants, Takeout, Coffee, And Meals";
+            case "shopping_spending" -> "Groceries, Retail, E-Commerce, And Durable Goods";
+            case "transport_spending" -> "Transit, Ride-Hail, Fuel, Parking, And Vehicle Costs";
+            case "entertainment_spending" -> "Travel, Leisure, Sports, And Entertainment";
+            case "education_spending" -> "Courses, Books, And Training (Non-Fixed Tuition)";
             case "social_spending" -> "Gifts, Red Envelopes, Donations, And Family Support";
             case "other_expense" -> "Miscellaneous Expense Not In Core Buckets";
             case "fixed_spending" -> "Recurring Fixed Obligations";
@@ -267,7 +285,9 @@ public final class FinanceSemanticsCatalog {
     private static String reportBucket(String tagId) {
         return switch (tagId) {
             case "real_income", "investment_income", "other_income", "refund_reimbursement" -> "income_statement";
-            case "daily_spending", "social_spending", "other_expense", "subscription_spending", "essential_spending" -> "expense";
+            case "daily_spending", "dining_spending", "shopping_spending", "transport_spending",
+                    "entertainment_spending", "education_spending",
+                    "social_spending", "other_expense", "subscription_spending", "essential_spending" -> "expense";
             case "fixed_spending" -> "fixed_commitment";
             case "transfer", "investment", "liability", "asset_adjustment" -> "capital_flow";
             default -> "unset";

@@ -61,12 +61,19 @@ public final class CategorySemanticDefaults {
             case "FIXED-05" -> "subscription_spending";
             case "FIXED-04", "TRANS-06", "DEBT-05" -> "essential_spending";
             case "FIXED-07" -> "fixed_spending";
+            case "EDU-01" -> "essential_spending";
             case "GIFT-02", "ASSET-02", "INVEST-05" -> "transfer";
             case "INC-04", "INCOME-03", "INV-04", "INV-06", "WEALTH-02" -> "investment_income";
             case "INC-08", "DEBT-02" -> "liability";
             case "INC-10" -> "refund_reimbursement";
             case "REIM-01", "REIM-02", "REIM-03", "REIM-04", "REIM-05" -> "refund_reimbursement";
             case "OTHER-01", "OTHER-02", "OTHER-03" -> "other_expense";
+            case "DAILY-01", "DAILY-02" -> "dining_spending";
+            case "DAILY-03", "DAILY-04" -> "shopping_spending";
+            case "SHOP-01", "SHOP-02", "SHOP-03", "SHOP-04", "SHOP-05", "SHOP-06" -> "shopping_spending";
+            case "TRAVEL-01", "TRANS-02", "TRANS-03", "TRANS-04", "TRANS-05", "TRANS-07" -> "transport_spending";
+            case "ENT-01", "ENT-02", "ENT-03", "ENT-04", "ENT-05", "ENT-06" -> "entertainment_spending";
+            case "EDU-02" -> "education_spending";
             default -> inferFromHeuristics(
                     target.code(),
                     target.parentL1Code(),
@@ -84,7 +91,11 @@ public final class CategorySemanticDefaults {
         return switch (c) {
             case "INC", "INCOME" -> "real_income";
             case "FIXED" -> "fixed_spending";
-            case "LIVING", "SHOPPING", "TRANSPORT", "TRAVEL", "ENT", "EDU" -> "daily_spending";
+            case "LIVING" -> "dining_spending";
+            case "SHOPPING" -> "shopping_spending";
+            case "TRANSPORT", "TRAVEL" -> "transport_spending";
+            case "ENT" -> "entertainment_spending";
+            case "EDU" -> "education_spending";
             case "GIFT", "SOCIAL" -> "social_spending";
             case "REIM", "REIMB" -> "refund_reimbursement";
             case "ASSET" -> "asset_adjustment";
@@ -187,28 +198,37 @@ public final class CategorySemanticDefaults {
         if (parent.equals("OTHER") || c.startsWith("OTHER-")) {
             return "other_expense";
         }
-        if (parent.equals("TRANSPORT") || parent.equals("TRAVEL") || c.startsWith("TRANS-")
-                || c.startsWith("TRAVEL-")) {
-            if (n.contains("保险") || c.equals("TRANS-06")) {
-                return "essential_spending";
-            }
-            return "daily_spending";
+        if (c.equals("EDU-01") || n.contains("学费")) {
+            return "essential_spending";
         }
-        if (parent.equals("EDU") || c.startsWith("EDU-")) {
-            if (n.contains("学费") || c.equals("EDU-01")) {
-                return "essential_spending";
-            }
-            return "daily_spending";
+        if (c.equals("TRANS-06") || (n.contains("保险") && parent.equals("TRANSPORT"))) {
+            return "essential_spending";
         }
-        if (parent.equals("LIVING") || parent.equals("SHOPPING") || parent.equals("ENT")
-                || c.startsWith("DAILY-") || c.startsWith("LIVING-") || c.startsWith("SHOP-")
-                || c.startsWith("SHOPPING-") || c.startsWith("ENT-")) {
-            return "daily_spending";
+
+        Optional<String> domain = CategorySpendingDomain.inferDomainTag(c, parent, n);
+        if (domain.isPresent()) {
+            return domain.get();
         }
-        return inferFromReportRole(role, parent, c, txn);
+
+        if (parent.equals("TRANSPORT") || parent.equals("TRAVEL")) {
+            return "transport_spending";
+        }
+        if (parent.equals("SHOPPING")) {
+            return "shopping_spending";
+        }
+        if (parent.equals("ENT")) {
+            return "entertainment_spending";
+        }
+        if (parent.equals("EDU")) {
+            return "education_spending";
+        }
+        if (parent.equals("LIVING")) {
+            return "dining_spending";
+        }
+        return inferFromReportRole(role, parent, c, txn, n);
     }
 
-    static String inferFromReportRole(String role, String parent, String code, String txn) {
+    static String inferFromReportRole(String role, String parent, String code, String txn, String name) {
         return switch (role) {
             case "income" -> (code.startsWith("INC-04") || txn.contains("invest"))
                     ? "investment_income" : "real_income";
@@ -234,7 +254,7 @@ public final class CategorySemanticDefaults {
                 if (parent.equals("OTHER") || code.startsWith("OTHER-")) {
                     yield "other_expense";
                 }
-                yield "daily_spending";
+                yield CategorySpendingDomain.inferDomainTag(code, parent, name).orElse("daily_spending");
             }
             default -> "other";
         };
