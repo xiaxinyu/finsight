@@ -23,9 +23,6 @@ import {
   topSemanticRows,
   type SemanticBreakdown,
 } from '../../utils/semanticBreakdownReport'
-import {
-  buildCategoryClassificationRows,
-} from '../../utils/categoryClassificationReport'
 import type dayjs from 'dayjs'
 import { REPORT_METRIC_HINTS } from '../../components/MetricExplanation'
 
@@ -161,14 +158,6 @@ export function buildReportView(
     const weekRows = ('week' in data && data.week) ? buildWeekdaySeries(data.week as ReportPoint[]) : []
     const weekTotal = weekRows.reduce((s, d) => s + d.value, 0)
     const topRows = topSemanticRows(breakdown.rows)
-    const categoryPoints = ('categoryRows' in data && data.categoryRows)
-      ? data.categoryRows as ReportPoint[]
-      : []
-    const tableRows = buildCategoryClassificationRows(
-      categoryPoints,
-      cfg.txnType === 'income' ? 'income' : 'expense',
-      breakdown.expenseTotal,
-    )
     return {
       insights: insightsSemanticStructure(breakdown, periodLabel),
       kpis: [
@@ -177,26 +166,31 @@ export function buildReportView(
         { key: 'total', label: 'Expense total', value: formatMoney(breakdown.expenseTotal), tone: 'expense', explain: REPORT_METRIC_HINTS.consumptionSpend },
         { key: 'week', label: 'Weekday spend', value: formatMoney(weekTotal), hint: periodLabel, explain: REPORT_METRIC_HINTS.consumptionSpend },
       ],
-      chartTitle: 'Expense by reporting tag',
+      chartTitle: 'Expense by classification',
       chartOption: {
-        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        tooltip: {
+          trigger: 'item',
+          formatter: (p: { name?: string; value?: number; percent?: number }) =>
+            `${p.name ?? ''}<br/>${formatMoney(Number(p.value ?? 0))} (${Number(p.percent ?? 0).toFixed(1)}%)`,
+        },
         legend: {
           type: 'scroll',
-          orient: 'horizontal',
-          bottom: 0,
-          left: 'center',
+          orient: 'vertical',
+          right: 0,
+          top: 'middle',
           textStyle: { fontSize: 11 },
         },
         series: [{
           type: 'pie',
-          radius: ['38%', '58%'],
-          center: ['50%', '42%'],
-          data: topRows.map((r) => ({ name: r.label, value: r.amount, tagId: r.tagId })),
+          radius: ['40%', '62%'],
+          center: ['36%', '50%'],
+          data: topRows.map((r) => ({
+            name: r.classification || r.label,
+            value: r.amount,
+            tagId: r.tagId,
+          })),
           label: { show: false },
           labelLine: { show: false },
-          emphasis: {
-            label: { show: true, fontSize: 12, fontWeight: 600 },
-          },
         }],
       },
       tableCols: [
@@ -205,7 +199,7 @@ export function buildReportView(
         { title: 'Amount', dataIndex: 'amount', unit: 'CNY', align: 'right', sortType: 'number' },
         { title: 'Share', dataIndex: 'sharePct', align: 'right', sortType: 'percent', render: (v) => `${Number(v).toFixed(1)}%` },
       ],
-      tableData: tableRows.map((r) => ({ ...r })),
+      tableData: breakdown.rows.map((r) => ({ key: r.tagId, ...r })),
       tableSummary: { classification: 'Total', amount: breakdown.expenseTotal, sharePct: 100 },
     }
   }

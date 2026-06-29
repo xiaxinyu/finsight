@@ -8,17 +8,21 @@ import {
 } from './semanticBreakdownReport'
 
 describe('semanticBreakdownReport', () => {
-  it('maps rows to report points by label and tag code', () => {
+  it('maps rows to report points by classification path', () => {
     const pts = semanticBreakdownToReportPoints([
-      { tagId: 'dining_spending', label: 'Dining', amount: 100 },
+      { tagId: 'dining_spending', label: 'Dining', classification: 'Expense / Dining', amount: 100 },
     ])
-    expect(pts[0]).toEqual({ key: 'dining_spending', value: 100, code: 'dining_spending', name: 'Dining' })
+    expect(pts[0]).toEqual({ key: 'dining_spending', value: 100, code: 'dining_spending', name: 'Expense / Dining' })
   })
 
   it('rolls excess rows into Other', () => {
     const rows = Array.from({ length: 12 }, (_, i) => ({
       tagId: `tag_${i}`,
       label: `Tag ${i}`,
+      classL1: 'Expense',
+      classL2: `Tag ${i}`,
+      classification: `Expense / Tag ${i}`,
+      txnType: 'Expense' as const,
       group: 'expense' as const,
       amount: 100 - i,
       sharePct: 10,
@@ -36,8 +40,28 @@ describe('semanticBreakdownReport', () => {
   it('builds fixed vs variable insights', () => {
     const breakdown: SemanticBreakdown = {
       rows: [
-        { tagId: 'fixed_housing', label: 'Housing', group: 'fixed', amount: 5000, sharePct: 50 },
-        { tagId: 'dining_spending', label: 'Dining', group: 'expense', amount: 5000, sharePct: 50 },
+        {
+          tagId: 'fixed_housing',
+          label: 'Housing',
+          classL1: 'Fixed',
+          classL2: 'Housing',
+          classification: 'Fixed / Housing',
+          txnType: 'Expense',
+          group: 'fixed',
+          amount: 5000,
+          sharePct: 50,
+        },
+        {
+          tagId: 'dining_spending',
+          label: 'Dining',
+          classL1: 'Expense',
+          classL2: 'Dining',
+          classification: 'Expense / Dining',
+          txnType: 'Expense',
+          group: 'expense',
+          amount: 5000,
+          sharePct: 50,
+        },
       ],
       expenseTotal: 10000,
       fixedTotal: 5000,

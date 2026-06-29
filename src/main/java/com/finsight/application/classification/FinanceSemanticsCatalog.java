@@ -202,6 +202,34 @@ public final class FinanceSemanticsCatalog {
         };
     }
 
+    /** Level-1 Reporting Classification row (picker group title). */
+    public static String semanticTagPickerRowLabel(String tagId) {
+        return switch (semanticTagGroup(tagId)) {
+            case "income" -> "Income";
+            case "fixed" -> "Fixed";
+            case "capital" -> "Capital";
+            case "other" -> "Expense";
+            default -> "Expense";
+        };
+    }
+
+    /** Level-2 semantic tag label (English). */
+    public static String semanticTagLevel2Label(String tagId) {
+        return semanticTagLabel(tagId);
+    }
+
+    /** Display path: {@code Expense / Dining}, {@code Fixed / Housing}. */
+    public static String semanticTagClassification(String tagId) {
+        String l1 = semanticTagPickerRowLabel(tagId);
+        String l2 = semanticTagLevel2Label(tagId);
+        return l1 + " / " + l2;
+    }
+
+    /** Transaction type for reports: Income or Expense only. */
+    public static String semanticTagTxnTypeLabel(String tagId) {
+        return "income".equals(semanticTagGroup(tagId)) ? "Income" : "Expense";
+    }
+
     public static String budgetBehaviorLabel(String behavior) {
         return switch (behavior) {
             case "fixed" -> "Fixed";

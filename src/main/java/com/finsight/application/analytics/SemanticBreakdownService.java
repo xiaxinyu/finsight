@@ -50,7 +50,13 @@ public class SemanticBreakdownService {
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("tagId", row.tagId());
-            out.put("label", FinanceSemanticsCatalog.semanticTagLabel(row.tagId()));
+            String classL1 = FinanceSemanticsCatalog.semanticTagPickerRowLabel(row.tagId());
+            String classL2 = FinanceSemanticsCatalog.semanticTagLevel2Label(row.tagId());
+            out.put("classL1", classL1);
+            out.put("classL2", classL2);
+            out.put("classification", FinanceSemanticsCatalog.semanticTagClassification(row.tagId()));
+            out.put("txnType", FinanceSemanticsCatalog.semanticTagTxnTypeLabel(row.tagId()));
+            out.put("label", classL2);
             out.put("group", group);
             out.put("amount", round2(row.amount()));
             out.put("sharePct", expenseTotal > 0 ? round1(row.amount() * 100.0 / expenseTotal) : 0.0);

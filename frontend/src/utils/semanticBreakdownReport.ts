@@ -3,6 +3,10 @@ import type { ReportPoint } from '../api/report'
 export type SemanticBreakdownRow = {
   tagId: string
   label: string
+  classL1: string
+  classL2: string
+  classification: string
+  txnType: 'Expense' | 'Income'
   group: 'expense' | 'fixed' | 'income' | 'capital' | 'other'
   amount: number
   sharePct: number
@@ -26,13 +30,13 @@ export function isDrillableSemanticTag(tagId?: string | null): boolean {
 }
 
 export function semanticBreakdownToReportPoints(
-  rows: Array<Pick<SemanticBreakdownRow, 'tagId' | 'label' | 'amount'>>,
+  rows: Array<Pick<SemanticBreakdownRow, 'tagId' | 'label' | 'classification' | 'amount'>>,
 ): ReportPoint[] {
   return rows.map((r) => ({
     key: r.tagId,
     value: r.amount,
     code: r.tagId,
-    name: r.label,
+    name: r.classification || r.label,
   }))
 }
 
@@ -47,6 +51,10 @@ export function topSemanticRows(rows: SemanticBreakdownRow[], topN = 10): Semant
   return [...head, {
     tagId: 'other_combined',
     label: 'Other',
+    classL1: 'Expense',
+    classL2: 'Other',
+    classification: 'Expense / Other',
+    txnType: 'Expense' as const,
     group: 'expense',
     amount: otherAmount,
     sharePct: otherShare,
@@ -72,7 +80,7 @@ export function insightsSemanticStructure(
   }
   const top = breakdown.rows[0]
   if (top) {
-    bullets.push({ text: `Largest bucket: ${top.label} (${top.sharePct.toFixed(1)}%, ${formatCompact(top.amount)}).` })
+    bullets.push({ text: `Largest bucket: ${top.classification || top.label} (${top.sharePct.toFixed(1)}%, ${formatCompact(top.amount)}).` })
   }
   const medical = breakdown.rows.find((r) => r.tagId === 'medical_spending')
   if (medical && medical.sharePct >= 8) {

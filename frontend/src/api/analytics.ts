@@ -103,6 +103,10 @@ export type SemanticBreakdownResponse = {
   rows: Array<{
     tagId: string
     label: string
+    classL1: string
+    classL2: string
+    classification: string
+    txnType: string
     group: string
     amount: number
     sharePct: number

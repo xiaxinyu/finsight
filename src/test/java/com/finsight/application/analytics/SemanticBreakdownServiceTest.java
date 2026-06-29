@@ -42,9 +42,15 @@ class SemanticBreakdownServiceTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rows = (List<Map<String, Object>>) out.get("rows");
         assertEquals("Dining", rows.get(0).get("label"));
+        assertEquals("Expense", rows.get(0).get("classL1"));
+        assertEquals("Dining", rows.get(0).get("classL2"));
+        assertEquals("Expense / Dining", rows.get(0).get("classification"));
+        assertEquals("Expense", rows.get(0).get("txnType"));
         assertEquals("expense", rows.get(0).get("group"));
         assertEquals("Housing", rows.get(1).get("label"));
-        assertEquals("fixed", rows.get(1).get("group"));
+        assertEquals("Fixed", rows.get(1).get("classL1"));
+        assertEquals("Fixed / Housing", rows.get(1).get("classification"));
+        assertEquals("Expense", rows.get(1).get("txnType"));
     }
 
     @Test

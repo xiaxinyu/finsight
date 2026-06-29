@@ -109,12 +109,11 @@ export function ReportsPage() {
       }
       if (cfg.type === 'homeBuckets') {
         const r = periodToStrings(applied.period)
-        const [semanticBreakdown, week, categoryRows] = await Promise.all([
+        const [semanticBreakdown, week] = await Promise.all([
           fetchSemanticBreakdown(r.start, r.end, semanticFilters),
           fetchReport('/transaction-report/week-consume', baseParams),
-          fetchReport('/transaction-report/consume', baseParams),
         ])
-        return { semanticBreakdown, week, categoryRows }
+        return { semanticBreakdown, week }
       }
       if (cfg.type === 'incomeVsExpense') {
         const r = periodToStrings(applied.period)
@@ -160,7 +159,7 @@ export function ReportsPage() {
 
   const tableScrollY = view?.tableData && view.tableData.length > 10 ? 280 : undefined
 
-  const usesSemanticChartDrill = cfg?.type === 'homeBuckets'
+  const usesSemanticDrill = cfg?.type === 'homeBuckets'
 
   const openDrillDown = (
     categorySlice?: string | CategoryDrillSlice,
@@ -211,7 +210,7 @@ export function ReportsPage() {
       seriesIndex?: number
       data?: { tagId?: string; level1Code?: string; level1Name?: string; code?: string }
     }
-    if (usesSemanticChartDrill && p.data?.tagId) {
+    if (usesSemanticDrill && p.data?.tagId) {
       if (!isDrillableSemanticTag(p.data.tagId)) return
       openDrillDown(undefined, p.seriesIndex, { tagId: p.data.tagId, label: p.name || p.data.tagId })
       return
@@ -429,18 +428,15 @@ export function ReportsPage() {
                   fixedLayout={false}
                   onRow={(record) => ({
                     onClick: () => {
-                      if (usesSemanticChartDrill) {
-                        const name = String(record.categoryName ?? record.classification ?? record.key ?? '')
-                        if (!name || name === 'Total') return
-                        openDrillDown({
-                          key: name,
-                          level1Code: record.level1Code as string | undefined,
-                          level1Name: record.level1Name as string | undefined,
-                          code: record.categoryCode as string | undefined,
-                        })
+                      if (usesSemanticDrill) {
+                        const tagId = String(record.tagId ?? record.key ?? '')
+                        const label = String(record.classification ?? record.label ?? tagId)
+                        if (isDrillableSemanticTag(tagId)) {
+                          openDrillDown(undefined, undefined, { tagId, label })
+                        }
                         return
                       }
-                      const name = String(record.key || record.label || record.classification || '')
+                      const name = String(record.key || record.label || '')
                       if (name && name !== 'Total') {
                         openDrillDown({
                           key: name,
