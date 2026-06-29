@@ -236,7 +236,19 @@
                 )
             </if>
             <if test="q.consumeName != null">
-                and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+                and (
+                    t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+                    or cat.name = #{q.consumeName,jdbcType=VARCHAR}
+                    or exists (
+                        select 1 from cls_category parent
+                        where parent.deleted != 1
+                          and parent.name = #{q.consumeName,jdbcType=VARCHAR}
+                          and (
+                              cat.parent_id = parent.code
+                              or cat.parent_id = parent.id
+                          )
+                    )
+                )
             </if>
             <if test="q.demoArea != null">
                 and (
@@ -620,7 +632,19 @@
                 )
             </if>
             <if test="q.consumeName != null">
-                and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+                and (
+                    t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+                    or cat.name = #{q.consumeName,jdbcType=VARCHAR}
+                    or exists (
+                        select 1 from cls_category parent
+                        where parent.deleted != 1
+                          and parent.name = #{q.consumeName,jdbcType=VARCHAR}
+                          and (
+                              cat.parent_id = parent.code
+                              or cat.parent_id = parent.id
+                          )
+                    )
+                )
             </if>
             <if test="q.demoArea != null">
                 and (
@@ -691,7 +715,19 @@
                 )
             </if>
             <if test="q.consumeName != null">
-                and t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+                and (
+                    t.consume_name = #{q.consumeName,jdbcType=VARCHAR}
+                    or cat.name = #{q.consumeName,jdbcType=VARCHAR}
+                    or exists (
+                        select 1 from cls_category parent
+                        where parent.deleted != 1
+                          and parent.name = #{q.consumeName,jdbcType=VARCHAR}
+                          and (
+                              cat.parent_id = parent.code
+                              or cat.parent_id = parent.id
+                          )
+                    )
+                )
             </if>
             <if test="q.demoArea != null">
                 and (t.memo like CONCAT('%', #{q.demoArea,jdbcType=VARCHAR}, '%')

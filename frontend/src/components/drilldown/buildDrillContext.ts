@@ -31,15 +31,18 @@ export function buildReportDrillContext(input: {
   provenance?: DrillDownContext['provenance']
 }): DrillDownContext {
   const category = input.params.consumeName
+  const categoryGroup = input.params.consumeID
   const semanticTag = input.params.semanticFilter
   const explanation = input.explanation?.length
     ? input.explanation
     : [
         semanticTag
           ? `Drill into "${input.metricLabel}" classification for the selected period.`
-          : category
-            ? `Drill into "${category}" for the selected period.`
-            : 'Explore category and merchant contribution for this slice.',
+          : categoryGroup && !category
+            ? `Drill into "${input.metricLabel}" and its subcategories for the selected period.`
+            : category
+              ? `Drill into "${category}" for the selected period.`
+              : 'Explore category and merchant contribution for this slice.',
         'Use breakdown to see where spending clusters, then open transactions for line-level review.',
       ]
   return {
@@ -111,6 +114,36 @@ export function drillParamsForCategory(
     txnTypes,
     consumeName: categoryName,
   }
+}
+
+export type CategoryDrillSlice = {
+  key: string
+  code?: string
+  level1Code?: string
+  level1Name?: string
+}
+
+/** Drill by L1 group (includes child categories) or leaf category name/code. */
+export function drillParamsForCategorySlice(
+  slice: CategoryDrillSlice,
+  periodStart: string,
+  periodEnd: string,
+  txnTypes: 'income' | 'expense' = 'expense',
+): Record<string, string> {
+  const base = {
+    transactionDateStartStr: periodStart,
+    transactionDateEndStr: periodEnd,
+    txnTypes,
+  }
+  const l1Code = slice.level1Code?.trim()
+  if (l1Code && (slice.key === slice.level1Name || slice.key === l1Code)) {
+    return { ...base, consumeID: l1Code }
+  }
+  const code = slice.code?.trim()
+  if (code) {
+    return { ...base, consumeID: code }
+  }
+  return { ...base, consumeName: slice.key }
 }
 
 export function drillParamsForYearMonth(

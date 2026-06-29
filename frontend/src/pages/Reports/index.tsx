@@ -15,7 +15,7 @@ import { InsightPanel } from '../../components/InsightPanel'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
-import { buildReportDrillContext, drillParamsForSemanticTag } from '../../components/drilldown/buildDrillContext'
+import { buildReportDrillContext, drillParamsForCategorySlice, drillParamsForSemanticTag, type CategoryDrillSlice } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -160,7 +160,7 @@ export function ReportsPage() {
   const usesSemanticDrill = cfg?.type === 'homeBuckets'
 
   const openDrillDown = (
-    categoryName?: string,
+    categorySlice?: string | CategoryDrillSlice,
     seriesIndex?: number,
     semantic?: { tagId: string; label: string },
   ) => {
@@ -175,13 +175,15 @@ export function ReportsPage() {
     if (semantic?.tagId) {
       if (!isDrillableSemanticTag(semantic.tagId)) return
       Object.assign(next, drillParamsForSemanticTag(semantic.tagId, r.start, r.end, (cfg.txnType || 'expense') as 'income' | 'expense'))
-    } else if (categoryName) {
-      next.consumeName = categoryName
+    } else if (categorySlice && typeof categorySlice === 'object') {
+      Object.assign(next, drillParamsForCategorySlice(categorySlice, r.start, r.end, (cfg.txnType || 'expense') as 'income' | 'expense'))
+    } else if (typeof categorySlice === 'string' && categorySlice) {
+      Object.assign(next, drillParamsForCategorySlice({ key: categorySlice }, r.start, r.end, (cfg.txnType || 'expense') as 'income' | 'expense'))
     }
     if (applied.card) next.cardId = applied.card
-    if (applied.consume) next.consumeID = applied.consume
+    if (applied.consume && !next.consumeID) next.consumeID = applied.consume
     const periodLabel = formatPeriodPreview(range[0], range[1])
-    const sliceLabel = semantic?.label || categoryName
+    const sliceLabel = semantic?.label || (typeof categorySlice === 'string' ? categorySlice : categorySlice?.key)
     const title = sliceLabel ? `${sliceLabel} · ${periodLabel}` : `${cfg.title} · ${periodLabel}`
     const insights = view?.insights.map((b) => b.text) || []
     const explanation = sliceLabel
@@ -195,19 +197,30 @@ export function ReportsPage() {
       source: 'report',
       provenance: {
         reportId,
-        sourceView: semantic?.tagId ? 'semantic classification slice' : categoryName ? 'chart category slice' : 'report chart',
+        sourceView: semantic?.tagId ? 'semantic classification slice' : categorySlice ? 'chart category slice' : 'report chart',
       },
     }))
   }
 
   const onChartClick = (params: unknown) => {
-    const p = params as { name?: string; seriesIndex?: number; data?: { tagId?: string } }
+    const p = params as {
+      name?: string
+      seriesIndex?: number
+      data?: { tagId?: string; level1Code?: string; level1Name?: string; code?: string }
+    }
     if (usesSemanticDrill && p.data?.tagId) {
       if (!isDrillableSemanticTag(p.data.tagId)) return
       openDrillDown(undefined, p.seriesIndex, { tagId: p.data.tagId, label: p.name || p.data.tagId })
       return
     }
-    if (p.name) openDrillDown(p.name, p.seriesIndex)
+    if (p.name) {
+      openDrillDown({
+        key: p.name,
+        level1Code: p.data?.level1Code,
+        level1Name: p.data?.level1Name,
+        code: p.data?.code,
+      }, p.seriesIndex)
+    }
   }
 
   const handleApply = () => apply(() => refetch())
@@ -421,7 +434,14 @@ export function ReportsPage() {
                         return
                       }
                       const name = String(record.key || record.label || '')
-                      if (name && name !== 'Total') openDrillDown(name)
+                      if (name && name !== 'Total') {
+                        openDrillDown({
+                          key: name,
+                          level1Code: record.level1Code as string | undefined,
+                          level1Name: record.level1Name as string | undefined,
+                          code: record.code as string | undefined,
+                        })
+                      }
                     },
                     style: { cursor: 'pointer' },
                   })}

@@ -16,7 +16,7 @@ import { advisorFeedback, advisorRecommendations, fetchMetricPeriodSummary } fro
 import type { AdvisorCard } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
-import { buildDashboardDrillContext, drillParamsForCategory, drillParamsForMonth } from '../../components/drilldown/buildDrillContext'
+import { buildDashboardDrillContext, drillParamsForCategorySlice, drillParamsForMonth, type CategoryDrillSlice } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -131,7 +131,12 @@ export function DashboardPage() {
   const trustPct = dataTrustScore(unclassified)
 
   const pieData = useMemo(
-    () => (periodReport?.topCats || []).map((r) => ({ name: r.key, value: r.value })),
+    () => (periodReport?.topCats || []).map((r) => ({
+      name: r.key,
+      value: r.value,
+      level1Code: r.level1Code,
+      level1Name: r.level1Name,
+    })),
     [periodReport?.topCats],
   )
 
@@ -189,14 +194,14 @@ export function DashboardPage() {
     }))
   }
 
-  const openCategoryDrill = (categoryName: string) => {
+  const openCategoryDrill = (slice: CategoryDrillSlice) => {
     if (!periodKey.start || !periodKey.end) return
     openDrill(buildDashboardDrillContext({
-      title: `${categoryName} · ${periodLabel}`,
-      metricLabel: categoryName,
-      params: drillParamsForCategory(categoryName, periodKey.start, periodKey.end),
+      title: `${slice.key} · ${periodLabel}`,
+      metricLabel: slice.key,
+      params: drillParamsForCategorySlice(slice, periodKey.start, periodKey.end),
       explanation: [
-        `${categoryName} is among your top expense categories this period.`,
+        `${slice.key} is among your top expense categories this period.`,
         (periodReport?.top3Share ?? 0) >= 50
           ? `Top-3 categories account for ${(periodReport?.top3Share ?? 0).toFixed(1)}% of spend — high concentration.`
           : 'Spending is relatively diversified across categories.',
@@ -353,8 +358,15 @@ export function DashboardPage() {
                   }}
                   onEvents={{
                     click: (p) => {
-                      const name = (p as { name?: string }).name
-                      if (name) openCategoryDrill(name)
+                      const evt = p as { name?: string; data?: CategoryDrillSlice & { value?: number } }
+                      if (evt.name) {
+                        openCategoryDrill({
+                          key: evt.name,
+                          level1Code: evt.data?.level1Code,
+                          level1Name: evt.data?.level1Name ?? evt.name,
+                          code: evt.data?.level1Code,
+                        })
+                      }
                     },
                   }}
                 />

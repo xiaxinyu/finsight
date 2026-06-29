@@ -104,15 +104,29 @@ export function enrichCategoryRows(rows: ReportPoint[]): CategoryRow[] {
 
 /** Roll up leaf categories to level-1 parents for clearer charts. */
 export function rollupToLevel1(rows: ReportPoint[]): ReportPoint[] {
-  const map = new Map<string, number>()
+  const map = new Map<string, { value: number; level1Code?: string; level1Name?: string }>()
   for (const r of rows) {
     if (!Number.isFinite(r.value) || r.value <= 0) continue
     const label = r.level1Name || r.level1Code || r.key
     if (!label) continue
-    map.set(label, (map.get(label) ?? 0) + r.value)
+    const prev = map.get(label) ?? {
+      value: 0,
+      level1Code: r.level1Code,
+      level1Name: r.level1Name || label,
+    }
+    prev.value += r.value
+    if (!prev.level1Code && r.level1Code) prev.level1Code = r.level1Code
+    map.set(label, prev)
   }
   return [...map.entries()]
-    .map(([key, value]) => ({ key, value }))
+    .map(([key, meta]) => ({
+      key,
+      value: meta.value,
+      level1Code: meta.level1Code,
+      level1Name: meta.level1Name,
+      code: meta.level1Code,
+      name: meta.level1Name,
+    }))
     .sort((a, b) => b.value - a.value)
 }
 

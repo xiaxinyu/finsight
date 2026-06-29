@@ -3,6 +3,7 @@ import {
   buildDashboardDrillContext,
   buildReportDrillContext,
   drillParamsForCategory,
+  drillParamsForCategorySlice,
   drillParamsForMerchant,
   drillParamsForMonth,
   drillParamsForSemanticTag,
@@ -73,6 +74,19 @@ describe('buildDrillContext', () => {
       transactionDateEndStr: '2026-01-31',
       txnTypes: 'expense',
       semanticFilter: 'dining_spending',
+    })
+  })
+
+  it('drillParamsForCategorySlice uses L1 code for rolled-up groups', () => {
+    expect(drillParamsForCategorySlice(
+      { key: '日常生活', level1Code: 'LIVING', level1Name: '日常生活' },
+      '2026-01-01',
+      '2026-06-30',
+    )).toEqual({
+      transactionDateStartStr: '2026-01-01',
+      transactionDateEndStr: '2026-06-30',
+      txnTypes: 'expense',
+      consumeID: 'LIVING',
     })
   })
 

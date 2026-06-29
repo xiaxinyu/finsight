@@ -41,6 +41,7 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
       context.params.transactionDateStartStr,
       context.params.transactionDateEndStr,
       context.params.consumeName,
+      context.params.consumeID,
       context.params.semanticFilter,
       context.params.merchantLabel,
       context.params.merchantToken,

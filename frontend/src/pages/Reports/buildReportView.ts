@@ -347,7 +347,13 @@ export function buildReportView(
           type: 'pie',
           radius: ['44%', '70%'],
           center: ['50%', '52%'],
-          data: top.map((r) => ({ name: r.key, value: r.value })),
+          data: top.map((r) => ({
+            name: r.key,
+            value: r.value,
+            level1Code: r.level1Code,
+            level1Name: r.level1Name,
+            code: r.code,
+          })),
           label: { fontSize: 11, formatter: '{b}\n{d}%' },
         }],
       } : {
@@ -361,7 +367,14 @@ export function buildReportView(
         { title: 'Amount', dataIndex: 'value', unit: 'CNY', align: 'right', sortType: 'number' },
         { title: 'Share', dataIndex: 'share', align: 'right', sortType: 'percent', render: (v) => `${Number(v).toFixed(1)}%` },
       ],
-      tableData: top.map((r) => ({ key: r.key, value: r.value, share: r.share })),
+      tableData: top.map((r) => ({
+        key: r.key,
+        value: r.value,
+        share: r.share,
+        level1Code: r.level1Code,
+        level1Name: r.level1Name,
+        code: r.code,
+      })),
       tableSummary: { key: 'Total', value: total, share: 100 },
     }
   }
