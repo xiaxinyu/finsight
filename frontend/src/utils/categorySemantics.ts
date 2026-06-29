@@ -138,6 +138,7 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
       'fixed_tuition',
       'fixed_repayment',
       'fixed_misc',
+      'subscription_spending',
     ],
   },
   {
@@ -330,8 +331,9 @@ export function inferExpenseDomainTag(
   if (/餐饮|外卖|堂食|早餐|咖啡|饭店|吃饭|小吃/.test(name)) return 'dining_spending'
   if (/娱乐|旅行|旅游|酒店|景点|门票|电影|演出|游戏|健身|运动/.test(name)) return 'entertainment_spending'
   if (/培训|书籍|资料|课程/.test(name)) return 'education_spending'
+  if (/宠物/.test(name)) return 'daily_spending'
   if (/医疗|医院|药|体检|挂号|牙科|疫苗/.test(name)) return 'medical_spending'
-  if (/宠物|家政|快递|保洁|维修/.test(name)) return 'daily_spending'
+  if (/家政|快递|保洁|维修/.test(name)) return 'daily_spending'
 
   if (parent === 'SHOPPING' || parent === 'SHOP') return 'shopping_spending'
   if (parent === 'TRANSPORT' || parent === 'TRAVEL') return 'transport_spending'
@@ -401,21 +403,65 @@ export function txnTypeFilter(txnTypes?: string): TxnTypeFilter {
   return 'both'
 }
 
+/** L1 / domain parents where Capital tags are rarely needed on the category itself. */
+const EXPENSE_DOMAIN_PARENTS = new Set([
+  'LIVING', 'DAILY', 'SHOPPING', 'SHOP', 'TRANSPORT', 'TRAVEL', 'ENT', 'EDU', 'GIFT', 'SOCIAL', 'OTHER', 'FEE', 'FE',
+])
+
+const CAPITAL_SEMANTIC_TAGS = new Set<SemanticTagId>([
+  'transfer', 'investment', 'liability', 'asset_adjustment',
+])
+
+export function isCapitalSemanticTag(tag?: string | null): boolean {
+  return Boolean(tag && CAPITAL_SEMANTIC_TAGS.has(tag.trim() as SemanticTagId))
+}
+
+/** Hide Capital row by default for everyday expense categories; advanced users can expand. */
+export function shouldHideCapitalRow(
+  parentId?: string,
+  categoryCode?: string,
+  txnTypes?: string,
+): boolean {
+  const parent = (parentId ?? '').trim().toUpperCase()
+  const code = (categoryCode ?? '').trim().toUpperCase()
+  const filter = txnTypeFilter(txnTypes)
+  const codeRoot = code.includes('-') ? code.split('-')[0] : code
+
+  if (parent === 'REIM' || parent === 'REIMB' || code.startsWith('REIM-')) return true
+  if (['ASSET', 'LIABILITY', 'INVEST', 'WEALTH', 'FP'].includes(parent)) return false
+  if ((parent === 'INC' || parent === 'INCOME') && filter !== 'expense') return false
+
+  if (parent === 'FIXED' || code.startsWith('FIXED-')) return true
+  if (EXPENSE_DOMAIN_PARENTS.has(parent) || EXPENSE_DOMAIN_PARENTS.has(codeRoot)) return true
+  if (filter === 'expense') return true
+  if (filter === 'both' && (EXPENSE_DOMAIN_PARENTS.has(parent) || EXPENSE_DOMAIN_PARENTS.has(codeRoot))) {
+    return true
+  }
+  return false
+}
+
+export type SemanticTagGroupFilterOptions = {
+  /** When true, include Capital row even if hidden by default for this category. */
+  includeCapital?: boolean
+}
+
 export function filterSemanticTagGroups(
   groups: Array<{ title: string; appliesTo?: string; tags: SemanticTagId[] }>,
   txnTypes?: string,
   parentId?: string,
   categoryCode?: string,
+  options?: SemanticTagGroupFilterOptions,
 ) {
   const filter = txnTypeFilter(txnTypes)
   const parent = (parentId ?? '').trim().toUpperCase()
   const code = (categoryCode ?? '').trim().toUpperCase()
+  const includeCapital = options?.includeCapital ?? !shouldHideCapitalRow(parentId, categoryCode, txnTypes)
 
   if (parent === 'REIM' || parent === 'REIMB' || code.startsWith('REIM-')) {
     return groups.filter((g) => g.appliesTo === 'income')
   }
   if (parent === 'FIXED' || code.startsWith('FIXED-')) {
-    return groups.filter((g) => g.title === 'Fixed' || g.appliesTo === 'capital')
+    return groups.filter((g) => g.title === 'Fixed' || (includeCapital && g.appliesTo === 'capital'))
   }
   if ((parent === 'INC' || parent === 'INCOME') && filter === 'income') {
     return groups.filter((g) => g.appliesTo === 'income')
@@ -426,9 +472,12 @@ export function filterSemanticTagGroups(
   }
 
   return groups.filter((g) => {
+    if (g.appliesTo === 'capital' || g.title === 'Capital') {
+      return includeCapital
+    }
     const applies = g.appliesTo ?? 'both'
     if (filter === 'both') return true
-    if (applies === 'both' || applies === 'capital') return true
+    if (applies === 'both') return true
     if (filter === 'income') return applies === 'income'
     if (filter === 'expense') return applies === 'expense'
     return true
@@ -547,6 +596,7 @@ export function profileCategorySemantics(
   parentId?: string,
   categoryCode?: string,
   storedSemanticTag?: string | null,
+  categoryName?: string,
 ): CategorySemanticProfile {
   const role = effectiveReportRole(reportRole, txnTypes, parentId, categoryCode).toLowerCase()
   const txn = (txnTypes ?? '').toLowerCase()
@@ -561,7 +611,7 @@ export function profileCategorySemantics(
 
   const excluded = role === 'transfer' || role === 'refund' || role === 'investment'
     || role === 'liability' || role === 'asset'
-  const semanticTag = resolveSemanticTag(storedSemanticTag, role, parentId, categoryCode, txnTypes)
+  const semanticTag = resolveSemanticTag(storedSemanticTag, role, parentId, categoryCode, txnTypes, categoryName)
   const includeInIncomeTrend = role === 'income' && txn.includes('income')
   const includeInExpenseTrend = !excluded
     && txn.includes('expense')

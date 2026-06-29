@@ -13,6 +13,7 @@ import {
   semanticTagLabel,
   filterSemanticTagGroups,
   SEMANTIC_TAG_GROUPS,
+  shouldHideCapitalRow,
 } from './categorySemantics'
 
 describe('categorySemantics', () => {
@@ -44,6 +45,23 @@ describe('categorySemantics', () => {
     expect(incomeOnly.some((g) => g.appliesTo === 'expense' && g.title === 'Expense')).toBe(false)
   })
 
+  it('hides capital row for everyday expense categories', () => {
+    expect(shouldHideCapitalRow('LIVING', 'LIVING-08', 'expense')).toBe(true)
+    const living = filterSemanticTagGroups(SEMANTIC_TAG_GROUPS, 'expense', 'LIVING', 'LIVING-08')
+    expect(living.some((g) => g.title === 'Capital')).toBe(false)
+    expect(living.some((g) => g.title === 'Expense')).toBe(true)
+    const withCapital = filterSemanticTagGroups(
+      SEMANTIC_TAG_GROUPS, 'expense', 'LIVING', 'LIVING-08', { includeCapital: true },
+    )
+    expect(withCapital.some((g) => g.title === 'Capital')).toBe(true)
+  })
+
+  it('keeps capital row for asset and liability trees', () => {
+    expect(shouldHideCapitalRow('ASSET', 'ASSET-01', 'expense')).toBe(false)
+    const asset = filterSemanticTagGroups(SEMANTIC_TAG_GROUPS, 'expense', 'ASSET', 'ASSET-01')
+    expect(asset.some((g) => g.title === 'Capital')).toBe(true)
+  })
+
   it('maps semantic tags to stored report roles', () => {
     expect(reportRoleFromSemanticSelection('daily_spending')).toBe('budget')
     expect(reportRoleFromSemanticSelection('medical_spending')).toBe('budget')
@@ -58,6 +76,7 @@ describe('categorySemantics', () => {
   it('infers medical from category name', () => {
     expect(semanticTagFromReportRole('budget', 'LIVING', 'DAILY-05', 'expense', '医疗药品')).toBe('medical_spending')
     expect(semanticTagFromReportRole('budget', 'LIVING', 'LIVING-06', 'expense', '基础医疗')).toBe('medical_spending')
+    expect(semanticTagFromReportRole('budget', 'LIVING', 'LIVING-08', 'expense', '宠物支出（食品、医疗）')).toBe('daily_spending')
   })
 
   it('derives semantic tag from report role and category tree', () => {

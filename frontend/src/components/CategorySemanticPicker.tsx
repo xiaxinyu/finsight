@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Alert, Tag, Typography } from 'antd'
 import {
   catalogSemanticTagLabel,
@@ -8,6 +9,7 @@ import {
   compactGroupTitle,
   filterSemanticTagGroups,
   inclusionSummary,
+  isCapitalSemanticTag,
   isFlatFixedSemanticTag,
   parentTxnMismatchWarning,
   profileCategorySemantics,
@@ -15,6 +17,7 @@ import {
   reportRoleFromSemanticSelection,
   resolveSemanticTag,
   semanticTagLabel,
+  shouldHideCapitalRow,
   txnTypeFilter,
 } from '../utils/categorySemantics'
 
@@ -102,7 +105,14 @@ export function CategorySemanticPicker({
 }: PickerProps) {
   const { data: catalog } = useSemanticsCatalog()
   const activeTag = resolveSemanticTag(semanticTag, reportRole, parentId, categoryCode, txnTypes, categoryName)
-  const preview = profileCategorySemantics(reportRole, txnTypes, parentId, categoryCode, activeTag)
+  const capitalHiddenByDefault = shouldHideCapitalRow(parentId, categoryCode, txnTypes)
+  const [capitalExpanded, setCapitalExpanded] = useState(() => isCapitalSemanticTag(activeTag))
+
+  useEffect(() => {
+    setCapitalExpanded(isCapitalSemanticTag(activeTag))
+  }, [parentId, categoryCode, txnTypes, activeTag])
+
+  const preview = profileCategorySemantics(reportRole, txnTypes, parentId, categoryCode, activeTag, categoryName)
   const allGroups = (catalog?.semanticTagGroups ?? []).map((g) => ({
     title: g.title,
     appliesTo: g.appliesTo,
@@ -113,6 +123,7 @@ export function CategorySemanticPicker({
     txnTypes,
     parentId,
     categoryCode,
+    { includeCapital: capitalExpanded || !capitalHiddenByDefault },
   )
   const reportSurfaces = (catalog?.reportSurfaces ?? []) as ReportSurface[]
   const txnFilter = txnTypeFilter(txnTypes)
@@ -194,6 +205,15 @@ export function CategorySemanticPicker({
           </div>
           )
         })}
+        {capitalHiddenByDefault && !capitalExpanded && (
+          <button
+            type="button"
+            className="fs-category-capital-expand"
+            onClick={() => setCapitalExpanded(true)}
+          >
+            Capital &amp; transfers…
+          </button>
+        )}
       </div>
 
       {showPreview && (

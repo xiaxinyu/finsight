@@ -226,7 +226,8 @@ public final class FinanceSemanticsCatalog {
         groups.add(tagGroup("Fixed", "expense",
                 List.of(
                         "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
-                        "fixed_tuition", "fixed_repayment", "fixed_misc")));
+                        "fixed_tuition", "fixed_repayment", "fixed_misc",
+                        "subscription_spending")));
         groups.add(tagGroup("Capital", "capital",
                 List.of("transfer", "investment", "liability", "asset_adjustment")));
         out.put("semanticTagGroups", groups);

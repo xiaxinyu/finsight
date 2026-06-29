@@ -31,7 +31,13 @@ class CategorySpendingDomainTest {
     }
 
     @Test
-    void petName_isGeneral() {
+    void petNameWithMedicalSubstring_isGeneralNotMedical() {
+        assertEquals("daily_spending",
+                CategorySpendingDomain.inferDomainTag("LIVING-08", "LIVING", "宠物支出（食品、医疗）").orElseThrow());
+    }
+
+    @Test
+    void dailyPetCode_isGeneral() {
         assertEquals("daily_spending",
                 CategorySpendingDomain.inferDomainTag("LIVING-11", "LIVING", "宠物").orElseThrow());
     }

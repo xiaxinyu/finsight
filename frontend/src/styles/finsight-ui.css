@@ -363,6 +363,23 @@
   font-size: 12px;
 }
 
+.fs-category-capital-expand {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1677ff;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.fs-category-capital-expand:hover {
+  color: #4096ff;
+}
+
 .fs-category-classification-body {
   display: flex;
   flex-direction: column;

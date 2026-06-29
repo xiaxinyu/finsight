@@ -77,6 +77,8 @@ public final class CategorySemanticDefaults {
             case "DAILY-01", "DAILY-02" -> "dining_spending";
             case "DAILY-03", "DAILY-04" -> "shopping_spending";
             case "DAILY-05" -> "medical_spending";
+            case "DAILY-06" -> "daily_spending";
+            case "DAILY-07" -> "daily_spending";
             case "SHOP-01", "SHOP-02", "SHOP-03", "SHOP-04", "SHOP-05", "SHOP-06" -> "shopping_spending";
             case "TRAVEL-01", "TRANS-02", "TRANS-03", "TRANS-04", "TRANS-05", "TRANS-07" -> "transport_spending";
             case "ENT-01", "ENT-02", "ENT-03", "ENT-04", "ENT-05", "ENT-06" -> "entertainment_spending";
