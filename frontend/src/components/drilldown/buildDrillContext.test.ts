@@ -5,6 +5,7 @@ import {
   drillParamsForCategory,
   drillParamsForMerchant,
   drillParamsForMonth,
+  drillParamsForSemanticTag,
   drillParamsForYearMonth,
   mergeDrillActions,
 } from './buildDrillContext'
@@ -64,6 +65,15 @@ describe('buildDrillContext', () => {
     expect(ctx.provenance?.reportId).toBe('cashflow')
     expect(ctx.provenance?.filterParams?.consumeName).toBe('Food')
     expect(ctx.provenance?.aggregateTotal).toBe(1200)
+  })
+
+  it('drillParamsForSemanticTag filters by semantic tag id', () => {
+    expect(drillParamsForSemanticTag('dining_spending', '2026-01-01', '2026-01-31')).toEqual({
+      transactionDateStartStr: '2026-01-01',
+      transactionDateEndStr: '2026-01-31',
+      txnTypes: 'expense',
+      semanticFilter: 'dining_spending',
+    })
   })
 
   it('buildDashboardDrillContext tags source dashboard', () => {

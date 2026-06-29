@@ -99,6 +99,32 @@ export async function fetchMetricPeriodSummary(from?: string, to?: string) {
   return unwrap<PeriodMetricSummary>(await getJson(`/api/v1/analytics/metrics/period-summary${suffix}`))
 }
 
+export type SemanticBreakdownResponse = {
+  rows: Array<{
+    tagId: string
+    label: string
+    group: string
+    amount: number
+    sharePct: number
+  }>
+  expenseTotal: number
+  fixedTotal: number
+  variableTotal: number
+  fixedSharePct: number
+  variableSharePct: number
+  metricsSource?: string
+  periodStart?: string
+  periodEnd?: string
+}
+
+export async function fetchSemanticBreakdown(from?: string, to?: string) {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return unwrap<SemanticBreakdownResponse>(await getJson(`/api/v1/analytics/metrics/semantic-breakdown${suffix}`))
+}
+
 export async function fetchProfileHistory(from: string, to: string, dimension?: string) {
   const params = new URLSearchParams({ from, to })
   if (dimension) params.set('dimension', dimension)

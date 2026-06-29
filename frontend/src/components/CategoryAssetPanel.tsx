@@ -64,6 +64,7 @@ function StatGridSkeleton() {
 type Props = {
   asset: CategoryAsset | null
   loading?: boolean
+  hideReportingClassification?: boolean
   onCreateCandidate?: (candidate: CategoryChildCandidate) => void
   onViewReportImpact?: () => void
 }
@@ -71,6 +72,7 @@ type Props = {
 export function CategoryAssetPanel({
   asset,
   loading,
+  hideReportingClassification,
   onCreateCandidate,
   onViewReportImpact,
 }: Props) {
@@ -102,6 +104,7 @@ export function CategoryAssetPanel({
 
   return (
     <div className="fs-category-asset-panel">
+      {!hideReportingClassification ? (
       <ContentCard title="Reporting Classification" size="small" className="fs-category-asset-card fs-category-semantics-card">
         <div className="fs-category-semantics-tags">
           <Tag color="blue">{semanticTagLabel(semantics.semanticTag)}</Tag>
@@ -122,6 +125,11 @@ export function CategoryAssetPanel({
           <Tag color={asset.includeInBudget ? 'geekblue' : 'default'}>Budget</Tag>
         </div>
       </ContentCard>
+      ) : (
+        <Typography.Paragraph type="secondary" className="fs-category-semantics-inclusion">
+          Reports: {inclusionSummary(semantics)}
+        </Typography.Paragraph>
+      )}
 
       <ContentCard title="Usage & coverage" size="small" className="fs-category-asset-card">
         {asset.qualityFlags?.length ? (

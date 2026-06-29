@@ -104,6 +104,9 @@
                             or sem.category_l1_code = 'OTHER'
                             or sem.category_code = 'OTHER')
                     </when>
+                    <otherwise>
+                        and sem.semantic_tag = #{q.semanticFilter,jdbcType=VARCHAR}
+                    </otherwise>
                 </choose>
             )
         </if>

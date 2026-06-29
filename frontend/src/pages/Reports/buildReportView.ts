@@ -18,6 +18,11 @@ import {
   monthSeriesFromPoints,
   sumReportPoints,
 } from '../../utils/reportAnalytics'
+import {
+  insightsSemanticStructure,
+  topSemanticRows,
+  type SemanticBreakdown,
+} from '../../utils/semanticBreakdownReport'
 import type dayjs from 'dayjs'
 import { REPORT_METRIC_HINTS } from '../../components/MetricExplanation'
 
@@ -145,6 +150,41 @@ export function buildReportView(
       ],
       tableData: enriched,
       tableSummary: { bucketKey: 'Total', limit: totalLimit, actual: totalActual, remaining: totalLimit - totalActual },
+    }
+  }
+
+  if ('semanticBreakdown' in data && data.semanticBreakdown) {
+    const breakdown = data.semanticBreakdown as SemanticBreakdown
+    const weekRows = ('week' in data && data.week) ? buildWeekdaySeries(data.week as ReportPoint[]) : []
+    const weekTotal = weekRows.reduce((s, d) => s + d.value, 0)
+    const topRows = topSemanticRows(breakdown.rows)
+    return {
+      insights: insightsSemanticStructure(breakdown, periodLabel),
+      kpis: [
+        { key: 'fixed', label: 'Fixed %', value: `${breakdown.fixedSharePct.toFixed(1)}%`, explain: REPORT_METRIC_HINTS.fixedShare },
+        { key: 'var', label: 'Variable %', value: `${breakdown.variableSharePct.toFixed(1)}%`, explain: REPORT_METRIC_HINTS.variableShare },
+        { key: 'total', label: 'Expense total', value: formatMoney(breakdown.expenseTotal), tone: 'expense', explain: REPORT_METRIC_HINTS.consumptionSpend },
+        { key: 'week', label: 'Weekday spend', value: formatMoney(weekTotal), hint: periodLabel, explain: REPORT_METRIC_HINTS.consumptionSpend },
+      ],
+      chartTitle: 'Expense by classification',
+      chartOption: {
+        tooltip: { trigger: 'item' },
+        series: [{
+          type: 'pie',
+          radius: ['44%', '70%'],
+          center: ['50%', '52%'],
+          data: topRows.map((r) => ({ name: r.label, value: r.amount, tagId: r.tagId })),
+          label: { fontSize: 11, formatter: '{b}\n{d}%' },
+        }],
+      },
+      tableCols: [
+        { title: 'Classification', dataIndex: 'label', sortType: 'text' },
+        { title: 'Type', dataIndex: 'group', sortType: 'text' },
+        { title: 'Amount', dataIndex: 'amount', unit: 'CNY', align: 'right', sortType: 'number' },
+        { title: 'Share', dataIndex: 'sharePct', align: 'right', sortType: 'percent', render: (v) => `${Number(v).toFixed(1)}%` },
+      ],
+      tableData: breakdown.rows.map((r) => ({ key: r.tagId, ...r })),
+      tableSummary: { label: 'Total', amount: breakdown.expenseTotal, sharePct: 100 },
     }
   }
 

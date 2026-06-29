@@ -6,6 +6,7 @@ import { formatPeriodPreview, type PeriodRange } from './periodPresets'
 
 export type SpendingDriftRow = {
   key: string
+  label: string
   periodA: number
   periodB: number
   delta: number
@@ -63,6 +64,10 @@ function monthlyRate(total: number, days: number): number {
 export function buildSpendingDriftRows(ptsA: ReportPoint[], ptsB: ReportPoint[]): SpendingDriftRow[] {
   const mapA = new Map(ptsA.map((p) => [p.key, p.value]))
   const mapB = new Map(ptsB.map((p) => [p.key, p.value]))
+  const labelOf = (key: string) => {
+    const pt = ptsA.find((p) => p.key === key) ?? ptsB.find((p) => p.key === key)
+    return pt?.name ?? key
+  }
   const keys = [...new Set([...mapA.keys(), ...mapB.keys()])]
   const totalShift = keys.reduce((s, key) => s + ((mapB.get(key) ?? 0) - (mapA.get(key) ?? 0)), 0)
   return keys.map((key) => {
@@ -71,6 +76,7 @@ export function buildSpendingDriftRows(ptsA: ReportPoint[], ptsB: ReportPoint[])
     const delta = periodB - periodA
     return {
       key,
+      label: labelOf(key),
       periodA,
       periodB,
       delta,
@@ -154,7 +160,7 @@ export function buildSpendingDriftKpis(
     },
     {
       key: 'cats',
-      label: 'Categories',
+      label: 'Buckets',
       value: String(keys.size),
       hint: comparable ? 'Comparable spans' : 'Align periods for fair %',
       tone: comparable ? 'neutral' : 'warn',
@@ -201,14 +207,14 @@ export function buildSpendingDriftInsights(
   const topDown = rows.find((r) => r.delta < 0)
   if (topUp) {
     bullets.push({
-      text: `Largest increase: “${topUp.key}” (+${formatMoney(topUp.delta)}${comparable ? `, +${topUp.deltaPct.toFixed(0)}%` : ''}).`,
+      text: `Largest increase: “${topUp.label}” (+${formatMoney(topUp.delta)}${comparable ? `, +${topUp.deltaPct.toFixed(0)}%` : ''}).`,
       warn: topUp.delta > totalA * 0.08,
     })
   }
   if (topDown) {
-    bullets.push({ text: `Largest decrease: “${topDown.key}” (${formatMoney(topDown.delta)}).` })
+    bullets.push({ text: `Largest decrease: “${topDown.label}” (${formatMoney(topDown.delta)}).` })
   }
-  bullets.push({ text: 'Click a category row or chart bar to drill into transactions.' })
+  bullets.push({ text: 'Click a classification row or chart bar to drill into transactions.' })
   return bullets
 }
 
@@ -219,7 +225,7 @@ export function buildSpendingDriftChart(
   topN = 10,
 ): EChartsOption {
   const top = rows.slice(0, topN).reverse()
-  const labelWidth = Math.min(200, Math.max(96, ...top.map((r) => r.key.length * 7)))
+  const labelWidth = Math.min(200, Math.max(96, ...top.map((r) => r.label.length * 7)))
   return {
     grid: { left: 8, right: 20, top: 32, bottom: 12, containLabel: true },
     tooltip: {
@@ -230,7 +236,7 @@ export function buildSpendingDriftChart(
     legend: { data: [labelA, labelB], top: 0, textStyle: { fontSize: 11 } },
     yAxis: {
       type: 'category',
-      data: top.map((r) => r.key),
+      data: top.map((r) => r.label),
       axisLabel: {
         fontSize: 11,
         width: labelWidth,

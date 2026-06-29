@@ -187,6 +187,21 @@ public final class FinanceSemanticsCatalog {
         };
     }
 
+    /** Report bucket for semantic tag aggregation: expense, fixed, income, capital, other. */
+    public static String semanticTagGroup(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return "other";
+        }
+        return switch (tagId.trim()) {
+            case "real_income", "investment_income", "other_income", "refund_reimbursement" -> "income";
+            case "fixed_spending", "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
+                    "fixed_tuition", "fixed_repayment", "fixed_misc", "subscription_spending" -> "fixed";
+            case "transfer", "investment", "liability", "asset_adjustment" -> "capital";
+            case "other" -> "other";
+            default -> "expense";
+        };
+    }
+
     public static String budgetBehaviorLabel(String behavior) {
         return switch (behavior) {
             case "fixed" -> "Fixed";

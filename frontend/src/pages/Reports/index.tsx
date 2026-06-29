@@ -15,7 +15,7 @@ import { InsightPanel } from '../../components/InsightPanel'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
-import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
+import { buildReportDrillContext, drillParamsForSemanticTag } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -26,7 +26,7 @@ import { periodToStrings } from '../../utils/periodStrings'
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
-import { homeSummary } from '../../api/report'
+import { fetchSemanticBreakdown } from '../../api/analytics'
 import { buildReportView } from './buildReportView'
 import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
@@ -101,9 +101,11 @@ export function ReportsPage() {
       }
       if (cfg.type === 'homeBuckets') {
         const r = periodToStrings(applied.period)
-        const summary = await homeSummary(applied.period[0].year(), r)
-        const week = await fetchReport('/transaction-report/week-consume', baseParams)
-        return { summary, week }
+        const [semanticBreakdown, week] = await Promise.all([
+          fetchSemanticBreakdown(r.start, r.end),
+          fetchReport('/transaction-report/week-consume', baseParams),
+        ])
+        return { semanticBreakdown, week }
       }
       if (cfg.type === 'incomeVsExpense') {
         const r = periodToStrings(applied.period)
@@ -147,7 +149,13 @@ export function ReportsPage() {
     [cfg, data, applied],
   )
 
-  const openDrillDown = (categoryName?: string, seriesIndex?: number) => {
+  const usesSemanticDrill = cfg?.type === 'homeBuckets'
+
+  const openDrillDown = (
+    categoryName?: string,
+    seriesIndex?: number,
+    semantic?: { tagId: string; label: string },
+  ) => {
     if (!cfg) return
     const range = cfg.type === 'yearCompare' && seriesIndex === 1 ? applied.comparePeriod : applied.period
     const r = periodToStrings(range)
@@ -156,29 +164,38 @@ export function ReportsPage() {
       transactionDateEndStr: r.end,
       txnTypes: cfg.txnType || 'expense',
     }
-    if (categoryName) next.consumeName = categoryName
+    if (semantic?.tagId) {
+      Object.assign(next, drillParamsForSemanticTag(semantic.tagId, r.start, r.end, (cfg.txnType || 'expense') as 'income' | 'expense'))
+    } else if (categoryName) {
+      next.consumeName = categoryName
+    }
     if (applied.card) next.cardId = applied.card
     const periodLabel = formatPeriodPreview(range[0], range[1])
-    const title = categoryName ? `${categoryName} · ${periodLabel}` : `${cfg.title} · ${periodLabel}`
+    const sliceLabel = semantic?.label || categoryName
+    const title = sliceLabel ? `${sliceLabel} · ${periodLabel}` : `${cfg.title} · ${periodLabel}`
     const insights = view?.insights.map((b) => b.text) || []
-    const explanation = categoryName
-      ? insights.filter((t) => t.toLowerCase().includes(categoryName.toLowerCase()))
+    const explanation = sliceLabel
+      ? insights.filter((t) => t.toLowerCase().includes(sliceLabel.toLowerCase()))
       : insights
     openDrill(buildReportDrillContext({
       title,
-      metricLabel: categoryName || cfg.title,
+      metricLabel: sliceLabel || cfg.title,
       params: next,
       explanation: explanation.length ? explanation : undefined,
       source: 'report',
       provenance: {
         reportId,
-        sourceView: categoryName ? 'chart category slice' : 'report chart',
+        sourceView: semantic?.tagId ? 'semantic classification slice' : categoryName ? 'chart category slice' : 'report chart',
       },
     }))
   }
 
   const onChartClick = (params: unknown) => {
-    const p = params as { name?: string; seriesIndex?: number }
+    const p = params as { name?: string; seriesIndex?: number; data?: { tagId?: string } }
+    if (usesSemanticDrill && p.data?.tagId) {
+      openDrillDown(undefined, p.seriesIndex, { tagId: p.data.tagId, label: p.name || p.data.tagId })
+      return
+    }
     if (p.name) openDrillDown(p.name, p.seriesIndex)
   }
 
@@ -384,6 +401,14 @@ export function ReportsPage() {
                   scroll={{ y: chartHeight - 24 }}
                   onRow={(record) => ({
                     onClick: () => {
+                      if (usesSemanticDrill) {
+                        const tagId = String(record.tagId ?? record.key ?? '')
+                        const label = String(record.label ?? tagId)
+                        if (tagId && tagId !== 'Total') {
+                          openDrillDown(undefined, undefined, { tagId, label })
+                        }
+                        return
+                      }
                       const name = String(record.key || record.label || '')
                       if (name && name !== 'Total') openDrillDown(name)
                     },

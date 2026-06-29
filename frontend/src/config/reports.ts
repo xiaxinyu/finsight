@@ -37,14 +37,14 @@ export const reportConfigs: Record<string, ReportConfig> = {
   },
   'fixed-vs-variable': {
     title: 'Fixed vs Variable',
-    subtitle: 'Fixed burden and weekday spending patterns',
+    subtitle: 'Semantic expense structure — Dining, Medical, Housing, and fixed costs',
     type: 'homeBuckets',
     chartProfile: 'categoryBar',
     legacyIds: ['weekly-summary'],
   },
   'spending-drift': {
     title: 'Spending Drift',
-    subtitle: 'Compare category spending between two periods — align dates for fair YoY',
+    subtitle: 'Compare semantic buckets between two periods — stable even when categories move',
     type: 'yearCompare',
     txnType: 'expense',
     compareYear: true,

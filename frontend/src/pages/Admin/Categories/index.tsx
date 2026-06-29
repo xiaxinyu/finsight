@@ -561,6 +561,7 @@ export function CategoriesAdminPage() {
                 <CategoryAssetPanel
                   asset={categoryAsset ?? null}
                   loading={assetLoading}
+                  hideReportingClassification
                   onCreateCandidate={(c) => setCandidateDraft(c)}
                   onViewReportImpact={() => setReportImpactOpen(true)}
                 />

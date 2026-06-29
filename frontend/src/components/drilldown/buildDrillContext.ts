@@ -31,12 +31,15 @@ export function buildReportDrillContext(input: {
   provenance?: DrillDownContext['provenance']
 }): DrillDownContext {
   const category = input.params.consumeName
+  const semanticTag = input.params.semanticFilter
   const explanation = input.explanation?.length
     ? input.explanation
     : [
-        category
-          ? `Drill into "${category}" for the selected period.`
-          : 'Explore category and merchant contribution for this slice.',
+        semanticTag
+          ? `Drill into "${input.metricLabel}" classification for the selected period.`
+          : category
+            ? `Drill into "${category}" for the selected period.`
+            : 'Explore category and merchant contribution for this slice.',
         'Use breakdown to see where spending clusters, then open transactions for line-level review.',
       ]
   return {
@@ -80,6 +83,20 @@ export function drillParamsForMonth(
   const start = dayjs().year(year).month(idx).startOf('month').format('YYYY-MM-DD')
   const end = dayjs().year(year).month(idx).endOf('month').format('YYYY-MM-DD')
   return { transactionDateStartStr: start, transactionDateEndStr: end, txnTypes }
+}
+
+export function drillParamsForSemanticTag(
+  tagId: string,
+  periodStart: string,
+  periodEnd: string,
+  txnTypes: 'income' | 'expense' = 'expense',
+): Record<string, string> {
+  return {
+    transactionDateStartStr: periodStart,
+    transactionDateEndStr: periodEnd,
+    txnTypes,
+    semanticFilter: tagId,
+  }
 }
 
 export function drillParamsForCategory(

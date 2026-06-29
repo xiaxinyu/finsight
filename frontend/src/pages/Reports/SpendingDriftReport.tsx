@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Button, Col, Row } from 'antd'
 import { BarChartOutlined, SwapOutlined } from '@ant-design/icons'
-import { fetchReport } from '../../api/report'
+import { fetchSemanticBreakdown } from '../../api/analytics'
 import { CardFilterSelect } from '../../components/filters/CardFilterSelect'
 import { CategoryFilterSelect } from '../../components/filters/CategoryFilterSelect'
 import { useFilterApply } from '../../hooks/useFilterApply'
@@ -12,7 +12,7 @@ import { InsightPanel } from '../../components/InsightPanel'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { ReportKpiStrip } from '../../components/ReportKpiStrip'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
-import { buildReportDrillContext } from '../../components/drilldown/buildDrillContext'
+import { buildReportDrillContext, drillParamsForSemanticTag } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -39,6 +39,7 @@ import {
   spendingDriftChartHeight,
   type SpendingDriftRow,
 } from '../../utils/spendingDrift'
+import { semanticBreakdownToReportPoints } from '../../utils/semanticBreakdownReport'
 
 type SpendingDriftReportProps = {
   title: string
@@ -82,11 +83,14 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
     queryFn: async () => {
       const rA = periodToStrings(applied.period)
       const rB = periodToStrings(applied.comparePeriod)
-      const [a, b] = await Promise.all([
-        fetchReport('/transaction-report/consume', { ...baseParams, transactionDateStartStr: rA.start, transactionDateEndStr: rA.end }),
-        fetchReport('/transaction-report/consume', { ...baseParams, transactionDateStartStr: rB.start, transactionDateEndStr: rB.end }),
+      const [breakdownA, breakdownB] = await Promise.all([
+        fetchSemanticBreakdown(rA.start, rA.end),
+        fetchSemanticBreakdown(rB.start, rB.end),
       ])
-      return { a, b }
+      return {
+        a: semanticBreakdownToReportPoints(breakdownA.rows),
+        b: semanticBreakdownToReportPoints(breakdownB.rows),
+      }
     },
   })
 
@@ -115,23 +119,23 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
   )
   const chartHeight = spendingDriftChartHeight(Math.min(rows.length, 10))
 
-  const openDrillDown = (categoryName: string, range: Filters['period']) => {
+  const labelToTag = useMemo(() => new Map(rows.map((r) => [r.label, r.key])), [rows])
+
+  const openDrillDown = (tagId: string, range: Filters['period'], displayLabel?: string) => {
     const r = periodToStrings(range)
+    const label = displayLabel ?? rows.find((row) => row.key === tagId)?.label ?? tagId
     openDrill(buildReportDrillContext({
-      title: `${categoryName} · ${formatPeriodPreview(range[0], range[1])}`,
-      metricLabel: categoryName,
+      title: `${label} · ${formatPeriodPreview(range[0], range[1])}`,
+      metricLabel: label,
       params: {
-        transactionDateStartStr: r.start,
-        transactionDateEndStr: r.end,
-        txnTypes: txnType,
-        consumeName: categoryName,
+        ...drillParamsForSemanticTag(tagId, r.start, r.end, txnType),
         ...(applied.card ? { cardId: applied.card } : {}),
       },
       explanation: insights.map((b) => b.text),
       source: 'report',
       provenance: {
         reportId: 'spending-drift',
-        sourceView: 'category drift row',
+        sourceView: 'semantic classification drift row',
       },
     }))
   }
@@ -142,8 +146,8 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
 
   const tableCols = [
     {
-      title: 'Category',
-      dataIndex: 'key',
+      title: 'Classification',
+      dataIndex: 'label',
       sortType: 'text' as const,
       ellipsis: true,
       width: 200,
@@ -282,7 +286,8 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
                   onEvents={{
                     click: (p) => {
                       const name = (p as { name?: string }).name
-                      if (name) openDrillDown(name, applied.period)
+                      const tagId = name ? labelToTag.get(name) : undefined
+                      if (tagId) openDrillDown(tagId, applied.period, name)
                     },
                   }}
                 />
@@ -290,7 +295,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
             </Col>
             <Col xs={24} xl={14}>
               <FsDataTable
-                title="Category breakdown"
+                title="Classification breakdown"
                 columns={tableCols}
                 dataSource={rows}
                 rowKey="key"
@@ -303,7 +308,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
                   delta: rows.reduce((s, r) => s + r.delta, 0),
                 }}
                 onRow={(record) => ({
-                  onClick: () => openDrillDown(record.key, applied.period),
+                  onClick: () => openDrillDown(record.key, applied.period, record.label),
                   style: { cursor: 'pointer' },
                 })}
                 locale={{
