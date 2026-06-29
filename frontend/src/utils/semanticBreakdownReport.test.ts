@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   insightsSemanticStructure,
+  isDrillableSemanticTag,
   semanticBreakdownToReportPoints,
   topSemanticRows,
   type SemanticBreakdown,
@@ -25,6 +26,11 @@ describe('semanticBreakdownReport', () => {
     const top = topSemanticRows(rows, 10)
     expect(top).toHaveLength(11)
     expect(top[10]?.label).toBe('Other')
+  })
+
+  it('blocks drill on rolled-up Other slice', () => {
+    expect(isDrillableSemanticTag('other_combined')).toBe(false)
+    expect(isDrillableSemanticTag('dining_spending')).toBe(true)
   })
 
   it('builds fixed vs variable insights', () => {

@@ -39,7 +39,7 @@ import {
   spendingDriftChartHeight,
   type SpendingDriftRow,
 } from '../../utils/spendingDrift'
-import { semanticBreakdownToReportPoints } from '../../utils/semanticBreakdownReport'
+import { isDrillableSemanticTag, semanticBreakdownToReportPoints } from '../../utils/semanticBreakdownReport'
 
 type SpendingDriftReportProps = {
   title: string
@@ -78,14 +78,22 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
   const periodLabel = formatPeriodPreview(applied.period[0], applied.period[1])
   const compareLabel = formatPeriodPreview(applied.comparePeriod[0], applied.comparePeriod[1])
 
+  const semanticFilters = useMemo(
+    () => ({
+      cardId: applied.card || undefined,
+      consumeID: applied.consume || undefined,
+    }),
+    [applied.card, applied.consume],
+  )
+
   const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['spending-drift', baseParams, periodToStrings(applied.period), periodToStrings(applied.comparePeriod)],
+    queryKey: ['spending-drift', baseParams, semanticFilters, periodToStrings(applied.period), periodToStrings(applied.comparePeriod)],
     queryFn: async () => {
       const rA = periodToStrings(applied.period)
       const rB = periodToStrings(applied.comparePeriod)
       const [breakdownA, breakdownB] = await Promise.all([
-        fetchSemanticBreakdown(rA.start, rA.end),
-        fetchSemanticBreakdown(rB.start, rB.end),
+        fetchSemanticBreakdown(rA.start, rA.end, semanticFilters),
+        fetchSemanticBreakdown(rB.start, rB.end, semanticFilters),
       ])
       return {
         a: semanticBreakdownToReportPoints(breakdownA.rows),
@@ -122,6 +130,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
   const labelToTag = useMemo(() => new Map(rows.map((r) => [r.label, r.key])), [rows])
 
   const openDrillDown = (tagId: string, range: Filters['period'], displayLabel?: string) => {
+    if (!isDrillableSemanticTag(tagId)) return
     const r = periodToStrings(range)
     const label = displayLabel ?? rows.find((row) => row.key === tagId)?.label ?? tagId
     openDrill(buildReportDrillContext({
@@ -130,6 +139,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
       params: {
         ...drillParamsForSemanticTag(tagId, r.start, r.end, txnType),
         ...(applied.card ? { cardId: applied.card } : {}),
+        ...(applied.consume ? { consumeID: applied.consume } : {}),
       },
       explanation: insights.map((b) => b.text),
       source: 'report',
@@ -203,7 +213,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
   return (
     <DataPageLayout
       title={title}
-      subtitle={subtitle ?? 'Category spending vs a comparison period'}
+      subtitle={subtitle ?? 'Classification spending vs a comparison period'}
       icon={<BarChartOutlined />}
       className="fs-data-page--dense fs-data-page--fill fs-data-page--reports fs-spending-drift"
       toolbar={(
@@ -282,12 +292,14 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
                   height={chartHeight}
                   loading={loading}
                   option={chartOption}
-                  empty={<EmptyState compact title="No category data" description="Adjust filters and Apply." />}
+                  empty={<EmptyState compact title="No classification data" description="Adjust filters and Apply." />}
                   onEvents={{
                     click: (p) => {
-                      const name = (p as { name?: string }).name
+                      const evt = p as { name?: string; seriesIndex?: number }
+                      const name = evt.name
                       const tagId = name ? labelToTag.get(name) : undefined
-                      if (tagId) openDrillDown(tagId, applied.period, name)
+                      const range = evt.seriesIndex === 1 ? applied.comparePeriod : applied.period
+                      if (tagId) openDrillDown(tagId, range, name)
                     },
                   }}
                 />
@@ -312,7 +324,7 @@ export function SpendingDriftReport({ title, subtitle, txnType = 'expense' }: Sp
                   style: { cursor: 'pointer' },
                 })}
                 locale={{
-                  emptyText: <EmptyState compact title="No categories" description="Try a wider date range." />,
+                  emptyText: <EmptyState compact title="No classifications" description="Try a wider date range." />,
                 }}
               />
             </Col>

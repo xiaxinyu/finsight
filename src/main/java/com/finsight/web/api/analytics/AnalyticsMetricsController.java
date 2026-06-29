@@ -29,7 +29,9 @@ public class AnalyticsMetricsController {
 
     @GetMapping("/metrics/semantic-breakdown")
     public CommonResult semanticBreakdown(@RequestParam(required = false) String from,
-                                          @RequestParam(required = false) String to) {
-        return CommonResult.success(semanticBreakdownService.expenseBreakdown(from, to));
+                                          @RequestParam(required = false) String to,
+                                          @RequestParam(required = false) String cardId,
+                                          @RequestParam(required = false) String consumeID) {
+        return CommonResult.success(semanticBreakdownService.expenseBreakdown(from, to, cardId, consumeID));
     }
 }

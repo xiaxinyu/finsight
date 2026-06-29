@@ -117,10 +117,16 @@ export type SemanticBreakdownResponse = {
   periodEnd?: string
 }
 
-export async function fetchSemanticBreakdown(from?: string, to?: string) {
+export async function fetchSemanticBreakdown(
+  from?: string,
+  to?: string,
+  filters?: { cardId?: string; consumeID?: string },
+) {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
   if (to) params.set('to', to)
+  if (filters?.cardId) params.set('cardId', filters.cardId)
+  if (filters?.consumeID) params.set('consumeID', filters.consumeID)
   const suffix = params.toString() ? `?${params.toString()}` : ''
   return unwrap<SemanticBreakdownResponse>(await getJson(`/api/v1/analytics/metrics/semantic-breakdown${suffix}`))
 }

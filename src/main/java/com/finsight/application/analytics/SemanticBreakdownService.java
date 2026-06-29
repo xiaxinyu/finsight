@@ -28,12 +28,13 @@ public class SemanticBreakdownService {
         this.authenticationFacade = authenticationFacade;
     }
 
-    public Map<String, Object> expenseBreakdown(String fromStr, String toStr) {
+    public Map<String, Object> expenseBreakdown(String fromStr, String toStr, String cardId, String consumeId) {
         LocalDate end = parseEnd(toStr);
         LocalDate start = parseStart(fromStr, end);
 
         List<SemanticBreakdownRepository.TagAmountRow> raw = breakdownRepository.expenseBySemanticTag(
-                userKey(), start, end);
+                new SemanticBreakdownRepository.SemanticBreakdownQuery(
+                        userKey(), start, end, cardId, consumeId));
 
         double expenseTotal = raw.stream().mapToDouble(SemanticBreakdownRepository.TagAmountRow::amount).sum();
         double fixedTotal = 0;
@@ -44,7 +45,7 @@ public class SemanticBreakdownService {
             String group = FinanceSemanticsCatalog.semanticTagGroup(row.tagId());
             if ("fixed".equals(group)) {
                 fixedTotal += row.amount();
-            } else if ("expense".equals(group)) {
+            } else if ("expense".equals(group) || "other".equals(group)) {
                 variableTotal += row.amount();
             }
             Map<String, Object> out = new LinkedHashMap<>();

@@ -28,12 +28,12 @@ class SemanticBreakdownServiceTest {
     @Test
     void expenseBreakdown_groupsFixedAndVariableShares() {
         when(authenticationFacade.getUserName()).thenReturn("alice");
-        when(breakdownRepository.expenseBySemanticTag(any(), any(), any())).thenReturn(List.of(
+        when(breakdownRepository.expenseBySemanticTag(any())).thenReturn(List.of(
                 new SemanticBreakdownRepository.TagAmountRow("dining_spending", 3000),
                 new SemanticBreakdownRepository.TagAmountRow("fixed_housing", 5000),
                 new SemanticBreakdownRepository.TagAmountRow("medical_spending", 2000)));
 
-        Map<String, Object> out = semanticBreakdownService.expenseBreakdown("01/01/2026", "01/31/2026");
+        Map<String, Object> out = semanticBreakdownService.expenseBreakdown("01/01/2026", "01/31/2026", null, null);
 
         assertEquals(10000.0, out.get("expenseTotal"));
         assertEquals(5000.0, out.get("fixedTotal"));
@@ -45,5 +45,21 @@ class SemanticBreakdownServiceTest {
         assertEquals("expense", rows.get(0).get("group"));
         assertEquals("Housing", rows.get(1).get("label"));
         assertEquals("fixed", rows.get(1).get("group"));
+    }
+
+    @Test
+    void expenseBreakdown_countsOtherTagAsVariable() {
+        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(breakdownRepository.expenseBySemanticTag(any())).thenReturn(List.of(
+                new SemanticBreakdownRepository.TagAmountRow("other", 1000),
+                new SemanticBreakdownRepository.TagAmountRow("fixed_housing", 3000)));
+
+        Map<String, Object> out = semanticBreakdownService.expenseBreakdown("01/01/2026", "01/31/2026", null, null);
+
+        assertEquals(4000.0, out.get("expenseTotal"));
+        assertEquals(3000.0, out.get("fixedTotal"));
+        assertEquals(1000.0, out.get("variableTotal"));
+        assertEquals(75.0, out.get("fixedSharePct"));
+        assertEquals(25.0, out.get("variableSharePct"));
     }
 }

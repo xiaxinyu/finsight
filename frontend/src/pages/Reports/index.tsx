@@ -28,6 +28,7 @@ import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } fr
 import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
 import { fetchSemanticBreakdown } from '../../api/analytics'
 import { buildReportView } from './buildReportView'
+import { isDrillableSemanticTag } from '../../utils/semanticBreakdownReport'
 import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
 import { MerchantReport } from './MerchantReport'
@@ -65,10 +66,17 @@ export function ReportsPage() {
   const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
 
   const baseParams = useMemo(() => (cfg ? buildParams(cfg, applied) : {}), [cfg, applied])
+  const semanticFilters = useMemo(
+    () => ({
+      cardId: applied.card || undefined,
+      consumeID: applied.consume || undefined,
+    }),
+    [applied.card, applied.consume],
+  )
   const periodLabel = formatPeriodPreview(applied.period[0], applied.period[1])
 
   const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ['report', reportId, baseParams, periodToStrings(applied.comparePeriod)],
+    queryKey: ['report', reportId, baseParams, semanticFilters, periodToStrings(applied.comparePeriod)],
     enabled: !!cfg,
     queryFn: async () => {
       if (!cfg) return null
@@ -102,7 +110,7 @@ export function ReportsPage() {
       if (cfg.type === 'homeBuckets') {
         const r = periodToStrings(applied.period)
         const [semanticBreakdown, week] = await Promise.all([
-          fetchSemanticBreakdown(r.start, r.end),
+          fetchSemanticBreakdown(r.start, r.end, semanticFilters),
           fetchReport('/transaction-report/week-consume', baseParams),
         ])
         return { semanticBreakdown, week }
@@ -165,11 +173,13 @@ export function ReportsPage() {
       txnTypes: cfg.txnType || 'expense',
     }
     if (semantic?.tagId) {
+      if (!isDrillableSemanticTag(semantic.tagId)) return
       Object.assign(next, drillParamsForSemanticTag(semantic.tagId, r.start, r.end, (cfg.txnType || 'expense') as 'income' | 'expense'))
     } else if (categoryName) {
       next.consumeName = categoryName
     }
     if (applied.card) next.cardId = applied.card
+    if (applied.consume) next.consumeID = applied.consume
     const periodLabel = formatPeriodPreview(range[0], range[1])
     const sliceLabel = semantic?.label || categoryName
     const title = sliceLabel ? `${sliceLabel} · ${periodLabel}` : `${cfg.title} · ${periodLabel}`
@@ -193,6 +203,7 @@ export function ReportsPage() {
   const onChartClick = (params: unknown) => {
     const p = params as { name?: string; seriesIndex?: number; data?: { tagId?: string } }
     if (usesSemanticDrill && p.data?.tagId) {
+      if (!isDrillableSemanticTag(p.data.tagId)) return
       openDrillDown(undefined, p.seriesIndex, { tagId: p.data.tagId, label: p.name || p.data.tagId })
       return
     }
@@ -404,7 +415,7 @@ export function ReportsPage() {
                       if (usesSemanticDrill) {
                         const tagId = String(record.tagId ?? record.key ?? '')
                         const label = String(record.label ?? tagId)
-                        if (tagId && tagId !== 'Total') {
+                        if (isDrillableSemanticTag(tagId)) {
                           openDrillDown(undefined, undefined, { tagId, label })
                         }
                         return

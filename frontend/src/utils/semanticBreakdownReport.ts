@@ -20,6 +20,11 @@ export type SemanticBreakdown = {
   periodEnd?: string
 }
 
+export function isDrillableSemanticTag(tagId?: string | null): boolean {
+  if (!tagId || tagId === 'Total') return false
+  return tagId !== 'other_combined'
+}
+
 export function semanticBreakdownToReportPoints(
   rows: Array<Pick<SemanticBreakdownRow, 'tagId' | 'label' | 'amount'>>,
 ): ReportPoint[] {
