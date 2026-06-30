@@ -1,33 +1,33 @@
-# Personal finance reporting reference (technical)
+# Personal finance reporting reference
 
 | | |
 | :--- | :--- |
 | **Language** | English · [简体中文](personal-finance-reporting-guide.zh-cn.md) |
 
 > **User guides:** [data-semantics.md](../../user/concepts/data-semantics.md) · [reports-catalog.md](../../user/concepts/reports-catalog.md)  
-> **Contract:** [finance-semantic-contract.zh-cn.md](./finance-semantic-contract.zh-cn.md)
+> **Semantic rules:** [finance-semantic-contract.md](./finance-semantic-contract.md) · [中文](./finance-semantic-contract.zh-cn.md)
 
-For engineering, QA, and acceptance — APIs, views, metric codes, consistency rules.
+For developers and QA: APIs, database views, metric codes, and acceptance checks.
 
 ---
 
 ## 1. Data sources
 
-| Consumer | Primary source | Fallback |
+| UI area | API / table | Fallback |
 | :--- | :--- | :--- |
-| Dashboard KPIs | `GET /api/v1/analytics/metrics/period-summary` | Transaction aggregates |
+| Dashboard KPIs | `GET /api/v1/analytics/metrics/period-summary` | Transaction sum |
 | Dashboard donut | `GET /api/v1/analytics/semantic-breakdown?scope=expense` | — |
-| Profile | Materialized `fin_profile_current` | `fin_metric_monthly` |
-| Reports | semantic-breakdown / per-report services | See mappers |
+| Profile | `fin_profile_current` (materialized) | `fin_metric_monthly` |
+| Reports | Per-report service + semantic breakdown | See mappers |
 | Transaction filters | `v_transaction_finance_semantics` | — |
 
-Canonical view: `v_transaction_finance_semantics` (Flyway V32+, V49 tag-driven inclusion).
+Canonical SQL view: `v_transaction_finance_semantics` (Flyway V32+, V49 inclusion by tag).
 
 ---
 
-## 2. Headline KPI mapping
+## 2. Headline KPI codes
 
-| UI label | MetricCode | Inclusion |
+| UI label | `MetricCode` | Inclusion rule |
 | :--- | :--- | :--- |
 | Real income | `REAL_INCOME` | `include_in_income_trend = 1` |
 | Consumption | `CONSUMPTION_EXPENSE` | `include_in_expense_trend = 1` |
@@ -37,62 +37,58 @@ Canonical view: `v_transaction_finance_semantics` (Flyway V32+, V49 tag-driven i
 
 ## 3. Semantic breakdown scopes
 
-| scope | SQL predicate (summary) |
+| `scope` param | Meaning |
 | :--- | :--- |
-| `expense` | `include_in_expense_trend = 1` |
-| `income` | `include_in_income_trend = 1` |
-| `non_pnl` | transfer / investment / liability flows |
-| `tax` | `tax_expense` · `tax_refund` tags |
-| `refund` | `refund_reimbursement` |
+| `expense` | Living spend trend |
+| `income` | Real income trend |
+| `non_pnl` | Transfers, loans, investments |
+| `tax` | Tax paid and refunds |
+| `refund` | Reimbursements |
 
-Implementation: `SemanticBreakdownRepository.java`
+Code: `SemanticBreakdownRepository.java`
 
 ---
 
-## 4. Drill-down
+## 4. Drill-down API
 
-| Endpoint | Notes |
-| :--- | :--- |
-| `GET /api/v1/transactions/drill-breakdown` | Category · merchant · sample transactions |
+`GET /api/v1/transactions/drill-breakdown`
 
-**v2.0.2+**: When `semanticFilter` is set, `TransactionMapper.filterTxnTypesT` skips legacy `txn_types` filters.
+When `semanticFilter` is set, legacy `txn_types` filters are **skipped** (`TransactionMapper.filterTxnTypesT`) so semantic tags are not blocked by old category types.
 
 ---
 
-## 5. Profile endpoints
+## 5. Profile API
 
-| Endpoint | Behavior |
-| :--- | :--- |
-| `GET /api/v1/analytics/profile` | Read `fin_profile_current` only |
-| `POST /api/v1/analytics/profile/refresh` | Recompute and materialize |
+| Method | Path | Behavior |
+| :--- | :--- | :--- |
+| GET | `/api/v1/analytics/profile` | Read materialized snapshot only |
+| POST | `/api/v1/analytics/profile/refresh` | Recompute and save |
 
-Metrics prefer `REAL_INCOME` / `CONSUMPTION_EXPENSE`; fallback `INCOME_TOTAL` / `EXPENSE_TOTAL`.
-
-Runbook: [profile-materialization-runbook.zh-cn.md](./profile-materialization-runbook.zh-cn.md)
+Prefer `REAL_INCOME` / `CONSUMPTION_EXPENSE`; fallback `INCOME_TOTAL` / `EXPENSE_TOTAL`.
 
 ---
 
-## 6. Consistency acceptance
+## 6. Acceptance checklist
 
-1. Dashboard period Net ≈ Cashflow report for same period  
+1. Dashboard Net ≈ Cashflow report (same period)  
 2. Budget vs Actual **Spent** uses consumption scope  
-3. Transfer & Finance totals must not appear in Consumption  
-4. Profile Refresh updates `asOf`; stale banner clears  
-5. Metric gate mismatch shows UI warning; no silent inline recompute on read
+3. Transfer & Finance totals ∉ Consumption  
+4. Profile Refresh updates `asOf`  
+5. Metric gate mismatch shows UI warning (no silent recompute on GET)
 
 ---
 
-## 7. Frontend hint constants
+## 7. Frontend constants
 
-| File | Constants |
+| File | Content |
 | :--- | :--- |
-| `frontend/src/components/MetricExplanation.tsx` | `DASHBOARD_METRIC_HINTS` · `REPORT_METRIC_HINTS` |
-| `frontend/src/utils/reportTaxonomy.ts` | `REPORT_METRICS_SOURCE` · scope labels |
+| `MetricExplanation.tsx` | `DASHBOARD_METRIC_HINTS`, `REPORT_METRIC_HINTS` |
+| `reportTaxonomy.ts` | Scope labels, filter catalog |
 
 ---
 
-## 8. Change rules
+## 8. Change policy
 
 1. Inclusion logic changes → update contract, Flyway view, tests  
-2. Do not default refunds / redemptions / borrowing into income trend  
-3. Do not default repayments / transfers / investment buys into expense trend
+2. Never default refunds / redemptions / borrowing into income trend  
+3. Never default repayments / transfers / investment buys into expense trend

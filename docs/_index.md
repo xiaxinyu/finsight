@@ -8,55 +8,70 @@ title: FinSight Documentation
 | :--- | :--- |
 | **Language** | English · [简体中文](user/concepts/overview.zh-cn.md) |
 
-Kubernetes-style docs: **Concepts → Tasks → Reference**. User and technical docs are separated.
+**Concepts → Tasks → Reference** · User docs and engineering docs are split.
 
 ---
 
-## Quick entry
+## Start here
 
-| I want to… | Document |
-| :--- | :--- |
-| <span style="color:#2563eb">**Understand numbers**</span> | [Data semantics (EN)](user/concepts/data-semantics.md) · [数据语义 (ZH)](user/concepts/data-semantics.zh-cn.md) |
-| <span style="color:#2563eb">**Dashboard & Profile**</span> | [EN](user/concepts/dashboard-profile.md) · [ZH](user/concepts/dashboard-profile.zh-cn.md) |
-| <span style="color:#2563eb">**Reports**</span> | [EN](user/concepts/reports-catalog.md) · [ZH](user/concepts/reports-catalog.zh-cn.md) |
-| <span style="color:#2563eb">**Quick start**</span> | [EN](user/concepts/getting-started.md) · [ZH](user/concepts/getting-started.zh-cn.md) |
-| **Run locally** | [Local development](user/setup/local-development.md) |
-| **Engineering** | [Technical](tech/architecture/technical.md) · [Reporting ref](tech/finance/personal-finance-reporting-guide.md) |
+| Step | English | 简体中文 |
+| :---: | :--- | :--- |
+| 1 | [Getting started](user/concepts/getting-started.md) | [快速上手](user/concepts/getting-started.zh-cn.md) |
+| 2 | [Data semantics](user/concepts/data-semantics.md) | [数据语义](user/concepts/data-semantics.zh-cn.md) |
+| 2b | [Semantic scenarios](user/concepts/semantic-scenarios.md) | [语义场景速查](user/concepts/semantic-scenarios.zh-cn.md) |
+| 3 | [Dashboard & Profile](user/concepts/dashboard-profile.md) | [Dashboard 指南](user/concepts/dashboard-profile.zh-cn.md) |
+| 4 | [Reports catalog](user/concepts/reports-catalog.md) | [报表目录](user/concepts/reports-catalog.zh-cn.md) |
+
+Hub pages: [overview.md](user/concepts/overview.md) · [overview.zh-cn.md](user/concepts/overview.zh-cn.md)
 
 ---
 
-## User docs · Concepts (bilingual)
+## Tasks (step-by-step)
 
-| Topic | English | 简体中文 |
+| Task | EN | ZH |
 | :--- | :--- | :--- |
-| Getting started | [getting-started.md](user/concepts/getting-started.md) | [getting-started.zh-cn.md](user/concepts/getting-started.zh-cn.md) |
-| Data semantics | [data-semantics.md](user/concepts/data-semantics.md) | [data-semantics.zh-cn.md](user/concepts/data-semantics.zh-cn.md) |
-| Dashboard & Profile | [dashboard-profile.md](user/concepts/dashboard-profile.md) | [dashboard-profile.zh-cn.md](user/concepts/dashboard-profile.zh-cn.md) |
-| Reports catalog | [reports-catalog.md](user/concepts/reports-catalog.md) | [reports-catalog.zh-cn.md](user/concepts/reports-catalog.zh-cn.md) |
-| Version highlights | [version-highlights.md](user/concepts/version-highlights.md) | [version-highlights.zh-cn.md](user/concepts/version-highlights.zh-cn.md) |
-| Doc hub | [overview.md](user/concepts/overview.md) | [overview.zh-cn.md](user/concepts/overview.zh-cn.md) |
-| Style markers | [_style-guide.md](user/concepts/_style-guide.md) | [_style-guide.zh-cn.md](user/concepts/_style-guide.zh-cn.md) |
+| Index | [tasks/README.md](user/tasks/README.md) | [tasks/README.zh-cn.md](user/tasks/README.zh-cn.md) |
+| Import statement | [import-bank-statement.md](user/tasks/import-bank-statement.md) | [import-bank-statement.zh-cn.md](user/tasks/import-bank-statement.zh-cn.md) |
+| Classify rows | [classify-unclassified-transactions.md](user/tasks/classify-unclassified-transactions.md) | [classify-unclassified-transactions.zh-cn.md](user/tasks/classify-unclassified-transactions.zh-cn.md) |
+| Category semantics | [set-category-semantics.md](user/tasks/set-category-semantics.md) | [set-category-semantics.zh-cn.md](user/tasks/set-category-semantics.zh-cn.md) |
+| Refresh Profile | [refresh-profile.md](user/tasks/refresh-profile.md) | [refresh-profile.zh-cn.md](user/tasks/refresh-profile.zh-cn.md) |
+| Reconcile KPIs | [reconcile-kpi-numbers.md](user/tasks/reconcile-kpi-numbers.md) | [reconcile-kpi-numbers.zh-cn.md](user/tasks/reconcile-kpi-numbers.zh-cn.md) |
+| Monthly budget | [set-monthly-budget.md](user/tasks/set-monthly-budget.md) | [set-monthly-budget.zh-cn.md](user/tasks/set-monthly-budget.zh-cn.md) |
+| Classification rule | [write-classification-rule.md](user/tasks/write-classification-rule.md) | [write-classification-rule.zh-cn.md](user/tasks/write-classification-rule.zh-cn.md) |
+| Drill down from reports | [drill-down-from-reports.md](user/tasks/drill-down-from-reports.md) | [drill-down-from-reports.zh-cn.md](user/tasks/drill-down-from-reports.zh-cn.md) |
+| Local setup | [local-development.md](user/setup/local-development.md) | [local-development.zh-cn.md](user/setup/local-development.zh-cn.md) |
 
 ---
 
-## Technical docs
+## All concept guides (bilingual)
 
-| Area | English | 简体中文 |
+| Topic | EN | ZH |
+| :--- | :--- | :--- |
+| Style & markers | [_style-guide.md](user/concepts/_style-guide.md) | [_style-guide.zh-cn.md](user/concepts/_style-guide.zh-cn.md) |
+| Version highlights | [version-highlights.md](user/concepts/version-highlights.md) | [version-highlights.zh-cn.md](user/concepts/version-highlights.zh-cn.md) |
+| Product guide | [product-guide.md](user/concepts/product-guide.md) | [product-guide.zh-cn.md](user/concepts/product-guide.zh-cn.md) |
+| Semantic scenarios | [semantic-scenarios.md](user/concepts/semantic-scenarios.md) | [semantic-scenarios.zh-cn.md](user/concepts/semantic-scenarios.zh-cn.md) |
+
+---
+
+## Engineering
+
+| Topic | EN | ZH |
 | :--- | :--- | :--- |
 | Reporting reference | [personal-finance-reporting-guide.md](tech/finance/personal-finance-reporting-guide.md) | [personal-finance-reporting-guide.zh-cn.md](tech/finance/personal-finance-reporting-guide.zh-cn.md) |
-| Semantic contract | — | [finance-semantic-contract.zh-cn.md](tech/finance/finance-semantic-contract.zh-cn.md) |
-| Function list | [function-list.md](tech/reference/function-list.md) | [function-list.zh-cn.md](tech/reference/function-list.zh-cn.md) |
 | Architecture | [technical.md](tech/architecture/technical.md) | [technical.zh-cn.md](tech/architecture/technical.zh-cn.md) |
+| Function list | [function-list.md](tech/reference/function-list.md) | [function-list.zh-cn.md](tech/reference/function-list.zh-cn.md) |
+| Semantic contract | [finance-semantic-contract.md](tech/finance/finance-semantic-contract.md) | [finance-semantic-contract.zh-cn.md](tech/finance/finance-semantic-contract.zh-cn.md) |
 | UI dev | [REPORT_UI.md](tech/REPORT_UI.md) | — |
 
 ---
 
-## Layering rules
+## Layer rules
 
-| Layer | Contains | Avoid |
-| :--- | :--- | :--- |
-| **Concept** | What / why · page guides | Step-by-step runbooks |
-| **Task** | Steps + verification | Long theory |
-| **Reference** | APIs · fields · flags | Narrative tutorials |
+| Layer | Contains |
+| :--- | :--- |
+| **Concept** | What / why — page and KPI meaning |
+| **Task** | Steps + verification |
+| **Reference** | APIs, fields, SQL views |
 
-Reading markers: <span style="color:#2563eb">Core</span> · <span style="color:#059669">Included</span> · <span style="color:#d97706">Note</span> · <span style="color:#64748b">Reference</span>
+English user docs target **B1 readability**: short sentences, defined finance terms. See [_style-guide.md](user/concepts/_style-guide.md).

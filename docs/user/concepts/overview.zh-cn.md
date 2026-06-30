@@ -4,62 +4,63 @@
 | :--- | :--- |
 | **Language** | 简体中文 · [English](overview.md) |
 
-采用 **Concepts → Tasks → Reference** 分层；用户文档与工程文档分离。
+采用 **Concepts → Tasks → Reference** 分层；用户指南与工程文档分离。
+
+**首次阅读：** [快速上手](getting-started.zh-cn.md) → [数据语义](data-semantics.zh-cn.md)
 
 ---
 
-## 快速入口
+## 快速链接
 
-| 我想… | 文档 |
-| :--- | :--- |
-| <span style="color:#2563eb">**5 分钟上手**</span> | [getting-started.zh-cn.md](getting-started.zh-cn.md) |
-| <span style="color:#2563eb">**理解数字含义**</span> | [data-semantics.zh-cn.md](data-semantics.zh-cn.md) |
-| <span style="color:#2563eb">**读 Dashboard / Profile**</span> | [dashboard-profile.zh-cn.md](dashboard-profile.zh-cn.md) |
-| <span style="color:#2563eb">**选报表 / 看功能**</span> | [reports-catalog.zh-cn.md](reports-catalog.zh-cn.md) |
-| **查版本新功能** | [version-highlights.zh-cn.md](version-highlights.zh-cn.md) |
-| **本地运行** | [local-development.md](../setup/local-development.md) |
+| 目标 | English | 简体中文 |
+| :--- | :--- | :--- |
+| 本地运行 | [getting-started.md](getting-started.md) | [getting-started.zh-cn.md](getting-started.zh-cn.md) |
+| 理解 KPI | [data-semantics.md](data-semantics.md) | [data-semantics.zh-cn.md](data-semantics.zh-cn.md) |
+| 语义场景速查 | [semantic-scenarios.md](semantic-scenarios.md) | [semantic-scenarios.zh-cn.md](semantic-scenarios.zh-cn.md) |
+| Dashboard / Profile | [dashboard-profile.md](dashboard-profile.md) | [dashboard-profile.zh-cn.md](dashboard-profile.zh-cn.md) |
+| 选择报表 | [reports-catalog.md](reports-catalog.md) | [reports-catalog.zh-cn.md](reports-catalog.zh-cn.md) |
+| 版本功能 | [version-highlights.md](version-highlights.md) | [version-highlights.zh-cn.md](version-highlights.zh-cn.md) |
 
-阅读标记：[_style-guide.zh-cn.md](_style-guide.zh-cn.md)
+## 任务指南（Tasks）
 
----
+完整索引：[tasks/README.zh-cn.md](tasks/README.zh-cn.md) · [tasks/README.md](tasks/README.md)
 
-## 用户文档 · Concepts
+| 任务 | English | 简体中文 |
+| :--- | :--- | :--- |
+| 导入流水 | [import-bank-statement.md](tasks/import-bank-statement.md) | [import-bank-statement.zh-cn.md](tasks/import-bank-statement.zh-cn.md) |
+| 处理未分类 | [classify-unclassified-transactions.md](tasks/classify-unclassified-transactions.md) | [classify-unclassified-transactions.zh-cn.md](tasks/classify-unclassified-transactions.zh-cn.md) |
+| 设置分类语义 | [set-category-semantics.md](tasks/set-category-semantics.md) | [set-category-semantics.zh-cn.md](tasks/set-category-semantics.zh-cn.md) |
+| 刷新 Profile | [refresh-profile.md](tasks/refresh-profile.md) | [refresh-profile.zh-cn.md](tasks/refresh-profile.zh-cn.md) |
+| 核对 KPI | [reconcile-kpi-numbers.md](tasks/reconcile-kpi-numbers.md) | [reconcile-kpi-numbers.zh-cn.md](tasks/reconcile-kpi-numbers.zh-cn.md) |
+| 设置月度预算 | [set-monthly-budget.md](tasks/set-monthly-budget.md) | [set-monthly-budget.zh-cn.md](tasks/set-monthly-budget.zh-cn.md) |
+| 编写分类规则 | [write-classification-rule.md](tasks/write-classification-rule.md) | [write-classification-rule.zh-cn.md](tasks/write-classification-rule.zh-cn.md) |
+| 报表下钻 | [drill-down-from-reports.md](tasks/drill-down-from-reports.md) | [drill-down-from-reports.zh-cn.md](tasks/drill-down-from-reports.zh-cn.md) |
 
-| 文档 | 说明 |
-| :--- | :--- |
-| [数据语义](data-semantics.zh-cn.md) | Real income · Consumption · 计入/不计入 |
-| [Dashboard 与 Profile](dashboard-profile.zh-cn.md) | 页面模块与阅读节奏 |
-| [报表目录](reports-catalog.zh-cn.md) | 14+ 报表按决策问题分组 |
-| [版本功能要点](version-highlights.zh-cn.md) | v2.0.0 → 当前 |
-| [产品指南](product-guide.zh-cn.md) | 定位与能力分档 |
-| [宣言](manifesto.zh-cn.md) | 本地优先 · 数据可控 |
-| [商业模式](business-model.zh-cn.md) | 价值主张 |
-| [SWOT](swot.zh-cn.md) | 优劣势与风险 |
-| [品牌](branding.zh-cn.md) | 视觉方向 |
-
----
-
-## 工程文档 · Tech
-
-| 文档 | 说明 |
-| :--- | :--- |
-| [报表口径（技术）](../tech/finance/personal-finance-reporting-guide.zh-cn.md) | API · 数据源 · 验收 |
-| [报表口径（EN）](../tech/finance/personal-finance-reporting-guide.md) | English technical reference |
-| [财务语义合同](../tech/finance/finance-semantic-contract.zh-cn.md) | inclusion 规则 · 视图字段 |
-| [功能清单](../tech/reference/function-list.zh-cn.md) | 与代码对齐的能力列表 |
-| [技术架构](../tech/architecture/technical.zh-cn.md) | 栈 · 部署 · 分层 |
-| [v2.0.2 计划](../tech/roadmap/v2.0.2-professional-finance-quality-plan.zh-cn.md) | 专业语义版本边界 |
-| [协作规范](../tech/contributing/rules-guide.zh-cn.md) | 含 AI 协作 |
+总索引：[docs/_index.md](../../_index.md)
 
 ---
 
-## 战略与里程碑
+## 战略与产品
 
-- [路线图与里程碑](../tech/architecture/milestones.zh-cn.md)
-- [FINALIZATION 2026-03](../tech/architecture/finalization-2026-03.md)
+| 文档 | EN | ZH |
+| :--- | :--- | :--- |
+| 产品指南 | [product-guide.md](product-guide.md) | [product-guide.zh-cn.md](product-guide.zh-cn.md) |
+| 宣言 | [manifesto.md](manifesto.md) | [manifesto.zh-cn.md](manifesto.zh-cn.md) |
+| 功能清单 | [function-list.md](../../tech/reference/function-list.md) | [function-list.zh-cn.md](../../tech/reference/function-list.zh-cn.md) |
 
 ---
 
-## 项目主页
+## 工程文档
 
-- [README.zh-CN.md](../../README.zh-CN.md)
+| 文档 | EN | ZH |
+| :--- | :--- | :--- |
+| 架构 | [technical.md](../../tech/architecture/technical.md) | [technical.zh-cn.md](../../tech/architecture/technical.zh-cn.md) |
+| 报表口径 | [personal-finance-reporting-guide.md](../../tech/finance/personal-finance-reporting-guide.md) | [personal-finance-reporting-guide.zh-cn.md](../../tech/finance/personal-finance-reporting-guide.zh-cn.md) |
+| 语义合同 | [finance-semantic-contract.md](../../tech/finance/finance-semantic-contract.md) | [finance-semantic-contract.zh-cn.md](../../tech/finance/finance-semantic-contract.zh-cn.md) |
+| 本地环境 | [local-development.md](../setup/local-development.md) | [local-development.zh-cn.md](../setup/local-development.zh-cn.md) |
+
+---
+
+## 写作规范
+
+见 [_style-guide.zh-cn.md](_style-guide.zh-cn.md) — 财务/IT 专业术语 + 中文简明表述；英文遵循 B1 可读性。

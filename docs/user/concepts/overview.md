@@ -4,61 +4,63 @@
 | :--- | :--- |
 | **Language** | English · [简体中文](overview.zh-cn.md) |
 
-Kubernetes-style layering: **Concepts → Tasks → Reference**. User docs and technical docs are separated.
+Structured like Kubernetes docs: **Concepts → Tasks → Reference**. User guides and engineering docs are separate.
+
+**New here?** Start with [Getting started](getting-started.md), then [Data semantics](data-semantics.md).
 
 ---
 
-## Quick entry
+## Quick links
 
-| I want to… | Document |
-| :--- | :--- |
-| <span style="color:#2563eb">**Start in 5 minutes**</span> | [getting-started.md](getting-started.md) |
-| <span style="color:#2563eb">**Understand the numbers**</span> | [data-semantics.md](data-semantics.md) |
-| <span style="color:#2563eb">**Read Dashboard & Profile**</span> | [dashboard-profile.md](dashboard-profile.md) |
-| <span style="color:#2563eb">**Pick a report**</span> | [reports-catalog.md](reports-catalog.md) |
-| **See v2.0.x features** | [version-highlights.md](version-highlights.md) |
-| **Run locally** | [local-development.md](../setup/local-development.md) |
+| I want to… | English | 简体中文 |
+| :--- | :--- | :--- |
+| Run locally | [getting-started.md](getting-started.md) | [getting-started.zh-cn.md](getting-started.zh-cn.md) |
+| Understand KPIs | [data-semantics.md](data-semantics.md) | [data-semantics.zh-cn.md](data-semantics.zh-cn.md) |
+| Semantic scenarios | [semantic-scenarios.md](semantic-scenarios.md) | [semantic-scenarios.zh-cn.md](semantic-scenarios.zh-cn.md) |
+| Use Dashboard / Profile | [dashboard-profile.md](dashboard-profile.md) | [dashboard-profile.zh-cn.md](dashboard-profile.zh-cn.md) |
+| Choose a report | [reports-catalog.md](reports-catalog.md) | [reports-catalog.zh-cn.md](reports-catalog.zh-cn.md) |
+| See release notes | [version-highlights.md](version-highlights.md) | [version-highlights.zh-cn.md](version-highlights.zh-cn.md) |
 
-Reading markers: [_style-guide.md](_style-guide.md)
+## Tasks (step-by-step)
 
----
+Full index: [tasks/README.md](tasks/README.md) · [tasks/README.zh-cn.md](tasks/README.zh-cn.md)
 
-## User docs · Concepts
+| Task | English | 简体中文 |
+| :--- | :--- | :--- |
+| Import statement | [import-bank-statement.md](tasks/import-bank-statement.md) | [import-bank-statement.zh-cn.md](tasks/import-bank-statement.zh-cn.md) |
+| Classify rows | [classify-unclassified-transactions.md](tasks/classify-unclassified-transactions.md) | [classify-unclassified-transactions.zh-cn.md](tasks/classify-unclassified-transactions.zh-cn.md) |
+| Category semantics | [set-category-semantics.md](tasks/set-category-semantics.md) | [set-category-semantics.zh-cn.md](tasks/set-category-semantics.zh-cn.md) |
+| Refresh Profile | [refresh-profile.md](tasks/refresh-profile.md) | [refresh-profile.zh-cn.md](tasks/refresh-profile.zh-cn.md) |
+| Reconcile KPIs | [reconcile-kpi-numbers.md](tasks/reconcile-kpi-numbers.md) | [reconcile-kpi-numbers.zh-cn.md](tasks/reconcile-kpi-numbers.zh-cn.md) |
+| Monthly budget | [set-monthly-budget.md](tasks/set-monthly-budget.md) | [set-monthly-budget.zh-cn.md](tasks/set-monthly-budget.zh-cn.md) |
+| Classification rule | [write-classification-rule.md](tasks/write-classification-rule.md) | [write-classification-rule.zh-cn.md](tasks/write-classification-rule.zh-cn.md) |
+| Report drill-down | [drill-down-from-reports.md](tasks/drill-down-from-reports.md) | [drill-down-from-reports.zh-cn.md](tasks/drill-down-from-reports.zh-cn.md) |
 
-| Document | Description |
-| :--- | :--- |
-| [Data semantics](data-semantics.md) | Real income · Consumption · inclusion rules |
-| [Dashboard & Profile](dashboard-profile.md) | Page modules and reading cadence |
-| [Reports catalog](reports-catalog.md) | 14+ reports by decision question |
-| [Version highlights](version-highlights.md) | v2.0.0 → current |
-| [Product guide](product-guide.md) | Positioning and capability tiers |
-| [Manifesto](manifesto.md) | Local-first · data control |
-| [Business model](business-model.md) | Value proposition |
-| [SWOT](swot.md) | Strengths, gaps, risks |
-| [Branding](branding.md) | Visual direction |
-
----
-
-## Technical docs
-
-| Document | Description |
-| :--- | :--- |
-| [Reporting reference](../tech/finance/personal-finance-reporting-guide.md) | APIs · views · acceptance |
-| [Semantic contract (ZH)](../tech/finance/finance-semantic-contract.zh-cn.md) | Inclusion rules · view fields |
-| [Function list](../tech/reference/function-list.md) | Code-aligned capability inventory |
-| [Architecture](../tech/architecture/technical.md) | Stack · deployment · layers |
-| [v2.0.2 plan (ZH)](../tech/roadmap/v2.0.2-professional-finance-quality-plan.zh-cn.md) | Professional semantics release |
-| [Contributing rules](../tech/contributing/rules-guide.md) | Includes AI collaboration |
+Master index: [docs/_index.md](../../_index.md)
 
 ---
 
-## Strategy & milestones
+## Strategy & product
 
-- [Milestones](../tech/architecture/milestones.md)
-- [FINALIZATION 2026-03](../tech/architecture/finalization-2026-03.md)
+| Document | EN | ZH |
+| :--- | :--- | :--- |
+| Product guide | [product-guide.md](product-guide.md) | [product-guide.zh-cn.md](product-guide.zh-cn.md) |
+| Manifesto | [manifesto.md](manifesto.md) | [manifesto.zh-cn.md](manifesto.zh-cn.md) |
+| Function list | [function-list.md](../../tech/reference/function-list.md) | [function-list.zh-cn.md](../../tech/reference/function-list.zh-cn.md) |
 
 ---
 
-## Project home
+## Engineering
 
-- [README.md](../../README.md)
+| Document | EN | ZH |
+| :--- | :--- | :--- |
+| Architecture | [technical.md](../../tech/architecture/technical.md) | [technical.zh-cn.md](../../tech/architecture/technical.zh-cn.md) |
+| Reporting reference | [personal-finance-reporting-guide.md](../../tech/finance/personal-finance-reporting-guide.md) | [personal-finance-reporting-guide.zh-cn.md](../../tech/finance/personal-finance-reporting-guide.zh-cn.md) |
+| Semantic contract | [finance-semantic-contract.md](../../tech/finance/finance-semantic-contract.md) | [finance-semantic-contract.zh-cn.md](../../tech/finance/finance-semantic-contract.zh-cn.md) |
+| Local setup | [local-development.md](../setup/local-development.md) | [local-development.zh-cn.md](../setup/local-development.zh-cn.md) |
+
+---
+
+## Writing rules
+
+See [_style-guide.md](_style-guide.md) — B1-friendly English, professional finance terms with plain definitions.

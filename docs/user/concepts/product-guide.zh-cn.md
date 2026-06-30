@@ -11,8 +11,10 @@ FinSight 是 **可自建部署的个人财务管理应用**：导入银行流水
 | 步骤 | 文档 |
 | :---: | :--- |
 | 1 | [数据语义](data-semantics.zh-cn.md) |
+| 1b | [语义场景速查](semantic-scenarios.zh-cn.md) |
 | 2 | [Dashboard 与 Profile](dashboard-profile.zh-cn.md) |
 | 3 | [报表目录](reports-catalog.zh-cn.md) |
+| 4 | [任务索引](../tasks/README.zh-cn.md) |
 
 功能清单：[function-list.zh-cn.md](../../tech/reference/function-list.zh-cn.md) · 版本：[version-highlights.zh-cn.md](version-highlights.zh-cn.md)
 

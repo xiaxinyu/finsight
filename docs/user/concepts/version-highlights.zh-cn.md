@@ -4,53 +4,43 @@
 | :--- | :--- |
 | **Language** | 简体中文 · [English](version-highlights.md) |
 
-> 工程清单：[function-list.zh-cn.md](../../tech/reference/function-list.zh-cn.md) · 计划：[v2.0.2 计划](../../tech/roadmap/v2.0.2-professional-finance-quality-plan.zh-cn.md)
+> 完整清单：[function-list.zh-cn.md](../../tech/reference/function-list.zh-cn.md)
+
+按 release 归纳**用户可感知**变更，便于对照界面与文档。
 
 ---
 
-## v2.0.2 — 专业财务语义（当前）
+## v2.0.2 — 专业财务语义（当前主线）
 
-<span style="color:#2563eb">**主题**</span>：统一口径 · 物化分析 · 可解释报表
+**主题：** Dashboard、Profile、Reports 共用同一 semantic layer。
 
-| 域 | 功能 |
+| 域 | 变更摘要 |
 | :--- | :--- |
-| **语义层** | `v_transaction_finance_semantics` · 月度 `REAL_INCOME` / `CONSUMPTION_EXPENSE` |
-| **Profile** | `fin_profile_current` 物化 · GET 只读 · Refresh 重算 |
-| **Dashboard** | 语义 KPI · 饼图 drill · Metric hints |
-| **分类** | Admin semantics · report_role 可编辑 · Transactions Reporting Classification 筛选 |
-| **报表** | Transfer & Finance · Tax · Budget vs Actual · Spending Drift · Trend Changes · 统一 quality bar |
-| **Drill** | Unified Drawer · semantic tag drill · legacy txnTypes 冲突修复 |
-| **术语** | Non-P&L → Transfer / Finance / Investment |
+| **语义层** | `v_transaction_finance_semantics`；月度 KPI `REAL_INCOME` / `CONSUMPTION_EXPENSE` |
+| **Profile** | 物化 snapshot；Refresh 重算；10 维度 + confidence |
+| **Dashboard** | 语义 KPI；Reporting Classification 饼图；semantic drill |
+| **分类** | Admin finance semantics；可编辑 report_role / semantic tag |
+| **Transactions** | Reporting Classification 全量筛选 |
+| **Reports** | Transfer & Finance、Tax、统一 quality bar、metric ? |
+| **术语** | Transfer / Finance / Investment（替代 Non-P&L） |
 
 ---
 
 ## v2.0.1 — 质量优化
 
-可索引 date range · Forecast hybrid · Profile GET 只读 · CI 恢复
+可索引 date range SQL · Forecast hybrid · Profile GET 只读。
 
 ---
 
 ## v2.0.0 — 稳定性
 
-Metric gate · read-path 稳定 · L2 seed
+Metric gate · read-path 统一。
 
 ---
 
 ## v1.8 — 分类治理
 
-规则影响预览 · Data quality 层 · 决策型报表导航
-
----
-
-## 近期 commit 摘要
-
-| 范围 | 变更 |
-| :--- | :--- |
-| `feat(semantics)` | Catalog · semantic picker · semanticTag 持久化 |
-| `feat(analytics)` | Semantic breakdown · period-summary |
-| `feat(drilldown)` | `drillParamsForSemanticTag` |
-| `feat(reports)` | Layout · metric explanations |
-| `fix(transactions)` | Auto-classify 写回 · drill 过滤修复 |
+规则 impact preview · data quality 层 · 决策型报表导航。
 
 ---
 
@@ -58,6 +48,5 @@ Metric gate · read-path 稳定 · L2 seed
 
 | 文档 | 用途 |
 | :--- | :--- |
-| [data-semantics.zh-cn.md](data-semantics.zh-cn.md) | 理解数字 |
-| [reports-catalog.zh-cn.md](reports-catalog.zh-cn.md) | 报表目录 |
-| [finance-semantic-contract.zh-cn.md](../../tech/finance/finance-semantic-contract.zh-cn.md) | 技术合同 |
+| [data-semantics.zh-cn.md](data-semantics.zh-cn.md) | 读 KPI |
+| [reports-catalog.zh-cn.md](reports-catalog.zh-cn.md) | 报表索引 |

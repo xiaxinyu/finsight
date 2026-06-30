@@ -1,96 +1,90 @@
-# Dashboard 与 Profile 阅读指南
+# Dashboard 与 Profile 指南
 
 | | |
 | :--- | :--- |
 | **Language** | 简体中文 · [English](dashboard-profile.md) |
 
-> 语义基础：[data-semantics.zh-cn.md](data-semantics.zh-cn.md)
+> KPI 定义：[data-semantics.zh-cn.md](data-semantics.zh-cn.md)
 
 ---
 
-## 1. 页面分工
+## 1. 两页分工
 
-| 页面 | 时间范围 | 更新方式 | 回答的问题 |
+| 页面 | 时间窗口 | 更新机制 | 核心问题 |
 | :--- | :--- | :--- | :--- |
-| <span style="color:#2563eb">**Dashboard**</span> | Period 自选 | 实时查询 | **这段时间**过得怎样？ |
-| <span style="color:#2563eb">**Profile**</span> | 最近 **12 个月** | 快照；**Refresh** | **长期**财务类型？ |
+| **Dashboard** | 自选 **Period** | 实时查询 | **当前区间**表现如何？ |
+| **Profile** | 固定 **近 12 个月** | **Snapshot**；**Refresh** 重算 | **长期**财务模式如何？ |
 
-<span style="color:#d97706">**注意**</span>：勿将 Dashboard 某段 Net 与 Profile 总分直接对比（时间与 scope 不同）。
+**注意：** 勿将 Dashboard 某段 Net 与 Profile 总分直接对比（date range 与 scope 不同）。
 
 ---
 
-## 2. Dashboard 模块
+## 2. Dashboard 结构
 
-```
-Period Picker ──► 所有 KPI / 图表
-     ├─ Real income / Consumption / Net
-     ├─ Cash flow 柱状图
-     ├─ Expense breakdown 饼图
-     ├─ Data quality 条
-     ├─ Advisor cards（可选）
-     └─ Account balance
-```
+| 区域 | 内容 | 建议动作 |
+| :--- | :--- | :--- |
+| **KPI 卡片** | Real income · Consumption · Net | 每次访问先看 |
+| **Cash flow 图** | 按月三项指标 | 点击月份 drill-down |
+| **Expense 饼图** | Top Reporting Classifications | 点击切片 → merchant → transaction |
+| **Data quality 条** | Unclassified 计数 | trust 低则补分类 |
+| **Advisor cards** | 建议动作（feature flag） | 可选 |
+| **Account balance** | 账户余额 | 与 period 消费不同维度 |
 
 ### KPI 解读
 
-| KPI | 怎么读 | 下一步 |
+| KPI | 业务读法 | 异常时 |
 | :--- | :--- | :--- |
-| Real income | 真实收入 | Cash flow 看月度波动 |
-| Consumption | 生活消费 | 饼图 top3 是否集中 |
-| Net | 结余/缺口 | 负值 → Spending Drift · Budget vs Actual |
+| Real income | 区间内真实收入 | 查 [data-semantics.zh-cn.md](data-semantics.zh-cn.md) |
+| Consumption | 区间内生活消费 | 看饼图 + Budget vs Actual |
+| Net | 盈余（+）或缺口（−） | 负值 → Spending Drift |
 
-### 交互
-
-| 操作 | 结果 |
-| :--- | :--- |
-| 点击 Cash flow 某月 | 该月 drill |
-| 点击饼图切片 | Reporting Classification → 商户 → 交易 |
-
-语义 drill 按 **semantic tag** 过滤，不叠加 legacy `txn_types`。
+**Drill-down：** 饼图按 **semantic tag** 过滤，不仅依赖 legacy category tree。
 
 ---
 
-## 3. Profile 模块
+## 3. Profile 结构
 
-```
-Overall Score + Confidence + User Type
-     ├─ 雷达图 10 维度
-     ├─ Weakest / Strongest
-     └─ 维度详情 → Reason · Evidence · 动作
-```
-
-### 十个维度
-
-| ID | 名称 | 衡量 |
-| :--- | :--- | :--- |
-| `income_stability` | 收入稳定性 | 12 个月收入波动 |
-| `spending_control` | 支出控制 | 支出 vs 收入 |
-| `savings_discipline` | 储蓄纪律 | 储蓄率 |
-| `fixed_burden` | 固定负担 | 固定成本占收入 |
-| `liquidity_safety` | 流动性安全 | 应急月数 |
-| `debt_pressure` | 债务压力 | 偿债 vs 收入 |
-| `lifestyle_inflation` | 生活方式通胀 | 支出增长 |
-| `spending_concentration` | 支出集中度 | Top 分类占比 |
-| `seasonality_risk` | 季节性风险 | 月际波动 |
-| `data_trust` | 数据可信度 | 分类完整度 |
-
-### 快照状态
-
-| 状态 | 操作 |
+| 区域 | 内容 |
 | :--- | :--- |
-| Not ready | Generate profile |
-| Stale | Refresh |
-| Reconciliation mismatch | 补分类；见 [runbook](../../tech/finance/profile-materialization-runbook.zh-cn.md) |
+| **Overall score** | 加权健康分（0–100） |
+| **Confidence** | 分数可信度 |
+| **User type** | 类型标签（如 Disciplined saver） |
+| **Radar** | 10 维度 |
+| **Weakest / Strongest** | 改进与优势 |
+| **维度详情** | Reason · Evidence · 跳转 |
+
+### 十维度（业务含义）
+
+| 维度 | 衡量 |
+| :--- | :--- |
+| Income stability | 收入稳定性 |
+| Spending control | 支出相对收入的控制 |
+| Savings discipline | 储蓄纪律 |
+| Fixed burden | 固定成本占收入比 |
+| Liquidity safety | 流动性 runway（月） |
+| Debt pressure | 偿债压力 |
+| Lifestyle inflation | 支出膨胀 |
+| Spending concentration | 分类集中度 |
+| Seasonality risk | 月际波动 |
+| Data trust | 分类完整度 |
+
+### Snapshot 状态
+
+| 状态 | 含义 | 操作 |
+| :--- | :--- | :--- |
+| Not ready | 无快照 | Generate profile |
+| Stale | 数据已变 | Refresh |
+| Reconciliation mismatch | 物化指标与重算不一致 | 补分类；见 runbook |
 
 ---
 
-## 4. 推荐使用节奏
+## 4. 使用频率建议
 
 | 频率 | Dashboard | Profile | Reports |
 | :--- | :--- | :--- | :--- |
-| 日常 | Net + top3 | — | — |
-| 每月 | 确认 period | — | Cashflow · Budget vs Actual · Spending Drift |
-| 每季 | — | Refresh + weakest 3 | Trend Changes · Outlook · Cash Risk |
+| 每日（5 min） | Net + 饼图 top3 | — | — |
+| 每月（15 min） | 确认 Period | — | Cashflow · Budget vs Actual · Spending Drift |
+| 每季（30 min） | — | Refresh + weakest 3 | Trend Changes · Outlook · Cash Risk |
 
 ---
 

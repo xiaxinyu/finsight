@@ -4,7 +4,11 @@ title: Local development setup
 
 # Local development setup
 
-This task helps you run FinSight locally.
+| | |
+| :--- | :--- |
+| **Language** | English · [简体中文](local-development.zh-cn.md) |
+
+Run FinSight backend and optional frontend dev server on your machine.
 
 ## Prerequisites
 

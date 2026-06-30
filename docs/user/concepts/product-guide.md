@@ -4,19 +4,21 @@
 | :--- | :--- |
 | **Language** | English · [简体中文](product-guide.zh-cn.md) |
 
-FinSight is a **self-hosted personal finance application**: import bank activity, apply **rules-based classification**, and review **reports and trends** without third-party cloud custody.
+FinSight is a **self-hosted personal finance application**. You import bank data, classify transactions with rules, and review Dashboard, Profile, and Reports on your own server.
 
-**v2.0.2+ reading path:**
+**Read these first (v2.0.2+):**
 
 | Step | Document |
 | :---: | :--- |
 | 1 | [Data semantics](data-semantics.md) |
+| 1b | [Semantic scenarios](semantic-scenarios.md) |
 | 2 | [Dashboard & Profile](dashboard-profile.md) |
 | 3 | [Reports catalog](reports-catalog.md) |
+| 4 | [Tasks index](../tasks/README.md) |
 
 Feature inventory: [function-list.md](../../tech/reference/function-list.md) · Releases: [version-highlights.md](version-highlights.md)
 
-**Principle:** clarity and control first—useful insight from data you already own.
+**Principle:** clarity and control first — then insight from data you already own.
 
 ---
 

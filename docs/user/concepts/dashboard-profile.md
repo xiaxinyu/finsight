@@ -1,110 +1,94 @@
-# Dashboard & Profile reading guide
+# Dashboard & Profile guide
 
 | | |
 | :--- | :--- |
 | **Language** | English · [简体中文](dashboard-profile.zh-cn.md) |
 
-> Semantic foundation: [data-semantics.md](data-semantics.md)
+> KPI definitions: [data-semantics.md](data-semantics.md)
 
 ---
 
-## 1. Page roles at a glance
+## 1. Two pages, two questions
 
-| Page | Time window | Update model | Question |
+| Page | Time window | Updates | Question |
 | :--- | :--- | :--- | :--- |
-| <span style="color:#2563eb">**Dashboard**</span> | **Period picker** (top-right) | Live query | How am I doing **in this period**? |
-| <span style="color:#2563eb">**Profile**</span> | Fixed **last 12 months** | Materialized snapshot; **Refresh** to recompute | What **financial persona** am I over the long run? |
+| **Dashboard** | You pick the **Period** (top-right) | Live query each time | How am I doing **now**? |
+| **Profile** | Fixed **last 12 months** | Saved **snapshot**; click **Refresh** to rebuild | What is my **long-term** financial pattern? |
 
-<span style="color:#d97706">**Note**</span>: Do not compare Dashboard Net for Jan–Jun with Profile overall score without aligning time and scope.
+**Note:** Do not compare Dashboard Net (e.g. Jan–Jun) with Profile overall score without matching dates and scope.
 
 ---
 
-## 2. Dashboard layout
+## 2. Dashboard map
 
-```
-Period Picker ──► all KPIs & charts
-     │
-     ├─ Real income / Consumption / Net        ← semantic period-summary
-     ├─ Cash flow chart                        ← monthly Real income · Consumption · Net
-     ├─ Expense breakdown (donut)              ← top Reporting Classifications
-     ├─ Data quality strip                     ← unclassified count → trust
-     ├─ Advisor cards (feature flag)           ← suggested actions
-     └─ Account balance panel                  ← balances (not period spend)
-```
-
-### 2.1 Headline KPIs
-
-| KPI | How to read | Next step |
+| Area | Shows | Action |
 | :--- | :--- | :--- |
-| Real income | Earned in period (semantic) | Open cash flow chart for monthly spikes |
-| Consumption | Living spend in period | Check donut top-3 concentration |
-| Net | Surplus or deficit | If negative → Spending Drift · Budget vs Actual |
+| **KPI cards** | Real income · Consumption · Net | Start here every visit |
+| **Cash flow chart** | Same three metrics by month | Click a month to drill down |
+| **Expense donut** | Top Reporting Classifications | Click a slice → merchants → transactions |
+| **Data quality strip** | Unclassified count | Fix categories if trust is low |
+| **Advisor cards** | Suggested next steps (if enabled) | Optional |
+| **Account balance** | Current balances | Not the same as period spend |
 
-**?** tooltip = same definitions as backend hints.
+### Read the KPIs
 
-### 2.2 Interactions
+| KPI | Read it as | If it looks wrong |
+| :--- | :--- | :--- |
+| Real income | Earned money in the Period | Check [data-semantics.md](data-semantics.md); exclude refunds |
+| Consumption | Living spend in the Period | Open donut; compare with Budget vs Actual |
+| Net | Surplus (+) or gap (−) | If negative, open Spending Drift or Budget vs Actual |
 
-| Action | Result |
+**Drill-down:** Clicking a donut slice (e.g. Social) filters by **semantic tag**, not the old category tree only.
+
+---
+
+## 3. Profile map
+
+| Area | Shows |
 | :--- | :--- |
-| Click a month in Cash flow | Drill into that month’s structure |
-| Click donut slice (e.g. Social) | Drill by **Reporting Classification** → merchants → transactions |
+| **Overall score (0–100)** | Weighted health score |
+| **Confidence** | How reliable the score is (data + history length) |
+| **User type** | Short label (e.g. *Disciplined saver*, *Cashflow stressed*) |
+| **Radar chart** | Ten dimension scores |
+| **Weakest / Strongest** | Where to improve or maintain |
+| **Dimension detail** | Reason, evidence, links to reports |
 
-Semantic drill filters by **semantic tag**; legacy category `txn_types` filters are skipped when a semantic filter is active.
+### Ten dimensions (plain English)
 
----
+| Dimension | Measures |
+| :--- | :--- |
+| Income stability | Is income steady month to month? |
+| Spending control | Do expenses stay below income? |
+| Savings discipline | Are you saving enough? |
+| Fixed burden | How much income goes to fixed bills? |
+| Liquidity safety | How many months of runway do you have? |
+| Debt pressure | How heavy are loan payments? |
+| Lifestyle inflation | Is spending growing faster than income? |
+| Spending concentration | Is spend stuck in a few categories? |
+| Seasonality risk | How volatile is month-to-month net? |
+| Data trust | How complete is classification? |
 
-## 3. Profile layout
+### Snapshot status
 
-```
-Overall score (0–100) + Confidence + User type
-     │
-     ├─ Radar: 10 dimensions
-     ├─ Weakest / Strongest highlights
-     └─ Dimension click → Reason · Evidence · Suggested actions
-```
-
-### 3.1 Ten dimensions
-
-| ID | Label | Measures |
-| :--- | :--- | :--- |
-| `income_stability` | Income stability | Income volatility over 12 months |
-| `spending_control` | Spending control | Expense vs income balance |
-| `savings_discipline` | Savings discipline | Savings rate vs target |
-| `fixed_burden` | Fixed burden | Fixed costs as % of income |
-| `liquidity_safety` | Liquidity safety | Emergency runway (months) |
-| `debt_pressure` | Debt pressure | Debt service vs income |
-| `lifestyle_inflation` | Lifestyle inflation | Expense growth trend |
-| `spending_concentration` | Spending concentration | Top-category share |
-| `seasonality_risk` | Seasonality risk | Month-to-month net volatility |
-| `data_trust` | Data trust | Classification completeness |
-
-### 3.2 User types (examples)
-
-Disciplined saver · High fixed burden · Cashflow stressed · Volatile income · Lifestyle inflation · Debt pressure · Data quality risk · Balanced
-
-### 3.3 Snapshot states
-
-| State | Meaning | Action |
+| Status | Meaning | Action |
 | :--- | :--- | :--- |
 | Not ready | No snapshot yet | **Generate profile** |
-| Stale | Ledger changed since snapshot | **Refresh** |
-| Reconciliation mismatch | Monthly metrics ≠ transaction recompute | Fix classification; see runbook |
-
-<span style="color:#64748b">**Reference**</span>: [profile-materialization-runbook.zh-cn.md](../../tech/finance/profile-materialization-runbook.zh-cn.md)
+| Stale | Data changed after snapshot | **Refresh** |
+| Reconciliation mismatch | Stored metrics ≠ live recompute | Fix categories; see engineering runbook |
 
 ---
 
-## 4. Recommended cadence
+## 4. How often to open each page
 
-| Cadence | Dashboard | Profile | Reports |
+| How often | Dashboard | Profile | Reports |
 | :--- | :--- | :--- | :--- |
-| Daily (~5 min) | Net + donut top 3 | — | — |
-| Monthly (~15 min) | Confirm period | — | Cashflow · Budget vs Actual · Spending Drift |
-| Quarterly (~30 min) | — | Refresh; review weakest 3 | Trend Changes · Annual Outlook · Cash Risk |
+| Daily (5 min) | Net + top 3 donut slices | — | — |
+| Monthly (15 min) | Confirm Period | — | Cashflow · Budget vs Actual · Spending Drift |
+| Quarterly (30 min) | — | Refresh; review 3 weakest dimensions | Trend Changes · Annual Outlook · Cash Risk |
 
 ---
 
 ## 5. Related docs
 
-- [reports-catalog.md](reports-catalog.md) — report index  
-- [data-semantics.md](data-semantics.md) — KPI definitions
+- [reports-catalog.md](reports-catalog.md)  
+- [data-semantics.md](data-semantics.md)
