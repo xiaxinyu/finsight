@@ -1,6 +1,42 @@
 # FinSight Function List & Classification
 
-This document provides a detailed list of features and capabilities of FinSight, categorized by their functional domain. It reflects the development history and the current state of the application. For product positioning and the **Free / Plus / Pro** roadmap labels (not a license or SKU map), see [`docs/user/concepts/product-guide.md`](../../user/concepts/product-guide.md).
+> **User guides:** [reports-catalog.md](../../user/concepts/reports-catalog.md) · [version-highlights.md](../../user/concepts/version-highlights.md)  
+> **中文版:** [function-list.zh-cn.md](function-list.zh-cn.md)
+
+Feature inventory aligned to the codebase. Product tiers: [product-guide.md](../../user/concepts/product-guide.md).
+
+---
+
+## 6. v2.0.x professional semantics (current)
+
+### 6.1 Finance semantic layer
+
+*   View `v_transaction_finance_semantics`: direction · economic_nature · semantic_tag · inclusion flags
+*   Monthly metrics in `fin_metric_monthly`: `REAL_INCOME` · `CONSUMPTION_EXPENSE` · `NET_CASHFLOW`
+*   Admin category semantics: editable `report_role` · semantic tag · inclusion preview
+*   Transaction filters: full Reporting Classification catalog + quick filters
+
+### 6.2 Dashboard & Profile
+
+*   Dashboard semantic KPIs: Real income · Consumption · Net
+*   Donut semantic breakdown with drill
+*   Materialized Profile: 10 dimensions · confidence · user type · Refresh
+*   Metric hints on KPIs
+
+### 6.3 Decision-oriented reports
+
+*   Cashflow & budget: Cashflow · Budget vs Actual · Fund Flow · Transfer & Finance · Tax Summary
+*   Spending: Fixed vs Variable · Spending Drift · Trend Changes
+*   Cash & outlook: Bills Calendar · Annual Outlook · Cash Risk
+*   Merchants: Subscriptions · Concentration · Drift
+*   Shared: Unified Drill Drawer · Reports data quality bar · semantic drill
+
+### 6.4 Quality & CI (v2.0.0–v2.0.1)
+
+*   Metric gate / reconciliation · read-path stability · index-friendly date-range SQL
+*   Forecast hybrid_projection · Profile GET read-only
+
+---
 
 ## 1. Transaction Processing (交易处理)
 
@@ -77,6 +113,10 @@ The technical foundation of FinSight.
 
 ## 5. Release History (版本历史)
 
+*   **v2.0.2** (2026-06): Professional finance semantic layer; unified Dashboard/Profile/report scopes; Profile materialization; Transfer & Finance · Tax Summary; semantic drill; metric hints. See [version-highlights.md](../../user/concepts/version-highlights.md).
+*   **v2.0.1** (2026-06): Quality optimization; Forecast hybrid; index-friendly date range; Profile read-path.
+*   **v2.0.0** (2026-06): Metric gate; read-path stability; L2 category seed.
+*   **v1.8** (2026): Classification governance UX; rule impact preview; data quality layer; report navigation.
 *   **v1.6.0** (2025-12-23): Restructured navigation menu (Income/Expense Management, Benefit, Investment); Added Administration module (section and user management with role assignment); switched authentication to Database + BCrypt, improved failure handling and login page style; fixed UserMapper time column alignment.
 *   **v1.5.0** (2025-12-19): Added Year/Month comparison, CRBank import, Delete Category.
 *   **v1.4.0** (2025-12-18): Optimized Debit import, recovered automation keywords.

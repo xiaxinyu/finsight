@@ -1,6 +1,42 @@
 # FinSight 功能清单与分类
 
-本文档提供了 FinSight 的详细功能清单，按功能领域分类。它反映了系统的开发历史和当前能力。产品定位与 **Free / Plus / Pro** 分档说明（非许可或 SKU 对应关系）见 [`docs/user/concepts/product-guide.zh-cn.md`](../../user/concepts/product-guide.zh-cn.md)。
+> **用户向报表说明：** [reports-catalog.zh-cn.md](../../user/concepts/reports-catalog.zh-cn.md)  
+> **版本要点：** [version-highlights.zh-cn.md](../../user/concepts/version-highlights.zh-cn.md)
+
+本文档按功能域列出能力，与代码演进对齐。产品分档见 [product-guide.zh-cn.md](../../user/concepts/product-guide.zh-cn.md)。
+
+---
+
+## 6. v2.0.x 专业语义与分析（当前）
+
+### 6.1 财务语义层
+
+*   **统一视图** `v_transaction_finance_semantics`：cash_direction · economic_nature · semantic_tag · inclusion 标志
+*   **月度指标** `fin_metric_monthly`：`REAL_INCOME` · `CONSUMPTION_EXPENSE` · `NET_CASHFLOW` 等
+*   **Admin 分类语义**：report_role 可编辑 · semantic tag · Finance semantics 面板
+*   **Transactions 筛选**：Reporting Classification 全目录 + Quick filters（consumption / transfer / …）
+
+### 6.2 Dashboard & Profile
+
+*   **Dashboard 语义 KPI**：Real income · Consumption · Net（period-summary）
+*   **Expense breakdown 饼图**：semantic scope expense，可 drill 到商户
+*   **Profile 物化**：10 维度 · weighted score · confidence · user type · Refresh
+*   **Metric hints**：KPI 旁 ? 口径说明
+
+### 6.3 报表（决策导向）
+
+*   **Cashflow & budget**：Cashflow · Budget vs Actual · Fund Flow · Transfer & Finance · Tax Summary
+*   **Spending**：Fixed vs Variable · Spending Drift · Trend Changes
+*   **Cash & outlook**：Bills Calendar · Annual Outlook · Cash Risk
+*   **Merchants**：Subscriptions · Concentration · Drift
+*   **共用**：Unified Drill Drawer · Reports Data quality bar · semantic drill
+
+### 6.4 质量与 CI（v2.0.0–v2.0.1）
+
+*   Metric gate / reconciliation · read-path 稳定 · 可索引 date range SQL
+*   Forecast hybrid_projection · Profile GET read-only
+
+---
 
 ## 1. 交易处理 (Transaction Processing)
 
@@ -78,6 +114,10 @@ FinSight 的技术基石。
 
 ## 5. 版本历史 (Release History)
 
+*   **v2.0.2** (2026-06): 专业财务语义层；Dashboard/Profile/报表口径统一；Profile 物化；Transfer & Finance · Tax Summary 报表；Reporting Classification drill；metric hints。详见 [version-highlights.zh-cn.md](../../user/concepts/version-highlights.zh-cn.md)。
+*   **v2.0.1** (2026-06): 质量优化；Forecast hybrid；可索引 date range；Profile read-path。
+*   **v2.0.0** (2026-06): Metric gate；read-path 稳定；L2 分类 seed。
+*   **v1.8** (2026): 分类治理 UX；规则影响预览；数据质量层；报表导航重组。
 *   **v1.6.0** (2025-12-23): 重构导航菜单（收入/支出管理、五险一金、投资）；新增后台管理模块（Admin 分组、用户管理与角色分配）；登录认证切换为数据库 + BCrypt，并优化失败提示与登录页样式；修复 UserMapper 时间列名对齐。
 *   **v1.5.0** (2025-12-19): 新增年月消费对比，华润银行导入，删除类别功能。
 *   **v1.4.0** (2025-12-18): 优化借记卡导入，恢复自动化关键字。

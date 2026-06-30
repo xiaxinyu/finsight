@@ -1,10 +1,22 @@
 # FinSight 产品指南
 
-语言: 中文 · [English](product-guide.md)
+| | |
+| :--- | :--- |
+| **Language** | 简体中文 · [English](product-guide.md) |
 
-FinSight 是 **可自建部署的个人财务管理应用**：导入银行流水，通过 **规则与分类引擎** 管理交易，并以 **报表与趋势** 支持复盘；数据不依赖第三方云端托管。本文说明 **产品定位与能力范畴**；与版本强相关的功能点见 [`docs/tech/reference/function-list.zh-cn.md`](../../tech/reference/function-list.zh-cn.md)。
+FinSight 是 **可自建部署的个人财务管理应用**：导入银行流水，通过 **规则与分类引擎** 管理交易，并以 **报表与趋势** 支持复盘。
 
-**原则：**先保证清晰与可控，再从自有数据中提炼可用洞察。
+**v2.0.2+ 阅读路径：**
+
+| 步骤 | 文档 |
+| :---: | :--- |
+| 1 | [数据语义](data-semantics.zh-cn.md) |
+| 2 | [Dashboard 与 Profile](dashboard-profile.zh-cn.md) |
+| 3 | [报表目录](reports-catalog.zh-cn.md) |
+
+功能清单：[function-list.zh-cn.md](../../tech/reference/function-list.zh-cn.md) · 版本：[version-highlights.zh-cn.md](version-highlights.zh-cn.md)
+
+**原则：** 先保证清晰与可控，再从自有数据中提炼可用洞察。
 
 ---
 

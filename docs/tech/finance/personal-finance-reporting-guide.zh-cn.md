@@ -1,41 +1,98 @@
-# 个人财务报表口径指南（v2.0.2）
+# 个人财务报表口径（技术）
 
-本文档说明 FinSight 核心数字的含义，与 [finance-semantic-contract.zh-cn.md](./finance-semantic-contract.zh-cn.md) 一致。
+| | |
+| :--- | :--- |
+| **Language** | 简体中文 · [English](personal-finance-reporting-guide.md) |
 
-## Dashboard
+> **用户文档：** [data-semantics.zh-cn.md](../../user/concepts/data-semantics.zh-cn.md) · [reports-catalog.zh-cn.md](../../user/concepts/reports-catalog.zh-cn.md)  
+> **语义合同：** [finance-semantic-contract.zh-cn.md](./finance-semantic-contract.zh-cn.md)
 
-| KPI | 含义 | 不包含 |
-| --- | --- | --- |
-| Real income | 计入收入趋势的真实收入（如工资） | 退款、报销、投资赎回、借款 |
-| Consumption | 生活与预算类消费支出 | 转账、退款、投资买入、信用卡还款 |
-| Net cashflow | Real income − Consumption | — |
+本文面向研发与验收：API、视图、指标代码与一致性规则。
 
-数据来源：`GET /api/v1/analytics/metrics/period-summary`（语义视图）；无数据时回退交易报表。
+---
 
-## Profile / Forecast
+## 1. 数据源
 
-- Profile 与 Forecast 优先使用 `REAL_INCOME`、`CONSUMPTION_EXPENSE` 月度指标。
-- Profile GET 只读物化快照；需点击 Refresh 重算。
+| 消费方 | 主数据源 | 回退 |
+| :--- | :--- | :--- |
+| Dashboard KPI | `GET /api/v1/analytics/metrics/period-summary` | 交易聚合 |
+| Dashboard 饼图 | `GET /api/v1/analytics/semantic-breakdown?scope=expense` | — |
+| Profile | `fin_profile_current` 物化 | `fin_metric_monthly` |
+| Reports | semantic-breakdown / 各 report service | 见各 mapper |
+| Transactions 筛选 | `v_transaction_finance_semantics` | — |
 
-## Transactions
+统一视图：`v_transaction_finance_semantics`（Flyway V32+，V49 tag-driven inclusion）。
 
-- 语义标签与筛选基于 `v_transaction_finance_semantics`。
-- 筛选只改变查看范围，不修改交易本身。
+---
 
-## Categories（Admin）
+## 2. Headline KPI 映射
 
-- 选中分类后展示 **Finance semantics**：`report_role`、财务本质、是否计入收入/支出/预算趋势。
-- **Report role** 可在分类表单中编辑；保存后写入 `cls_category.report_role` 并触发 taxonomy 版本 bump。
-- 未设置 `report_role` 时，表单展示推断默认值；保存后即持久化。
-- 数据与 [finance-semantic-contract.zh-cn.md](./finance-semantic-contract.zh-cn.md) 一致。
+| UI 标签 | MetricCode | Inclusion |
+| :--- | :--- | :--- |
+| Real income | `REAL_INCOME` | `include_in_income_trend = 1` |
+| Consumption | `CONSUMPTION_EXPENSE` | `include_in_expense_trend = 1` |
+| Net | `NET_CASHFLOW` | 上两者差（或物化） |
 
-## Reports
+---
 
-- 各报表 KPI 标签旁 **?** 图标展示口径说明（与 Dashboard 一致）。
-- 预算、消费结构、支出漂移、预测、趋势变化、现金风险、商户报表等均已挂载 `REPORT_METRIC_HINTS`。
+## 3. Semantic breakdown scope
 
-## 报表一致性
+| scope | SQL 谓词摘要 |
+| :--- | :--- |
+| `expense` | `include_in_expense_trend = 1` |
+| `income` | `include_in_income_trend = 1` |
+| `non_pnl` | transfer / investment / liability 等 |
+| `tax` | `tax_expense` · `tax_refund` tags |
+| `refund` | `refund_reimbursement` |
 
-Dashboard、Profile、Forecast 的核心收入/支出口径应对齐语义层。若发现不一致，先检查 metric refresh 与分类 `report_role`。
+实现：`SemanticBreakdownRepository.java`
 
-**数据质量提示**：所有 `/reports/*` 页面在顶部共用一条精简 Data quality 栏（`ReportsDataQualityBar`），不在各报表内重复展示。
+---
+
+## 4. Drill-down
+
+| 端点 | 说明 |
+| :--- | :--- |
+| `GET /api/v1/transactions/drill-breakdown` | category · merchant · sample txns |
+
+**v2.0.2+ 规则：** 当 `semanticFilter` 存在时，`TransactionMapper.filterTxnTypesT` **跳过** legacy `txn_types` 过滤，避免与 semantic tag 冲突。
+
+---
+
+## 5. Profile
+
+| 端点 | 行为 |
+| :--- | :--- |
+| `GET /api/v1/analytics/profile` | 只读 `fin_profile_current` |
+| `POST /api/v1/analytics/profile/refresh` | 重算并物化 |
+
+指标优先：`REAL_INCOME` / `CONSUMPTION_EXPENSE`；缺失回退 `INCOME_TOTAL` / `EXPENSE_TOTAL`。
+
+Runbook：[profile-materialization-runbook.zh-cn.md](./profile-materialization-runbook.zh-cn.md)
+
+---
+
+## 6. 一致性验收
+
+1. Dashboard period Net ≈ Cashflow 报表同 period 汇总  
+2. Budget vs Actual `Spent` 使用 consumption scope  
+3. Transfer & Finance 总额不应出现在 Consumption  
+4. Profile Refresh 后 `asOf` 更新；stale 告警消失  
+5. metric gate mismatch 时 UI 展示 warning，不 silent 重算
+
+---
+
+## 7. 前端 hint 常量
+
+| 文件 | 用途 |
+| :--- | :--- |
+| `frontend/src/components/MetricExplanation.tsx` | `DASHBOARD_METRIC_HINTS` · `REPORT_METRIC_HINTS` |
+| `frontend/src/utils/reportTaxonomy.ts` | `REPORT_METRICS_SOURCE` · scope 标签 |
+
+---
+
+## 8. 变更规则
+
+1. 修改 inclusion → 同步更新 semantic contract、Flyway 视图、测试  
+2. 不得默认将退款/赎回/借款计入 income trend  
+3. 不得默认将还款/转账/投资买入计入 expense trend  

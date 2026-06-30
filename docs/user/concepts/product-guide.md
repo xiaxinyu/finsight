@@ -1,8 +1,20 @@
 # FinSight Product Guide
 
-Language: English · [中文](product-guide.zh-cn.md)
+| | |
+| :--- | :--- |
+| **Language** | English · [简体中文](product-guide.zh-cn.md) |
 
-FinSight is a **self-hosted personal finance application**: import bank activity, apply **rules-based classification**, and review **reports and trends** without sending data to a third-party cloud. This guide describes **product intent and capability areas**; exact features ship with each release—see [`docs/tech/reference/function-list.md`](../../tech/reference/function-list.md).
+FinSight is a **self-hosted personal finance application**: import bank activity, apply **rules-based classification**, and review **reports and trends** without third-party cloud custody.
+
+**v2.0.2+ reading path:**
+
+| Step | Document |
+| :---: | :--- |
+| 1 | [Data semantics](data-semantics.md) |
+| 2 | [Dashboard & Profile](dashboard-profile.md) |
+| 3 | [Reports catalog](reports-catalog.md) |
+
+Feature inventory: [function-list.md](../../tech/reference/function-list.md) · Releases: [version-highlights.md](version-highlights.md)
 
 **Principle:** clarity and control first—useful insight from data you already own.
 
