@@ -4,6 +4,7 @@ import {
   buildMerchantContributorChart,
   buildTrendInsights,
   buildTrendKpis,
+  buildTrendYoYCards,
   type TrendChangesReport,
 } from './trendChanges'
 
@@ -34,11 +35,20 @@ const sample: TrendChangesReport = {
 }
 
 describe('trendChanges utils', () => {
-  it('builds KPI strip with lifestyle growth metrics', () => {
+  it('builds KPI strip without redundant year labels', () => {
     const kpis = buildTrendKpis(sample)
+    expect(kpis.find((k) => k.key === 'from')).toBeUndefined()
     expect(kpis.find((k) => k.key === 'exp')?.value).toContain('15,000')
     expect(kpis.find((k) => k.key === 'incGrowth')?.value).toContain('10.0%')
     expect(kpis.find((k) => k.key === 'lifeGap')?.value).toContain('8.8')
+  })
+
+  it('builds YoY summary cards for income expense and savings', () => {
+    const cards = buildTrendYoYCards(sample)
+    expect(cards).toHaveLength(3)
+    expect(cards[0].label).toBe('Income')
+    expect(cards[1].label).toBe('Expense')
+    expect(cards[2].format).toBe('percent')
   })
 
   it('builds insights with separate category and merchant drivers', () => {
@@ -48,12 +58,12 @@ describe('trendChanges utils', () => {
     expect(insights.some((b) => b.text.includes('Top merchant'))).toBe(true)
   })
 
-  it('builds separate category and merchant charts', () => {
+  it('builds signed delta mover charts', () => {
     const cat = buildCategoryContributorChart(sample)
     const mer = buildMerchantContributorChart(sample)
-    const catSeries = cat.series as { data?: number[] }[]
-    const merSeries = mer.series as { data?: number[] }[]
-    expect(catSeries[0].data?.length).toBe(1)
-    expect(merSeries[0].data?.length).toBe(1)
+    const catSeries = cat.series as { data?: { value?: number }[] }[]
+    const merSeries = mer.series as { data?: { value?: number }[] }[]
+    expect(catSeries[0].data?.[0]?.value).toBe(8000)
+    expect(merSeries[0].data?.[0]?.value).toBe(3000)
   })
 })

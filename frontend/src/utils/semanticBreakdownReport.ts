@@ -19,7 +19,7 @@ export type SemanticBreakdownRow = {
   classL1: string
   classL2: string
   classification: string
-  txnType: 'Expense' | 'Income'
+  txnType: 'Expense' | 'Income' | 'Non-P&L'
   group: 'expense' | 'fixed' | 'income' | 'capital' | 'other'
   amount: number
   sharePct: number

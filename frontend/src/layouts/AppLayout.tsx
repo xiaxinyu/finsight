@@ -3,7 +3,12 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { verifySession } from '../api/client'
 import { Layout, Menu, Typography, Button, Breadcrumb, Popconfirm, theme, type MenuProps } from 'antd'
 import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
-import { menuItems, type FsMenuItem } from '../config/menuConfig'
+import {
+  menuItems,
+  menuOpenKeysForPath,
+  reconcileMenuOpenKeys,
+  type FsMenuItem,
+} from '../config/menuConfig'
 import { useFeatureFlags } from '../hooks/useFeatureFlags'
 import { filterMenuByFeatures } from '../utils/featureFlags'
 import { BrandLogo } from '../components/BrandLogo'
@@ -19,26 +24,17 @@ function findSelectedKeys(pathname: string): string[] {
   return [pathname]
 }
 
-function findOpenKeys(pathname: string): string[] {
-  if (pathname.startsWith('/reports')) {
-    if (pathname.includes('income-curve')) return ['income']
-    if (pathname.includes('expense-curve')) return ['expense']
-    return ['reports']
-  }
-  if (pathname.startsWith('/ledgers')) {
-    if (pathname.includes('salary') || pathname.includes('income-curve')) return ['income']
-    if (pathname.includes('expense') || pathname.includes('house-rent') || pathname.includes('expense-curve')) return ['expense']
-    return ['benefit']
-  }
-  if (pathname.startsWith('/admin')) return ['admin']
-  if (pathname.startsWith('/transactions') || pathname.startsWith('/statements')) return ['transactions']
-  if (pathname === '/planning' || pathname === '/wealth' || pathname === '/goals') return []
-  return []
-}
-
 function renderMenuItems(items: FsMenuItem[]): MenuProps['items'] {
   return items.map((item) => {
-    if (item.children) {
+    if (item.type === 'group') {
+      return {
+        type: 'group',
+        key: item.key,
+        label: item.label,
+        children: renderMenuItems(item.children ?? []),
+      }
+    }
+    if (item.children?.length) {
       return { key: item.key, icon: item.icon, label: item.label, children: renderMenuItems(item.children) }
     }
     if (item.path) {
@@ -56,12 +52,20 @@ export function AppLayout() {
   const routeMeta = resolveRouteMeta(location.pathname)
   const { flags } = useFeatureFlags()
   const visibleMenu = useMemo(() => filterMenuByFeatures(menuItems, flags), [flags])
+  const [openKeys, setOpenKeys] = useState<string[]>(() => menuOpenKeysForPath(location.pathname))
 
   useEffect(() => {
     verifySession().then((ok) => {
       if (!ok) navigate('/login', { replace: true })
     })
   }, [navigate])
+
+  useEffect(() => {
+    setOpenKeys((prev) => {
+      const routeKeys = menuOpenKeysForPath(location.pathname)
+      return [...new Set([...routeKeys, ...prev.filter((k) => routeKeys.some((r) => k.startsWith(r) || r.startsWith(k)))])]
+    })
+  }, [location.pathname])
 
   const breadcrumbItems = routeMeta.breadcrumb.map((label, i) => ({
     key: String(i),
@@ -70,20 +74,33 @@ export function AppLayout() {
       : <span style={{ fontSize: 13 }}>{label}</span>,
   }))
 
+  const onOpenChange: MenuProps['onOpenChange'] = (keys) => {
+    setOpenKeys((prev) => reconcileMenuOpenKeys(prev, keys))
+  }
+
   return (
     <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-      <Sider collapsible collapsed={collapsed} trigger={null} width={200} theme="dark">
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        trigger={null}
+        width={220}
+        theme="dark"
+        className="fs-app-sider"
+      >
         <BrandLogo collapsed={collapsed} variant="dark" />
-        <Menu
-          key={location.pathname}
-          className="fs-sider-menu"
-          theme="dark"
-          mode="inline"
-          selectedKeys={findSelectedKeys(location.pathname)}
-          defaultOpenKeys={findOpenKeys(location.pathname)}
-          items={renderMenuItems(visibleMenu)}
-          style={{ borderRight: 0 }}
-        />
+        <div className="fs-sider-menu-scroll">
+          <Menu
+            className="fs-sider-menu"
+            theme="dark"
+            mode="inline"
+            selectedKeys={findSelectedKeys(location.pathname)}
+            openKeys={collapsed ? [] : openKeys}
+            onOpenChange={onOpenChange}
+            items={renderMenuItems(visibleMenu)}
+            style={{ borderRight: 0 }}
+          />
+        </div>
       </Sider>
       <Layout style={{ minHeight: 0 }}>
         <Header

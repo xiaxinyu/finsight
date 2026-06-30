@@ -38,6 +38,9 @@ const reportTitles: Record<string, string> = {
   'annual-outlook': 'Annual Outlook',
   'trend-changes': 'Trend Changes',
   'cash-risk': 'Cash Risk',
+  subscriptions: 'Subscriptions',
+  'merchant-concentration': 'Merchant Concentration',
+  'merchant-drift': 'Merchant Drift',
 }
 
 const ledgerTitles: Record<string, string> = {
@@ -64,8 +67,7 @@ export function resolveRouteMeta(pathname: string): RouteMeta {
   if (pathname.startsWith('/ledgers/')) {
     const id = pathname.replace('/ledgers/', '')
     const title = ledgerTitles[id] || 'Ledger'
-    const group = id === 'salary' || id.includes('income') ? 'Income' : id === 'expense' || id === 'house-rent' ? 'Expense' : 'Benefits'
-    return { path: pathname, title, breadcrumb: [group, title], group }
+    return { path: pathname, title, breadcrumb: ['Ledgers', title], group: 'Ledgers' }
   }
 
   return { path: pathname, title: 'FinSight', breadcrumb: ['FinSight'] }

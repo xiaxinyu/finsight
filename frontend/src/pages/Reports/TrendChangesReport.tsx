@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Col, Row, Select, Tooltip, Typography } from 'antd'
-import { BarChartOutlined } from '@ant-design/icons'
+import { Alert, Segmented, Select, Tag, Tooltip, Typography } from 'antd'
+import { ArrowRightOutlined, BarChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchTrends } from '../../api/analytics'
 import type { TrendItem, TrendMover } from '../../utils/trendChanges'
@@ -23,8 +23,13 @@ import {
   buildMerchantContributorChart,
   buildTrendInsights,
   buildTrendKpis,
+  buildTrendYoYCards,
+  findTrendItem,
   moverFromTo,
-  trendTypeLabel,
+  moverKey,
+  moverLabel,
+  trendChartHeight,
+  type TrendYoYCard,
 } from '../../utils/trendChanges'
 
 type TrendChangesReportProps = {
@@ -32,10 +37,25 @@ type TrendChangesReportProps = {
   subtitle?: string
 }
 
+type DriverView = 'category' | 'merchant'
+
+function formatYoYDelta(card: TrendYoYCard): string {
+  if (card.format === 'percent') {
+    return `${card.deltaAmount >= 0 ? '+' : ''}${card.deltaAmount.toFixed(1)} pts`
+  }
+  return formatMoney(card.deltaAmount)
+}
+
+function formatYoYValue(card: TrendYoYCard, value: number): string {
+  return card.format === 'percent' ? `${value.toFixed(1)}%` : formatMoney(value)
+}
+
 export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps) {
   const { flags } = useFeatureFlags()
   const { open: drillOpen, context: drillContext, openDrill, closeDrill } = useDrillDown()
   const [toYear, setToYear] = useState(dayjs().year())
+  const [driverView, setDriverView] = useState<DriverView>('category')
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const fromYear = toYear - 1
 
   const { data, isLoading, isFetching, isError, error } = useQuery({
@@ -47,8 +67,21 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
   const loading = isLoading || isFetching
   const kpis = useMemo(() => (data ? buildTrendKpis(data) : []), [data])
   const insights = useMemo(() => (data ? buildTrendInsights(data) : []), [data])
-  const categoryChart = useMemo(() => (data ? buildCategoryContributorChart(data) : {}), [data])
-  const merchantChart = useMemo(() => (data ? buildMerchantContributorChart(data) : {}), [data])
+  const yoyCards = useMemo(() => (data ? buildTrendYoYCards(data) : []), [data])
+
+  const movers = useMemo(() => {
+    if (!data) return []
+    return driverView === 'category' ? data.topCategoryGrowth : data.topMerchantMovers
+  }, [data, driverView])
+
+  const chartOption = useMemo(() => {
+    if (!data) return {}
+    return driverView === 'category'
+      ? buildCategoryContributorChart(data)
+      : buildMerchantContributorChart(data)
+  }, [data, driverView])
+
+  const chartHeight = trendChartHeight(Math.min(movers.length, 8))
 
   const openTrendDrill = (label: string, item: TrendItem | TrendMover, explanation: string[]) => {
     openDrill(buildReportDrillContext({
@@ -65,22 +98,54 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
     }))
   }
 
+  const moverExplanation = (row: TrendMover) => {
+    const { from, to } = moverFromTo(row)
+    const pct = Number(row.deltaPercent ?? row.pctChange ?? 0)
+    const name = moverLabel(row)
+    const parts = [
+      from != null && to != null ? `${name}: ${formatMoney(from)} → ${formatMoney(to)}` : name,
+      `Δ ${formatMoney(row.deltaAmount)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`,
+      `${Number(row.contributionPct).toFixed(1)}% of expense shift`,
+    ]
+    return parts.join(' · ')
+  }
+
+  const openMoverDrill = (row: TrendMover) => {
+    const name = moverLabel(row)
+    openTrendDrill(name, row, [
+      `${driverView === 'category' ? 'Category' : 'Merchant'} ${name} moved ${formatMoney(row.deltaAmount)} YoY.`,
+      moverExplanation(row),
+    ])
+  }
+
+  const openYoYCardDrill = (card: TrendYoYCard) => {
+    if (!data || !card.trendType) return
+    const trend = findTrendItem(data, card.trendType)
+    if (!trend?.drillDown) return
+    openTrendDrill(card.label, trend, [
+      `${card.label}: ${formatYoYValue(card, card.from)} → ${formatYoYValue(card, card.to)}`,
+      `${formatYoYDelta(card)} (${card.deltaPercent >= 0 ? '+' : ''}${card.deltaPercent.toFixed(1)}% change).`,
+    ])
+  }
+
   const fromToCols = [
     {
-      title: 'From',
+      title: String(fromYear),
       key: 'fromAmount',
       align: 'right' as const,
       sortType: 'number' as const,
+      width: 96,
       render: (_: unknown, row: TrendMover) => {
         const { from } = moverFromTo(row)
         return from == null ? '—' : formatMoney(from)
       },
     },
     {
-      title: 'To',
+      title: String(toYear),
       key: 'toAmount',
       align: 'right' as const,
       sortType: 'number' as const,
+      width: 96,
       render: (_: unknown, row: TrendMover) => {
         const { to } = moverFromTo(row)
         return to == null ? '—' : formatMoney(to)
@@ -90,13 +155,12 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
 
   const moverCols = [
     {
-      title: 'Name',
+      title: driverView === 'category' ? 'Category' : 'Merchant',
       dataIndex: 'label',
       sortType: 'text' as const,
-      width: 148,
       ellipsis: true,
       render: (_: unknown, row: TrendMover) => {
-        const name = String(row.label || row.categoryName || row.categoryCode || '—')
+        const name = moverLabel(row)
         return (
           <Tooltip title={name}>
             <Typography.Text ellipsis>{name}</Typography.Text>
@@ -104,7 +168,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
         )
       },
     },
-    ...fromToCols.map((col) => ({ ...col, width: 96 })),
+    ...fromToCols,
     {
       title: 'Delta',
       dataIndex: 'deltaAmount',
@@ -125,49 +189,53 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
       ),
     },
     {
-      title: 'Contribution',
+      title: 'Share of shift',
       dataIndex: 'contributionPct',
       cellType: 'contribution' as const,
       align: 'right' as const,
       sortType: 'number' as const,
-      width: 124,
+      width: 112,
     },
   ]
 
-  const moverExplanation = (row: TrendMover) => {
-    const { from, to } = moverFromTo(row)
-    const pct = Number(row.deltaPercent ?? row.pctChange ?? 0)
-    const name = row.label || row.categoryName || 'Mover'
-    const parts = [
-      from != null && to != null ? `${name}: ${formatMoney(from)} → ${formatMoney(to)}` : name,
-      `Δ ${formatMoney(row.deltaAmount)} (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`,
-      `${Number(row.contributionPct).toFixed(1)}% of expense shift`,
-    ]
-    return parts.join(' · ')
+  const onChartClick = (params: unknown) => {
+    if (!data) return
+    const name = (p: { name?: string }) => p.name
+    const clickedName = name(params as { name?: string })
+    if (!clickedName) return
+    const row = movers.find((m) => moverLabel(m) === clickedName)
+    if (row) {
+      setSelectedKey(moverKey(row, driverView))
+    }
   }
 
-  const openMoverDrill = (row: TrendMover, kind: 'category' | 'merchant') => {
-    const name = String(row.label || row.categoryName || row.categoryCode)
-    openTrendDrill(name, row, [
-      `${kind === 'category' ? 'Category' : 'Merchant'} ${name} moved ${formatMoney(row.deltaAmount)} YoY.`,
-      moverExplanation(row),
-    ])
-  }
+  const yearOptions = [toYear - 1, toYear, toYear + 1].map((y) => ({ value: y, label: String(y) }))
 
   return (
     <DataPageLayout
       title={title}
-      subtitle={subtitle}
+      subtitle={subtitle ? `${subtitle} · ${fromYear} → ${toYear}` : `${fromYear} → ${toYear}`}
       icon={<BarChartOutlined />}
-      className="fs-data-page--dense fs-data-page--reports"
+      className="fs-data-page--dense fs-data-page--reports fs-trend-changes"
       toolbar={(
-        <Select
-          size="small"
-          value={toYear}
-          style={{ width: 110 }}
-          options={[toYear - 1, toYear, toYear + 1].map((y) => ({ value: y, label: String(y) }))}
-          onChange={setToYear}
-        />
+        <div className="fs-trend-toolbar">
+          <span className="fs-trend-toolbar__label">Compare</span>
+          <Typography.Text type="secondary" className="fs-trend-toolbar__year">{fromYear}</Typography.Text>
+          <ArrowRightOutlined className="fs-trend-toolbar__arrow" />
+          <Select
+            size="small"
+            value={toYear}
+            className="fs-trend-toolbar__select"
+            options={yearOptions}
+            onChange={(y) => {
+              setToYear(y)
+              setSelectedKey(null)
+            }}
+          />
+          {data?.lifestyleInflation.detected && (
+            <Tag color="warning" className="fs-trend-toolbar__tag">Lifestyle inflation</Tag>
+          )}
+        </div>
       )}
     >
       {!flags.forecast && (
@@ -180,149 +248,107 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
 
       {flags.forecast && data && (
         <>
+          <section className="fs-trend-yoy-grid" aria-label="Year-over-year summary">
+            {yoyCards.map((card) => (
+              <button
+                key={card.key}
+                type="button"
+                className={`fs-trend-yoy-card fs-trend-yoy-card--${card.tone}`}
+                onClick={() => openYoYCardDrill(card)}
+                title={card.trendType ? 'Click to drill into transactions' : undefined}
+              >
+                <span className="fs-trend-yoy-card__label">{card.label}</span>
+                <div className="fs-trend-yoy-card__flow">
+                  <span className="fs-trend-yoy-card__amount">{formatYoYValue(card, card.from)}</span>
+                  <ArrowRightOutlined className="fs-trend-yoy-card__arrow" />
+                  <span className="fs-trend-yoy-card__amount fs-trend-yoy-card__amount--to">{formatYoYValue(card, card.to)}</span>
+                </div>
+                <span className={`fs-trend-yoy-card__delta${card.deltaAmount >= 0 ? ' fs-delta--up' : ' fs-delta--down'}`}>
+                  {formatYoYDelta(card)}
+                  <span className="fs-trend-yoy-card__pct">
+                    ({card.deltaPercent >= 0 ? '+' : ''}{card.deltaPercent.toFixed(1)}%)
+                  </span>
+                </span>
+              </button>
+            ))}
+          </section>
+
           <ReportKpiStrip items={kpis} />
           <InsightPanel bullets={insights} title="What changed" />
 
-          <Row gutter={[12, 12]} className="fs-report-body">
-            <Col xs={24} lg={12}>
-              <ContentCard title="Category contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
-                <FsChart
-                  profile="horizontalBar"
-                  height={280}
-                  loading={loading}
-                  option={categoryChart}
-                  empty={<EmptyState compact title="No category movers" />}
-                  onEvents={{
-                    click: (p) => {
-                      const name = (p as { name?: string }).name
-                      const cat = data.topCategoryGrowth.find((c) => c.categoryName === name)
-                      if (cat) openMoverDrill(cat, 'category')
-                    },
-                  }}
-                />
-              </ContentCard>
-            </Col>
-            <Col xs={24} lg={12}>
-              <ContentCard title="Merchant contribution to expense change" size="small" styles={{ body: { padding: 8 } }}>
-                <FsChart
-                  profile="horizontalBar"
-                  height={280}
-                  loading={loading}
-                  option={merchantChart}
-                  empty={<EmptyState compact title="No merchant movers" />}
-                  onEvents={{
-                    click: (p) => {
-                      const name = (p as { name?: string }).name
-                      const merchant = data.topMerchantMovers.find((m) => m.label === name)
-                      if (merchant) openMoverDrill(merchant, 'merchant')
-                    },
-                  }}
-                />
-              </ContentCard>
-            </Col>
-          </Row>
-
-          <Row gutter={[12, 12]} className="fs-report-body">
-            <Col xs={24} lg={14}>
-              <FsDataTable
-                title="Trend summary"
-                columns={[
-                  { title: 'Type', dataIndex: 'type', width: 120, render: (t: string) => trendTypeLabel(t) },
-                  {
-                    title: 'Label',
-                    dataIndex: 'label',
-                    sortType: 'text',
-                    ellipsis: true,
-                    render: (v: string) => (
-                      <Tooltip title={v}>
-                        <Typography.Text ellipsis>{v}</Typography.Text>
-                      </Tooltip>
-                    ),
-                  },
-                  {
-                    title: 'Delta',
-                    dataIndex: 'deltaAmount',
-                    cellType: 'deltaMoney',
-                    unit: 'CNY',
-                    align: 'right',
-                    sortType: 'number',
-                    width: 108,
-                  },
-                  {
-                    title: 'Change %',
-                    dataIndex: 'deltaPercent',
-                    cellType: 'deltaPercent',
-                    align: 'right',
-                    sortType: 'number',
-                    width: 80,
-                  },
-                  {
-                    title: 'Contribution',
-                    dataIndex: 'contributionPct',
-                    cellType: 'contribution',
-                    align: 'right',
-                    sortType: 'number',
-                    width: 124,
-                  },
-                ]}
-                dataSource={data.trends}
-                rowKey={(r) => `${r.type}-${r.label}`}
-                loading={loading}
-                rowExplanation={(record) => {
-                  const { from, to } = moverFromTo(record, data.summary.expense)
-                  const parts = [
-                    from != null && to != null
-                      ? `${record.label}: ${formatMoney(from)} → ${formatMoney(to)}`
-                      : record.label,
-                    `${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change)`,
-                  ]
-                  if (record.contributionPct) {
-                    parts.push(`${record.contributionPct.toFixed(1)}% of expense shift`)
-                  }
-                  return parts.join(' · ')
+          <section className="fs-trend-drivers">
+            <div className="fs-trend-drivers__head">
+              <div>
+                <Typography.Title level={5} className="fs-trend-drivers__title">What drove expense change?</Typography.Title>
+                <Typography.Text type="secondary" className="fs-trend-drivers__hint">
+                  Bars show YoY delta (orange = spend up, green = spend down). Click a bar to highlight; click a row to drill down.
+                </Typography.Text>
+              </div>
+              <Segmented<DriverView>
+                value={driverView}
+                onChange={(v) => {
+                  setDriverView(v)
+                  setSelectedKey(null)
                 }}
-                onRow={(record) => ({
-                  onClick: () => openTrendDrill(record.label, record, [
-                    `${record.label}: ${formatMoney(record.deltaAmount)} (${record.deltaPercent.toFixed(1)}% change).`,
-                    record.contributionPct
-                      ? `${record.contributionPct.toFixed(1)}% of total expense shift.`
-                      : 'Open breakdown and transactions for this slice.',
-                  ]),
-                  style: { cursor: 'pointer' },
-                })}
-                scroll={{ x: 640, y: 260 }}
+                options={[
+                  { label: `Categories (${data.topCategoryGrowth.length})`, value: 'category' },
+                  { label: `Merchants (${data.topMerchantMovers.length})`, value: 'merchant' },
+                ]}
               />
-            </Col>
+            </div>
 
-            <Col xs={24} lg={10}>
-              <FsDataTable
-                title="Top category movers"
-                columns={moverCols}
-                dataSource={data.topCategoryGrowth}
-                rowKey={(r) => String(r.categoryCode)}
-                loading={loading}
-                rowExplanation={moverExplanation}
-                onRow={(record) => ({
-                  onClick: () => openMoverDrill(record, 'category'),
-                  style: { cursor: 'pointer' },
-                })}
-                scroll={{ x: 620, y: 150 }}
-              />
-              <FsDataTable
-                title="Top merchant movers"
-                columns={moverCols}
-                dataSource={data.topMerchantMovers}
-                rowKey={(r) => String(r.merchantToken || r.key)}
-                loading={loading}
-                rowExplanation={moverExplanation}
-                onRow={(record) => ({
-                  onClick: () => openMoverDrill(record, 'merchant'),
-                  style: { cursor: 'pointer' },
-                })}
-                scroll={{ x: 620, y: 150 }}
-              />
-            </Col>
-          </Row>
+            <div className="fs-report-split fs-report-split--with-table">
+              <section className="fs-report-split__chart">
+                <ContentCard
+                  title={driverView === 'category' ? 'Category movers' : 'Merchant movers'}
+                  size="small"
+                  className="fs-trend-drivers__chart-card"
+                  styles={{ body: { padding: 8 } }}
+                >
+                  <FsChart
+                    profile="horizontalBar"
+                    height={chartHeight}
+                    loading={loading}
+                    option={chartOption}
+                    empty={<EmptyState compact title="No movers" description="Try another comparison year." />}
+                    onEvents={{ click: onChartClick }}
+                  />
+                </ContentCard>
+              </section>
+
+              <section className="fs-report-split__table">
+                <FsDataTable
+                  title="Contributors"
+                  columns={moverCols}
+                  dataSource={movers}
+                  rowKey={(r) => moverKey(r, driverView)}
+                  loading={loading}
+                  rowExplanation={moverExplanation}
+                  onRow={(record) => ({
+                    onClick: () => {
+                      setSelectedKey(moverKey(record, driverView))
+                      openMoverDrill(record)
+                    },
+                    style: { cursor: 'pointer' },
+                  })}
+                  rowClassName={(record) => (
+                    selectedKey === moverKey(record, driverView) ? 'fs-trend-row--selected' : ''
+                  )}
+                  scroll={movers.length > 8 ? { y: 320 } : undefined}
+                  fixedLayout={false}
+                  locale={{
+                    emptyText: (
+                      <EmptyState
+                        compact
+                        title={driverView === 'category' ? 'No category movers' : 'No merchant movers'}
+                        description="Expense may be flat or evenly distributed."
+                      />
+                    ),
+                  }}
+                />
+              </section>
+            </div>
+          </section>
         </>
       )}
 

@@ -41,15 +41,24 @@ export function buildProfileRadarOption(dimensions: ProfileDimension[] | undefin
   }
 
   return {
-    tooltip: {},
+    color: ['#2563eb'],
+    tooltip: { trigger: 'item' },
     radar: {
       indicator: dimensions.map((d) => ({ name: PROFILE_DIM_LABELS[d.id] || d.id, max: 100 })),
-      radius: '62%',
+      radius: '68%',
+      splitNumber: 4,
+      axisName: { color: '#64748b', fontSize: 11 },
+      splitArea: { areaStyle: { color: ['#f8fafc', '#fff'] } },
+      splitLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLine: { lineStyle: { color: '#cbd5e1' } },
     },
     series: [{
       type: 'radar' as const,
       data: [{ value: dimensions.map((d) => d.score), name: 'Profile' }],
-      areaStyle: { opacity: 0.15 },
+      areaStyle: { opacity: 0.22, color: '#2563eb' },
+      lineStyle: { width: 2, color: '#2563eb' },
+      itemStyle: { color: '#2563eb' },
+      symbolSize: 5,
     }],
   }
 }

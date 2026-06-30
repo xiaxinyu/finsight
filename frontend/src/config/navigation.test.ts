@@ -6,7 +6,8 @@ import { menuItems, type FsMenuItem } from './menuConfig'
 function collectPaths(items: FsMenuItem[]): string[] {
   return items.flatMap((item) => {
     const paths = item.path ? [item.path] : []
-    return paths.concat(item.children ? collectPaths(item.children) : [])
+    const childItems = item.children ?? []
+    return paths.concat(childItems.length ? collectPaths(childItems) : [])
   })
 }
 

@@ -113,6 +113,7 @@ public final class FinanceSemanticsCatalog {
             case "daily_spending" -> "orange";
             case "dining_spending" -> "orange";
             case "shopping_spending" -> "gold";
+            case "groceries_spending" -> "lime";
             case "transport_spending" -> "blue";
             case "entertainment_spending" -> "volcano";
             case "education_spending" -> "cyan";
@@ -124,7 +125,10 @@ public final class FinanceSemanticsCatalog {
                     "fixed_tuition", "fixed_repayment", "fixed_misc" -> "purple";
             case "subscription_spending" -> "geekblue";
             case "essential_spending" -> "cyan";
+            case "finance_fee" -> "magenta";
+            case "tax_expense", "tax_refund" -> "default";
             case "transfer" -> "geekblue";
+            case "finance_loan", "finance_credit_loan", "finance_installment" -> "volcano";
             case "investment" -> "purple";
             case "liability" -> "volcano";
             case "asset_adjustment" -> "gold";
@@ -162,6 +166,7 @@ public final class FinanceSemanticsCatalog {
             case "daily_spending" -> "General";
             case "dining_spending" -> "Dining";
             case "shopping_spending" -> "Shopping";
+            case "groceries_spending" -> "Groceries";
             case "transport_spending" -> "Transport";
             case "entertainment_spending" -> "Entertainment";
             case "education_spending" -> "Education";
@@ -179,6 +184,12 @@ public final class FinanceSemanticsCatalog {
             case "subscription_spending" -> "Subscription";
             case "essential_spending" -> "Essential";
             case "transfer" -> "Transfer";
+            case "finance_loan" -> "Loan";
+            case "finance_credit_loan" -> "Credit loan";
+            case "finance_installment" -> "Installment";
+            case "finance_fee" -> "Fee";
+            case "tax_expense" -> "Tax paid";
+            case "tax_refund" -> "Tax refund";
             case "investment" -> "Investment";
             case "liability" -> "Debt";
             case "asset_adjustment" -> "Rebalance";
@@ -193,10 +204,11 @@ public final class FinanceSemanticsCatalog {
             return "other";
         }
         return switch (tagId.trim()) {
-            case "real_income", "investment_income", "other_income", "refund_reimbursement" -> "income";
+            case "real_income", "investment_income", "other_income", "refund_reimbursement", "tax_refund" -> "income";
             case "fixed_spending", "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
                     "fixed_tuition", "fixed_repayment", "fixed_misc", "subscription_spending" -> "fixed";
-            case "transfer", "investment", "liability", "asset_adjustment" -> "capital";
+            case "transfer", "investment", "liability", "asset_adjustment",
+                    "finance_loan", "finance_credit_loan", "finance_installment" -> "capital";
             case "other" -> "other";
             default -> "expense";
         };
@@ -204,10 +216,27 @@ public final class FinanceSemanticsCatalog {
 
     /** Level-1 Reporting Classification row (picker group title). */
     public static String semanticTagPickerRowLabel(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return "Expense";
+        }
+        String id = tagId.trim();
+        if ("transfer".equals(id)) {
+            return "Transfer";
+        }
+        if ("tax_expense".equals(id) || "tax_refund".equals(id)) {
+            return "Tax";
+        }
+        if ("finance_fee".equals(id)) {
+            return "Expense";
+        }
+        if ("finance_loan".equals(id) || "finance_credit_loan".equals(id) || "finance_installment".equals(id)
+                || "liability".equals(id) || "investment".equals(id) || "asset_adjustment".equals(id)) {
+            return "Finance";
+        }
         return switch (semanticTagGroup(tagId)) {
             case "income" -> "Income";
             case "fixed" -> "Fixed";
-            case "capital" -> "Capital";
+            case "capital" -> "Finance";
             case "other" -> "Expense";
             default -> "Expense";
         };
@@ -225,8 +254,19 @@ public final class FinanceSemanticsCatalog {
         return l1 + " / " + l2;
     }
 
-    /** Transaction type for reports: Income or Expense only. */
+    /** Transaction type for reports: Income, Expense, or Non-P&L (transfers & finance flows). */
     public static String semanticTagTxnTypeLabel(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return "Expense";
+        }
+        String id = tagId.trim();
+        if ("transfer".equals(id)) {
+            return "Non-P&L";
+        }
+        if ("finance_loan".equals(id) || "finance_credit_loan".equals(id) || "finance_installment".equals(id)
+                || "investment".equals(id) || "asset_adjustment".equals(id) || "liability".equals(id)) {
+            return "Non-P&L";
+        }
         return "income".equals(semanticTagGroup(tagId)) ? "Income" : "Expense";
     }
 
@@ -255,37 +295,44 @@ public final class FinanceSemanticsCatalog {
     public static Map<String, Object> catalogPayload() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("fieldLabel", "Reporting Classification");
-        out.put("fieldHint", "Pick expense domain (Dining/Shopping), fixed costs (Housing/Utilities), or capital behavior.");
+        out.put("fieldHint", "Pick expense domain (Dining/Shopping), fixed costs (Housing/Utilities), transfer, or finance (Loan/Credit loan).");
 
         List<Map<String, Object>> groups = new ArrayList<>();
         groups.add(tagGroup("Income", "income",
                 List.of("real_income", "investment_income", "refund_reimbursement", "other_income")));
         groups.add(tagGroup("Expense", "expense",
                 List.of(
-                        "dining_spending", "shopping_spending", "transport_spending",
+                        "dining_spending", "shopping_spending", "groceries_spending", "transport_spending",
                         "entertainment_spending", "education_spending", "medical_spending",
-                        "social_spending", "subscription_spending", "essential_spending",
+                        "social_spending", "subscription_spending", "essential_spending", "finance_fee",
                         "daily_spending", "other_expense")));
         groups.add(tagGroup("Fixed", "expense",
                 List.of(
                         "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
-                        "fixed_tuition", "fixed_repayment", "fixed_misc",
-                        "subscription_spending")));
-        groups.add(tagGroup("Capital", "capital",
-                List.of("transfer", "investment", "liability", "asset_adjustment")));
+                        "fixed_tuition", "fixed_repayment", "fixed_misc")));
+        groups.add(tagGroup("Transfer", "capital", List.of("transfer")));
+        groups.add(tagGroup("Finance", "capital",
+                List.of(
+                        "finance_loan", "finance_credit_loan", "finance_installment",
+                        "investment", "asset_adjustment")));
+        groups.add(tagGroup("Tax", "both",
+                List.of("tax_expense", "tax_refund")));
         out.put("semanticTagGroups", groups);
 
         Map<String, Object> semanticTags = new LinkedHashMap<>();
         for (String id : List.of(
                 "real_income", "investment_income", "other_income", "refund_reimbursement",
-                "dining_spending", "shopping_spending", "transport_spending", "entertainment_spending", "education_spending",
+                "dining_spending", "shopping_spending", "groceries_spending", "transport_spending", "entertainment_spending", "education_spending",
                 "medical_spending",
                 "daily_spending", "social_spending", "other_expense",
                 "fixed_spending",
                 "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
                 "fixed_tuition", "fixed_repayment", "fixed_misc",
-                "subscription_spending", "essential_spending",
-                "transfer", "investment", "liability", "asset_adjustment", "other")) {
+                "subscription_spending", "essential_spending", "finance_fee",
+                "tax_expense", "tax_refund",
+                "transfer",
+                "finance_loan", "finance_credit_loan", "finance_installment",
+                "investment", "liability", "asset_adjustment", "other")) {
             semanticTags.put(id, Map.of(
                     "id", id,
                     "label", semanticTagLabel(id),
@@ -315,6 +362,12 @@ public final class FinanceSemanticsCatalog {
                 surface("cashflow", "CashFlow")));
 
         out.put("previewSectionLabel", "ReportPreview");
+        out.put("legacySemanticTags", List.of("liability"));
+        out.put("groupHints", Map.of(
+                "Fixed", "Repayment = recurring budget line (Fixed %). Card/loan principal → Finance.",
+                "Finance", "Loan / Credit loan / Installment = balance-sheet flows (Non-P&L).",
+                "Tax", "Statutory taxes — tracked separately from daily spending.",
+                "Expense", "Subscription lives here only (not under Fixed)."));
         return out;
     }
 
@@ -326,7 +379,8 @@ public final class FinanceSemanticsCatalog {
             case "refund_reimbursement" -> "Refund Or Expense Reimbursement Inflow";
             case "daily_spending" -> "General Discretionary Expense";
             case "dining_spending" -> "Restaurants, Takeout, Coffee, And Meals";
-            case "shopping_spending" -> "Groceries, Retail, E-Commerce, And Durable Goods";
+            case "shopping_spending" -> "Retail, E-Commerce, Apparel, And Durable Goods (Not Groceries)";
+            case "groceries_spending" -> "Supermarket, Fresh Food, Staples, And Household Consumables";
             case "transport_spending" -> "Transit, Ride-Hail, Fuel, Parking, And Vehicle Costs";
             case "entertainment_spending" -> "Travel, Leisure, Sports, And Entertainment";
             case "education_spending" -> "Courses, Books, And Training (Non-Fixed Tuition)";
@@ -339,14 +393,20 @@ public final class FinanceSemanticsCatalog {
             case "fixed_telecom" -> "Phone, Internet, And Telecom";
             case "fixed_insurance" -> "Insurance Premiums";
             case "fixed_tuition" -> "Tuition And School Fees";
-            case "fixed_repayment" -> "Loan Or Credit Repayment";
+            case "fixed_repayment" -> "Recurring Loan Payment In Budget (Fixed % — Not Card Principal)";
             case "fixed_misc" -> "Other Recurring Fixed Costs";
-            case "subscription_spending" -> "Recurring Subscriptions And Memberships";
+            case "subscription_spending" -> "Recurring Subscriptions And Memberships (Pick Under Expense Only)";
             case "essential_spending" -> "Required Non-Discretionary Cash Outflow";
-            case "transfer" -> "Internal Transfer Or Balance Adjustment";
-            case "investment" -> "Investment Buy, Sell, Or Transfer";
-            case "liability" -> "Borrowing, Repayment, Or Debt Service";
-            case "asset_adjustment" -> "Asset Purchase, Sale, Or Rebalance";
+            case "finance_fee" -> "Bank, Payment, Or Brokerage Fees (Counts As Expense)";
+            case "tax_expense" -> "Income Tax, Property Tax, Or Other Statutory Tax Paid";
+            case "tax_refund" -> "Tax Refund Or Rebate Received";
+            case "transfer" -> "Internal Transfer Or Balance Adjustment (Excluded From P&L)";
+            case "finance_loan" -> "Personal Or Bank Loan — Borrow, Disburse, Or Repay (Non-P&L)";
+            case "finance_credit_loan" -> "Credit Card Or Revolving Credit — Draw Or Repay Principal (Non-P&L)";
+            case "finance_installment" -> "Installment Plan Or Buy-Now-Pay-Later (Non-P&L)";
+            case "investment" -> "Investment Buy, Sell, Or Transfer (Non-P&L)";
+            case "liability" -> "Legacy Tag — Use Loan, Credit Loan, Or Installment Instead";
+            case "asset_adjustment" -> "Asset Purchase, Sale, Or Rebalance (Non-P&L)";
             case "other" -> "Unset Classification — Fix Before Reporting";
             default -> "";
         };
@@ -354,13 +414,15 @@ public final class FinanceSemanticsCatalog {
 
     private static String reportBucket(String tagId) {
         return switch (tagId) {
-            case "real_income", "investment_income", "other_income", "refund_reimbursement" -> "income_statement";
-            case "daily_spending", "dining_spending", "shopping_spending", "transport_spending",
+            case "real_income", "investment_income", "other_income", "refund_reimbursement", "tax_refund" -> "income_statement";
+            case "daily_spending", "dining_spending", "shopping_spending", "groceries_spending", "transport_spending",
                     "entertainment_spending", "education_spending", "medical_spending",
-                    "social_spending", "other_expense", "subscription_spending", "essential_spending" -> "expense";
+                    "social_spending", "other_expense", "subscription_spending", "essential_spending",
+                    "finance_fee", "tax_expense" -> "expense";
             case "fixed_spending", "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
                     "fixed_tuition", "fixed_repayment", "fixed_misc" -> "fixed_commitment";
-            case "transfer", "investment", "liability", "asset_adjustment" -> "capital_flow";
+            case "transfer", "finance_loan", "finance_credit_loan", "finance_installment",
+                    "investment", "liability", "asset_adjustment" -> "capital_flow";
             default -> "unset";
         };
     }

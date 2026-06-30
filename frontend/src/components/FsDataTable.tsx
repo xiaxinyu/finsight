@@ -53,6 +53,7 @@ type Props<T> = {
   onRow?: TableProps<T>['onRow']
   locale?: TableProps<T>['locale']
   rowExplanation?: (record: T) => string | undefined
+  rowClassName?: TableProps<T>['rowClassName']
   /** Fixed column widths — prevents Change % / Contribution overlap in dense report tables. */
   fixedLayout?: boolean
 }
@@ -147,6 +148,7 @@ export function FsDataTable<T extends Record<string, unknown>>({
   onRow,
   locale,
   rowExplanation,
+  rowClassName,
   fixedLayout = true,
 }: Props<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -227,7 +229,14 @@ export function FsDataTable<T extends Record<string, unknown>>({
         pagination={false}
         tableLayout={fixedLayout ? 'fixed' : undefined}
         scroll={scroll}
-        rowClassName={() => 'fs-table-row'}
+        rowClassName={(record, index, indent) => {
+          const extra = rowClassName
+            ? (typeof rowClassName === 'function'
+              ? rowClassName(record, index, indent)
+              : rowClassName)
+            : ''
+          return ['fs-table-row', extra].filter(Boolean).join(' ')
+        }}
         onRow={mergedOnRow}
         locale={locale ?? {
           emptyText: <EmptyState compact title="No rows" description="Adjust filters or date range." />,

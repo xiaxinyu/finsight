@@ -184,6 +184,8 @@ export type SemanticsCatalog = {
   fixedCostKinds?: Record<string, { id: string; label: string }>
   budgetBehaviors?: Record<string, string>
   reportSurfaces?: Array<{ id: string; label: string }>
+  groupHints?: Record<string, string>
+  legacySemanticTags?: string[]
 }
 
 export async function fetchSemanticsCatalog(): Promise<SemanticsCatalog> {

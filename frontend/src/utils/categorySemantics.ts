@@ -37,6 +37,7 @@ export type SemanticTagId =
   | 'daily_spending'
   | 'dining_spending'
   | 'shopping_spending'
+  | 'groceries_spending'
   | 'transport_spending'
   | 'entertainment_spending'
   | 'education_spending'
@@ -53,7 +54,13 @@ export type SemanticTagId =
   | 'fixed_misc'
   | 'subscription_spending'
   | 'essential_spending'
+  | 'finance_fee'
+  | 'tax_expense'
+  | 'tax_refund'
   | 'transfer'
+  | 'finance_loan'
+  | 'finance_credit_loan'
+  | 'finance_installment'
   | 'investment'
   | 'liability'
   | 'asset_adjustment'
@@ -70,6 +77,7 @@ export const SEMANTIC_TAG_LABELS: Record<SemanticTagId, string> = {
   daily_spending: 'General',
   dining_spending: 'Dining',
   shopping_spending: 'Shopping',
+  groceries_spending: 'Groceries',
   transport_spending: 'Transport',
   entertainment_spending: 'Entertainment',
   education_spending: 'Education',
@@ -86,7 +94,13 @@ export const SEMANTIC_TAG_LABELS: Record<SemanticTagId, string> = {
   fixed_misc: 'FixedOther',
   subscription_spending: 'Subscription',
   essential_spending: 'Essential',
+  finance_fee: 'Fee',
+  tax_expense: 'Tax paid',
+  tax_refund: 'Tax refund',
   transfer: 'Transfer',
+  finance_loan: 'Loan',
+  finance_credit_loan: 'Credit loan',
+  finance_installment: 'Installment',
   investment: 'Investment',
   liability: 'Debt',
   asset_adjustment: 'Rebalance',
@@ -115,6 +129,7 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
     appliesTo: 'expense',
     tags: [
       'dining_spending',
+      'groceries_spending',
       'shopping_spending',
       'transport_spending',
       'entertainment_spending',
@@ -123,6 +138,7 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
       'social_spending',
       'subscription_spending',
       'essential_spending',
+      'finance_fee',
       'daily_spending',
       'other_expense',
     ],
@@ -138,13 +154,28 @@ export const SEMANTIC_TAG_GROUPS: Array<{ title: string; appliesTo: TxnTypeFilte
       'fixed_tuition',
       'fixed_repayment',
       'fixed_misc',
-      'subscription_spending',
     ],
   },
   {
-    title: 'Capital',
+    title: 'Transfer',
     appliesTo: 'capital',
-    tags: ['transfer', 'investment', 'liability', 'asset_adjustment'],
+    tags: ['transfer'],
+  },
+  {
+    title: 'Finance',
+    appliesTo: 'capital',
+    tags: [
+      'finance_loan',
+      'finance_credit_loan',
+      'finance_installment',
+      'investment',
+      'asset_adjustment',
+    ],
+  },
+  {
+    title: 'Tax',
+    appliesTo: 'both',
+    tags: ['tax_expense', 'tax_refund'],
   },
 ]
 
@@ -319,12 +350,14 @@ export function inferExpenseDomainTag(
 
   if (code.startsWith('DAILY-05') || code.startsWith('LIVING-06')) return 'medical_spending'
   if (code.startsWith('DAILY-01') || code.startsWith('DAILY-02')) return 'dining_spending'
-  if (code.startsWith('DAILY-03') || code.startsWith('DAILY-04') || code.startsWith('SHOP-')) return 'shopping_spending'
+  if (code.startsWith('DAILY-03') || code.startsWith('DAILY-04')) return 'groceries_spending'
+  if (code.startsWith('SHOP-')) return 'shopping_spending'
   if (code.startsWith('TRANS-') || code.startsWith('TRAVEL-')) return 'transport_spending'
   if (code.startsWith('ENT-')) return 'entertainment_spending'
   if (code.startsWith('EDU-') && code !== 'EDU-01') return 'education_spending'
 
-  if (/超市|购物|网上|电商|服饰|美妆|母婴|家居|耐用品|日用品|百货/.test(name)) return 'shopping_spending'
+  if (/超市|食材|粮油|生鲜|菜场/.test(name)) return 'groceries_spending'
+  if (/购物|网上|电商|服饰|美妆|母婴|家居|耐用品|日用品|百货/.test(name)) return 'shopping_spending'
   if (/交通|地铁|公交|打车|网约车|滴滴|停车|油费|充电|过路|车辆|机票|火车|租车|代驾|保养|洗车/.test(name)) {
     return 'transport_spending'
   }
@@ -408,12 +441,24 @@ const EXPENSE_DOMAIN_PARENTS = new Set([
   'LIVING', 'DAILY', 'SHOPPING', 'SHOP', 'TRANSPORT', 'TRAVEL', 'ENT', 'EDU', 'GIFT', 'SOCIAL', 'OTHER', 'FEE', 'FE',
 ])
 
-const CAPITAL_SEMANTIC_TAGS = new Set<SemanticTagId>([
-  'transfer', 'investment', 'liability', 'asset_adjustment',
+const ADVANCED_SEMANTIC_TAGS = new Set<SemanticTagId>([
+  'transfer',
+  'finance_loan',
+  'finance_credit_loan',
+  'finance_installment',
+  'investment',
+  'liability',
+  'asset_adjustment',
 ])
 
+export const LEGACY_SEMANTIC_TAGS = new Set<SemanticTagId>(['liability'])
+
+export function isLegacySemanticTag(tag?: string | null): boolean {
+  return Boolean(tag && LEGACY_SEMANTIC_TAGS.has(tag.trim() as SemanticTagId))
+}
+
 export function isCapitalSemanticTag(tag?: string | null): boolean {
-  return Boolean(tag && CAPITAL_SEMANTIC_TAGS.has(tag.trim() as SemanticTagId))
+  return Boolean(tag && ADVANCED_SEMANTIC_TAGS.has(tag.trim() as SemanticTagId))
 }
 
 /** Hide Capital row by default for everyday expense categories; advanced users can expand. */
@@ -472,7 +517,10 @@ export function filterSemanticTagGroups(
   }
 
   return groups.filter((g) => {
-    if (g.appliesTo === 'capital' || g.title === 'Capital') {
+    if (g.appliesTo === 'both') {
+      return true
+    }
+    if (g.appliesTo === 'capital' || g.title === 'Transfer' || g.title === 'Finance' || g.title === 'Capital') {
       return includeCapital
     }
     const applies = g.appliesTo ?? 'both'
@@ -502,6 +550,8 @@ export function semanticTagFromReportRole(
   }
   if (role === 'refund') return 'refund_reimbursement'
   if (role === 'transfer') return 'transfer'
+  if (/税/.test(categoryName ?? '') && role === 'income') return 'tax_refund'
+  if (/税/.test(categoryName ?? '') && (role === 'budget' || role === 'cashflow')) return 'tax_expense'
   if (role === 'investment') {
     if (parent === 'INC' || parent === 'INCOME' || code.startsWith('INC-04')) return 'investment_income'
     return 'investment'
@@ -509,6 +559,11 @@ export function semanticTagFromReportRole(
   if (role === 'liability') {
     if (isFixedCategory(parentId, categoryCode)) {
       return flatFixedTagForKind(inferFixedCostKind(parentId, categoryCode) ?? 'repayment')
+    }
+    if (code === 'DEBT-01') return 'finance_credit_loan'
+    if (code === 'DEBT-04') return 'finance_installment'
+    if (code === 'DEBT-02' || code === 'DEBT-03' || code === 'INC-08' || parent === 'LIABILITY') {
+      return 'finance_loan'
     }
     return 'liability'
   }
@@ -548,6 +603,7 @@ export function reportRoleFromSemanticSelection(
     case 'daily_spending':
     case 'dining_spending':
     case 'shopping_spending':
+    case 'groceries_spending':
     case 'transport_spending':
     case 'entertainment_spending':
     case 'education_spending':
@@ -570,10 +626,19 @@ export function reportRoleFromSemanticSelection(
       if (fixedKind === 'insurance') return 'cashflow'
       if (fixedKind === 'repayment') return 'liability'
       return 'budget'
-    case 'essential_spending': return 'cashflow'
+    case 'essential_spending':
+    case 'finance_fee':
+      return 'cashflow'
+    case 'tax_expense':
+      return 'cashflow'
+    case 'tax_refund':
+      return 'refund'
     case 'transfer': return 'transfer'
-    case 'investment': return 'investment'
+    case 'finance_loan':
+    case 'finance_credit_loan':
+    case 'finance_installment':
     case 'liability': return 'liability'
+    case 'investment': return 'investment'
     case 'asset_adjustment': return 'asset'
     default: return 'other'
   }
@@ -698,6 +763,24 @@ export function compactGroupTitle(title: string, txnFilter: ReturnType<typeof tx
     .replace(/^Income Statement · Expense$/i, 'Expense')
     .replace(/^Fixed Commitments$/i, 'Fixed')
     .replace(/^Capital And Transfers$/i, 'Capital')
+}
+
+export const SEMANTIC_GROUP_HINTS: Record<string, string> = {
+  Fixed: 'Repayment = recurring budget line (Fixed %). Card/loan principal → Finance.',
+  Finance: 'Loan / Credit loan / Installment = balance-sheet flows (Non-P&L).',
+  Tax: 'Statutory taxes — tracked separately from daily spending.',
+  Expense: 'Subscription lives here only (not under Fixed).',
+}
+
+/** Visible tags per group — hides legacy Debt unless already selected. */
+export function visibleSemanticTagsForGroup(
+  group: { title: string; tags: SemanticTagId[] },
+  activeTag?: SemanticTagId,
+): SemanticTagId[] {
+  if (group.title === 'Finance') {
+    return group.tags.filter((t) => !isLegacySemanticTag(t) || activeTag === t)
+  }
+  return group.tags
 }
 
 export type CoercedCategoryFields = {

@@ -11,14 +11,17 @@ import {
   inclusionSummary,
   isCapitalSemanticTag,
   isFlatFixedSemanticTag,
+  isLegacySemanticTag,
   parentTxnMismatchWarning,
   profileCategorySemantics,
   reportRoleForSemanticTag,
   reportRoleFromSemanticSelection,
   resolveSemanticTag,
   semanticTagLabel,
+  SEMANTIC_GROUP_HINTS,
   shouldHideCapitalRow,
   txnTypeFilter,
+  visibleSemanticTagsForGroup,
 } from '../utils/categorySemantics'
 
 type PickerProps = {
@@ -38,6 +41,7 @@ function tagColor(tag: SemanticTagId): string {
   if (isFlatFixedSemanticTag(tag) || tag === 'fixed_spending') return 'purple'
   if (tag === 'subscription_spending') return 'geekblue'
   if (tag === 'dining_spending' || tag === 'daily_spending' || tag === 'other_expense') return 'orange'
+  if (tag === 'groceries_spending') return 'lime'
   if (tag === 'shopping_spending') return 'gold'
   if (tag === 'transport_spending') return 'blue'
   if (tag === 'entertainment_spending') return 'volcano'
@@ -46,10 +50,15 @@ function tagColor(tag: SemanticTagId): string {
   if (tag === 'social_spending') return 'magenta'
   if (tag === 'real_income' || tag === 'other_income') return 'green'
   if (tag === 'investment_income') return 'purple'
-  if (tag === 'refund_reimbursement') return 'blue'
-  if (tag === 'essential_spending') return 'cyan'
-  if (tag === 'investment') return 'geekblue'
-  if (tag === 'liability') return 'volcano'
+  if (tag === 'refund_reimbursement' || tag === 'tax_refund') return 'blue'
+  if (tag === 'essential_spending' || tag === 'tax_expense') return 'cyan'
+  if (tag === 'finance_fee') return 'magenta'
+  if (tag === 'finance_loan' || tag === 'finance_credit_loan' || tag === 'finance_installment' || tag === 'liability') {
+    return 'volcano'
+  }
+  if (tag === 'transfer') return 'geekblue'
+  if (tag === 'investment') return 'purple'
+  if (tag === 'asset_adjustment') return 'gold'
   return 'default'
 }
 
@@ -61,8 +70,16 @@ function txnBadgeLabel(filter: ReturnType<typeof txnTypeFilter>): string {
   return 'Mixed'
 }
 
+function isFinanceTagGroup(title: string): boolean {
+  return title === 'Finance'
+}
+
 function isFixedTagGroup(title: string): boolean {
   return title === 'Fixed' || title === 'Fixed Commitments'
+}
+
+function isTaxTagGroup(title: string): boolean {
+  return title === 'Tax'
 }
 
 function SelectableTag({
@@ -70,12 +87,14 @@ function SelectableTag({
   label,
   description,
   tone,
+  legacy,
   onSelect,
 }: {
   selected: boolean
   label: string
   description?: string
   tone?: 'fixed' | 'default'
+  legacy?: boolean
   onSelect: () => void
 }) {
   return (
@@ -83,7 +102,7 @@ function SelectableTag({
       type="button"
       title={description}
       aria-pressed={selected}
-      className={`fs-category-semantic-tag${tone === 'fixed' ? ' fs-category-semantic-tag--fixed' : ''}${selected ? ' fs-category-semantic-tag--active' : ''}`}
+      className={`fs-category-semantic-tag${tone === 'fixed' ? ' fs-category-semantic-tag--fixed' : ''}${legacy ? ' fs-category-semantic-tag--legacy' : ''}${selected ? ' fs-category-semantic-tag--active' : ''}`}
       onClick={onSelect}
     >
       {label}
@@ -125,6 +144,7 @@ export function CategorySemanticPicker({
     categoryCode,
     { includeCapital: capitalExpanded || !capitalHiddenByDefault },
   )
+  const groupHints = { ...SEMANTIC_GROUP_HINTS, ...(catalog?.groupHints ?? {}) }
   const reportSurfaces = (catalog?.reportSurfaces ?? []) as ReportSurface[]
   const txnFilter = txnTypeFilter(txnTypes)
   const parentWarning = parentTxnMismatchWarning(parentId, txnTypes)
@@ -157,6 +177,9 @@ export function CategorySemanticPicker({
           <div className="fs-category-classification-selection">
             <Tag color={tagColor(activeTag)} bordered={false} className="fs-category-selection-tag">
               {primaryLabel}
+              {isLegacySemanticTag(activeTag) && (
+                <span className="fs-category-selection-legacy"> (legacy)</span>
+              )}
             </Tag>
             {activeSurfaces.length > 0 && (
               <Typography.Text type="secondary" className="fs-category-selection-reports">
@@ -176,19 +199,31 @@ export function CategorySemanticPicker({
         />
       )}
 
-      <div className="fs-category-classification-body">
+      <div className="fs-category-classification-grid">
         {tagGroups.map((group) => {
           const fixedRow = isFixedTagGroup(group.title)
+          const financeRow = isFinanceTagGroup(group.title)
+          const taxRow = isTaxTagGroup(group.title)
+          const hint = groupHints[group.title]
+          const visibleTags = visibleSemanticTagsForGroup(group, activeTag)
+          const groupKey = group.title.toLowerCase().replace(/\s+/g, '-')
           return (
-          <div
+          <section
             key={group.title}
-            className={`fs-category-semantic-group fs-category-semantic-group--inline${fixedRow ? ' fs-category-semantic-group--fixed' : ''}`}
+            className={`fs-category-classification-card fs-category-classification-card--${groupKey}${fixedRow ? ' fs-category-classification-card--fixed' : ''}${financeRow ? ' fs-category-classification-card--finance' : ''}${taxRow ? ' fs-category-classification-card--tax' : ''}`}
           >
-            <span className="fs-category-semantic-group-label">
-              {compactGroupTitle(group.title, txnFilter)}
-            </span>
-            <div className="fs-category-semantic-tag-row">
-              {group.tags.map((tag) => {
+            <header className="fs-category-classification-card__head">
+              <span className="fs-category-classification-card__title">
+                {compactGroupTitle(group.title, txnFilter)}
+              </span>
+              {hint && (
+                <Typography.Text type="secondary" className="fs-category-classification-card__hint">
+                  {hint}
+                </Typography.Text>
+              )}
+            </header>
+            <div className="fs-category-semantic-tag-grid">
+              {visibleTags.map((tag) => {
                 const meta = catalog?.semanticTags?.[tag]
                 return (
                   <SelectableTag
@@ -197,12 +232,13 @@ export function CategorySemanticPicker({
                     label={catalogSemanticTagLabel(catalog, tag)}
                     description={meta?.description}
                     tone={fixedRow ? 'fixed' : 'default'}
+                    legacy={isLegacySemanticTag(tag)}
                     onSelect={() => selectTag(tag)}
                   />
                 )
               })}
             </div>
-          </div>
+          </section>
           )
         })}
         {capitalHiddenByDefault && !capitalExpanded && (
@@ -211,8 +247,13 @@ export function CategorySemanticPicker({
             className="fs-category-capital-expand"
             onClick={() => setCapitalExpanded(true)}
           >
-            Capital &amp; transfers…
+            Transfer &amp; finance…
           </button>
+        )}
+        {isLegacySemanticTag(activeTag) && (
+          <Typography.Text type="secondary" className="fs-category-legacy-note">
+            Legacy tag &quot;Debt&quot; — save as Loan, Credit loan, or Installment when you edit this category.
+          </Typography.Text>
         )}
       </div>
 

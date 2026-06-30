@@ -14,6 +14,9 @@ const MERCHANT_REPORT_PATHS = new Set([
 ])
 
 function isMenuItemVisible(item: FsMenuItem, flags: FeatureFlags): boolean {
+  if (item.type === 'group') {
+    return true
+  }
   if (!item.path) {
     return true
   }
@@ -32,6 +35,12 @@ function isMenuItemVisible(item: FsMenuItem, flags: FeatureFlags): boolean {
 export function filterMenuByFeatures(items: FsMenuItem[], flags: FeatureFlags): FsMenuItem[] {
   const out: FsMenuItem[] = []
   for (const item of items) {
+    if (item.type === 'group') {
+      const children = filterMenuByFeatures(item.children ?? [], flags)
+      if (children.length === 0) continue
+      out.push({ ...item, children })
+      continue
+    }
     if (item.children?.length) {
       const children = filterMenuByFeatures(item.children, flags)
       if (children.length === 0) {

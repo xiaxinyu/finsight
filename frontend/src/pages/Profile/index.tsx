@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Col, Progress, Row, Tag, Typography, message } from 'antd'
+import { Alert, Button, Progress, Tag, Typography, message } from 'antd'
 import { ReloadOutlined, UserOutlined } from '@ant-design/icons'
 import { fetchProfile, fetchProfileRefresh } from '../../api/analytics'
 import type { ProfileDimension } from '../../api/analytics'
-import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { FsChart } from '../../components/FsChart'
 import { EmptyState } from '../../components/EmptyState'
@@ -15,10 +14,110 @@ import { buildProfileRadarOption, PROFILE_DIM_LABELS, profileUserTypeLabel } fro
 import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
 import { profileActionLinks } from './profileActions'
 import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
+import {
+  profileDimensionHighlights,
+  profileDimensionLabel,
+  profileLevelTier,
+  profileScoreColor,
+  profileScoreTier,
+} from './profileDisplay'
 
 function dimensionIdFromRadarName(name: string): string | undefined {
   const entry = Object.entries(PROFILE_DIM_LABELS).find(([, label]) => label === name)
   return entry?.[0]
+}
+
+function ProfileAlerts({
+  needsGenerate,
+  stale,
+  metricsWarning,
+  message: profileMessage,
+  metricsGate,
+  metricsSource,
+}: {
+  needsGenerate: boolean
+  stale: boolean
+  metricsWarning: boolean
+  message?: string
+  metricsGate?: { warning?: string; mismatches?: string[] }
+  metricsSource?: string
+}) {
+  if (needsGenerate) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        className="fs-profile-alert"
+        message="Profile snapshot not ready"
+        description={profileMessage || 'Click Generate profile to compute your financial profile.'}
+      />
+    )
+  }
+  if (stale) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        className="fs-profile-alert"
+        message="Profile may be outdated"
+        description="Your data changed since this snapshot was computed. Refresh to update scores."
+      />
+    )
+  }
+  if (metricsWarning) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        className="fs-profile-alert"
+        message="Metrics reconciliation mismatch"
+        description={`Using stored metrics (${metricsSource || 'fin_metric_monthly'}). ${metricsGate?.warning || (metricsGate?.mismatches || []).join('; ')}`}
+      />
+    )
+  }
+  return null
+}
+
+function DimensionCard({
+  dim,
+  onOpen,
+}: {
+  dim: ProfileDimension
+  onOpen: () => void
+}) {
+  const tier = profileLevelTier(dim.level)
+  const primaryEvidence = dim.evidence?.[0]
+  const primaryAction = profileActionLinks(dim)[0]
+  const stroke = profileScoreColor(dim.score)
+
+  return (
+    <button type="button" className={`fs-profile-dim-card fs-profile-dim-card--${tier}`} onClick={onOpen}>
+      <div className="fs-profile-dim-card__head">
+        <span className="fs-profile-dim-card__title">{profileDimensionLabel(dim.id)}</span>
+        <Progress
+          type="circle"
+          percent={dim.score}
+          size={44}
+          strokeColor={stroke}
+          format={(v) => <span className="fs-profile-dim-card__score">{v}</span>}
+        />
+      </div>
+      <Tag bordered={false} className={`fs-profile-dim-card__level fs-profile-dim-card__level--${tier}`}>
+        {dim.level}
+      </Tag>
+      <Typography.Paragraph className="fs-profile-dim-card__reason" ellipsis={{ rows: 2, tooltip: dim.reason || dim.summary }}>
+        {dim.reason || dim.summary}
+      </Typography.Paragraph>
+      {primaryEvidence && (
+        <Typography.Text type="secondary" className="fs-profile-dim-card__evidence" ellipsis>
+          {primaryEvidence.label || primaryEvidence.ref}: {String(primaryEvidence.value ?? '—')}
+        </Typography.Text>
+      )}
+      {primaryAction && (
+        <span className="fs-profile-dim-card__action">{primaryAction.label} →</span>
+      )}
+    </button>
+  )
 }
 
 export function ProfilePage() {
@@ -75,12 +174,14 @@ export function ProfilePage() {
   const computedLabel = data.computedAt
     ? new Date(data.computedAt).toLocaleString()
     : null
+  const overallTier = profileScoreTier(data.overallScore)
+  const highlights = profileDimensionHighlights(data.dimensions)
 
   return (
     <DataPageLayout
       className="fs-data-page--profile"
       title="Financial Profile"
-      subtitle={`Explainable 10-dimension view · ${data.asOf}`}
+      subtitle={`10-dimension health model · ${data.asOf}`}
       icon={<UserOutlined />}
       actions={(
         <Button
@@ -103,144 +204,92 @@ export function ProfilePage() {
         </>
       )}
     >
-      {needsGenerate && (
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 12 }}
-          message="Profile snapshot not ready"
-          description={data.message || 'Click Generate profile to compute your financial profile. Subsequent visits read the saved snapshot.'}
-        />
-      )}
-      {data.stale && !needsGenerate && (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 12 }}
-          message="Profile may be outdated"
-          description="Your data changed since this snapshot was computed. Refresh to update scores and insights."
-        />
-      )}
-      {metricsWarning && (
-        <Alert
-          type="warning"
-          showIcon
-          style={{ marginBottom: 12 }}
-          message="Metrics reconciliation mismatch"
-          description={`Using stored metrics (${data.metricsSource || 'fin_metric_monthly'}). ${data.metricsGate?.warning || (data.metricsGate?.mismatches || []).join('; ')}`}
-        />
-      )}
+      <ProfileAlerts
+        needsGenerate={needsGenerate}
+        stale={!!(data.stale && !needsGenerate)}
+        metricsWarning={!!metricsWarning}
+        message={data.message}
+        metricsGate={data.metricsGate}
+        metricsSource={data.metricsSource}
+      />
 
-      {/* Layer 1: health summary */}
-      <Row gutter={[16, 16]} className="fs-profile-summary-row">
-        <Col xs={24} md={8}>
-          <ContentCard title="Overall">
-            <Typography.Title level={2} style={{ margin: 0 }}>{data.overallScore}</Typography.Title>
-            {data.confidence && (
-              <Tag color={data.confidence === 'high' ? 'green' : data.confidence === 'medium' ? 'blue' : 'orange'} style={{ marginTop: 8 }}>
-                Confidence: {data.confidence}
-              </Tag>
+      <section className="fs-profile-hero">
+        <div className={`fs-profile-hero__score fs-profile-hero__score--${overallTier}`}>
+          <Progress
+            type="dashboard"
+            percent={data.overallScore}
+            size={132}
+            strokeWidth={10}
+            strokeColor={profileScoreColor(data.overallScore)}
+            format={() => (
+              <div className="fs-profile-hero__score-inner">
+                <span className="fs-profile-hero__score-value">{data.overallScore}</span>
+                <span className="fs-profile-hero__score-label">Overall</span>
+              </div>
             )}
-            {data.sampleMonths != null && (
-              <Typography.Text type="secondary" style={{ display: 'block', marginTop: 4, fontSize: 12 }}>
-                Based on {data.sampleMonths} month(s) · source {data.metricsSource || 'fin_metric_monthly'}
-              </Typography.Text>
-            )}
-            <Tag color="blue">{profileUserTypeLabel(data.userType)}</Tag>
-            {data.userTypeExplanation && (
-              <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 8 }}>
-                {data.userTypeExplanation}
-              </Typography.Paragraph>
-            )}
-            <Progress percent={data.overallScore} showInfo={false} strokeColor="#2563eb" />
-          </ContentCard>
-        </Col>
-        <Col xs={24} md={16}>
-          <ContentCard title="Dimension radar" className="fs-profile-radar-card">
-            <div className="fs-profile-radar-wrap">
-              <FsChart
-                option={radarOption}
-                height={320}
-                onEvents={{
-                  click: (p) => {
-                    const name = (p as { name?: string }).name
-                    if (!name) return
-                    const dimId = dimensionIdFromRadarName(name)
-                    const dim = data.dimensions.find((d) => d.id === dimId)
-                    if (dim) setActiveDimension(dim)
-                  },
-                }}
-              />
-            </div>
-            <div className="fs-profile-radar-mobile-list" aria-hidden="false">
-              {data.dimensions.map((dim) => (
-                <button
-                  key={dim.id}
-                  type="button"
-                  className="fs-profile-dim-bar"
-                  onClick={() => setActiveDimension(dim)}
-                >
-                  <span>{PROFILE_DIM_LABELS[dim.id] || dim.id}</span>
-                  <span className="fs-profile-dim-bar-track">
-                    <span className="fs-profile-dim-bar-fill" style={{ width: `${dim.score}%` }} />
-                  </span>
-                  <strong>{dim.score}</strong>
+          />
+        </div>
+        <div className="fs-profile-hero__meta">
+          <Tag bordered={false} className={`fs-profile-hero__type fs-profile-hero__type--${overallTier}`}>
+            {profileUserTypeLabel(data.userType)}
+          </Tag>
+          {data.confidence && (
+            <span className="fs-profile-hero__confidence">
+              Confidence: <strong>{data.confidence}</strong>
+            </span>
+          )}
+          {data.sampleMonths != null && (
+            <Typography.Text type="secondary" className="fs-profile-hero__sample">
+              {data.sampleMonths} month(s) of data · {data.metricsSource || 'fin_metric_monthly'}
+            </Typography.Text>
+          )}
+          {data.userTypeExplanation && (
+            <Typography.Paragraph className="fs-profile-hero__explain">
+              {data.userTypeExplanation}
+            </Typography.Paragraph>
+          )}
+          <div className="fs-profile-hero__highlights">
+            <div className="fs-profile-hero__highlight-col">
+              <span className="fs-profile-hero__highlight-label">Needs attention</span>
+              {highlights.weakest.map((d) => (
+                <button key={d.id} type="button" className="fs-profile-hero__chip fs-profile-hero__chip--weak" onClick={() => setActiveDimension(d)}>
+                  {profileDimensionLabel(d.id)} · {d.score}
                 </button>
               ))}
             </div>
-          </ContentCard>
-        </Col>
-      </Row>
+            <div className="fs-profile-hero__highlight-col">
+              <span className="fs-profile-hero__highlight-label">Strengths</span>
+              {highlights.strongest.map((d) => (
+                <button key={d.id} type="button" className="fs-profile-hero__chip fs-profile-hero__chip--strong" onClick={() => setActiveDimension(d)}>
+                  {profileDimensionLabel(d.id)} · {d.score}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="fs-profile-hero__radar">
+          <FsChart
+            option={radarOption}
+            height={280}
+            onEvents={{
+              click: (p) => {
+                const name = (p as { name?: string }).name
+                if (!name) return
+                const dimId = dimensionIdFromRadarName(name)
+                const dim = data.dimensions.find((d) => d.id === dimId)
+                if (dim) setActiveDimension(dim)
+              },
+            }}
+          />
+        </div>
+      </section>
 
-      {/* Layer 2: dimension matrix */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }} className="fs-profile-matrix-row">
-        {data.dimensions.map((dim) => {
-          const primaryEvidence = dim.evidence?.[0]
-          const primaryAction = profileActionLinks(dim)[0]
-          return (
-            <Col xs={24} md={12} lg={8} key={dim.id}>
-              <ContentCard
-                className="fs-profile-dimension-card"
-                title={PROFILE_DIM_LABELS[dim.id] || dim.id}
-                extra={<Typography.Link onClick={() => setActiveDimension(dim)}>Details</Typography.Link>}
-              >
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="fs-profile-dimension-body"
-                  onClick={() => setActiveDimension(dim)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveDimension(dim) }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Tag>{dim.level}</Tag>
-                    <strong>{dim.score}</strong>
-                  </div>
-                  <Typography.Paragraph
-                    type="secondary"
-                    className="fs-profile-dimension-reason"
-                    ellipsis={{ rows: 2, tooltip: dim.reason || dim.summary }}
-                  >
-                    {dim.reason || dim.summary}
-                  </Typography.Paragraph>
-                  {primaryEvidence && (
-                    <Typography.Paragraph className="fs-profile-dimension-evidence" ellipsis={{ tooltip: String(primaryEvidence.value ?? '—') }}>
-                      <Typography.Text type="secondary">{primaryEvidence.label || primaryEvidence.ref}: </Typography.Text>
-                      {String(primaryEvidence.value ?? '—')}
-                    </Typography.Paragraph>
-                  )}
-                  {primaryAction && (
-                    <Typography.Text type="secondary" className="fs-profile-dimension-action">
-                      {primaryAction.label} →
-                    </Typography.Text>
-                  )}
-                </div>
-              </ContentCard>
-            </Col>
-          )
-        })}
-      </Row>
+      <section className="fs-profile-dim-grid">
+        {data.dimensions.map((dim) => (
+          <DimensionCard key={dim.id} dim={dim} onOpen={() => setActiveDimension(dim)} />
+        ))}
+      </section>
 
-      {/* Layer 3: compact combined insights */}
       <div className="fs-profile-insights-row">
         <CombinedInsightPanel compact title="Actionable insights" limit={2} />
       </div>

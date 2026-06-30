@@ -22,6 +22,9 @@ public final class CategorySpendingDomain {
         if (matchesMedical(c, parent, n)) {
             return Optional.of("medical_spending");
         }
+        if (matchesGroceries(c, parent, n)) {
+            return Optional.of("groceries_spending");
+        }
         if (matchesShopping(c, parent, n)) {
             return Optional.of("shopping_spending");
         }
@@ -68,14 +71,18 @@ public final class CategorySpendingDomain {
         return containsAny(name, "餐饮", "外卖", "堂食", "早餐", "咖啡", "饭店", "吃饭", "小吃");
     }
 
+    static boolean matchesGroceries(String code, String parent, String name) {
+        if (code.equals("DAILY-03") || code.equals("DAILY-04")) {
+            return true;
+        }
+        return containsAny(name, "超市", "食材", "粮油", "生鲜", "菜场");
+    }
+
     static boolean matchesShopping(String code, String parent, String name) {
         if (parent.equals("SHOPPING") || code.startsWith("SHOP-") || code.startsWith("SHOPPING-")) {
             return true;
         }
-        if (code.equals("DAILY-03") || code.equals("DAILY-04")) {
-            return true;
-        }
-        return containsAny(name, "超市", "购物", "网上", "电商", "服饰", "美妆", "母婴", "家居", "家装",
+        return containsAny(name, "购物", "网上", "电商", "服饰", "美妆", "母婴", "家居", "家装",
                 "耐用品", "日用品", "百货");
     }
 

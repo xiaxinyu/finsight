@@ -70,12 +70,14 @@ public final class CategorySemanticDefaults {
             case "EDU-01" -> "essential_spending";
             case "GIFT-02", "ASSET-02", "INVEST-05" -> "transfer";
             case "INC-04", "INCOME-03", "INV-04", "INV-06", "WEALTH-02" -> "investment_income";
-            case "INC-08", "DEBT-02" -> "liability";
+            case "INC-08", "DEBT-02", "DEBT-03" -> "finance_loan";
+            case "DEBT-01" -> "finance_credit_loan";
+            case "DEBT-04" -> "finance_installment";
             case "INC-10" -> "refund_reimbursement";
             case "REIM-01", "REIM-02", "REIM-03", "REIM-04", "REIM-05" -> "refund_reimbursement";
             case "OTHER-01", "OTHER-02", "OTHER-03" -> "other_expense";
             case "DAILY-01", "DAILY-02" -> "dining_spending";
-            case "DAILY-03", "DAILY-04" -> "shopping_spending";
+            case "DAILY-03", "DAILY-04" -> "groceries_spending";
             case "DAILY-05" -> "medical_spending";
             case "DAILY-06" -> "daily_spending";
             case "DAILY-07" -> "daily_spending";
@@ -108,9 +110,9 @@ public final class CategorySemanticDefaults {
             case "GIFT", "SOCIAL" -> "social_spending";
             case "REIM", "REIMB" -> "refund_reimbursement";
             case "ASSET" -> "asset_adjustment";
-            case "LIABILITY" -> "liability";
+            case "LIABILITY" -> "finance_loan";
             case "INVEST", "WEALTH", "FP" -> "investment";
-            case "FEE", "FE" -> "essential_spending";
+            case "FEE", "FE" -> "finance_fee";
             case "OTHER" -> "other_expense";
             default -> inferL1FromTxnTypes(txnTypes);
         };
@@ -154,7 +156,7 @@ public final class CategorySemanticDefaults {
             return flat != null ? flat : "fixed_misc";
         }
         if (parent.equals("FEE") || parent.equals("FE") || c.startsWith("FEE-")) {
-            return "essential_spending";
+            return "finance_fee";
         }
         if (parent.equals("GIFT") || parent.equals("SOCIAL") || c.startsWith("GIFT-")) {
             if (n.contains("转账") || txn.contains("transfer")) {
@@ -170,7 +172,7 @@ public final class CategorySemanticDefaults {
                 return "investment_income";
             }
             if (c.equals("INC-08") || txn.contains("liability")) {
-                return "liability";
+                return "finance_loan";
             }
             if (c.equals("INC-10") || n.contains("报销") || n.contains("退款")) {
                 return "refund_reimbursement";
@@ -190,7 +192,13 @@ public final class CategorySemanticDefaults {
             if (c.equals("FIXED-07") || n.contains("还款")) {
                 return "fixed_repayment";
             }
-            return "liability";
+            if (c.equals("DEBT-01") || n.contains("信用卡")) {
+                return "finance_credit_loan";
+            }
+            if (c.equals("DEBT-04") || n.contains("分期")) {
+                return "finance_installment";
+            }
+            return "finance_loan";
         }
         if (parent.equals("INVEST") || parent.equals("WEALTH") || parent.equals("FP")
                 || c.startsWith("INVEST-") || c.startsWith("WEALTH-")) {
@@ -247,6 +255,16 @@ public final class CategorySemanticDefaults {
                 if (parent.equals("FIXED") || code.startsWith("FIXED-")) {
                     String flat = CategoryFlatFixedTags.fromCategoryCode(parent, code);
                     yield flat != null ? flat : "fixed_repayment";
+                }
+                if (code.equals("DEBT-01")) {
+                    yield "finance_credit_loan";
+                }
+                if (code.equals("DEBT-04")) {
+                    yield "finance_installment";
+                }
+                if (code.equals("DEBT-02") || code.equals("DEBT-03") || code.equals("INC-08")
+                        || parent.equals("LIABILITY")) {
+                    yield "finance_loan";
                 }
                 yield "liability";
             }
