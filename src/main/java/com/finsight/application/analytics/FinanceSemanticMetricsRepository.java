@@ -103,4 +103,73 @@ public class FinanceSemanticMetricsRepository {
     private static BigDecimal bd(double value) {
         return BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP);
     }
+
+    private static final String SUM_EXPENSE_BASE = """
+            select coalesce(sum(s.amount), 0)
+            from v_transaction_finance_semantics s
+            inner join transaction t on t.id = s.id
+            where s.include_in_expense_trend = 1
+              and s.txn_date >= ? and s.txn_date <= ?
+              and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+            """;
+
+    /** Total consumption expense in range (P&L expense trend). */
+    public double sumConsumptionExpense(String userId, LocalDate start, LocalDate end) {
+        Double v = jdbcTemplate.queryForObject(SUM_EXPENSE_BASE, Double.class, start, end, userId, userId);
+        return v == null ? 0 : v;
+    }
+
+    /**
+     * Budget actual for a bucket or category tree code using Reporting Classification rules.
+     */
+    public double sumBudgetActual(String userId, LocalDate start, LocalDate end,
+                                  String categoryCode, String bucketKey) {
+        if (categoryCode != null && !categoryCode.isBlank()) {
+            String code = categoryCode.trim();
+            Double v = jdbcTemplate.queryForObject(
+                    SUM_EXPENSE_BASE + " and (s.category_code = ? or s.category_l1_code = ?)",
+                    Double.class, start, end, userId, userId, code, code);
+            return v == null ? 0 : v;
+        }
+        String bucket = bucketKey == null || bucketKey.isBlank() ? "all" : bucketKey.trim();
+        String predicate = com.finsight.application.classification.BudgetSemanticBuckets.sqlPredicate(bucket);
+        if (com.finsight.application.classification.BudgetSemanticBuckets.usesCategoryBind(bucket)) {
+            Double v = jdbcTemplate.queryForObject(
+                    SUM_EXPENSE_BASE + predicate,
+                    Double.class, start, end, userId, userId, bucket, bucket);
+            return v == null ? 0 : v;
+        }
+        Double v = jdbcTemplate.queryForObject(
+                SUM_EXPENSE_BASE + predicate,
+                Double.class, start, end, userId, userId);
+        return v == null ? 0 : v;
+    }
+
+    public record SemanticTagYearAmount(String tagId, int year, double amount) {
+    }
+
+    /** Expense-trend totals grouped by calendar year and semantic_tag. */
+    public java.util.List<SemanticTagYearAmount> sumExpenseBySemanticTagYears(
+            String userId, int fromYear, int toYear) {
+        LocalDate start = LocalDate.of(fromYear, 1, 1);
+        LocalDate end = LocalDate.of(toYear, 12, 31);
+        return jdbcTemplate.query(
+                """
+                        select year(s.txn_date) as yr,
+                               coalesce(nullif(trim(s.semantic_tag), ''), 'other') as tag_id,
+                               coalesce(sum(s.amount), 0) as amount
+                        from v_transaction_finance_semantics s
+                        inner join transaction t on t.id = s.id
+                        where s.include_in_expense_trend = 1
+                          and s.txn_date >= ? and s.txn_date <= ?
+                          and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+                        group by year(s.txn_date), coalesce(nullif(trim(s.semantic_tag), ''), 'other')
+                        order by yr, amount desc
+                        """,
+                (rs, rowNum) -> new SemanticTagYearAmount(
+                        rs.getString("tag_id"),
+                        rs.getInt("yr"),
+                        rs.getDouble("amount")),
+                start, end, userId, userId);
+    }
 }

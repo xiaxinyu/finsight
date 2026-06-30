@@ -31,6 +31,7 @@ import {
   trendChartHeight,
   type TrendYoYCard,
 } from '../../utils/trendChanges'
+import { REPORT_COLUMN_LABELS } from '../../utils/reportTaxonomy'
 
 type TrendChangesReportProps = {
   title: string
@@ -113,7 +114,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
   const openMoverDrill = (row: TrendMover) => {
     const name = moverLabel(row)
     openTrendDrill(name, row, [
-      `${driverView === 'category' ? 'Category' : 'Merchant'} ${name} moved ${formatMoney(row.deltaAmount)} YoY.`,
+      `${driverView === 'category' ? 'Classification' : 'Merchant'} ${name} moved ${formatMoney(row.deltaAmount)} YoY.`,
       moverExplanation(row),
     ])
   }
@@ -155,7 +156,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
 
   const moverCols = [
     {
-      title: driverView === 'category' ? 'Category' : 'Merchant',
+      title: driverView === 'category' ? REPORT_COLUMN_LABELS.classification : 'Merchant',
       dataIndex: 'label',
       sortType: 'text' as const,
       ellipsis: true,
@@ -291,7 +292,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                   setSelectedKey(null)
                 }}
                 options={[
-                  { label: `Categories (${data.topCategoryGrowth.length})`, value: 'category' },
+                  { label: `Classifications (${data.topCategoryGrowth.length})`, value: 'category' },
                   { label: `Merchants (${data.topMerchantMovers.length})`, value: 'merchant' },
                 ]}
               />
@@ -300,7 +301,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
             <div className="fs-report-split fs-report-split--with-table">
               <section className="fs-report-split__chart">
                 <ContentCard
-                  title={driverView === 'category' ? 'Category movers' : 'Merchant movers'}
+                  title={driverView === 'category' ? 'Classification movers' : 'Merchant movers'}
                   size="small"
                   className="fs-trend-drivers__chart-card"
                   styles={{ body: { padding: 8 } }}
@@ -340,7 +341,7 @@ export function TrendChangesReport({ title, subtitle }: TrendChangesReportProps)
                     emptyText: (
                       <EmptyState
                         compact
-                        title={driverView === 'category' ? 'No category movers' : 'No merchant movers'}
+                        title={driverView === 'category' ? 'No classification movers' : 'No merchant movers'}
                         description="Expense may be flat or evenly distributed."
                       />
                     ),

@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
   categoryFieldsFromSemanticTag,
+  categoryTxnKindToStorage,
   coerceCategoryFormFields,
+  defaultCategoryTxnKindForParent,
   fixedCostKindLabel,
   inferDefaultReportRole,
+  inferTxnKindFromSemanticTag,
   isFixedCategory,
   isFixedCostCategoryCode,
+  parseCategoryTxnKind,
   profileCategorySemantics,
   reportRoleFromSemanticSelection,
   resolveSemanticTag,
   semanticTagFromReportRole,
   semanticTagLabel,
+  serializeCategoryTxnTypes,
   filterSemanticTagGroups,
   inferExpenseDomainTag,
   SEMANTIC_TAG_GROUPS,
@@ -192,5 +197,55 @@ describe('categorySemantics', () => {
     expect(derived.semanticTag).toBe('real_income')
     expect(derived.reportRole).toBe('income')
     expect(derived.txnTypes).toBe('income')
+  })
+
+  it('parses legacy and canonical transaction kinds', () => {
+    expect(parseCategoryTxnKind('invest')).toBe('finance')
+    expect(parseCategoryTxnKind('transfer,asset')).toBe('transfer')
+    expect(parseCategoryTxnKind('transfer,liability')).toBe('finance')
+    expect(parseCategoryTxnKind('income,refund')).toBe('refund')
+    expect(parseCategoryTxnKind('expense,income')).toBe('mixed')
+    expect(parseCategoryTxnKind('tax,expense,income')).toBe('tax')
+    expect(parseCategoryTxnKind('finance,invest,liability')).toBe('finance')
+    expect(parseCategoryTxnKind('income,invest')).toBe('income')
+    expect(parseCategoryTxnKind('expense,transfer')).toBe('expense')
+    expect(categoryTxnKindToStorage('finance')).toContain('invest')
+  })
+
+  it('serializes portfolio income with invest token', () => {
+    expect(serializeCategoryTxnTypes('income', 'investment_income')).toBe('income,invest')
+    expect(serializeCategoryTxnTypes('income', 'real_income')).toBe('income')
+  })
+
+  it('defaults txn kind from parent roots', () => {
+    expect(defaultCategoryTxnKindForParent('WEALTH')).toBe('finance')
+    expect(defaultCategoryTxnKindForParent('ASSET')).toBe('transfer')
+    expect(defaultCategoryTxnKindForParent('REIM')).toBe('refund')
+  })
+
+  it('syncs finance txn type when investment tag is selected', () => {
+    const derived = categoryFieldsFromSemanticTag('investment', {
+      parentId: 'WEALTH',
+      code: 'WEALTH-01',
+      txnTypes: 'expense',
+    })
+    expect(derived.txnTypes).toBe('finance,invest,liability')
+    expect(derived.reportRole).toBe('investment')
+  })
+
+  it('filters classification groups for finance and tax kinds', () => {
+    const finance = filterSemanticTagGroups(SEMANTIC_TAG_GROUPS, 'finance,invest,liability', 'WEALTH', 'WEALTH-01')
+    expect(finance.some((g) => g.title === 'Finance')).toBe(true)
+    expect(finance.some((g) => g.title === 'Expense')).toBe(false)
+
+    const tax = filterSemanticTagGroups(SEMANTIC_TAG_GROUPS, 'tax,expense,income', 'OTHER', 'OTHER-01')
+    expect(tax.some((g) => g.title === 'Tax')).toBe(true)
+    expect(tax.some((g) => g.title === 'Transfer')).toBe(false)
+  })
+
+  it('infers txn kind from semantic tags', () => {
+    expect(inferTxnKindFromSemanticTag('investment')).toBe('finance')
+    expect(inferTxnKindFromSemanticTag('tax_expense')).toBe('tax')
+    expect(inferTxnKindFromSemanticTag('daily_spending')).toBeNull()
   })
 })

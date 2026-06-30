@@ -10,13 +10,13 @@ import {
   LineChartOutlined,
   RiseOutlined,
 } from '@ant-design/icons'
-import { homeSummary, fetchReport } from '../../api/report'
+import { homeSummary } from '../../api/report'
 import { cashflowMetrics, decisionCards, financialPulse } from '../../api/finance'
-import { advisorFeedback, advisorRecommendations, fetchMetricPeriodSummary } from '../../api/analytics'
+import { advisorFeedback, advisorRecommendations, fetchMetricPeriodSummary, fetchSemanticBreakdown } from '../../api/analytics'
 import type { AdvisorCard } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
 import { UnifiedDrillDrawer } from '../../components/ReportDrillDrawer'
-import { buildDashboardDrillContext, drillParamsForCategorySlice, drillParamsForMonth, type CategoryDrillSlice } from '../../components/drilldown/buildDrillContext'
+import { buildDashboardDrillContext, drillParamsForMonth, drillParamsForSemanticTag } from '../../components/drilldown/buildDrillContext'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
@@ -30,14 +30,15 @@ import { AccountBalancePanel } from '../../components/AccountBalancePanel'
 import { finsightColors } from '../../styles/finsight-tokens'
 import { PeriodRangePicker } from '../../components/PeriodRangePicker'
 import { periodToStrings } from '../../utils/periodStrings'
-import { formatMoney, MONTH_NAMES } from '../../utils/format'
+import { formatMoney } from '../../utils/format'
 import { defaultPeriodRange, formatPeriodPreview, type PeriodRange } from '../../utils/periodPresets'
-import { rollupToLevel1 } from '../../utils/reportAnalytics'
+import { isDrillableSemanticTag, topSemanticRows, type SemanticBreakdownRow } from '../../utils/semanticBreakdownReport'
 import { useViewportTableHeight } from '../../hooks/useViewportTableHeight'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
 import { DASHBOARD_METRIC_HINTS, MetricExplanation } from '../../components/MetricExplanation'
-import { mergeDashboardPeriodTotals } from '../../utils/dashboardMetrics'
+import { mapDashboardPeriodTotals } from '../../utils/dashboardMetrics'
+import { REPORT_METRICS_SOURCE } from '../../utils/reportTaxonomy'
 
 function savingsRateLabel(income: number, net: number): string {
   if (income <= 0) return '—'
@@ -62,43 +63,35 @@ export function DashboardPage() {
     queryFn: () => homeSummary(dayjs().year(), periodKey.start ? periodKey : undefined),
   })
 
-  const { data: periodReport, isFetching: totalsLoading } = useQuery({
-    queryKey: ['dash-period', periodKey],
-    queryFn: async () => {
-      const base: Record<string, string> = {}
-      if (periodKey.start) base.transactionDateStartStr = periodKey.start
-      if (periodKey.end) base.transactionDateEndStr = periodKey.end
-      const [inc, exp, cats] = await Promise.all([
-        fetchReport('/transaction-report/month-income', { ...base, txnTypes: 'income' }),
-        fetchReport('/transaction-report/month-expense', { ...base, txnTypes: 'expense' }),
-        fetchReport('/transaction-report/consume', { ...base, txnTypes: 'expense' }),
-      ])
-      const income = inc.reduce((s, r) => s + r.value, 0)
-      const expense = exp.reduce((s, r) => s + r.value, 0)
-      const months = MONTH_NAMES.map((name, i) => ({
-        month: name,
-        income: Number(inc[i]?.value || 0),
-        expense: Number(exp[i]?.value || 0),
-      }))
-      const rolled = rollupToLevel1(cats)
-      const topCats = rolled.filter((r) => r.value > 0).sort((a, b) => b.value - a.value)
-      const expenseTotal = topCats.reduce((s, r) => s + r.value, 0)
-      const top3 = topCats.slice(0, 3)
-      const top3Share = expenseTotal > 0 ? (top3.reduce((s, r) => s + r.value, 0) / expenseTotal) * 100 : 0
-      return { income, expense, months, topCats: top3, top3Share, expenseTotal, txnCount: topCats.length }
-    },
-  })
-
   const { data: semanticPeriod, isFetching: semanticLoading } = useQuery({
     queryKey: ['dash-semantic', periodKey.start, periodKey.end],
     queryFn: () => fetchMetricPeriodSummary(periodKey.start || undefined, periodKey.end || undefined),
     staleTime: ANALYTICS_STALE_MS,
   })
 
+  const { data: semanticBreakdown, isFetching: breakdownLoading } = useQuery({
+    queryKey: ['dash-breakdown', periodKey.start, periodKey.end],
+    queryFn: () => fetchSemanticBreakdown(periodKey.start || undefined, periodKey.end || undefined, { scope: 'expense' }),
+    staleTime: ANALYTICS_STALE_MS,
+  })
+
   const periodTotals = useMemo(
-    () => mergeDashboardPeriodTotals(semanticPeriod, periodReport),
-    [semanticPeriod, periodReport],
+    () => mapDashboardPeriodTotals(semanticPeriod),
+    [semanticPeriod],
   )
+
+  const expenseConcentration = useMemo(() => {
+    const rows = [...(semanticBreakdown?.rows ?? [])].sort((a, b) => b.amount - a.amount)
+    const total = semanticBreakdown?.expenseTotal ?? 0
+    const top3 = rows.slice(0, 3)
+    const top3Total = top3.reduce((s, r) => s + r.amount, 0)
+    return {
+      top3,
+      top3Share: total > 0 ? (top3Total / total) * 100 : 0,
+      expenseTotal: total,
+      count: rows.length,
+    }
+  }, [semanticBreakdown])
 
   const { data: pulse, isError: pulseError, error: pulseErr } = useQuery({
     queryKey: ['financial-pulse'],
@@ -131,13 +124,13 @@ export function DashboardPage() {
   const trustPct = dataTrustScore(unclassified)
 
   const pieData = useMemo(
-    () => (periodReport?.topCats || []).map((r) => ({
-      name: r.key,
-      value: r.value,
-      level1Code: r.level1Code,
-      level1Name: r.level1Name,
+    () => topSemanticRows((semanticBreakdown?.rows ?? []) as SemanticBreakdownRow[], 8).map((r) => ({
+      name: r.classification || r.label,
+      value: r.amount,
+      tagId: r.tagId,
+      classification: r.classification || r.label,
     })),
-    [periodReport?.topCats],
+    [semanticBreakdown?.rows],
   )
 
   const cashflowOption = useMemo(() => {
@@ -165,7 +158,7 @@ export function DashboardPage() {
   }, [period, periodTotals.months])
 
   const loadError = isError ? error : pulseError ? pulseErr : cardsError ? cardsErr : null
-  const loading = isLoading || totalsLoading || semanticLoading
+  const loading = isLoading || semanticLoading || breakdownLoading
   const periodLabel = formatPeriodPreview(period[0], period[1])
   const needsOnboarding = income === 0 && expense === 0 && Number(pulse?.liquidAssets || 0) === 0
 
@@ -194,17 +187,17 @@ export function DashboardPage() {
     }))
   }
 
-  const openCategoryDrill = (slice: CategoryDrillSlice) => {
-    if (!periodKey.start || !periodKey.end) return
+  const openSemanticDrill = (tagId: string, label: string) => {
+    if (!periodKey.start || !periodKey.end || !isDrillableSemanticTag(tagId)) return
     openDrill(buildDashboardDrillContext({
-      title: `${slice.key} · ${periodLabel}`,
-      metricLabel: slice.key,
-      params: drillParamsForCategorySlice(slice, periodKey.start, periodKey.end),
+      title: `${label} · ${periodLabel}`,
+      metricLabel: label,
+      params: drillParamsForSemanticTag(tagId, periodKey.start, periodKey.end, 'expense'),
       explanation: [
-        `${slice.key} is among your top expense categories this period.`,
-        (periodReport?.top3Share ?? 0) >= 50
-          ? `Top-3 categories account for ${(periodReport?.top3Share ?? 0).toFixed(1)}% of spend — high concentration.`
-          : 'Spending is relatively diversified across categories.',
+        `${label} is among your top expense classifications this period.`,
+        expenseConcentration.top3Share >= 50
+          ? `Top-3 classifications account for ${expenseConcentration.top3Share.toFixed(1)}% of spend — high concentration.`
+          : 'Spending is relatively diversified across classifications.',
       ],
     }))
   }
@@ -263,7 +256,7 @@ export function DashboardPage() {
             <div className="fs-dash-kpi-card">
               <MetricExplanation className="fs-dash-kpi-label" label="Real income" hint={DASHBOARD_METRIC_HINTS.realIncome} />
               <span className="fs-dash-kpi-value fs-dash-kpi-value--income">{formatMoney(income)}</span>
-              <span className="fs-dash-kpi-hint">{periodLabel}{periodTotals.usedSemantic ? ' · semantic' : ''}</span>
+              <span className="fs-dash-kpi-hint">{periodLabel} · {periodTotals.metricsSource || REPORT_METRICS_SOURCE}</span>
             </div>
             <div className="fs-dash-kpi-card">
               <MetricExplanation className="fs-dash-kpi-label" label="Consumption" hint={DASHBOARD_METRIC_HINTS.consumptionExpense} />
@@ -291,9 +284,9 @@ export function DashboardPage() {
             </div>
             <div className="fs-dash-kpi-card">
               <span className="fs-dash-kpi-label">Top-3 spend share</span>
-              <span className="fs-dash-kpi-value">{(periodReport?.top3Share ?? 0).toFixed(1)}%</span>
+              <span className="fs-dash-kpi-value">{expenseConcentration.top3Share.toFixed(1)}%</span>
               <span className="fs-dash-kpi-hint">
-                {(periodReport?.topCats || []).map((c) => c.key).join(' · ') || '—'}
+                {expenseConcentration.top3.map((c) => c.classification || c.label).join(' · ') || '—'}
               </span>
             </div>
           </div>
@@ -341,12 +334,12 @@ export function DashboardPage() {
               </ContentCard>
             </Col>
             <Col xs={24} lg={10}>
-              <ContentCard title="Expense concentration" size="small" styles={{ body: { padding: 8 } }}>
+              <ContentCard title="Expense by classification" size="small" styles={{ body: { padding: 8 } }}>
                 <FsChart
                   profile="donut"
                   height={chartHeight}
                   loading={loading}
-                  empty={<EmptyState compact title="No categories" description="Classify expenses to unlock category insights." />}
+                  empty={<EmptyState compact title="No classifications" description="Classify expenses to unlock reporting breakdown." />}
                   option={{
                     series: [{
                       type: 'pie',
@@ -358,23 +351,19 @@ export function DashboardPage() {
                   }}
                   onEvents={{
                     click: (p) => {
-                      const evt = p as { name?: string; data?: CategoryDrillSlice & { value?: number } }
-                      if (evt.name) {
-                        openCategoryDrill({
-                          key: evt.name,
-                          level1Code: evt.data?.level1Code,
-                          level1Name: evt.data?.level1Name ?? evt.name,
-                          code: evt.data?.level1Code,
-                        })
+                      const evt = p as { name?: string; data?: { tagId?: string; classification?: string } }
+                      const tagId = evt.data?.tagId
+                      if (tagId && evt.name) {
+                        openSemanticDrill(tagId, evt.data?.classification ?? evt.name)
                       }
                     },
                   }}
                 />
-                {periodReport && periodReport.expenseTotal > 0 && (
+                {expenseConcentration.expenseTotal > 0 && (
                   <Typography.Paragraph type="secondary" className="fs-dash-analysis-note">
-                    {(periodReport.top3Share ?? 0) >= 50
-                      ? `Spending is concentrated: top 3 categories account for ${periodReport.top3Share.toFixed(1)}% of ${formatMoney(periodReport.expenseTotal)}. Review caps in Planning.`
-                      : `Expense spread across ${periodReport.txnCount} categories — top category is ${periodReport.topCats[0]?.key || 'n/a'} (${formatMoney(periodReport.topCats[0]?.value || 0)}).`}
+                    {expenseConcentration.top3Share >= 50
+                      ? `Spending is concentrated: top 3 classifications account for ${expenseConcentration.top3Share.toFixed(1)}% of ${formatMoney(expenseConcentration.expenseTotal)}. Review caps in Planning.`
+                      : `Expense spread across ${expenseConcentration.count} classifications — largest is ${expenseConcentration.top3[0]?.classification || 'n/a'} (${formatMoney(expenseConcentration.top3[0]?.amount || 0)}).`}
                   </Typography.Paragraph>
                 )}
               </ContentCard>

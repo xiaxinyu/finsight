@@ -28,7 +28,7 @@ class SemanticBreakdownServiceTest {
     @Test
     void expenseBreakdown_groupsFixedAndVariableShares() {
         when(authenticationFacade.getUserName()).thenReturn("alice");
-        when(breakdownRepository.expenseBySemanticTag(any())).thenReturn(List.of(
+        when(breakdownRepository.bySemanticTag(any())).thenReturn(List.of(
                 new SemanticBreakdownRepository.TagAmountRow("dining_spending", 3000),
                 new SemanticBreakdownRepository.TagAmountRow("fixed_housing", 5000),
                 new SemanticBreakdownRepository.TagAmountRow("medical_spending", 2000)));
@@ -56,7 +56,7 @@ class SemanticBreakdownServiceTest {
     @Test
     void expenseBreakdown_countsOtherTagAsVariable() {
         when(authenticationFacade.getUserName()).thenReturn("alice");
-        when(breakdownRepository.expenseBySemanticTag(any())).thenReturn(List.of(
+        when(breakdownRepository.bySemanticTag(any())).thenReturn(List.of(
                 new SemanticBreakdownRepository.TagAmountRow("other", 1000),
                 new SemanticBreakdownRepository.TagAmountRow("fixed_housing", 3000)));
 

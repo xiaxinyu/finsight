@@ -254,20 +254,67 @@ public final class FinanceSemanticsCatalog {
         return l1 + " / " + l2;
     }
 
-    /** Transaction type for reports: Income, Expense, or Non-P&L (transfers & finance flows). */
+    /** Transaction type for reports — aligns with admin Transaction type kinds. */
     public static String semanticTagTxnTypeLabel(String tagId) {
         if (tagId == null || tagId.isBlank()) {
             return "Expense";
         }
         String id = tagId.trim();
+        if ("tax_expense".equals(id) || "tax_refund".equals(id)) {
+            return "Tax";
+        }
+        if ("refund_reimbursement".equals(id)) {
+            return "Refund";
+        }
         if ("transfer".equals(id)) {
-            return "Non-P&L";
+            return "Transfer";
+        }
+        if ("investment".equals(id) || "asset_adjustment".equals(id)) {
+            return "Investment";
         }
         if ("finance_loan".equals(id) || "finance_credit_loan".equals(id) || "finance_installment".equals(id)
-                || "investment".equals(id) || "asset_adjustment".equals(id) || "liability".equals(id)) {
-            return "Non-P&L";
+                || "liability".equals(id)) {
+            return "Finance";
         }
-        return "income".equals(semanticTagGroup(tagId)) ? "Income" : "Expense";
+        return "income".equals(semanticTagGroup(id)) ? "Income" : "Expense";
+    }
+
+    /** Whether rows with this tag count toward P&L income trend reports. */
+    public static boolean semanticTagIncludeInIncomeTrend(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return false;
+        }
+        return switch (tagId.trim()) {
+            case "real_income", "investment_income", "other_income" -> true;
+            default -> false;
+        };
+    }
+
+    /** Whether rows with this tag count toward P&L expense / consumption trend reports. */
+    public static boolean semanticTagIncludeInExpenseTrend(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return false;
+        }
+        return switch (tagId.trim()) {
+            case "dining_spending", "groceries_spending", "shopping_spending", "transport_spending",
+                 "entertainment_spending", "education_spending", "medical_spending", "social_spending",
+                 "subscription_spending", "essential_spending", "finance_fee", "daily_spending",
+                 "other_expense", "fixed_housing", "fixed_utilities", "fixed_telecom", "fixed_insurance",
+                 "fixed_tuition", "fixed_repayment", "fixed_misc", "fixed_spending", "tax_expense" -> true;
+            default -> false;
+        };
+    }
+
+    /** Capital / balance-sheet tags excluded from P&L trends. */
+    public static boolean semanticTagIsNonPnl(String tagId) {
+        if (tagId == null || tagId.isBlank()) {
+            return false;
+        }
+        return switch (tagId.trim()) {
+            case "transfer", "finance_loan", "finance_credit_loan", "finance_installment",
+                 "investment", "asset_adjustment", "liability" -> true;
+            default -> false;
+        };
     }
 
     public static String budgetBehaviorLabel(String behavior) {
@@ -365,9 +412,18 @@ public final class FinanceSemanticsCatalog {
         out.put("legacySemanticTags", List.of("liability"));
         out.put("groupHints", Map.of(
                 "Fixed", "Repayment = recurring budget line (Fixed %). Card/loan principal → Finance.",
-                "Finance", "Loan / Credit loan / Installment = balance-sheet flows (Non-P&L).",
+                "Finance", "Loan / Credit loan / Installment = excluded from income and spending trends.",
                 "Tax", "Statutory taxes — tracked separately from daily spending.",
                 "Expense", "Subscription lives here only (not under Fixed)."));
+        out.put("reportColumns", Map.of(
+                "classification", "Reporting Classification",
+                "txnType", "Transaction type",
+                "classL1", "Group",
+                "classL2", "Tag",
+                "amount", "Amount",
+                "sharePct", "Share"));
+        out.put("reportTxnTypes", List.of("Income", "Expense", "Tax", "Refund", "Transfer", "Finance", "Investment"));
+        out.put("metricsSourceLabel", "v_transaction_finance_semantics.semantic_tag");
         return out;
     }
 
@@ -400,13 +456,13 @@ public final class FinanceSemanticsCatalog {
             case "finance_fee" -> "Bank, Payment, Or Brokerage Fees (Counts As Expense)";
             case "tax_expense" -> "Income Tax, Property Tax, Or Other Statutory Tax Paid";
             case "tax_refund" -> "Tax Refund Or Rebate Received";
-            case "transfer" -> "Internal Transfer Or Balance Adjustment (Excluded From P&L)";
-            case "finance_loan" -> "Personal Or Bank Loan — Borrow, Disburse, Or Repay (Non-P&L)";
-            case "finance_credit_loan" -> "Credit Card Or Revolving Credit — Draw Or Repay Principal (Non-P&L)";
-            case "finance_installment" -> "Installment Plan Or Buy-Now-Pay-Later (Non-P&L)";
-            case "investment" -> "Investment Buy, Sell, Or Transfer (Non-P&L)";
+            case "transfer" -> "Internal Transfer Or Balance Adjustment — Excluded From Income And Spending";
+            case "finance_loan" -> "Personal Or Bank Loan — Borrow, Disburse, Or Repay";
+            case "finance_credit_loan" -> "Credit Card Or Revolving Credit — Draw Or Repay Principal";
+            case "finance_installment" -> "Installment Plan Or Buy-Now-Pay-Later";
+            case "investment" -> "Investment Buy, Sell, Or Transfer";
             case "liability" -> "Legacy Tag — Use Loan, Credit Loan, Or Installment Instead";
-            case "asset_adjustment" -> "Asset Purchase, Sale, Or Rebalance (Non-P&L)";
+            case "asset_adjustment" -> "Asset Purchase, Sale, Or Rebalance";
             case "other" -> "Unset Classification — Fix Before Reporting";
             default -> "";
         };

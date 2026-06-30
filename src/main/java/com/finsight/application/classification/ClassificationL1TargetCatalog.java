@@ -19,9 +19,9 @@ public enum ClassificationL1TargetCatalog {
     GIFT(ClassificationL1Codes.GIFT, "人情与公益", 65, "expense"),
     REIM(ClassificationL1Codes.REIM, "报销与返还", 70, "income,refund"),
     ASSET(ClassificationL1Codes.ASSET, "资产变动", 75, "transfer,asset"),
-    LIABILITY(ClassificationL1Codes.LIABILITY, "负债变动", 80, "transfer,liability"),
-    INVEST(ClassificationL1Codes.INVEST, "投资活动", 85, "expense,invest"),
-    WEALTH(ClassificationL1Codes.WEALTH, "理财与金融产品", 90, "invest"),
+    LIABILITY(ClassificationL1Codes.LIABILITY, "负债变动", 80, "finance,invest,liability"),
+    INVEST(ClassificationL1Codes.INVEST, "投资活动", 85, "finance,invest,liability"),
+    WEALTH(ClassificationL1Codes.WEALTH, "理财与金融产品", 90, "finance,invest,liability"),
     FEE(ClassificationL1Codes.FEE, "金融手续费", 92, "expense"),
     OTHER(ClassificationL1Codes.OTHER, "其它消费", 99, "expense");
 

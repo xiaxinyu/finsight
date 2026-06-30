@@ -100,6 +100,8 @@ export async function fetchMetricPeriodSummary(from?: string, to?: string) {
 }
 
 export type SemanticBreakdownResponse = {
+  scope?: string
+  periodTotal?: number
   rows: Array<{
     tagId: string
     label: string
@@ -124,13 +126,14 @@ export type SemanticBreakdownResponse = {
 export async function fetchSemanticBreakdown(
   from?: string,
   to?: string,
-  filters?: { cardId?: string; consumeID?: string },
+  filters?: { cardId?: string; consumeID?: string; scope?: string },
 ) {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
   if (to) params.set('to', to)
   if (filters?.cardId) params.set('cardId', filters.cardId)
   if (filters?.consumeID) params.set('consumeID', filters.consumeID)
+  if (filters?.scope) params.set('scope', filters.scope)
   const suffix = params.toString() ? `?${params.toString()}` : ''
   return unwrap<SemanticBreakdownResponse>(await getJson(`/api/v1/analytics/metrics/semantic-breakdown${suffix}`))
 }

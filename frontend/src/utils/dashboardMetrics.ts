@@ -1,4 +1,5 @@
 import type { PeriodMetricSummary } from '../api/analytics'
+import { REPORT_METRICS_SOURCE } from './reportTaxonomy'
 
 export type DashboardPeriodTotals = {
   realIncome: number
@@ -6,44 +7,31 @@ export type DashboardPeriodTotals = {
   net: number
   metricsSource: string
   months: { month: string; realIncome: number; consumptionExpense: number; net: number }[]
-  usedSemantic: boolean
 }
 
-/** Prefer semantic period summary; fall back to legacy report totals when semantic layer is empty. */
+/** Map semantic period summary to dashboard totals (single source of truth). */
+export function mapDashboardPeriodTotals(
+  semantic: PeriodMetricSummary | undefined,
+): DashboardPeriodTotals {
+  return {
+    realIncome: semantic?.realIncome ?? 0,
+    consumptionExpense: semantic?.consumptionExpense ?? 0,
+    net: semantic?.netCashflow ?? 0,
+    metricsSource: semantic?.metricsSource ?? REPORT_METRICS_SOURCE,
+    months: (semantic?.months ?? []).map((m) => ({
+      month: m.month,
+      realIncome: m.realIncome,
+      consumptionExpense: m.consumptionExpense,
+      net: m.net,
+    })),
+  }
+}
+
+/** @deprecated use {@link mapDashboardPeriodTotals} */
 export function mergeDashboardPeriodTotals(
   semantic: PeriodMetricSummary | undefined,
-  report: { income: number; expense: number; months: { month: string; income: number; expense: number }[] } | undefined,
-): DashboardPeriodTotals {
-  const semanticHasData = semantic
-    && (semantic.realIncome > 0 || semantic.consumptionExpense > 0)
-  if (semanticHasData && semantic) {
-    return {
-      realIncome: semantic.realIncome,
-      consumptionExpense: semantic.consumptionExpense,
-      net: semantic.netCashflow,
-      metricsSource: semantic.metricsSource,
-      months: (semantic.months || []).map((m) => ({
-        month: m.month,
-        realIncome: m.realIncome,
-        consumptionExpense: m.consumptionExpense,
-        net: m.net,
-      })),
-      usedSemantic: true,
-    }
-  }
-  const income = report?.income ?? 0
-  const expense = report?.expense ?? 0
-  return {
-    realIncome: income,
-    consumptionExpense: expense,
-    net: income - expense,
-    metricsSource: 'transaction_report',
-    months: (report?.months || []).map((m) => ({
-      month: m.month,
-      realIncome: m.income,
-      consumptionExpense: m.expense,
-      net: m.income - m.expense,
-    })),
-    usedSemantic: false,
-  }
+  _report?: unknown,
+): DashboardPeriodTotals & { usedSemantic: boolean } {
+  const mapped = mapDashboardPeriodTotals(semantic)
+  return { ...mapped, usedSemantic: true }
 }

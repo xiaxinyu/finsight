@@ -21,10 +21,16 @@ import {
 import {
   buildSemanticClassificationChartOption,
   insightsSemanticStructure,
+  insightsTaxSummary,
+  insightsTransferFinance,
+  REPORT_COLUMN_LABELS,
+  semanticScopePeriodTotal,
   topSemanticRows,
   type ChartSummaryItem,
   type SemanticBreakdown,
 } from '../../utils/semanticBreakdownReport'
+import type { SemanticBreakdownScope } from '../../utils/reportTaxonomy'
+import { REPORT_METRICS_SOURCE } from '../../utils/reportTaxonomy'
 import type dayjs from 'dayjs'
 import { REPORT_METRIC_HINTS } from '../../components/MetricExplanation'
 
@@ -77,6 +83,58 @@ export function buildReportView(
   }
   if (!data) return empty
 
+  if ('periodSummary' in data && data.periodSummary) {
+    const s = data.periodSummary as {
+      realIncome: number
+      consumptionExpense: number
+      netCashflow: number
+      refundInflow?: number
+      investmentOutflow?: number
+      months: Array<{ month: string; realIncome: number; consumptionExpense: number; net: number }>
+      metricsSource?: string
+    }
+    const rows = s.months.map((m, i) => ({
+      month: m.month,
+      monthIndex: i,
+      income: m.realIncome,
+      expense: m.consumptionExpense,
+      surplus: m.net,
+    }))
+    const incomeTotal = s.realIncome
+    const expenseTotal = s.consumptionExpense
+    const net = s.netCashflow
+    const savings = incomeTotal > 0 ? ((net / incomeTotal) * 100).toFixed(1) : '—'
+    return {
+      insights: insightsCashflow(rows, periodLabel),
+      kpis: [
+        { key: 'inc', label: 'Income (P&L)', value: formatMoney(incomeTotal), tone: 'income', explain: REPORT_METRIC_HINTS.income, hint: 'Reporting Classification: earned + portfolio' },
+        { key: 'exp', label: 'Expense (P&L)', value: formatMoney(expenseTotal), tone: 'expense', explain: REPORT_METRIC_HINTS.expense, hint: 'Consumption + fixed in expense trend' },
+        { key: 'net', label: 'Net', value: formatMoney(net), tone: net >= 0 ? 'income' : 'expense', hint: `Savings ${savings}%`, explain: REPORT_METRIC_HINTS.net },
+        { key: 'ref', label: 'Refunds', value: formatMoney(s.refundInflow ?? 0), tone: 'neutral', hint: 'Excluded from income trend' },
+      ],
+      chartTitle: 'Monthly cash flow (semantic)',
+      chartOption: {
+        ...chartBase,
+        legend: { data: ['Income', 'Expense', 'Net'], top: 4, textStyle: { fontSize: 11 } },
+        xAxis: { type: 'category', data: rows.map((r) => r.month), axisLabel: { fontSize: 10 } },
+        yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+        series: [
+          { name: 'Income', type: 'bar', data: rows.map((r) => r.income), itemStyle: { color: '#16a34a' }, barMaxWidth: 20 },
+          { name: 'Expense', type: 'bar', data: rows.map((r) => r.expense), itemStyle: { color: '#ea580c' }, barMaxWidth: 20 },
+          { name: 'Net', type: 'line', smooth: true, data: rows.map((r) => r.surplus), itemStyle: { color: '#2563eb' }, lineStyle: { width: 2 } },
+        ],
+      },
+      tableCols: [
+        { title: 'Month', dataIndex: 'month', sortType: 'text' },
+        { title: 'Income (P&L)', dataIndex: 'income', unit: 'CNY', align: 'right', sortType: 'number' },
+        { title: 'Expense (P&L)', dataIndex: 'expense', unit: 'CNY', align: 'right', sortType: 'number' },
+        { title: 'Net', dataIndex: 'surplus', unit: 'CNY', align: 'right', sortType: 'number' },
+      ],
+      tableData: rows as unknown as Record<string, unknown>[],
+      tableSummary: { month: 'Total', income: incomeTotal, expense: expenseTotal, surplus: net },
+    }
+  }
+
   if ('inc' in data && data.inc && data.exp) {
     const rows = buildMonthlyCashflow(data.inc as ReportPoint[], data.exp as ReportPoint[], applied.period)
     const incomeTotal = rows.reduce((s, r) => s + r.income, 0)
@@ -119,13 +177,15 @@ export function buildReportView(
     const meta = (data.meta as Record<string, unknown>) || {}
     const totalActual = Number(meta.actualTotal || 0)
     const totalLimit = Number(meta.limitTotal || 0)
+    const metricsSource = String(meta.metricsSource || REPORT_METRICS_SOURCE)
     const util = totalLimit > 0 ? ((totalActual / totalLimit) * 100).toFixed(1) : '—'
     const enriched: Record<string, unknown>[] = lines.map((l) => {
       const limit = Number(l.limit || 0)
       const actual = Number(l.actual || 0)
       const remaining = Number(l.remaining ?? limit - actual)
       const bucketUtil = limit > 0 ? (actual / limit) * 100 : 0
-      return { ...l, remaining, utilization: bucketUtil }
+      const classification = String(l.classification || l.bucketKey || l.categoryCode || '—')
+      return { ...l, classification, remaining, utilization: bucketUtil }
     })
     return {
       insights: insightsBudget(lines, totalActual, totalLimit),
@@ -133,13 +193,13 @@ export function buildReportView(
         { key: 'actual', label: 'Spent (period)', value: formatMoney(totalActual), tone: 'expense', explain: REPORT_METRIC_HINTS.budgetSpent },
         { key: 'limit', label: 'Budget', value: formatMoney(totalLimit), explain: REPORT_METRIC_HINTS.budgetLimit },
         { key: 'rem', label: 'Remaining', value: formatMoney(Math.max(0, totalLimit - totalActual)), tone: totalLimit - totalActual < totalLimit * 0.2 ? 'warn' : 'neutral' },
-        { key: 'util', label: 'Utilization', value: `${util}%`, tone: Number(util) >= 80 ? 'warn' : 'neutral', explain: REPORT_METRIC_HINTS.budgetUtilization },
+        { key: 'util', label: 'Utilization', value: `${util}%`, tone: Number(util) >= 80 ? 'warn' : 'neutral', explain: REPORT_METRIC_HINTS.budgetUtilization, hint: metricsSource },
       ],
-      chartTitle: 'Budget vs actual by bucket',
+      chartTitle: 'Budget vs actual by classification',
       chartOption: {
         ...chartBase,
         legend: { data: ['Limit', 'Actual'], top: 4 },
-        xAxis: { type: 'category', data: enriched.map((r) => String(r.bucketKey ?? r.categoryCode ?? 'line')), axisLabel: { fontSize: 10, rotate: 20 } },
+        xAxis: { type: 'category', data: enriched.map((r) => String(r.classification)), axisLabel: { fontSize: 10, rotate: 20 } },
         yAxis: { type: 'value' },
         series: [
           { name: 'Limit', type: 'bar', data: enriched.map((r) => Number(r.limit ?? 0)), itemStyle: { color: '#94a3b8' }, barMaxWidth: 22 },
@@ -147,23 +207,84 @@ export function buildReportView(
         ],
       },
       tableCols: [
-        { title: 'Bucket', dataIndex: 'bucketKey', sortType: 'text' },
+        { title: REPORT_COLUMN_LABELS.classification, dataIndex: 'classification', sortType: 'text', ellipsis: true },
         { title: 'Limit', dataIndex: 'limit', unit: 'CNY', align: 'right', sortType: 'number' },
         { title: 'Actual', dataIndex: 'actual', unit: 'CNY', align: 'right', sortType: 'number' },
         { title: 'Used %', dataIndex: 'utilization', align: 'right', sortType: 'percent', render: (v) => `${Number(v).toFixed(1)}%` },
         { title: 'Remaining', dataIndex: 'remaining', unit: 'CNY', align: 'right', sortType: 'number' },
       ],
       tableData: enriched,
-      tableSummary: { bucketKey: 'Total', limit: totalLimit, actual: totalActual, remaining: totalLimit - totalActual },
+      tableSummary: { classification: 'Total', limit: totalLimit, actual: totalActual, remaining: totalLimit - totalActual },
     }
   }
 
   if ('semanticBreakdown' in data && data.semanticBreakdown) {
     const breakdown = data.semanticBreakdown as SemanticBreakdown
-    const weekRows = ('week' in data && data.week) ? buildWeekdaySeries(data.week as ReportPoint[]) : []
-    const weekTotal = weekRows.reduce((s, d) => s + d.value, 0)
+    const scope = String(data.scope ?? breakdown.scope ?? 'expense') as SemanticBreakdownScope
     const topRows = topSemanticRows(breakdown.rows)
     const chart = buildSemanticClassificationChartOption(breakdown, topRows)
+    const tableCols: FsColumn<Record<string, unknown>>[] = [
+      { title: REPORT_COLUMN_LABELS.classification, dataIndex: 'classification', sortType: 'text', ellipsis: true },
+      { title: REPORT_COLUMN_LABELS.txnType, dataIndex: 'txnType', sortType: 'text', width: 100 },
+      { title: REPORT_COLUMN_LABELS.amount, dataIndex: 'amount', unit: 'CNY', align: 'right', sortType: 'number' },
+      { title: REPORT_COLUMN_LABELS.sharePct, dataIndex: 'sharePct', align: 'right', sortType: 'percent', render: (v) => `${Number(v).toFixed(1)}%` },
+    ]
+    const tableData = breakdown.rows.map((r) => ({ key: r.tagId, ...r }))
+    const periodTotal = semanticScopePeriodTotal(breakdown)
+
+    if (scope === 'tax') {
+      const paid = breakdown.rows.find((r) => r.tagId === 'tax_expense')?.amount ?? 0
+      const refund = breakdown.rows.find((r) => r.tagId === 'tax_refund')?.amount ?? 0
+      return {
+        insights: insightsTaxSummary(breakdown, periodLabel),
+        kpis: [
+          { key: 'paid', label: 'Tax paid', value: formatMoney(paid), tone: 'expense' },
+          { key: 'refund', label: 'Tax refunds', value: formatMoney(refund), tone: 'income' },
+          { key: 'net', label: 'Net tax', value: formatMoney(paid - refund), tone: paid - refund > 0 ? 'expense' : 'neutral' },
+          { key: 'total', label: 'Total activity', value: formatMoney(periodTotal), hint: periodLabel },
+        ],
+        chartTitle: 'Tax by classification',
+        chartProfile: 'donut',
+        chartHeight: 360,
+        chartSummary: chart.summary,
+        chartOption: chart.option,
+        tableCols,
+        tableData,
+        tableSummary: { classification: 'Total', amount: periodTotal, sharePct: 100 },
+      }
+    }
+
+    if (scope === 'non_pnl') {
+      const transfer = breakdown.rows.find((r) => r.tagId === 'transfer')?.amount ?? 0
+      const finance = breakdown.rows
+        .filter((r) => r.txnType === 'Finance')
+        .reduce((s, r) => s + r.amount, 0)
+      const investment = breakdown.rows
+        .filter((r) => r.txnType === 'Investment')
+        .reduce((s, r) => s + r.amount, 0)
+      return {
+        insights: insightsTransferFinance(breakdown, periodLabel),
+        kpis: [
+          { key: 'total', label: 'Total flow', value: formatMoney(periodTotal), tone: 'neutral', hint: 'Excluded from spending' },
+          { key: 'xfer', label: 'Transfers', value: formatMoney(transfer) },
+          { key: 'fin', label: 'Finance', value: formatMoney(finance) },
+          { key: 'inv', label: 'Investments', value: formatMoney(investment) },
+        ],
+        chartTitle: 'Transfer & finance by classification',
+        chartProfile: 'donut',
+        chartHeight: 360,
+        chartSummary: chart.summary,
+        chartOption: chart.option,
+        tableCols,
+        tableData,
+        tableSummary: { classification: 'Total', amount: periodTotal, sharePct: 100 },
+      }
+    }
+
+    const weekRows = ('week' in data && data.week) ? buildWeekdaySeries(data.week as ReportPoint[]) : []
+    const weekTotal = weekRows.reduce((s, d) => s + d.value, 0)
+    const topRowsExpense = topSemanticRows(breakdown.rows)
+    const chartExpense = buildSemanticClassificationChartOption(breakdown, topRowsExpense)
     return {
       insights: insightsSemanticStructure(breakdown, periodLabel),
       kpis: [
@@ -175,15 +296,10 @@ export function buildReportView(
       chartTitle: 'Expense by classification',
       chartProfile: 'donut',
       chartHeight: 400,
-      chartSummary: chart.summary,
-      chartOption: chart.option,
-      tableCols: [
-        { title: 'Classification', dataIndex: 'classification', sortType: 'text', ellipsis: true },
-        { title: 'Type', dataIndex: 'txnType', sortType: 'text', width: 88 },
-        { title: 'Amount', dataIndex: 'amount', unit: 'CNY', align: 'right', sortType: 'number' },
-        { title: 'Share', dataIndex: 'sharePct', align: 'right', sortType: 'percent', render: (v) => `${Number(v).toFixed(1)}%` },
-      ],
-      tableData: breakdown.rows.map((r) => ({ key: r.tagId, ...r })),
+      chartSummary: chartExpense.summary,
+      chartOption: chartExpense.option,
+      tableCols,
+      tableData,
       tableSummary: { classification: 'Total', amount: breakdown.expenseTotal, sharePct: 100 },
     }
   }
@@ -432,12 +548,12 @@ export function buildReportView(
       chartTitle: 'Top category growth',
       chartOption: {
         ...chartBase,
-        xAxis: { type: 'category', data: growth.map((g) => String(g.categoryCode)), axisLabel: { fontSize: 10, rotate: 20 } },
+        xAxis: { type: 'category', data: growth.map((g) => String(g.categoryName || g.categoryCode)), axisLabel: { fontSize: 10, rotate: 20 } },
         yAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
         series: [{ type: 'bar', data: growth.map((g) => Number(g.pctChange || 0)), itemStyle: { color: '#7c3aed' }, barMaxWidth: 22 }],
       },
       tableCols: [
-        { title: 'Category', dataIndex: 'categoryCode', sortType: 'text' },
+        { title: REPORT_COLUMN_LABELS.classification, dataIndex: 'categoryName', sortType: 'text', ellipsis: true },
         { title: 'Change %', dataIndex: 'pctChange', align: 'right', sortType: 'number' },
         { title: 'Delta', dataIndex: 'deltaAmount', unit: 'CNY', align: 'right', sortType: 'number' },
       ],

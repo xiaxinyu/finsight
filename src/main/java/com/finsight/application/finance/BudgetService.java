@@ -1,36 +1,43 @@
 package com.finsight.application.finance;
 
+import com.finsight.application.analytics.AnalyticsDateRange;
+import com.finsight.application.analytics.FinanceSemanticMetricsRepository;
 import com.finsight.application.analytics.MetricRefreshTrigger;
+import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.classification.BudgetSemanticBuckets;
 import com.finsight.application.support.ListingDateSupport;
 import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.Budget;
 import com.finsight.domain.model.BudgetLine;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 public class BudgetService {
 
     private final PlanningPreferencesGateway planningGateway;
-    private final FinancialMapper financialMapper;
+    private final FinanceSemanticMetricsRepository semanticMetricsRepository;
     private final MetricRefreshTrigger metricRefreshTrigger;
+    private final AuthenticationFacade authenticationFacade;
 
     public BudgetService(PlanningPreferencesGateway planningGateway,
-                         FinancialMapper financialMapper,
-                         MetricRefreshTrigger metricRefreshTrigger) {
+                         FinanceSemanticMetricsRepository semanticMetricsRepository,
+                         MetricRefreshTrigger metricRefreshTrigger,
+                         AuthenticationFacade authenticationFacade) {
         this.planningGateway = planningGateway;
-        this.financialMapper = financialMapper;
+        this.semanticMetricsRepository = semanticMetricsRepository;
         this.metricRefreshTrigger = metricRefreshTrigger;
+        this.authenticationFacade = authenticationFacade;
     }
 
     public Budget currentMonthlyBudget() {
@@ -67,28 +74,34 @@ public class BudgetService {
     public List<Map<String, Object>> budgetVsActual(String startStr, String endStr) throws AppServiceException {
         Budget budget = currentMonthlyBudget();
         List<BudgetLine> lines = linesForBudget(budget.getId());
-        Date rangeStart;
-        Date rangeEnd;
+        LocalDate rangeStart;
+        LocalDate rangeEnd;
         if (StringUtils.isNotBlank(startStr) && StringUtils.isNotBlank(endStr)) {
             Date[] range = ListingDateSupport.parseMmDdYyyyOrDefaultOneYear(startStr, endStr);
-            rangeStart = range[0];
-            rangeEnd = range[1];
+            rangeStart = AnalyticsDateRange.toLocalDate(range[0]);
+            rangeEnd = AnalyticsDateRange.toLocalDate(range[1]);
         } else {
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.DAY_OF_MONTH, 1);
-            rangeStart = cal.getTime();
-            rangeEnd = new Date();
+            rangeStart = AnalyticsDateRange.toLocalDate(cal.getTime());
+            rangeEnd = LocalDate.now();
         }
-        double actualTotal = safe(financialMapper.sumExpenseBetween(rangeStart, rangeEnd));
+        String userId = userKey();
+        double actualTotal = semanticMetricsRepository.sumConsumptionExpense(userId, rangeStart, rangeEnd);
 
         List<Map<String, Object>> rows = new ArrayList<>();
         double limitTotal = 0;
         for (BudgetLine line : lines) {
-            Map<String, Object> row = new HashMap<>();
-            row.put("bucketKey", line.getBucketKey());
+            Map<String, Object> row = new LinkedHashMap<>();
+            String bucket = line.getBucketKey() == null || line.getBucketKey().isBlank()
+                    ? "all" : line.getBucketKey();
+            row.put("bucketKey", bucket);
             row.put("categoryCode", line.getCategoryCode());
+            row.put("classification", line.getCategoryCode() != null && !line.getCategoryCode().isBlank()
+                    ? BudgetSemanticBuckets.displayLabel(line.getCategoryCode())
+                    : BudgetSemanticBuckets.displayLabel(bucket));
             row.put("limit", line.getLimitAmount());
-            double actual = resolveActual(rangeStart, rangeEnd, line);
+            double actual = resolveActual(userId, rangeStart, rangeEnd, line);
             row.put("actual", actual);
             double limit = line.getLimitAmount() == null ? 0 : line.getLimitAmount().doubleValue();
             row.put("remaining", limit - actual);
@@ -98,6 +111,7 @@ public class BudgetService {
         if (rows.isEmpty()) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("bucketKey", "all");
+            row.put("classification", BudgetSemanticBuckets.displayLabel("all"));
             row.put("limit", BigDecimal.ZERO);
             row.put("actual", actualTotal);
             row.put("remaining", -actualTotal);
@@ -109,19 +123,22 @@ public class BudgetService {
         meta.put("actualTotal", actualTotal);
         meta.put("periodStart", rangeStart);
         meta.put("periodEnd", rangeEnd);
+        meta.put("metricsSource", "v_transaction_finance_semantics.semantic_tag");
         meta.put("lines", rows);
         return List.of(meta);
     }
 
-    private double resolveActual(Date rangeStart, Date rangeEnd, BudgetLine line) {
+    private double resolveActual(String userId, LocalDate rangeStart, LocalDate rangeEnd, BudgetLine line) {
         if (line.getCategoryCode() != null && !line.getCategoryCode().isBlank()) {
-            return safe(financialMapper.sumExpenseByCategoryBetween(rangeStart, rangeEnd, line.getCategoryCode()));
+            return semanticMetricsRepository.sumBudgetActual(
+                    userId, rangeStart, rangeEnd, line.getCategoryCode(), null);
         }
         String bucket = line.getBucketKey() == null || line.getBucketKey().isBlank() ? "all" : line.getBucketKey();
-        return safe(financialMapper.sumExpenseByBucketBetween(rangeStart, rangeEnd, bucket));
+        return semanticMetricsRepository.sumBudgetActual(userId, rangeStart, rangeEnd, null, bucket);
     }
 
-    private static double safe(Double v) {
-        return v == null ? 0 : v;
+    private String userKey() {
+        String user = authenticationFacade.getUserName();
+        return user == null || user.isBlank() ? "_anonymous" : user.trim().toLowerCase(Locale.ROOT);
     }
 }

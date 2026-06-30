@@ -1,5 +1,7 @@
 import type { ReportPoint } from '../api/report'
 import { formatMoney } from './format'
+import type { ReportTxnTypeLabel } from './reportTaxonomy'
+export { REPORT_COLUMN_LABELS } from './reportTaxonomy'
 
 const PIE_COLORS = [
   '#2563eb', '#16a34a', '#ea580c', '#7c3aed', '#0891b2',
@@ -19,7 +21,7 @@ export type SemanticBreakdownRow = {
   classL1: string
   classL2: string
   classification: string
-  txnType: 'Expense' | 'Income' | 'Non-P&L'
+  txnType: ReportTxnTypeLabel
   group: 'expense' | 'fixed' | 'income' | 'capital' | 'other'
   amount: number
   sharePct: number
@@ -27,6 +29,8 @@ export type SemanticBreakdownRow = {
 
 export type SemanticBreakdown = {
   rows: SemanticBreakdownRow[]
+  scope?: string
+  periodTotal?: number
   expenseTotal: number
   fixedTotal: number
   variableTotal: number
@@ -53,6 +57,10 @@ export function semanticBreakdownToReportPoints(
   }))
 }
 
+export function semanticScopePeriodTotal(breakdown: SemanticBreakdown): number {
+  return breakdown.periodTotal ?? breakdown.expenseTotal ?? 0
+}
+
 export function buildSemanticClassificationChartOption(
   breakdown: SemanticBreakdown,
   topRows: SemanticBreakdownRow[],
@@ -60,6 +68,8 @@ export function buildSemanticClassificationChartOption(
   const sorted = [...breakdown.rows].sort((a, b) => b.amount - a.amount)
   const top = sorted[0]
   const top3Share = sorted.slice(0, 3).reduce((s, r) => s + r.sharePct, 0)
+  const displayTotal = breakdown.expenseTotal > 0 ? breakdown.expenseTotal : semanticScopePeriodTotal(breakdown)
+  const centerLabel = breakdown.expenseTotal > 0 ? 'Total expense' : 'Total'
 
   const data = topRows.map((r) => ({
     name: r.classification || r.label,
@@ -71,12 +81,14 @@ export function buildSemanticClassificationChartOption(
   const metaByName = new Map(data.map((d) => [d.name, d]))
 
   const summary: ChartSummaryItem[] = [
-    { key: 'total', label: 'Total expense', value: formatMoney(breakdown.expenseTotal), tone: 'expense' },
+    { key: 'total', label: centerLabel, value: formatMoney(displayTotal), tone: breakdown.expenseTotal > 0 ? 'expense' : 'neutral' },
     { key: 'items', label: 'Classifications', value: String(breakdown.rows.length) },
     ...(top ? [{ key: 'top', label: 'Largest', value: `${top.classL2} · ${top.sharePct.toFixed(1)}%` }] : []),
     { key: 'top3', label: 'Top 3 share', value: `${top3Share.toFixed(1)}%` },
-    { key: 'fixed', label: 'Fixed', value: `${breakdown.fixedSharePct.toFixed(1)}%` },
-    { key: 'var', label: 'Variable', value: `${breakdown.variableSharePct.toFixed(1)}%` },
+    ...(breakdown.expenseTotal > 0 ? [
+      { key: 'fixed', label: 'Fixed', value: `${breakdown.fixedSharePct.toFixed(1)}%` },
+      { key: 'var', label: 'Variable', value: `${breakdown.variableSharePct.toFixed(1)}%` },
+    ] : []),
   ]
 
   return {
@@ -113,7 +125,7 @@ export function buildSemanticClassificationChartOption(
           return `${item.classL2}  ${item.sharePct.toFixed(1)}%`
         },
       },
-      graphic: breakdown.expenseTotal > 0 ? [{
+      graphic: displayTotal > 0 ? [{
         type: 'group',
         left: 'center',
         top: '36%',
@@ -123,7 +135,7 @@ export function buildSemanticClassificationChartOption(
             left: 'center',
             top: 0,
             style: {
-              text: formatMoney(breakdown.expenseTotal),
+              text: formatMoney(displayTotal),
               textAlign: 'center',
               fill: '#0f172a',
               fontSize: 18,
@@ -136,7 +148,7 @@ export function buildSemanticClassificationChartOption(
             left: 'center',
             top: 24,
             style: {
-              text: 'Total expense',
+              text: centerLabel,
               textAlign: 'center',
               fill: '#64748b',
               fontSize: 11,
@@ -233,4 +245,51 @@ function formatCompact(amount: number): string {
   if (amount >= 10000) return `${(amount / 10000).toFixed(1)}万`
   if (amount >= 1000) return `${(amount / 1000).toFixed(1)}k`
   return String(Math.round(amount))
+}
+
+function rowAmountByTag(breakdown: SemanticBreakdown, tagId: string): number {
+  return breakdown.rows.find((r) => r.tagId === tagId)?.amount ?? 0
+}
+
+export function insightsTaxSummary(
+  breakdown: SemanticBreakdown,
+  periodLabel: string,
+): { text: string; warn?: boolean }[] {
+  const total = breakdown.periodTotal ?? breakdown.expenseTotal
+  if (total <= 0) {
+    return [{ text: 'No classified tax activity in this period.', warn: true }]
+  }
+  const paid = rowAmountByTag(breakdown, 'tax_expense')
+  const refund = rowAmountByTag(breakdown, 'tax_refund')
+  const bullets = [
+    { text: `${periodLabel}: tax paid ${formatMoney(paid)} · refunds ${formatMoney(refund)}.` },
+  ]
+  if (paid > 0 && refund > 0) {
+    bullets.push({ text: `Net tax ${formatMoney(paid - refund)} after refunds.` })
+  }
+  return bullets
+}
+
+export function insightsTransferFinance(
+  breakdown: SemanticBreakdown,
+  periodLabel: string,
+): { text: string; warn?: boolean }[] {
+  const total = breakdown.periodTotal ?? 0
+  if (total <= 0) {
+    return [{ text: 'No transfer, loan, or investment activity in this period.', warn: true }]
+  }
+  const transfer = rowAmountByTag(breakdown, 'transfer')
+  const top = [...breakdown.rows].sort((a, b) => b.amount - a.amount)[0]
+  const bullets = [
+    {
+      text: `${periodLabel}: ${formatMoney(total)} in transfers, finance, and investments — excluded from spending reports.`,
+    },
+  ]
+  if (transfer > 0 && total > 0) {
+    bullets.push({ text: `Transfers account for ${((transfer / total) * 100).toFixed(0)}% of this flow.` })
+  }
+  if (top) {
+    bullets.push({ text: `Largest: ${top.classification || top.label} (${top.sharePct.toFixed(1)}%).` })
+  }
+  return bullets
 }

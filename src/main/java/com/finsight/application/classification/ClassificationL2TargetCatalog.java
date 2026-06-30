@@ -24,7 +24,7 @@ public enum ClassificationL2TargetCatalog {
     LEGACY_INC_RENTAL("INC-05", "房租/资产出租收入", ClassificationL1Codes.INC, 5, "income", "income", false),
     LEGACY_INC_GIFT("INC-06", "亲友资助/赠与", ClassificationL1Codes.INC, 6, "income", "income", false),
     LEGACY_INC_SUBSIDY("INC-07", "政府补贴/退税/公积金提取", ClassificationL1Codes.INC, 7, "income", "income", false),
-    LEGACY_INC_BORROW_IN("INC-08", "借款（他人借入）", ClassificationL1Codes.INC, 8, "income,liability", "liability", false),
+    LEGACY_INC_BORROW_IN("INC-08", "借款（他人借入）", ClassificationL1Codes.INC, 8, "finance,invest,liability", "liability", false),
     LEGACY_INC_LEND_OUT("INC-09", "借款（他人借出）", ClassificationL1Codes.INC, 9, "income", "income", false),
     LEGACY_INC_REIMBURSE("INC-10", "报销到账（餐补、差旅等）", ClassificationL1Codes.INC, 10, "income,refund", "refund", false),
     LEGACY_INC_OTHER("INC-99", "其他收入", ClassificationL1Codes.INC, 99, "income", "income", false),
@@ -92,32 +92,32 @@ public enum ClassificationL2TargetCatalog {
 
     // --- Asset movement ---
     ASSET_ATM("ASSET-01", "ATM 取现", ClassificationL1Codes.ASSET, 1, "transfer,asset", "asset"),
-    ASSET_INTERNAL("ASSET-02", "账户间转入转出", ClassificationL1Codes.ASSET, 2, "transfer", "transfer"),
+    ASSET_INTERNAL("ASSET-02", "账户间转入转出", ClassificationL1Codes.ASSET, 2, "transfer,asset", "transfer"),
     ASSET_ADJUST("ASSET-03", "余额调整", ClassificationL1Codes.ASSET, 3, "transfer,asset", "asset"),
     ASSET_SAVINGS("ASSET-04", "储蓄转入", ClassificationL1Codes.ASSET, 4, "transfer,asset", "asset"),
     ASSET_PURCHASE("ASSET-05", "资产购买", ClassificationL1Codes.ASSET, 5, "transfer,asset", "asset"),
 
     // --- Liability ---
-    DEBT_CC_REPAY("DEBT-01", "信用卡还款", ClassificationL1Codes.LIABILITY, 1, "transfer,liability", "liability"),
-    DEBT_BORROW_IN("DEBT-02", "借款收到", ClassificationL1Codes.LIABILITY, 2, "transfer,liability", "liability"),
-    DEBT_LOAN_REPAY("DEBT-03", "贷款还款", ClassificationL1Codes.LIABILITY, 3, "expense,liability", "liability"),
-    DEBT_INSTALL("DEBT-04", "分期还款", ClassificationL1Codes.LIABILITY, 4, "expense,liability", "liability"),
+    DEBT_CC_REPAY("DEBT-01", "信用卡还款", ClassificationL1Codes.LIABILITY, 1, "finance,invest,liability", "liability"),
+    DEBT_BORROW_IN("DEBT-02", "借款收到", ClassificationL1Codes.LIABILITY, 2, "finance,invest,liability", "liability"),
+    DEBT_LOAN_REPAY("DEBT-03", "贷款还款", ClassificationL1Codes.LIABILITY, 3, "finance,invest,liability", "liability"),
+    DEBT_INSTALL("DEBT-04", "分期还款", ClassificationL1Codes.LIABILITY, 4, "finance,invest,liability", "liability"),
     DEBT_INTEREST("DEBT-05", "利息支出", ClassificationL1Codes.LIABILITY, 5, "expense", "cashflow"),
 
     // --- Investment activity (INVEST-01/02 may already exist — insertWhenMissing only) ---
-    INV_FUND_BUY("INVEST-01", "基金申购", ClassificationL1Codes.INVEST, 1, "expense,invest", "investment", false),
-    INV_STOCK_LEGACY("INVEST-02", "股票", ClassificationL1Codes.INVEST, 2, "expense,invest", "investment", false),
-    INV_STOCK_BUY("INVEST-03", "股票买入", ClassificationL1Codes.INVEST, 3, "expense,invest", "investment", true),
-    INV_STOCK_SELL("INVEST-04", "股票卖出", ClassificationL1Codes.INVEST, 4, "income,invest", "investment", true),
-    INV_BROKER_XFER("INVEST-05", "证券转账", ClassificationL1Codes.INVEST, 5, "transfer,invest", "investment", true),
-    INV_FUND_SELL("INVEST-06", "基金赎回", ClassificationL1Codes.INVEST, 6, "income,invest", "investment", true),
+    INV_FUND_BUY("INVEST-01", "基金申购", ClassificationL1Codes.INVEST, 1, "finance,invest,liability", "investment", false),
+    INV_STOCK_LEGACY("INVEST-02", "股票", ClassificationL1Codes.INVEST, 2, "finance,invest,liability", "investment", false),
+    INV_STOCK_BUY("INVEST-03", "股票买入", ClassificationL1Codes.INVEST, 3, "finance,invest,liability", "investment", true),
+    INV_STOCK_SELL("INVEST-04", "股票卖出", ClassificationL1Codes.INVEST, 4, "finance,invest,liability", "investment", true),
+    INV_BROKER_XFER("INVEST-05", "证券转账", ClassificationL1Codes.INVEST, 5, "finance,invest,liability", "investment", true),
+    INV_FUND_SELL("INVEST-06", "基金赎回", ClassificationL1Codes.INVEST, 6, "finance,invest,liability", "investment", true),
 
     // --- Wealth products ---
-    WEALTH_BANK_BUY("WEALTH-01", "银行理财申购", ClassificationL1Codes.WEALTH, 1, "expense,invest", "investment"),
+    WEALTH_BANK_BUY("WEALTH-01", "银行理财申购", ClassificationL1Codes.WEALTH, 1, "finance,invest,liability", "investment"),
     WEALTH_BANK_SELL("WEALTH-02", "银行理财赎回", ClassificationL1Codes.WEALTH, 2, "income,invest", "investment"),
-    WEALTH_MMF("WEALTH-03", "货币基金", ClassificationL1Codes.WEALTH, 3, "invest", "investment"),
-    WEALTH_TD("WEALTH-04", "定期存款", ClassificationL1Codes.WEALTH, 4, "transfer,invest", "investment"),
-    WEALTH_STRUCT("WEALTH-05", "结构性产品", ClassificationL1Codes.WEALTH, 5, "invest", "investment"),
+    WEALTH_MMF("WEALTH-03", "货币基金", ClassificationL1Codes.WEALTH, 3, "finance,invest,liability", "investment"),
+    WEALTH_TD("WEALTH-04", "定期存款", ClassificationL1Codes.WEALTH, 4, "finance,invest,liability", "investment"),
+    WEALTH_STRUCT("WEALTH-05", "结构性产品", ClassificationL1Codes.WEALTH, 5, "finance,invest,liability", "investment"),
 
     // --- Fees ---
     FEE_BANK("FEE-01", "银行手续费", ClassificationL1Codes.FEE, 1, "expense", "cashflow"),

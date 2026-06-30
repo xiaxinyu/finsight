@@ -120,20 +120,20 @@ public final class CategorySemanticDefaults {
 
     private static String inferL1FromTxnTypes(String txnTypes) {
         String txn = StringUtils.defaultString(txnTypes).toLowerCase(Locale.ROOT);
-        if (txn.contains("income") && !txn.contains("expense")) {
-            return "real_income";
-        }
         if (txn.contains("refund")) {
             return "refund_reimbursement";
+        }
+        if (txn.contains("tax")) {
+            return "tax_expense";
+        }
+        if (txn.contains("finance") || txn.contains("invest") || txn.contains("liability")) {
+            return "investment";
         }
         if (txn.contains("transfer")) {
             return "transfer";
         }
-        if (txn.contains("invest")) {
-            return "investment";
-        }
-        if (txn.contains("liability")) {
-            return "liability";
+        if (txn.contains("income") && !txn.contains("expense")) {
+            return "real_income";
         }
         if (txn.contains("expense")) {
             return "daily_spending";

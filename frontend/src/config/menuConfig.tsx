@@ -85,6 +85,8 @@ export const menuItems: FsMenuItem[] = [
               { key: '/reports/cashflow', icon: <SwapOutlined />, label: 'Cashflow', path: '/reports/cashflow' },
               { key: '/reports/budget-vs-actual', icon: <PieChartOutlined />, label: 'Budget vs Actual', path: '/reports/budget-vs-actual' },
               { key: '/reports/fund-flow', icon: <SwapOutlined />, label: 'Fund flow', path: '/reports/fund-flow' },
+              { key: '/reports/transfer-finance', icon: <BankOutlined />, label: 'Transfer & Finance', path: '/reports/transfer-finance' },
+              { key: '/reports/tax-summary', icon: <FundOutlined />, label: 'Tax summary', path: '/reports/tax-summary' },
             ],
           },
           {
@@ -179,7 +181,7 @@ export function menuOpenKeysForPath(pathname: string): string[] {
   if (pathname.startsWith('/reports/')) {
     keys.push('reports')
     const id = pathname.replace('/reports/', '')
-    if (['cashflow', 'budget-vs-actual', 'fund-flow'].includes(id)) keys.push('reports-cashflow')
+    if (['cashflow', 'budget-vs-actual', 'fund-flow', 'transfer-finance', 'tax-summary'].includes(id)) keys.push('reports-cashflow')
     else if (['fixed-vs-variable', 'spending-drift', 'trend-changes'].includes(id)) keys.push('reports-spending')
     else if (['bills-calendar', 'annual-outlook', 'cash-risk'].includes(id)) keys.push('reports-outlook')
     else if (['subscriptions', 'merchant-concentration', 'merchant-drift'].includes(id)) keys.push('reports-merchants')

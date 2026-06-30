@@ -31,7 +31,8 @@ public class AnalyticsMetricsController {
     public CommonResult semanticBreakdown(@RequestParam(required = false) String from,
                                           @RequestParam(required = false) String to,
                                           @RequestParam(required = false) String cardId,
-                                          @RequestParam(required = false) String consumeID) {
-        return CommonResult.success(semanticBreakdownService.expenseBreakdown(from, to, cardId, consumeID));
+                                          @RequestParam(required = false) String consumeID,
+                                          @RequestParam(required = false, defaultValue = "expense") String scope) {
+        return CommonResult.success(semanticBreakdownService.breakdown(from, to, cardId, consumeID, scope));
     }
 }

@@ -26,7 +26,7 @@ import { periodToStrings } from '../../utils/periodStrings'
 import { formatMoney } from '../../utils/format'
 import { defaultComparePeriodRange, defaultPeriodRange, formatPeriodPreview } from '../../utils/periodPresets'
 import { billCalendar, budgetVsActual, listTransfers } from '../../api/finance'
-import { fetchSemanticBreakdown } from '../../api/analytics'
+import { fetchMetricPeriodSummary, fetchSemanticBreakdown } from '../../api/analytics'
 import { buildReportView } from './buildReportView'
 import { isDrillableSemanticTag } from '../../utils/semanticBreakdownReport'
 import { AnnualOutlookReport } from './AnnualOutlookReport'
@@ -113,30 +113,20 @@ export function ReportsPage() {
           fetchSemanticBreakdown(r.start, r.end, semanticFilters),
           fetchReport('/transaction-report/week-consume', baseParams),
         ])
-        return { semanticBreakdown, week }
+        return { semanticBreakdown, week, scope: 'expense' }
+      }
+      if (cfg.type === 'semanticScope' && cfg.semanticScope) {
+        const r = periodToStrings(applied.period)
+        const semanticBreakdown = await fetchSemanticBreakdown(r.start, r.end, {
+          ...semanticFilters,
+          scope: cfg.semanticScope,
+        })
+        return { semanticBreakdown, scope: cfg.semanticScope }
       }
       if (cfg.type === 'incomeVsExpense') {
         const r = periodToStrings(applied.period)
-        const base = {
-          transactionDateStartStr: r.start,
-          transactionDateEndStr: r.end,
-          cardId: applied.card || undefined,
-          consumeID: applied.consume || undefined,
-        }
-        const [inc, exp] = await Promise.all([
-          fetchReport('/transaction-report/month-income', { ...base, txnTypes: 'income' }),
-          fetchReport('/transaction-report/month-expense', { ...base, txnTypes: 'expense' }),
-        ])
-        return { inc, exp }
-      }
-      if (cfg.type === 'yearCompare') {
-        const rA = periodToStrings(applied.period)
-        const rB = periodToStrings(applied.comparePeriod)
-        const [a, b] = await Promise.all([
-          fetchReport('/transaction-report/consume', { ...baseParams, transactionDateStartStr: rA.start, transactionDateEndStr: rA.end }),
-          fetchReport('/transaction-report/consume', { ...baseParams, transactionDateStartStr: rB.start, transactionDateEndStr: rB.end }),
-        ])
-        return { a, b }
+        const periodSummary = await fetchMetricPeriodSummary(r.start, r.end)
+        return { periodSummary }
       }
       const ep = cfg.type === 'timeCurve'
         ? (cfg.txnType === 'income' ? '/transaction-report/month-income' : '/transaction-report/month-expense')
@@ -159,7 +149,7 @@ export function ReportsPage() {
 
   const tableScrollY = view?.tableData && view.tableData.length > 10 ? 280 : undefined
 
-  const usesSemanticDrill = cfg?.type === 'homeBuckets'
+  const usesSemanticDrill = cfg?.type === 'homeBuckets' || cfg?.type === 'semanticScope'
 
   const openDrillDown = (
     categorySlice?: string | CategoryDrillSlice,

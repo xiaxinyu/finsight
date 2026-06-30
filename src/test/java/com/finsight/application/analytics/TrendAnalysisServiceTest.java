@@ -1,11 +1,6 @@
 package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
-import com.finsight.application.query.TransactionQuerySupport;
-import com.finsight.domain.model.CategoryAggregate;
-import com.finsight.domain.model.KeyValue;
-import com.finsight.domain.port.TransactionRepository;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +8,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,27 +19,18 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-
-import java.time.LocalDate;
 
 @ExtendWith(MockitoExtension.class)
 class TrendAnalysisServiceTest {
 
     @Mock
-    private TransactionRepository transactionRepository;
-
-    @Mock
-    private TransactionQuerySupport querySupport;
-
-    @Mock
     private AuthenticationFacade authenticationFacade;
 
     @Mock
-    private FinancialMapper financialMapper;
+    private FinanceSemanticMetricsRepository semanticMetricsRepository;
 
     @Mock
     private JdbcTemplate jdbcTemplate;
@@ -50,24 +39,22 @@ class TrendAnalysisServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TrendAnalysisService(
-                transactionRepository, querySupport, authenticationFacade, financialMapper, jdbcTemplate);
+        service = new TrendAnalysisService(authenticationFacade, semanticMetricsRepository, jdbcTemplate);
         when(authenticationFacade.getUserName()).thenReturn("user1");
     }
 
     @Test
     void trends_returnsDecomposedYoYWithMovers() throws Exception {
-        when(transactionRepository.monthIncomeReport(any()))
-                .thenReturn(List.of(kv(5000), kv(5000)))
-                .thenReturn(List.of(kv(6000), kv(6000)));
-        when(transactionRepository.monthExpenseReport(any()))
-                .thenReturn(List.of(kv(3000), kv(3000)))
-                .thenReturn(List.of(kv(4500), kv(4500)));
-        when(financialMapper.sumFixedBucketYear(2025)).thenReturn(1200.0);
-        when(financialMapper.sumFixedBucketYear(2026)).thenReturn(1500.0);
-        when(transactionRepository.consumeReport(any())).thenReturn(
-                List.of(cat("FOOD", "Food", 1000), cat("TRAVEL", "Travel", 500)),
-                List.of(cat("FOOD", "Food", 1800), cat("TRAVEL", "Travel", 900)));
+        when(semanticMetricsRepository.aggregateMonth(eq("user1"), eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2025, 12, 31))))
+                .thenReturn(aggregate(10000, 6000, 1200));
+        when(semanticMetricsRepository.aggregateMonth(eq("user1"), eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 12, 31))))
+                .thenReturn(aggregate(12000, 9000, 1500));
+        when(semanticMetricsRepository.sumExpenseBySemanticTagYears("user1", 2025, 2026))
+                .thenReturn(List.of(
+                        new FinanceSemanticMetricsRepository.SemanticTagYearAmount("dining_spending", 2025, 1000),
+                        new FinanceSemanticMetricsRepository.SemanticTagYearAmount("transport_spending", 2025, 500),
+                        new FinanceSemanticMetricsRepository.SemanticTagYearAmount("dining_spending", 2026, 1800),
+                        new FinanceSemanticMetricsRepository.SemanticTagYearAmount("transport_spending", 2026, 900)));
         when(jdbcTemplate.queryForList(contains("v.txn_date >="),
                 eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2026, 1, 1)), eq("user1"), eq("user1")))
                 .thenReturn(List.of(Map.of(
@@ -103,19 +90,18 @@ class TrendAnalysisServiceTest {
         Map<String, String> drill = (Map<String, String>) merchants.get(0).get("drillDown");
         assertNotNull(drill.get("merchantToken"));
         assertNull(drill.get("demoArea"));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> categories = (List<Map<String, Object>>) out.get("topCategoryGrowth");
+        assertTrue(categories.stream().anyMatch(c -> "dining_spending".equals(c.get("categoryCode"))));
+        assertEquals("v_transaction_finance_semantics.semantic_tag", out.get("metricsSource"));
     }
 
-    private static KeyValue kv(double value) {
-        KeyValue kv = new KeyValue();
-        kv.setValue(String.valueOf(value));
-        return kv;
-    }
-
-    private static CategoryAggregate cat(String code, String name, double value) {
-        CategoryAggregate cat = new CategoryAggregate();
-        cat.setCode(code);
-        cat.setName(name);
-        cat.setValue(value);
-        return cat;
+    private static Map<String, BigDecimal> aggregate(double income, double expense, double fixed) {
+        Map<String, BigDecimal> m = new LinkedHashMap<>();
+        m.put("REAL_INCOME", BigDecimal.valueOf(income));
+        m.put("CONSUMPTION_EXPENSE", BigDecimal.valueOf(expense));
+        m.put("FIXED_EXPENSE", BigDecimal.valueOf(fixed));
+        return m;
     }
 }

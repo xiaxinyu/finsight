@@ -68,6 +68,164 @@ export type SemanticTagId =
 
 export type TxnTypeFilter = 'income' | 'expense' | 'both' | 'capital'
 
+/** Admin-facing primary transaction kind (maps to comma-separated {@code txn_types} in DB). */
+export type CategoryTxnKind =
+  | 'expense'
+  | 'income'
+  | 'mixed'
+  | 'transfer'
+  | 'finance'
+  | 'tax'
+  | 'refund'
+
+export const CATEGORY_TXN_KIND_OPTIONS: Array<{
+  value: CategoryTxnKind
+  label: string
+  hint: string
+}> = [
+  {
+    value: 'expense',
+    label: 'Expense',
+    hint: 'P&L outflows — dining, shopping, bills',
+  },
+  {
+    value: 'income',
+    label: 'Income',
+    hint: 'P&L inflows — salary, interest, dividends',
+  },
+  {
+    value: 'mixed',
+    label: 'Mixed P&L',
+    hint: 'Both income and expense subcategories',
+  },
+  {
+    value: 'transfer',
+    label: 'Transfer',
+    hint: 'Internal account movements — excluded from income and spending',
+  },
+  {
+    value: 'finance',
+    label: 'Finance',
+    hint: 'Loans, investments, installments — excluded from income and spending',
+  },
+  {
+    value: 'tax',
+    label: 'Tax',
+    hint: 'Statutory tax payments and refunds',
+  },
+  {
+    value: 'refund',
+    label: 'Refund / Reimbursement',
+    hint: 'Returns and expense reimbursements',
+  },
+]
+
+const CAPITAL_TXN_TOKENS = new Set(['invest', 'liability', 'finance'])
+
+/** Parse stored {@code txn_types} into a single admin kind (backwards compatible). */
+export function parseCategoryTxnKind(txnTypes?: string): CategoryTxnKind {
+  const tokens = (txnTypes ?? '')
+    .toLowerCase()
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (!tokens.length) return 'expense'
+
+  const has = (token: string) => tokens.includes(token)
+  const hasAny = (...items: string[]) => items.some(has)
+
+  if (has('refund')) return 'refund'
+  if (has('tax')) return 'tax'
+  // Portfolio income (dividends, interest) — still P&L, not balance-sheet finance
+  if (has('income') && has('invest') && !has('expense') && !has('liability') && !has('finance')) {
+    return 'income'
+  }
+  // Expense with transfer semantics (e.g. gift transfer) — still P&L expense
+  if (has('expense') && has('transfer') && !has('asset')) {
+    return 'expense'
+  }
+  if (hasAny(...CAPITAL_TXN_TOKENS)) return 'finance'
+  if (has('transfer')) return 'transfer'
+  if (has('expense') && has('income')) return 'mixed'
+  if (has('income')) return 'income'
+  if (has('expense')) return 'expense'
+  return 'expense'
+}
+
+/** Serialize admin kind to persisted {@code txn_types}. */
+export function categoryTxnKindToStorage(kind: CategoryTxnKind): string {
+  switch (kind) {
+    case 'expense':
+      return 'expense'
+    case 'income':
+      return 'income'
+    case 'mixed':
+      return 'expense,income'
+    case 'transfer':
+      return 'transfer,asset'
+    case 'finance':
+      return 'finance,invest,liability'
+    case 'tax':
+      return 'tax,expense,income'
+    case 'refund':
+      return 'income,refund'
+    default:
+      return 'expense'
+  }
+}
+
+/** Persist txn_types with legacy SQL tokens where needed (e.g. income,invest for portfolio income). */
+export function serializeCategoryTxnTypes(
+  kind: CategoryTxnKind,
+  semanticTag?: SemanticTagId | null,
+): string {
+  if (kind === 'income' && semanticTag === 'investment_income') {
+    return 'income,invest'
+  }
+  return categoryTxnKindToStorage(kind)
+}
+
+export function categoryTxnKindLabel(kind: CategoryTxnKind): string {
+  return CATEGORY_TXN_KIND_OPTIONS.find((o) => o.value === kind)?.label ?? kind
+}
+
+/** Default kind when creating a child under an L1 root. */
+export function defaultCategoryTxnKindForParent(parentId?: string): CategoryTxnKind {
+  const parent = (parentId ?? '').trim().toUpperCase()
+  if (parent === 'INC' || parent === 'INCOME') return 'income'
+  if (parent === 'REIM' || parent === 'REIMB') return 'refund'
+  if (parent === 'ASSET') return 'transfer'
+  if (parent === 'LIABILITY' || parent === 'INVEST' || parent === 'WEALTH' || parent === 'FP') return 'finance'
+  if (parent === 'FIXED') return 'expense'
+  return 'expense'
+}
+
+/** Infer kind from reporting classification tag (when unambiguous). */
+export function inferTxnKindFromSemanticTag(tag: SemanticTagId): CategoryTxnKind | null {
+  switch (tag) {
+    case 'transfer':
+      return 'transfer'
+    case 'finance_loan':
+    case 'finance_credit_loan':
+    case 'finance_installment':
+    case 'investment':
+    case 'asset_adjustment':
+    case 'liability':
+      return 'finance'
+    case 'tax_expense':
+    case 'tax_refund':
+      return 'tax'
+    case 'refund_reimbursement':
+      return 'refund'
+    case 'real_income':
+    case 'investment_income':
+    case 'other_income':
+      return 'income'
+    default:
+      return null
+  }
+}
+
 /** User-facing semantic tag labels — fallback when catalog API unavailable. */
 export const SEMANTIC_TAG_LABELS: Record<SemanticTagId, string> = {
   real_income: 'Earned',
@@ -269,6 +427,20 @@ export function categoryFieldsFromSemanticTag(
     warnings.push('Fixed categories use Transaction Type Expense — adjusted automatically.')
   }
 
+  const inferredKind = inferTxnKindFromSemanticTag(semanticTag)
+  if (inferredKind && !isFixedCategory(parentId, code)) {
+    const currentKind = parseCategoryTxnKind(txnTypes)
+    const shouldSync = inferredKind === 'finance'
+      || inferredKind === 'transfer'
+      || inferredKind === 'tax'
+      || inferredKind === 'refund'
+      || (inferredKind === 'income' && currentKind === 'expense')
+      || (inferredKind === 'expense' && currentKind === 'income')
+    if (shouldSync && currentKind !== inferredKind) {
+      txnTypes = serializeCategoryTxnTypes(inferredKind, semanticTag)
+    }
+  }
+
   const fixedKind = isFlatFixedSemanticTag(semanticTag)
     ? fixedKindFromFlatTag(semanticTag)
     : semanticTag === 'fixed_spending'
@@ -429,10 +601,11 @@ export function inferDefaultReportRole(
 }
 
 export function txnTypeFilter(txnTypes?: string): TxnTypeFilter {
-  const txn = (txnTypes ?? '').toLowerCase()
-  if (txn.includes('income') && txn.includes('expense')) return 'both'
-  if (txn.includes('income')) return 'income'
-  if (txn.includes('expense')) return 'expense'
+  const kind = parseCategoryTxnKind(txnTypes)
+  if (kind === 'income' || kind === 'refund') return 'income'
+  if (kind === 'expense') return 'expense'
+  if (kind === 'mixed' || kind === 'tax') return 'both'
+  if (kind === 'transfer' || kind === 'finance') return 'capital'
   return 'both'
 }
 
@@ -498,9 +671,23 @@ export function filterSemanticTagGroups(
   options?: SemanticTagGroupFilterOptions,
 ) {
   const filter = txnTypeFilter(txnTypes)
+  const kind = parseCategoryTxnKind(txnTypes)
   const parent = (parentId ?? '').trim().toUpperCase()
   const code = (categoryCode ?? '').trim().toUpperCase()
   const includeCapital = options?.includeCapital ?? !shouldHideCapitalRow(parentId, categoryCode, txnTypes)
+
+  if (kind === 'tax') {
+    return groups.filter((g) => g.title === 'Tax' || g.appliesTo === 'both')
+  }
+  if (kind === 'finance') {
+    return groups.filter((g) => g.appliesTo === 'capital')
+  }
+  if (kind === 'transfer') {
+    return groups.filter((g) => g.title === 'Transfer')
+  }
+  if (kind === 'refund') {
+    return groups.filter((g) => g.appliesTo === 'income')
+  }
 
   if (parent === 'REIM' || parent === 'REIMB' || code.startsWith('REIM-')) {
     return groups.filter((g) => g.appliesTo === 'income')
@@ -737,12 +924,21 @@ export function effectiveReportRole(
 
 export function parentTxnMismatchWarning(parentId?: string, txnTypes?: string): string | null {
   const parent = (parentId ?? '').trim().toUpperCase()
-  const filter = txnTypeFilter(txnTypes)
-  if ((parent === 'INC' || parent === 'INCOME') && filter === 'expense') {
+  const kind = parseCategoryTxnKind(txnTypes)
+  if ((parent === 'INC' || parent === 'INCOME') && kind === 'expense') {
     return 'Parent is an income group but transaction type is Expense — verify the parent category.'
   }
-  if (parent === 'FIXED' && filter === 'income') {
+  if (parent === 'FIXED' && kind === 'income') {
     return 'Fixed categories should use Transaction Type Expense.'
+  }
+  if ((parent === 'WEALTH' || parent === 'INVEST' || parent === 'LIABILITY') && kind === 'expense') {
+    return 'Parent is a finance group — use Finance transaction type.'
+  }
+  if (parent === 'ASSET' && kind === 'finance') {
+    return 'Asset categories usually use Transfer transaction type.'
+  }
+  if ((parent === 'REIM' || parent === 'REIMB') && kind !== 'refund' && kind !== 'income') {
+    return 'Reimbursement categories should use Refund / Reimbursement transaction type.'
   }
   return null
 }
@@ -767,7 +963,7 @@ export function compactGroupTitle(title: string, txnFilter: ReturnType<typeof tx
 
 export const SEMANTIC_GROUP_HINTS: Record<string, string> = {
   Fixed: 'Repayment = recurring budget line (Fixed %). Card/loan principal → Finance.',
-  Finance: 'Loan / Credit loan / Installment = balance-sheet flows (Non-P&L).',
+  Finance: 'Loan / Credit loan / Installment = excluded from income and spending trends.',
   Tax: 'Statutory taxes — tracked separately from daily spending.',
   Expense: 'Subscription lives here only (not under Fixed).',
 }
@@ -816,19 +1012,39 @@ export function coerceCategoryFormFields(fields: {
     } else {
       reportRole = reportRoleFromSemanticSelection(flatFixedTagForKind(kind), kind)
     }
-  } else if (txnTypes === 'income' && !txnTypes.includes('expense')) {
-    const incompatible = ['budget', 'cashflow', 'asset', 'transfer', 'liability', 'investment']
-    if (incompatible.includes(reportRole) && !(code ?? '').startsWith('INC-04')) {
-      reportRole = inferDefaultReportRole(parentId, code, txnTypes)
-      warnings.push('Reporting classification aligned with Income transaction type.')
-    }
-  } else if (txnTypes === 'expense' && !txnTypes.includes('income')) {
-    const incomeRoles = ['income', 'refund']
-    const tag = semanticTagFromReportRole(reportRole, parentId, code, txnTypes)
-    const incomeTags: SemanticTagId[] = ['real_income', 'investment_income', 'other_income', 'refund_reimbursement']
-    if (incomeRoles.includes(reportRole) || incomeTags.includes(tag)) {
-      reportRole = inferDefaultReportRole(parentId, code, txnTypes)
-      warnings.push('Classification aligned with Expense transaction type.')
+  } else {
+    const kind = parseCategoryTxnKind(txnTypes)
+    if (kind === 'income' || kind === 'refund') {
+      const incompatible = ['budget', 'cashflow', 'asset', 'transfer', 'liability', 'investment']
+      if (incompatible.includes(reportRole) && !(code ?? '').startsWith('INC-04')) {
+        reportRole = inferDefaultReportRole(parentId, code, txnTypes)
+        warnings.push('Reporting classification aligned with Income transaction type.')
+      }
+    } else if (kind === 'expense') {
+      const incomeRoles = ['income', 'refund']
+      const tag = semanticTagFromReportRole(reportRole, parentId, code, txnTypes)
+      const incomeTags: SemanticTagId[] = ['real_income', 'investment_income', 'other_income', 'refund_reimbursement']
+      if (incomeRoles.includes(reportRole) || incomeTags.includes(tag)) {
+        reportRole = inferDefaultReportRole(parentId, code, txnTypes)
+        warnings.push('Classification aligned with Expense transaction type.')
+      }
+    } else if (kind === 'finance') {
+      const financeRoles = ['investment', 'liability', 'asset']
+      if (!financeRoles.includes(reportRole)) {
+        reportRole = inferDefaultReportRole(parentId, code, txnTypes)
+        warnings.push('Classification aligned with Finance transaction type.')
+      }
+    } else if (kind === 'transfer') {
+      if (reportRole !== 'transfer' && reportRole !== 'asset') {
+        reportRole = 'transfer'
+        warnings.push('Classification aligned with Transfer transaction type.')
+      }
+    } else if (kind === 'tax') {
+      const taxRoles = ['cashflow', 'refund']
+      if (!taxRoles.includes(reportRole)) {
+        reportRole = 'cashflow'
+        warnings.push('Classification aligned with Tax transaction type.')
+      }
     }
   }
 

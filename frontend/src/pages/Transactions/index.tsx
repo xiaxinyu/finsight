@@ -50,7 +50,12 @@ import { defaultPeriodStrings, formatPeriodPreview } from '../../utils/periodPre
 import { rowAmount, rowTxnKind } from '../../utils/transactionAmount'
 import { mapTransactionTableSort } from '../../utils/transactionTableSort'
 import { summarizeSelection } from '../../utils/transactionSelection'
-import { SEMANTIC_FILTER_OPTIONS } from '../../utils/transactionSemantic'
+import {
+  buildReportingClassificationFilterOptions,
+  reportingClassificationFilterLabel,
+  reportingClassificationFilterSelectOptions,
+} from '../../utils/reportTaxonomy'
+import { useSemanticsCatalog } from '../../hooks/useSemanticsCatalog'
 
 type TxFilters = {
   start: string
@@ -82,10 +87,6 @@ function txFiltersDiffer(a: TxFilters, b: TxFilters): boolean {
     || a.unclassified !== b.unclassified
     || a.semanticFilter !== b.semanticFilter
 }
-
-const SEMANTIC_DROPDOWN_OPTIONS = SEMANTIC_FILTER_OPTIONS.filter(
-  (o) => o.value && o.value !== 'unclassified',
-)
 
 function findTreeTitle(nodes: { title: string; value: string; children?: typeof nodes }[], value: string): string {
   for (const n of nodes) {
@@ -150,6 +151,15 @@ export function TransactionsPage() {
 
   const { treeData } = useConsumeTreeSelect()
   const { tree: cardTree } = useCardTree()
+  const { data: semanticsCatalog } = useSemanticsCatalog()
+  const classificationFilterOptions = useMemo(
+    () => buildReportingClassificationFilterOptions(semanticsCatalog),
+    [semanticsCatalog],
+  )
+  const classificationSelectOptions = useMemo(
+    () => reportingClassificationFilterSelectOptions(classificationFilterOptions),
+    [classificationFilterOptions],
+  )
 
   const reload = useCallback(async () => {
     setTableLoading(true)
@@ -257,15 +267,14 @@ export function TransactionsPage() {
       })
     }
     if (applied.semanticFilter && applied.semanticFilter !== 'unclassified') {
-      const opt = SEMANTIC_FILTER_OPTIONS.find((o) => o.value === applied.semanticFilter)
       chips.push({
         key: 'semantic',
-        label: opt?.label || applied.semanticFilter,
+        label: reportingClassificationFilterLabel(applied.semanticFilter, semanticsCatalog),
         onRemove: () => applyFilterPatch({ semanticFilter: '' }),
       })
     }
     return chips
-  }, [applied, cardTree, treeData, periodLabel, applyFilterPatch, syncUnclassifiedUrl])
+  }, [applied, cardTree, treeData, periodLabel, applyFilterPatch, syncUnclassifiedUrl, semanticsCatalog])
 
   const toggleUnclassifiedFilter = useCallback(() => {
     const next = !applied.unclassified
@@ -612,9 +621,11 @@ export function TransactionsPage() {
               size="small"
               disabled={disabled}
               value={draft.semanticFilter || undefined}
-              placeholder="Semantic"
+              placeholder="Reporting Classification"
               allowClear
-              options={SEMANTIC_DROPDOWN_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              showSearch
+              optionFilterProp="label"
+              options={classificationSelectOptions}
               onChange={(v) => setDraft((f) => ({ ...f, semanticFilter: v || '' }))}
             />
             <Input.Search

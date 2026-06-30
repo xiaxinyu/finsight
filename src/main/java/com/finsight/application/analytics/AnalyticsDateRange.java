@@ -1,6 +1,7 @@
 package com.finsight.application.analytics;
 
 import java.time.LocalDate;
+import java.util.Date;
 
 /**
  * Half-open {@code [start, end)} date ranges for sargable analytics SQL.
@@ -26,6 +27,9 @@ public final class AnalyticsDateRange {
         }
         if (value instanceof java.sql.Timestamp ts) {
             return ts.toLocalDateTime().toLocalDate();
+        }
+        if (value instanceof Date d) {
+            return new java.sql.Date(d.getTime()).toLocalDate();
         }
         String text = String.valueOf(value);
         return LocalDate.parse(text.length() >= 10 ? text.substring(0, 10) : text);

@@ -48,6 +48,9 @@
     <sql id="activeTransactionT">
         and (t.deleted is null or t.deleted = 0)
     </sql>
+    <sql id="categoryJoinT">
+        left join cls_category cat on cat.code = coalesce(nullif(trim(t.consume_code), ''), nullif(trim(t.category_code), '')) and cat.deleted != 1
+    </sql>
     <sql id="activeTransactionC">
         and (c.deleted is null or c.deleted = 0)
     </sql>
@@ -194,10 +197,9 @@
             and <include refid="merchantTokenNormT"/> = #{q.merchantToken,jdbcType=VARCHAR}
         </if>
     </sql>
-    <sql id="transactionDrillFilterT">
-        <include refid="activeTransactionT"/>
-        <include refid="excludeTransferUnlessSemanticT"/>
-        <if test="q != null">
+    <!-- Legacy txn_types filter — skip when semanticFilter is active (finance semantics view handles scope). -->
+    <sql id="filterTxnTypesT">
+        <if test="q != null and (q.semanticFilter == null or q.semanticFilter == '')">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
                 <include refid="filterTxnTypeIncomeT"/>
             </if>
@@ -207,6 +209,13 @@
             <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
                 and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
             </if>
+        </if>
+    </sql>
+    <sql id="transactionDrillFilterT">
+        <include refid="activeTransactionT"/>
+        <include refid="excludeTransferUnlessSemanticT"/>
+        <if test="q != null">
+            <include refid="filterTxnTypesT"/>
             <if test="q.transactionDateStart != null">
                 and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
@@ -594,15 +603,7 @@
         <include refid="activeTransactionT"/>
         <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
-            <if test="q.txnTypes != null and q.txnTypes == 'income'">
-                <include refid="filterTxnTypeIncomeT"/>
-            </if>
-            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
-                <include refid="filterTxnTypeExpenseT"/>
-            </if>
-            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
-                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
-            </if>
+            <include refid="filterTxnTypesT"/>
             <if test="q.transactionDateStart != null">
                 and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
@@ -672,20 +673,12 @@
         select count(distinct t.id) from transaction t
         left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
-        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        <include refid="categoryJoinT"/>
         where 1 = 1
         <include refid="activeTransactionT"/>
         <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
-            <if test="q.txnTypes != null and q.txnTypes == 'income'">
-                <include refid="filterTxnTypeIncomeT"/>
-            </if>
-            <if test="q.txnTypes != null and q.txnTypes == 'expense'">
-                <include refid="filterTxnTypeExpenseT"/>
-            </if>
-            <if test="q.txnTypes != null and q.txnTypes != '' and q.txnTypes != 'income' and q.txnTypes != 'expense'">
-                and cat.txn_types like CONCAT('%', #{q.txnTypes,jdbcType=VARCHAR}, '%')
-            </if>
+            <include refid="filterTxnTypesT"/>
             <if test="q.transactionDateStart != null">
                 and t.transaction_date &gt;= #{q.transactionDateStart,jdbcType=DATE}
             </if>
@@ -1168,26 +1161,26 @@
         from transaction t
         left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
-        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        <include refid="categoryJoinT"/>
         where 1 = 1
         <include refid="transactionDrillFilterT"/>
     </select>
 
     <select id="drillCategoryBreakdown" resultType="com.finsight.domain.model.DrillBreakdownItem">
         select
-            coalesce(nullif(trim(t.consume_code), ''), '__UNCLASSIFIED__') as code,
-            coalesce(nullif(trim(cat.name), ''), nullif(trim(t.consume_name), ''), '未分类') as label,
+            coalesce(nullif(trim(t.consume_code), ''), nullif(trim(t.category_code), ''), '__UNCLASSIFIED__') as code,
+            coalesce(nullif(trim(cat.name), ''), nullif(trim(t.consume_name), ''), nullif(trim(t.category_name), ''), '未分类') as label,
             count(distinct t.id) as txnCount,
             round(sum(<include refid="rowDisplayAmountT"/>)) as total
         from transaction t
         left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
-        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        <include refid="categoryJoinT"/>
         where 1 = 1
         <include refid="transactionDrillFilterT"/>
         group by
-            coalesce(nullif(trim(t.consume_code), ''), '__UNCLASSIFIED__'),
-            coalesce(nullif(trim(cat.name), ''), nullif(trim(t.consume_name), ''), '未分类')
+            coalesce(nullif(trim(t.consume_code), ''), nullif(trim(t.category_code), ''), '__UNCLASSIFIED__'),
+            coalesce(nullif(trim(cat.name), ''), nullif(trim(t.consume_name), ''), nullif(trim(t.category_name), ''), '未分类')
         order by total desc
         limit #{limit,jdbcType=NUMERIC}
     </select>
@@ -1201,7 +1194,7 @@
         from transaction t
         left join fin_bank_account bc on bc.id = t.bank_card_id and (bc.deleted is null or bc.deleted != 1)
         left join statement st on st.id = t.statement_id and (st.deleted is null or st.deleted != 1)
-        left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
+        <include refid="categoryJoinT"/>
         where 1 = 1
         <include refid="transactionDrillFilterT"/>
         group by

@@ -1,16 +1,12 @@
 package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
-import com.finsight.application.query.TransactionQuery;
-import com.finsight.application.query.TransactionQueryAssembler;
-import com.finsight.application.query.TransactionQuerySupport;
-import com.finsight.domain.model.KeyValue;
-import com.finsight.domain.port.TransactionRepository;
-import com.finsight.infrastructure.mapper.FinancialMapper;
-import com.finsight.web.api.dto.TransactionParam;
+import com.finsight.application.classification.FinanceSemanticsCatalog;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -20,39 +16,33 @@ import java.util.Map;
 @Service
 public class TrendAnalysisService {
 
-    private final TransactionRepository transactionRepository;
-    private final TransactionQuerySupport querySupport;
     private final AuthenticationFacade authenticationFacade;
-    private final FinancialMapper financialMapper;
+    private final FinanceSemanticMetricsRepository semanticMetricsRepository;
     private final JdbcTemplate jdbcTemplate;
 
-    public TrendAnalysisService(TransactionRepository transactionRepository,
-                                TransactionQuerySupport querySupport,
-                                AuthenticationFacade authenticationFacade,
-                                FinancialMapper financialMapper,
+    public TrendAnalysisService(AuthenticationFacade authenticationFacade,
+                                FinanceSemanticMetricsRepository semanticMetricsRepository,
                                 JdbcTemplate jdbcTemplate) {
-        this.transactionRepository = transactionRepository;
-        this.querySupport = querySupport;
         this.authenticationFacade = authenticationFacade;
-        this.financialMapper = financialMapper;
+        this.semanticMetricsRepository = semanticMetricsRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
     public Map<String, Object> trends(int fromYear, int toYear) throws Exception {
         String userId = userKey();
-        double incomeFrom = yearTotal("income", fromYear);
-        double incomeTo = yearTotal("income", toYear);
-        double expenseFrom = yearTotal("expense", fromYear);
-        double expenseTo = yearTotal("expense", toYear);
-        double fixedFrom = safeFixedYear(fromYear);
-        double fixedTo = safeFixedYear(toYear);
+        double incomeFrom = yearTotal(true, fromYear);
+        double incomeTo = yearTotal(true, toYear);
+        double expenseFrom = yearTotal(false, fromYear);
+        double expenseTo = yearTotal(false, toYear);
+        double fixedFrom = fixedYearTotal(fromYear);
+        double fixedTo = fixedYearTotal(toYear);
 
         double incomeDelta = incomeTo - incomeFrom;
         double expenseDelta = expenseTo - expenseFrom;
         double savingsFrom = incomeFrom > 0 ? (incomeFrom - expenseFrom) / incomeFrom * 100 : 0;
         double savingsTo = incomeTo > 0 ? (incomeTo - expenseTo) / incomeTo * 100 : 0;
 
-        List<Map<String, Object>> categoryRows = loadCategoryRows(fromYear, toYear);
+        List<Map<String, Object>> categoryRows = loadSemanticCategoryRows(fromYear, toYear, userId);
         List<Map<String, Object>> topCategoryGrowth = enrichCategoryMovers(categoryRows, fromYear, toYear, expenseDelta);
 
         Map<String, Double> merchantFrom = merchantSpendByYear(fromYear, userId);
@@ -99,6 +89,7 @@ public class TrendAnalysisService {
                 "deltaPercent", round(savingsTo - savingsFrom)));
         out.put("lifestyleInflation", lifestyleInflation);
         out.put("trends", trendItems);
+        out.put("metricsSource", "v_transaction_finance_semantics.semantic_tag");
         out.put("user", userId);
         return out;
     }
@@ -159,7 +150,7 @@ public class TrendAnalysisService {
                     ((Number) cat.get("deltaAmount")).doubleValue(),
                     ((Number) cat.get("pctChange")).doubleValue(),
                     ((Number) cat.get("contributionPct")).doubleValue(),
-                    drillCategory(toYear, String.valueOf(cat.get("categoryCode")), String.valueOf(cat.get("categoryName")))));
+                    drillSemanticTag(toYear, String.valueOf(cat.get("categoryCode")), String.valueOf(cat.get("categoryName")))));
         }
         for (Map<String, Object> merchant : merchants) {
             @SuppressWarnings("unchecked")
@@ -193,35 +184,38 @@ public class TrendAnalysisService {
         Map<String, Double> to = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
             int year = ((Number) row.get("year")).intValue();
-            String code = String.valueOf(row.get("categoryCode"));
-            names.putIfAbsent(code, String.valueOf(row.get("categoryName")));
+            String tagId = String.valueOf(row.get("categoryCode"));
+            names.putIfAbsent(tagId, String.valueOf(row.get("categoryName")));
             double amt = ((Number) row.get("amount")).doubleValue();
             if (year == fromYear) {
-                from.merge(code, amt, Double::sum);
+                from.merge(tagId, amt, Double::sum);
             }
             if (year == toYear) {
-                to.merge(code, amt, Double::sum);
+                to.merge(tagId, amt, Double::sum);
             }
         }
         List<Map<String, Object>> movers = new ArrayList<>();
-        for (String code : to.keySet()) {
-            double start = from.getOrDefault(code, 0.0);
-            double end = to.getOrDefault(code, 0.0);
+        for (String tagId : to.keySet()) {
+            double start = from.getOrDefault(tagId, 0.0);
+            double end = to.getOrDefault(tagId, 0.0);
             double delta = end - start;
             double pct = TrendDecomposition.pctChange(start, end);
             if (Math.abs(pct) < 10 && Math.abs(delta) < 100) {
                 continue;
             }
+            String label = names.getOrDefault(tagId, tagId);
             Map<String, Object> g = new LinkedHashMap<>();
-            g.put("categoryCode", code);
-            g.put("categoryName", names.getOrDefault(code, code));
+            g.put("categoryCode", tagId);
+            g.put("categoryName", label);
+            g.put("classification", label);
+            g.put("txnType", FinanceSemanticsCatalog.semanticTagTxnTypeLabel(tagId));
             g.put("fromAmount", round(start));
             g.put("toAmount", round(end));
             g.put("pctChange", Math.round(pct));
             g.put("deltaAmount", round(delta));
             g.put("deltaPercent", round(pct));
             g.put("contributionPct", round(TrendDecomposition.contributionPct(delta, expenseDelta)));
-            g.put("drillDown", drillCategory(toYear, code, names.getOrDefault(code, code)));
+            g.put("drillDown", drillSemanticTag(toYear, tagId, label));
             movers.add(g);
         }
         movers.sort((a, b) -> Double.compare(
@@ -240,44 +234,39 @@ public class TrendAnalysisService {
         return movers;
     }
 
-    private List<Map<String, Object>> loadCategoryRows(int fromYear, int toYear) throws Exception {
+    private List<Map<String, Object>> loadSemanticCategoryRows(int fromYear, int toYear, String userId) {
         List<Map<String, Object>> categoryShifts = new ArrayList<>();
-        for (int y = fromYear; y <= toYear; y++) {
-            final int year = y;
-            TransactionParam param = new TransactionParam();
-            param.setTransactionDateStartStr("01/01/" + year);
-            param.setTransactionDateEndStr("12/31/" + year);
-            param.setTxnTypes("expense");
-            TransactionQuery q = TransactionQueryAssembler.from(param);
-            querySupport.enrich(q);
-            transactionRepository.consumeReport(q).forEach(cat -> {
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("year", year);
-                row.put("categoryCode", cat.getCode());
-                row.put("categoryName", cat.getName());
-                row.put("amount", cat.getValue());
-                categoryShifts.add(row);
-            });
+        for (FinanceSemanticMetricsRepository.SemanticTagYearAmount row
+                : semanticMetricsRepository.sumExpenseBySemanticTagYears(userId, fromYear, toYear)) {
+            Map<String, Object> mapped = new LinkedHashMap<>();
+            mapped.put("year", row.year());
+            mapped.put("categoryCode", row.tagId());
+            mapped.put("categoryName", FinanceSemanticsCatalog.semanticTagClassification(row.tagId()));
+            mapped.put("amount", row.amount());
+            categoryShifts.add(mapped);
         }
         return categoryShifts;
     }
 
-    private double yearTotal(String txnTypes, int year) throws Exception {
-        TransactionParam param = new TransactionParam();
-        param.setTransactionDateStartStr("01/01/" + year);
-        param.setTransactionDateEndStr("12/31/" + year);
-        param.setTxnTypes(txnTypes);
-        TransactionQuery q = TransactionQueryAssembler.from(param);
-        querySupport.enrich(q);
-        List<KeyValue> rows = "income".equals(txnTypes)
-                ? transactionRepository.monthIncomeReport(q)
-                : transactionRepository.monthExpenseReport(q);
-        return rows.stream().mapToDouble(r -> Double.parseDouble(String.valueOf(r.getValue()))).sum();
+    private double yearTotal(boolean income, int year) {
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
+        Map<String, BigDecimal> totals = semanticMetricsRepository.aggregateMonth(userKey(), start, end);
+        if (income) {
+            return d(totals.get("REAL_INCOME"));
+        }
+        return d(totals.get("CONSUMPTION_EXPENSE"));
     }
 
-    private double safeFixedYear(int year) {
-        Double value = financialMapper.sumFixedBucketYear(year);
-        return value == null ? 0 : value;
+    private double fixedYearTotal(int year) {
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
+        Map<String, BigDecimal> totals = semanticMetricsRepository.aggregateMonth(userKey(), start, end);
+        return d(totals.get("FIXED_EXPENSE"));
+    }
+
+    private static double d(BigDecimal value) {
+        return value == null ? 0 : value.doubleValue();
     }
 
     private Map<String, Double> merchantSpendByYear(int year, String userId) {
@@ -351,10 +340,10 @@ public class TrendAnalysisService {
                 "txnTypes", txnTypes);
     }
 
-    private static Map<String, String> drillCategory(int year, String categoryCode, String categoryName) {
+    private static Map<String, String> drillSemanticTag(int year, String tagId, String label) {
         Map<String, String> drill = new LinkedHashMap<>(drillYear(year, "expense"));
-        drill.put("consumeID", categoryCode);
-        drill.put("consumeName", categoryName);
+        drill.put("semanticFilter", tagId);
+        drill.put("consumeName", label);
         return drill;
     }
 

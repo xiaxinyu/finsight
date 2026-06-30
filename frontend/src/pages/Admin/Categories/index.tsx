@@ -42,6 +42,10 @@ import type { SemanticTagId } from '../../../utils/categorySemantics'
 import {
   categoryFieldsFromSemanticTag,
   coerceCategoryFormFields,
+  defaultCategoryTxnKindForParent,
+  parseCategoryTxnKind,
+  serializeCategoryTxnTypes,
+  CATEGORY_TXN_KIND_OPTIONS,
   flatFixedTagForKind,
   initialCategoryFormValues,
   inferFixedCostKind,
@@ -134,13 +138,28 @@ export function CategoriesAdminPage() {
   useEffect(() => {
     if (creating) {
       const parentId = selected?.code || ''
+      const txnKind = defaultCategoryTxnKindForParent(parentId)
       const semanticTag = isFixedCategory(parentId)
         ? flatFixedTagForKind(inferFixedCostKind(parentId) ?? 'rent')
         : isSocialCategory(parentId)
           ? 'social_spending'
-          : 'daily_spending'
+          : txnKind === 'finance'
+            ? 'investment'
+            : txnKind === 'transfer'
+              ? 'transfer'
+              : txnKind === 'refund'
+                ? 'refund_reimbursement'
+                : txnKind === 'income'
+                  ? 'real_income'
+                  : 'daily_spending'
       const reportRole = reportRoleFromSemanticSelection(semanticTag)
-      form.setFieldsValue({ ...EMPTY, parentId, semanticTag, reportRole })
+      form.setFieldsValue({
+        ...EMPTY,
+        parentId,
+        semanticTag,
+        reportRole,
+        txnTypes: serializeCategoryTxnTypes(txnKind, semanticTag),
+      })
       return
     }
     if (selected) {
@@ -276,7 +295,7 @@ export function CategoriesAdminPage() {
     return {
       ...raw,
       deleted: raw.deleted ?? selected?.deleted ?? 0,
-      txnTypes: derived.txnTypes,
+      txnTypes: serializeCategoryTxnTypes(parseCategoryTxnKind(derived.txnTypes), derived.semanticTag),
       semanticTag: derived.semanticTag,
       reportRole: derived.reportRole,
     }
@@ -476,12 +495,38 @@ export function CategoriesAdminPage() {
                     <Form.Item name="parentId" label="Parent category">
                       <Select allowClear options={parentOptions} placeholder="Root category (no parent)" />
                     </Form.Item>
-                    <Form.Item name="txnTypes" label="Transaction types">
-                      <Select options={[
-                        { value: 'expense', label: 'Expense' },
-                        { value: 'income', label: 'Income' },
-                        { value: 'expense,income', label: 'Both' },
-                      ]} />
+                    <Form.Item
+                      label="Transaction type"
+                      tooltip="Primary economic nature — aligns with reporting classification below."
+                      extra={(
+                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                          Expense/Income = daily cashflow · Transfer/Finance = loans & investments · Tax tracked separately
+                        </Typography.Text>
+                      )}
+                    >
+                      <Select
+                        value={parseCategoryTxnKind(watchedTxnTypes)}
+                        onChange={(kind) => {
+                          const tag = form.getFieldValue('semanticTag') as SemanticTagId | undefined
+                          form.setFieldValue('txnTypes', serializeCategoryTxnTypes(kind, tag))
+                        }}
+                        options={CATEGORY_TXN_KIND_OPTIONS.map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                          title: o.hint,
+                        }))}
+                        optionRender={(opt) => (
+                          <div>
+                            <div>{opt.label}</div>
+                            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                              {CATEGORY_TXN_KIND_OPTIONS.find((o) => o.value === opt.value)?.hint}
+                            </Typography.Text>
+                          </div>
+                        )}
+                      />
+                      <Form.Item name="txnTypes" hidden>
+                        <Input />
+                      </Form.Item>
                     </Form.Item>
                     <Form.Item name="sortNo" label="Sort order">
                       <InputNumber min={1} style={{ width: '100%' }} />
@@ -511,6 +556,7 @@ export function CategoriesAdminPage() {
                       inferred={!creating && Boolean(selected && !selected.semanticTag?.trim() && !selected.reportRole?.trim())}
                       mismatchWarning={classificationMismatch}
                       onReportRoleSync={(role) => form.setFieldValue('reportRole', role)}
+                      onTxnTypesSync={(txnTypes) => form.setFieldValue('txnTypes', txnTypes)}
                     />
                   </Form.Item>
                 </div>

@@ -100,7 +100,7 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
   const provenance = context.provenance
 
   const actions = mergeDrillActions(context.actions)
-  const showCategories = !context.params.consumeName && !categoryFilter
+  const showCategories = !context.params.consumeName && !categoryFilter && !context.params.semanticFilter
 
   const handleClose = () => {
     setLayer('insight')

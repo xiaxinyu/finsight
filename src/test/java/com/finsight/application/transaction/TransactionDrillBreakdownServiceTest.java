@@ -75,6 +75,35 @@ class TransactionDrillBreakdownServiceTest {
     }
 
     @Test
+    void passesSemanticTagFilterWithoutLegacyTxnTypeClash() throws Exception {
+        TransactionParam param = new TransactionParam();
+        param.setTransactionDateStartStr("01/01/2026");
+        param.setTransactionDateEndStr("06/30/2026");
+        param.setTxnTypes("expense");
+        param.setSemanticFilter("social_spending");
+
+        when(transactionRepository.countTransaction(any())).thenReturn(12);
+        when(transactionMapper.aggregateStats(any())).thenReturn(Map.of("expense", 3500.0));
+
+        DrillBreakdownItem merchant = new DrillBreakdownItem();
+        merchant.setLabel("Gift shop");
+        merchant.setTxnCount(3);
+        merchant.setTotal(800.0);
+        when(transactionMapper.drillCategoryBreakdown(any(), eq(100))).thenReturn(List.of());
+        when(transactionMapper.drillMerchantBreakdown(any(), eq(100))).thenReturn(List.of(merchant));
+
+        Transaction tx = new Transaction();
+        tx.setId("t1");
+        when(transactionRepository.getTransactions(any(), any(Page.class))).thenReturn(List.of(tx));
+
+        DrillBreakdownResult result = service.load(param, 200);
+
+        assertEquals(12, result.getTotal());
+        assertEquals(3500.0, result.getAggregateTotal(), 0.01);
+        assertEquals(1, result.getMerchants().size());
+    }
+
+    @Test
     void passesMerchantTokenIntoQuery() throws Exception {
         TransactionParam param = new TransactionParam();
         param.setTransactionDateStartStr("01/01/2026");

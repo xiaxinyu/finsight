@@ -1,9 +1,10 @@
 export type ReportConfig = {
   title: string
   subtitle?: string
-  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'cashRisk' | 'merchantSubscriptions' | 'merchantConcentration' | 'merchantDrift'
+  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'cashRisk' | 'merchantSubscriptions' | 'merchantConcentration' | 'merchantDrift' | 'semanticScope'
   endpoint?: string
   txnType?: 'income' | 'expense'
+  semanticScope?: 'expense' | 'income' | 'non_pnl' | 'tax' | 'refund' | 'all'
   chartKind?: 'bar' | 'donut'
   dateRange?: boolean
   compareYear?: boolean
@@ -31,8 +32,24 @@ export const reportConfigs: Record<string, ReportConfig> = {
   },
   'fund-flow': {
     title: 'Fund Flow',
-    subtitle: 'Internal transfers excluded from spending reports',
+    subtitle: 'Internal transfer pairs excluded from spending reports',
     type: 'transfers',
+    dateRange: true,
+  },
+  'transfer-finance': {
+    title: 'Transfer & Finance',
+    subtitle: 'Account transfers, loans, and investments — excluded from spending',
+    type: 'semanticScope',
+    semanticScope: 'non_pnl',
+    chartProfile: 'donut',
+    dateRange: true,
+  },
+  'tax-summary': {
+    title: 'Tax Summary',
+    subtitle: 'Tax paid and refunds — tracked separately from daily spending',
+    type: 'semanticScope',
+    semanticScope: 'tax',
+    chartProfile: 'donut',
     dateRange: true,
   },
   'fixed-vs-variable': {

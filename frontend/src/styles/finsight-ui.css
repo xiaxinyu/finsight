@@ -416,6 +416,36 @@
   background: #e6f4ff;
 }
 
+.fs-category-txn-badge--mixed {
+  color: #0958d9;
+  background: #e6f4ff;
+}
+
+.fs-category-txn-badge--transfer {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.fs-category-txn-badge--finance {
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.fs-category-txn-badge--tax {
+  color: #0f766e;
+  background: #ecfdf5;
+}
+
+.fs-category-txn-badge--refund {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.fs-category-txn-badge--capital {
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+
 .fs-category-domain-badge {
   display: inline-flex;
   align-items: center;

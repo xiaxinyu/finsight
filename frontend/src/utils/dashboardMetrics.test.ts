@@ -1,28 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import { mergeDashboardPeriodTotals } from './dashboardMetrics'
+import { mapDashboardPeriodTotals, mergeDashboardPeriodTotals } from './dashboardMetrics'
+import { REPORT_METRICS_SOURCE } from './reportTaxonomy'
 
-describe('mergeDashboardPeriodTotals', () => {
-  it('prefers semantic totals when present', () => {
-    const out = mergeDashboardPeriodTotals(
-      {
-        realIncome: 10000,
-        consumptionExpense: 7000,
-        netCashflow: 3000,
-        metricsSource: 'v_transaction_finance_semantics',
-        months: [{ yearMonth: '2026-01', month: 'Jan', realIncome: 5000, consumptionExpense: 3500, net: 1500 }],
-      },
-      { income: 12000, expense: 8000, months: [] },
-    )
+describe('dashboardMetrics', () => {
+  it('maps semantic period summary', () => {
+    const out = mapDashboardPeriodTotals({
+      realIncome: 10000,
+      consumptionExpense: 7000,
+      netCashflow: 3000,
+      metricsSource: 'v_transaction_finance_semantics',
+      months: [{ yearMonth: '2026-01', month: 'Jan', realIncome: 5000, consumptionExpense: 3500, net: 1500 }],
+    })
     expect(out.realIncome).toBe(10000)
-    expect(out.usedSemantic).toBe(true)
+    expect(out.metricsSource).toBe('v_transaction_finance_semantics')
   })
 
-  it('falls back to report totals when semantic is empty', () => {
+  it('defaults metrics source when absent', () => {
+    const out = mapDashboardPeriodTotals(undefined)
+    expect(out.metricsSource).toBe(REPORT_METRICS_SOURCE)
+  })
+
+  it('mergeDashboardPeriodTotals delegates to semantic mapper', () => {
     const out = mergeDashboardPeriodTotals(
-      { realIncome: 0, consumptionExpense: 0, netCashflow: 0, metricsSource: 'x', months: [] },
-      { income: 5000, expense: 3000, months: [{ month: 'Jan', income: 5000, expense: 3000 }] },
+      { realIncome: 5000, consumptionExpense: 3000, netCashflow: 2000, metricsSource: 'x', months: [] },
     )
     expect(out.realIncome).toBe(5000)
-    expect(out.usedSemantic).toBe(false)
+    expect(out.usedSemantic).toBe(true)
   })
 })

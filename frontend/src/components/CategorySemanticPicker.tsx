@@ -6,13 +6,17 @@ import {
 } from '../hooks/useSemanticsCatalog'
 import type { SemanticTagId } from '../utils/categorySemantics'
 import {
+  categoryTxnKindLabel,
   compactGroupTitle,
   filterSemanticTagGroups,
+  inferTxnKindFromSemanticTag,
+  serializeCategoryTxnTypes,
   inclusionSummary,
   isCapitalSemanticTag,
   isFlatFixedSemanticTag,
   isLegacySemanticTag,
   parentTxnMismatchWarning,
+  parseCategoryTxnKind,
   profileCategorySemantics,
   reportRoleForSemanticTag,
   reportRoleFromSemanticSelection,
@@ -64,10 +68,8 @@ function tagColor(tag: SemanticTagId): string {
 
 type ReportSurface = { id: string; label: string }
 
-function txnBadgeLabel(filter: ReturnType<typeof txnTypeFilter>): string {
-  if (filter === 'income') return 'Income'
-  if (filter === 'expense') return 'Expense'
-  return 'Mixed'
+function txnBadgeLabel(txnTypes?: string): string {
+  return categoryTxnKindLabel(parseCategoryTxnKind(txnTypes))
 }
 
 function isFinanceTagGroup(title: string): boolean {
@@ -147,6 +149,7 @@ export function CategorySemanticPicker({
   const groupHints = { ...SEMANTIC_GROUP_HINTS, ...(catalog?.groupHints ?? {}) }
   const reportSurfaces = (catalog?.reportSurfaces ?? []) as ReportSurface[]
   const txnFilter = txnTypeFilter(txnTypes)
+  const txnKind = parseCategoryTxnKind(txnTypes)
   const parentWarning = parentTxnMismatchWarning(parentId, txnTypes)
 
   const selectTag = (tag: SemanticTagId) => {
@@ -170,8 +173,8 @@ export function CategorySemanticPicker({
   return (
     <div className={`fs-category-classification-panel fs-category-classification-panel--${txnFilter}`}>
       <div className="fs-category-classification-toolbar">
-        <span className={`fs-category-txn-badge fs-category-txn-badge--${txnFilter}`}>
-          {txnBadgeLabel(txnFilter)}
+        <span className={`fs-category-txn-badge fs-category-txn-badge--${txnKind}`}>
+          {txnBadgeLabel(txnTypes)}
         </span>
         {showPreview && (
           <div className="fs-category-classification-selection">
@@ -279,6 +282,7 @@ export function CategoryReportRoleControl({
   inferred,
   mismatchWarning,
   onReportRoleSync,
+  onTxnTypesSync,
 }: {
   value?: string
   onChange?: (value: string) => void
@@ -290,6 +294,7 @@ export function CategoryReportRoleControl({
   inferred?: boolean
   mismatchWarning?: string | null
   onReportRoleSync?: (reportRole: string) => void
+  onTxnTypesSync?: (txnTypes: string) => void
 }) {
   return (
     <CategorySemanticPicker
@@ -302,6 +307,10 @@ export function CategoryReportRoleControl({
       onSemanticTagChange={(tag, role) => {
         onChange?.(tag)
         onReportRoleSync?.(role)
+        const inferredKind = inferTxnKindFromSemanticTag(tag)
+        if (inferredKind) {
+          onTxnTypesSync?.(serializeCategoryTxnTypes(inferredKind, tag))
+        }
       }}
       inferred={inferred}
       mismatchWarning={mismatchWarning}
