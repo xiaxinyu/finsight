@@ -28,22 +28,47 @@
     <select id="listAll" resultMap="UserResultMap">
         select id, username, display_name, enabled, created_at, updated_at
         from fs_user
-        order by id desc
+        order by username asc
     </select>
 
-    <insert id="insert" parameterType="com.finsight.domain.model.User" useGeneratedKeys="true" keyProperty="id">
-        insert into fs_user(username, password, display_name, enabled, created_at, updated_at)
-        values(#{username}, #{password}, #{displayName}, #{enabled}, now(), now())
+    <select id="search" resultMap="UserResultMap">
+        select id, username, display_name, enabled, created_at, updated_at
+        from fs_user
+        where username like concat('%', #{q,jdbcType=VARCHAR}, '%')
+           or coalesce(display_name, '') like concat('%', #{q,jdbcType=VARCHAR}, '%')
+        order by username asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="user.id">
+        insert into fs_user(username, password, display_name, enabled, created_by, updated_by, created_at, updated_at)
+        values(#{user.username}, #{user.password}, #{user.displayName}, #{user.enabled},
+               #{actor,jdbcType=VARCHAR}, #{actor,jdbcType=VARCHAR}, now(), now())
     </insert>
 
-    <update id="update" parameterType="com.finsight.domain.model.User">
+    <update id="update">
         update fs_user
-        set display_name = #{displayName},
-            enabled = #{enabled},
-            password = #{password},
+        set display_name = #{user.displayName},
+            enabled = #{user.enabled},
+            updated_by = #{actor,jdbcType=VARCHAR},
             updated_at = now()
-        where id = #{id}
+        where id = #{user.id}
     </update>
+
+    <update id="updatePassword">
+        update fs_user
+        set password = #{password,jdbcType=VARCHAR},
+            updated_by = #{actor,jdbcType=VARCHAR},
+            updated_at = now()
+        where id = #{id,jdbcType=BIGINT}
+    </update>
+
+    <select id="countEnabledAdmins" resultType="int">
+        select count(distinct u.id)
+        from fs_user u
+        inner join fs_user_role ur on ur.user_id = u.id
+        inner join fs_role r on r.id = ur.role_id and r.code = 'ADMIN'
+        where coalesce(u.enabled, 1) = 1
+    </select>
 
     <delete id="delete" parameterType="long">
         delete from fs_user where id = #{id}
@@ -61,6 +86,7 @@
         from fs_role r
         inner join fs_user_role ur on ur.role_id = r.id
         where ur.user_id = #{userId}
+        order by r.code
     </select>
 
     <delete id="deleteRolesByUserId" parameterType="long">
@@ -68,6 +94,7 @@
     </delete>
 
     <insert id="addUserRole">
-        insert into fs_user_role(user_id, role_id) values(#{userId}, #{roleId})
+        insert into fs_user_role(user_id, role_id, created_at, updated_at)
+        values(#{userId}, #{roleId}, now(), now())
     </insert>
 </mapper>

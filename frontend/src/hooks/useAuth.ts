@@ -11,6 +11,9 @@ export function useAuth() {
 
   return {
     session: query.data,
+    username: query.data?.username,
+    displayName: query.data?.displayName,
+    roles: query.data?.roles,
     isAdmin: query.data?.admin === true,
     isAuthenticated: query.data?.authenticated === true,
     isLoading: query.isLoading,

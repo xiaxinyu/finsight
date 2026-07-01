@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { verifySession } from '../api/client'
-import { Layout, Menu, Typography, Button, Breadcrumb, Popconfirm, theme, type MenuProps } from 'antd'
-import { LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { Layout, Menu, Typography, Button, Breadcrumb, theme, type MenuProps } from 'antd'
+import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import {
   menuItems,
   menuOpenKeysForPath,
@@ -14,6 +14,7 @@ import { useAuth } from '../hooks/useAuth'
 import { filterMenuByFeatures } from '../utils/featureFlags'
 import { filterMenuByRole } from '../utils/menuRoleFilter'
 import { BrandLogo } from '../components/BrandLogo'
+import { UserAccountMenu } from '../components/UserAccountMenu'
 import { resolveRouteMeta } from '../config/routes'
 
 const { Header, Sider, Content } = Layout
@@ -127,9 +128,7 @@ export function AppLayout() {
           </div>
           <Typography.Text type="secondary" className="fs-app-tagline">Personal Finance Intelligence</Typography.Text>
           <div className="fs-app-header-right">
-            <Popconfirm title="Sign out of FinSight?" okText="Sign out" cancelText="Cancel" onConfirm={() => { window.location.href = '/logout' }}>
-              <Button type="text" size="small" icon={<LogoutOutlined />}>Sign out</Button>
-            </Popconfirm>
+            <UserAccountMenu />
           </div>
         </Header>
         <Content className="fs-app-content">

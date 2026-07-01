@@ -13,6 +13,7 @@ import {
   HistoryOutlined,
   HomeOutlined,
   LineChartOutlined,
+  LockOutlined,
   MedicineBoxOutlined,
   PieChartOutlined,
   RiseOutlined,
@@ -168,7 +169,8 @@ export const menuItems: FsMenuItem[] = [
     key: 'grp-settings',
     label: 'Settings',
     children: [
-      { key: '/profile', icon: <UserOutlined />, label: 'Profile', path: '/profile' },
+      { key: '/profile', icon: <UserOutlined />, label: 'Financial profile', path: '/profile' },
+      { key: '/settings/account', icon: <LockOutlined />, label: 'Account & security', path: '/settings/account' },
       {
         key: 'admin',
         icon: <SettingOutlined />,

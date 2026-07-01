@@ -29,16 +29,42 @@ export type ConsumeCategoryRow = {
   semanticTag?: string
 }
 
-export async function listUsers() {
-  return getJson('/api/v1/users')
+export type UserAdminRow = {
+  id?: number
+  username?: string
+  displayName?: string
+  enabled?: number
+  roles?: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type RoleRow = {
+  id: number
+  code: string
+  name?: string
+  description?: string
+}
+
+export async function listUsers(q?: string) {
+  const params = q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''
+  return getJson<UserAdminRow[]>(`/api/v1/users${params}`)
+}
+
+export async function listRoles() {
+  return getJson<RoleRow[]>('/api/v1/users/roles')
 }
 
 export async function createUser(user: Record<string, unknown>) {
-  return postJson('/api/v1/users', user)
+  return postJson<UserAdminRow>('/api/v1/users', user)
 }
 
 export async function updateUser(id: number | string, user: Record<string, unknown>) {
-  return putJson(`/api/v1/users/${id}`, user)
+  return putJson<UserAdminRow>(`/api/v1/users/${id}`, user)
+}
+
+export async function resetUserPassword(id: number | string, password: string) {
+  return postJson(`/api/v1/users/${id}/reset-password`, { password })
 }
 
 export async function deleteUser(id: number | string) {

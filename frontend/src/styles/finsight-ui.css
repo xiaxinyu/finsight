@@ -55,6 +55,114 @@
   flex-shrink: 0;
 }
 
+/* ── Header account menu ── */
+.fs-account-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--fs-border);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  max-width: 220px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fs-account-menu-trigger:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
+
+.fs-account-menu-trigger-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.fs-account-menu-trigger-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fs-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.fs-account-menu-trigger-user {
+  font-size: 11px;
+  color: var(--fs-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.fs-account-menu-chevron {
+  font-size: 11px;
+  color: var(--fs-text-secondary);
+  flex-shrink: 0;
+}
+
+.fs-account-menu-dropdown .ant-dropdown-menu {
+  min-width: 260px;
+  padding: 8px;
+}
+
+.fs-account-menu-header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 4px 4px 8px;
+}
+
+.fs-account-menu-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.fs-account-menu-name {
+  display: block;
+  font-size: 14px !important;
+  line-height: 1.3;
+}
+
+.fs-account-menu-handle {
+  display: block;
+  font-size: 12px !important;
+  margin-top: 2px;
+}
+
+.fs-account-menu-roles {
+  margin-top: 6px;
+}
+
+.fs-account-menu-roles .ant-tag {
+  margin: 0;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+@media (max-width: 640px) {
+  .fs-account-menu-trigger-text {
+    display: none;
+  }
+
+  .fs-account-menu-trigger {
+    padding: 2px;
+    border-radius: 50%;
+    border: none;
+  }
+
+  .fs-account-menu-chevron {
+    display: none;
+  }
+}
+
 .fs-app-tagline {
   font-size: 12px;
   color: var(--fs-text-secondary);
@@ -5896,4 +6004,124 @@
     flex: 0 0 100%;
     max-width: 100%;
   }
+}
+
+/* ── Users admin ── */
+.fs-data-page--users .fs-users-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #f8fafc 0%, #fff 100%);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
+}
+
+.fs-users-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  min-width: 88px;
+}
+
+.fs-users-stat-icon {
+  font-size: 18px;
+  color: #64748b;
+}
+
+.fs-users-stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.fs-users-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--fs-text);
+}
+
+.fs-users-stat-label {
+  font-size: 11px;
+  color: var(--fs-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fs-users-stat--admin {
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+
+.fs-users-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 360px;
+  margin-left: auto;
+}
+
+.fs-users-table-panel {
+  padding: 0 !important;
+}
+
+.fs-users-table .ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.fs-users-table .ant-table-tbody > tr.fs-users-row-self > td {
+  background: #eff6ff !important;
+}
+
+.fs-users-table .ant-table-tbody > tr.fs-users-row-self:hover > td {
+  background: #dbeafe !important;
+}
+
+.fs-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fs-user-cell-body {
+  min-width: 0;
+}
+
+.fs-user-cell-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.fs-user-you-tag {
+  margin: 0 !important;
+  font-size: 10px !important;
+  line-height: 16px !important;
+  padding: 0 6px !important;
+  border-radius: 999px !important;
+}
+
+.fs-user-cell-handle {
+  font-size: 12px !important;
+}
+
+.fs-user-ts {
+  font-size: 12px !important;
 }

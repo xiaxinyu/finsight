@@ -14,6 +14,7 @@ const staticRoutes: RouteMeta[] = [
   { path: '/wealth', title: 'Wealth', breadcrumb: ['Wealth'] },
   { path: '/goals', title: 'Goals', breadcrumb: ['Goals'] },
   { path: '/profile', title: 'Financial Profile', breadcrumb: ['Profile'] },
+  { path: '/settings/account', title: 'Account & security', breadcrumb: ['Settings', 'Account'] },
   { path: '/transactions', title: 'Transactions', breadcrumb: ['Transactions', 'Detail'] },
   { path: '/statements/upload', title: 'Import Statement', breadcrumb: ['Transactions', 'Import'] },
   { path: '/statements', title: 'Import History', breadcrumb: ['Transactions', 'Import History'] },
