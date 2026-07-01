@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Card, Form, Input, Typography } from 'antd'
 import { BarChartOutlined, LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons'
-import { getJson, verifySession } from '../../api/client'
+import { getJson, postLoginForm, verifySession } from '../../api/client'
+import { fetchCsrfToken } from '../../api/auth'
 import { BrandLogo } from '../../components/BrandLogo'
 
 export function LoginPage() {
@@ -11,6 +12,7 @@ export function LoginPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    fetchCsrfToken().catch(() => {})
     getJson<{ code?: string; msg?: string }>('/login-error.json')
       .then((d) => { if (d?.msg) setError(d.msg) })
       .catch(() => {})
@@ -19,17 +21,9 @@ export function LoginPage() {
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true)
     setError('')
-    const body = new URLSearchParams()
-    body.append('username', values.username)
-    body.append('password', values.password)
     try {
-      await fetch('/authentication/form', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-        redirect: 'follow',
-      })
+      await fetchCsrfToken().catch(() => null)
+      await postLoginForm(values.username, values.password)
       if (await verifySession()) {
         navigate('/dashboard', { replace: true })
         return

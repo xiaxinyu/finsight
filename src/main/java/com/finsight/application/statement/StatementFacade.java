@@ -2,6 +2,7 @@ package com.finsight.application.statement;
 
 import com.alibaba.fastjson.JSON;
 import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.common.security.SensitiveDataMasker;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.domain.model.Statement;
 import com.finsight.domain.model.Transaction;
@@ -77,7 +78,7 @@ public class StatementFacade {
                 return CommonResult.fail("File is empty or unreadable");
             }
             log.info("statement/upload request: user={}, bankCode={}, cardTypeCode={}, cardNo={}, bankCardId={}, fileName={}",
-                    userName, bankCode, cardTypeCode, cardNo, bankCardId, file.getOriginalFilename());
+                    userName, bankCode, cardTypeCode, SensitiveDataMasker.maskCardNumber(cardNo), bankCardId, file.getOriginalFilename());
 
             String filename = file.getOriginalFilename();
             String suffix = filename == null ? "" : filename.trim().toLowerCase();
@@ -171,7 +172,7 @@ public class StatementFacade {
         String userName = authenticationFacade.getUserName();
         try {
             log.info("statement/upload-parsed request: user={}, bankCode={}, cardTypeCode={}, cardNo={}, fileName={}, rows={}",
-                    userName, bankCode, cardTypeCode, cardNo, fileName, rows == null ? 0 : rows.size());
+                    userName, bankCode, cardTypeCode, SensitiveDataMasker.maskCardNumber(cardNo), fileName, rows == null ? 0 : rows.size());
             if (rows == null || rows.isEmpty()) {
                 return CommonResult.fail("empty_rows");
             }

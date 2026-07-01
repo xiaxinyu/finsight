@@ -10,7 +10,9 @@ import {
   type FsMenuItem,
 } from '../config/menuConfig'
 import { useFeatureFlags } from '../hooks/useFeatureFlags'
+import { useAuth } from '../hooks/useAuth'
 import { filterMenuByFeatures } from '../utils/featureFlags'
+import { filterMenuByRole } from '../utils/menuRoleFilter'
 import { BrandLogo } from '../components/BrandLogo'
 import { resolveRouteMeta } from '../config/routes'
 
@@ -51,7 +53,11 @@ export function AppLayout() {
   const { token } = theme.useToken()
   const routeMeta = resolveRouteMeta(location.pathname)
   const { flags } = useFeatureFlags()
-  const visibleMenu = useMemo(() => filterMenuByFeatures(menuItems, flags), [flags])
+  const { isAdmin } = useAuth()
+  const visibleMenu = useMemo(
+    () => filterMenuByRole(filterMenuByFeatures(menuItems, flags), isAdmin),
+    [flags, isAdmin],
+  )
   const [openKeys, setOpenKeys] = useState<string[]>(() => menuOpenKeysForPath(location.pathname))
 
   useEffect(() => {

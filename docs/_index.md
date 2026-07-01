@@ -63,6 +63,7 @@ Hub pages: [overview.md](user/concepts/overview.md) · [overview.zh-cn.md](user/
 | Function list | [function-list.md](tech/reference/function-list.md) | [function-list.zh-cn.md](tech/reference/function-list.zh-cn.md) |
 | Semantic contract | [finance-semantic-contract.md](tech/finance/finance-semantic-contract.md) | [finance-semantic-contract.zh-cn.md](tech/finance/finance-semantic-contract.zh-cn.md) |
 | v2.0.3 release | [v2.0.3-release-notes.md](tech/ops/v2.0.3-release-notes.md) | [v2.0.3-release-notes.zh-cn.md](tech/ops/v2.0.3-release-notes.zh-cn.md) |
+| Security guide | [SECURITY.md](tech/SECURITY.md) | [SECURITY.zh-cn.md](tech/SECURITY.zh-cn.md) |
 | UI dev | [REPORT_UI.md](tech/REPORT_UI.md) | — |
 
 ---

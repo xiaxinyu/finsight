@@ -35,7 +35,7 @@ class ProdActuatorSecurityTest {
     void actuatorHealthRedirectsToLoginWhenNotPublic() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("http://localhost/app/login"));
+                .andExpect(redirectedUrl("/app/login"));
     }
 
     @Test

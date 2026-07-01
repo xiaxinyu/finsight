@@ -5,6 +5,7 @@ import com.finsight.common.util.StringTool;
 import com.finsight.domain.model.Transaction;
 import com.finsight.application.importer.StatementImporter;
 import org.apache.commons.lang3.StringUtils;
+import com.finsight.common.security.SensitiveDataMasker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,7 @@ public class CrbankDebitTransactionStatementImporter implements StatementImporte
         }
 
         log.info("CRBANK importer start: rows={}, bankCode={}, cardTypeCode={}, cardNo={}",
-                rows.size(), bankCode, cardTypeCode, cardNo);
+                rows.size(), bankCode, cardTypeCode, SensitiveDataMasker.maskCardNumber(cardNo));
 
         for (String[] row : rows) {
             if (row == null || row.length < 2) {

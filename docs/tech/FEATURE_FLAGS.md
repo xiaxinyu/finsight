@@ -17,7 +17,11 @@ Runtime toggles under `finsight.*` in `application.yml`. The SPA reads effective
 | `finsight.analytics.profile-snapshot-scheduler-enabled` | `false` | Daily snapshot persist via `ProfileSnapshotScheduler`. |
 | `finsight.analytics.profile-snapshot-cron` | `0 0 2 * * *` | Cron when scheduler enabled (02:00 local server time). |
 | `finsight.security.csrf-enabled` | `false` (dev) | Enable CSRF protection (recommended in prod). |
+| `finsight.security.login-max-attempts` | `8` | Failed logins per IP before lockout. |
+| `finsight.security.login-lockout-seconds` | `900` | Lockout window after failed logins. |
 | `finsight.security.actuator-public` | `true` (dev) | When `false`, `/actuator/health` requires authentication. |
+
+See [SECURITY.md](SECURITY.md) for the full security guide.
 
 ## Production
 

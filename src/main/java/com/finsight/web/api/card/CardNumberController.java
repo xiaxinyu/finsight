@@ -4,6 +4,7 @@ import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.KeyValue;
 import com.finsight.web.api.dto.TreeNode;
 import com.finsight.application.card.CardFacade;
+import com.finsight.web.security.SecurityContextHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,7 +37,9 @@ public class CardNumberController {
 
     @GetMapping
     public List<BankCard> listCards(@RequestParam(value = "cardTypeCode", required = false) String cardTypeCode){
-        return cardFacade.listCards(cardTypeCode);
+        return cardFacade.listCards(cardTypeCode).stream()
+                .map(SecurityContextHelper::maskCardIfNeeded)
+                .toList();
     }
 
     @PostMapping

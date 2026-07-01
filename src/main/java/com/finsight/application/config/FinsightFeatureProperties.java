@@ -218,6 +218,8 @@ public class FinsightFeatureProperties {
     public static class Security {
         private boolean csrfEnabled;
         private boolean actuatorPublic = true;
+        private int loginMaxAttempts = 8;
+        private long loginLockoutSeconds = 900;
 
         public boolean isCsrfEnabled() {
             return csrfEnabled;
@@ -233,6 +235,22 @@ public class FinsightFeatureProperties {
 
         public void setActuatorPublic(boolean actuatorPublic) {
             this.actuatorPublic = actuatorPublic;
+        }
+
+        public int getLoginMaxAttempts() {
+            return loginMaxAttempts;
+        }
+
+        public void setLoginMaxAttempts(int loginMaxAttempts) {
+            this.loginMaxAttempts = loginMaxAttempts;
+        }
+
+        public long getLoginLockoutSeconds() {
+            return loginLockoutSeconds;
+        }
+
+        public void setLoginLockoutSeconds(long loginLockoutSeconds) {
+            this.loginLockoutSeconds = loginLockoutSeconds;
         }
     }
 }

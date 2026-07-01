@@ -12,6 +12,17 @@ finsight:
   security:
     csrf-enabled: true
     actuator-public: false
+    login-max-attempts: 8
+    login-lockout-seconds: 900
+
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        secure: true
+        same-site: strict
 
 management:
   endpoints:

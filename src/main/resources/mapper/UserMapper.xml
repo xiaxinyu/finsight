@@ -26,7 +26,7 @@
     </select>
 
     <select id="listAll" resultMap="UserResultMap">
-        select id, username, display_name, enabled, created_at, updated_at, password
+        select id, username, display_name, enabled, created_at, updated_at
         from fs_user
         order by id desc
     </select>

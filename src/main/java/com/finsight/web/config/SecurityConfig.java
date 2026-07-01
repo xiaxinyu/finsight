@@ -1,26 +1,35 @@
 package com.finsight.web.config;
 
 import com.finsight.application.config.FinsightFeatureProperties;
+import com.finsight.common.security.SecurityRoles;
+import com.finsight.web.security.ApiAccessDeniedHandler;
+import com.finsight.web.security.ApiAuthenticationEntryPoint;
+import com.finsight.web.security.LoginAttemptTracker;
+import com.finsight.web.security.LoginRateLimitFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
-    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -28,22 +37,81 @@ public class SecurityConfig {
     }
 
     @Bean
+    public FilterRegistrationBean<LoginRateLimitFilter> loginRateLimitFilterRegistration(
+            LoginAttemptTracker tracker,
+            FinsightFeatureProperties features) {
+        FilterRegistrationBean<LoginRateLimitFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new LoginRateLimitFilter(
+                tracker,
+                features.getSecurity().getLoginMaxAttempts(),
+                features.getSecurity().getLoginLockoutSeconds()));
+        registration.addUrlPatterns("/authentication/form");
+        registration.setOrder(1);
+        return registration;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    AuthenticationManager authenticationManager,
                                                    FinsightFeatureProperties features,
-                                                   Environment environment) throws Exception {
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+                                                   Environment environment,
+                                                   LoginAttemptTracker loginAttemptTracker) throws Exception {
+        http.headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())
+                .contentTypeOptions(content -> {})
+                .xssProtection(xss -> {})
+        );
+        if (environment.acceptsProfiles(Profiles.of("prod"))) {
+            http.headers(headers -> headers.httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(true)
+                    .maxAgeInSeconds(31536000)));
+        }
+
         if (features.getSecurity().isCsrfEnabled()) {
-            http.csrf(csrf -> csrf.ignoringRequestMatchers("/app/**"));
+            CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+            tokenRepository.setCookiePath("/");
+            CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+            requestHandler.setCsrfRequestAttributeName("_csrf");
+            http.csrf(csrf -> csrf
+                    .csrfTokenRepository(tokenRepository)
+                    .csrfTokenRequestHandler(requestHandler)
+                    .ignoringRequestMatchers("/app/**"));
         } else {
             http.csrf(csrf -> csrf.disable());
         }
+
+        http.exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new ApiAuthenticationEntryPoint())
+                .accessDeniedHandler(new ApiAccessDeniedHandler()));
+
         http.authorizeHttpRequests(auth -> {
-            auth.requestMatchers("/oauth/**", "/login/**", "/logout/**", "/plugins/**", "/login-error.json", "/app/**").permitAll();
+            auth.requestMatchers(
+                    "/oauth/**",
+                    "/login/**",
+                    "/logout/**",
+                    "/plugins/**",
+                    "/login-error.json",
+                    "/app/**",
+                    "/api/v1/auth/csrf"
+            ).permitAll();
             if (features.getSecurity().isActuatorPublic()) {
                 auth.requestMatchers("/actuator/health").permitAll();
             }
             auth.requestMatchers("/actuator/**").authenticated();
+
+            auth.requestMatchers("/api/v1/users/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers("/api/v1/maintenance/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.POST, "/api/v1/cards").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.PUT, "/api/v1/cards/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.DELETE, "/api/v1/cards/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.POST, "/api/v1/classification/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.PUT, "/api/v1/classification/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.DELETE, "/api/v1/classification/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers("/api/v1/consume/rules/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.POST, "/api/v1/consume/categories/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.PUT, "/api/v1/consume/categories/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.DELETE, "/api/v1/consume/categories/**").hasRole(SecurityRoles.ADMIN);
+
             if (environment.acceptsProfiles(Profiles.of("prod"))) {
                 auth.requestMatchers("/encrypt/**").denyAll();
             } else {
@@ -51,11 +119,19 @@ public class SecurityConfig {
             }
             auth.anyRequest().authenticated();
         });
+
         http.authenticationManager(authenticationManager);
+        http.sessionManagement(session -> session
+                .sessionFixation(fix -> fix.migrateSession())
+        );
+
         http.formLogin(form -> form
                 .loginPage("/app/login")
                 .loginProcessingUrl("/authentication/form")
                 .failureHandler((request, response, exception) -> {
+                    String clientKey = LoginAttemptTracker.clientKey(request);
+                    loginAttemptTracker.recordFailure(clientKey);
+
                     String code = "BAD_CREDENTIALS";
                     String msg = "Invalid username or password";
                     if (exception instanceof org.springframework.security.authentication.DisabledException) {
@@ -70,23 +146,29 @@ public class SecurityConfig {
                     } else if (exception instanceof org.springframework.security.authentication.LockedException) {
                         code = "LOCKED";
                         msg = "Account is locked";
-                    } else if (exception instanceof org.springframework.security.authentication.BadCredentialsException) {
-                        code = "BAD_CREDENTIALS";
-                        msg = "Invalid username or password";
-                    } else if (exception instanceof org.springframework.security.core.userdetails.UsernameNotFoundException) {
-                        code = "NOT_FOUND";
-                        msg = "User not found";
                     }
                     String user = request.getParameter("username");
-                    log.warn("Login failed: user={} code={} msg={}", user, code, msg);
+                    org.slf4j.LoggerFactory.getLogger(SecurityConfig.class)
+                            .warn("Login failed: user={} code={}", user, code);
                     jakarta.servlet.http.HttpSession sess = request.getSession(true);
                     sess.setAttribute("LOGIN_ERROR_CODE", code);
                     sess.setAttribute("LOGIN_ERROR_MSG", msg);
                     response.sendRedirect("/app/login");
                 })
-                .defaultSuccessUrl("/app/dashboard", true)
+                .successHandler((request, response, authentication) -> {
+                    loginAttemptTracker.reset(LoginAttemptTracker.clientKey(request));
+                    response.sendRedirect("/app/dashboard");
+                })
                 .permitAll()
         );
+
+        http.logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/app/login?logout")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID", "XSRF-TOKEN")
+        );
+
         return http.build();
     }
 
@@ -95,6 +177,7 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(encoder);
+        provider.setHideUserNotFoundExceptions(true);
         return new ProviderManager(provider);
     }
 }

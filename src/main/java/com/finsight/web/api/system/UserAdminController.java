@@ -22,7 +22,9 @@ public class UserAdminController {
 
     @GetMapping
     public List<User> list(){
-        return userMapper.listAll();
+        List<User> users = userMapper.listAll();
+        users.forEach(u -> u.setPassword(null));
+        return users;
     }
 
     @PostMapping
@@ -34,7 +36,9 @@ public class UserAdminController {
             user.setEnabled(1);
         }
         userMapper.insert(user);
-        return userMapper.findById(user.getId());
+        User created = userMapper.findById(user.getId());
+        created.setPassword(null);
+        return created;
     }
 
     @PutMapping("/{id}")
@@ -42,9 +46,14 @@ public class UserAdminController {
         user.setId(id);
         if (user.getPassword() != null && !user.getPassword().trim().isEmpty()){
             user.setPassword(passwordEncoder.encode(user.getPassword().trim()));
+        } else {
+            User existing = userMapper.findById(id);
+            user.setPassword(existing != null ? existing.getPassword() : null);
         }
         userMapper.update(user);
-        return userMapper.findById(id);
+        User updated = userMapper.findById(id);
+        updated.setPassword(null);
+        return updated;
     }
 
     @DeleteMapping("/{id}")

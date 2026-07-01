@@ -15,6 +15,7 @@ import { UsersAdminPage } from '../pages/Admin/Users'
 import { CardsAdminPage } from '../pages/Admin/Cards'
 import { RulesAdminPage } from '../pages/Admin/Rules'
 import { CategoriesAdminPage } from '../pages/Admin/Categories'
+import { AdminRoute } from './AdminRoute'
 
 export function AppRoutes() {
   return (
@@ -32,10 +33,12 @@ export function AppRoutes() {
         <Route path="/statements" element={<StatementListPage />} />
         <Route path="/reports/:reportId" element={<ReportRoute />} />
         <Route path="/ledgers/:ledgerId" element={<LedgersPage />} />
-        <Route path="/admin/users" element={<UsersAdminPage />} />
-        <Route path="/admin/cards" element={<CardsAdminPage />} />
-        <Route path="/admin/rules" element={<RulesAdminPage />} />
-        <Route path="/admin/categories" element={<CategoriesAdminPage />} />
+        <Route element={<AdminRoute />}>
+          <Route path="/admin/users" element={<UsersAdminPage />} />
+          <Route path="/admin/cards" element={<CardsAdminPage />} />
+          <Route path="/admin/rules" element={<RulesAdminPage />} />
+          <Route path="/admin/categories" element={<CategoriesAdminPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
