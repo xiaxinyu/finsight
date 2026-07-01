@@ -29,8 +29,23 @@ export type DebtYearPoint = {
   borrowing: number
   repayment: number
   net: number
+  cumulativeNet?: number
+  estimatedBalance?: number
+  debtDirection?: 'increase' | 'decrease' | 'flat'
+  yoyNetDelta?: number
   partial: boolean
   throughDate?: string
+}
+
+export type DebtBalanceSummary = {
+  currentLiabilities: number
+  asOfDate?: string
+  historyFromYear?: number
+  periodStartBalance?: number
+  periodBalanceChange?: number
+  periodTrend?: 'increase' | 'decrease' | 'flat'
+  source?: string
+  note?: string
 }
 
 export type DebtTrendsReport = {
@@ -38,6 +53,7 @@ export type DebtTrendsReport = {
   toYear: number
   historyFromYear?: number
   compareMode?: 'ytd_aligned' | 'full_year'
+  debtBalance?: DebtBalanceSummary
   summary: {
     borrowing: TrendDeltaMetric
     repayment: TrendDeltaMetric
@@ -118,10 +134,38 @@ export function orderedDebtCards(cards: DebtYoYCard[]): DebtYoYCard[] {
     .filter((c): c is DebtYoYCard => c != null)
 }
 
+export function debtDirectionLabel(direction?: DebtYearPoint['debtDirection']): string {
+  if (direction === 'increase') return 'Debt up'
+  if (direction === 'decrease') return 'Debt down'
+  return 'Stable'
+}
+
+export function debtDirectionTone(direction?: DebtYearPoint['debtDirection']): 'danger' | 'success' | 'default' {
+  if (direction === 'increase') return 'danger'
+  if (direction === 'decrease') return 'success'
+  return 'default'
+}
+
 export function buildDebtInsights(report: DebtTrendsReport) {
-  const bullets: { text: string; warn?: boolean }[] = [
-    { text: report.summary.headline || 'Year-over-year debt cash flow.' },
-  ]
+  const bullets: { text: string; warn?: boolean }[] = []
+  const balance = report.debtBalance
+  if (balance?.currentLiabilities != null) {
+    const change = balance.periodBalanceChange ?? 0
+    const from = balance.historyFromYear ?? report.historyFromYear ?? report.fromYear
+    if (Math.abs(change) >= 500) {
+      const dir = change > 0 ? 'increased' : 'reduced'
+      bullets.push({
+        text: `Outstanding debt ${dir} by ${formatMoney(Math.abs(change))} since ${from} (now ${formatMoney(balance.currentLiabilities)}).`,
+        warn: change > 0,
+      })
+    } else {
+      bullets.push({
+        text: `Outstanding debt is about ${formatMoney(balance.currentLiabilities)} as of today.`,
+        warn: balance.currentLiabilities > 0,
+      })
+    }
+  }
+  bullets.push({ text: report.summary.headline || 'Year-over-year debt cash flow.' })
   const pressure = report.debtPressure
   bullets.push({
     text: `Borrowing ${pressure.borrowingPctChange >= 0 ? '+' : ''}${pressure.borrowingPctChange.toFixed(1)}% vs repayments ${pressure.repaymentPctChange >= 0 ? '+' : ''}${pressure.repaymentPctChange.toFixed(1)}% (gap ${pressure.gapPct >= 0 ? '+' : ''}${pressure.gapPct.toFixed(1)} pts).`,
@@ -182,11 +226,13 @@ export function buildNetDebtLineChart(series: DebtYearPoint[]): EChartsOption {
         const idx = Number((row as { dataIndex?: number }).dataIndex ?? 0)
         const pt = series[idx]
         if (!pt) return ''
+        const dir = debtDirectionLabel(pt.debtDirection)
         return [
           `<b>${labels[idx]}</b>`,
-          `Net ${formatMoney(pt.net)}`,
+          `Net ${formatMoney(pt.net)} (${dir})`,
           `Borrowed ${formatMoney(pt.borrowing)} · Repaid ${formatMoney(pt.repayment)}`,
-        ].join('<br/>')
+          pt.estimatedBalance != null ? `Est. balance ${formatMoney(pt.estimatedBalance)}` : '',
+        ].filter(Boolean).join('<br/>')
       },
     },
     xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 11 } },
@@ -195,9 +241,67 @@ export function buildNetDebtLineChart(series: DebtYearPoint[]): EChartsOption {
       name: 'Net flow',
       type: 'line',
       smooth: true,
-      data: series.map((p) => p.net),
-      itemStyle: { color: '#7c2d12' },
-      areaStyle: { opacity: 0.08, color: '#ea580c' },
+      data: series.map((p) => ({
+        value: p.net,
+        itemStyle: {
+          color: p.debtDirection === 'increase' ? '#dc2626'
+            : p.debtDirection === 'decrease' ? '#16a34a' : '#64748b',
+        },
+      })),
+      lineStyle: { color: '#94a3b8', width: 2 },
+      areaStyle: { opacity: 0.06, color: '#64748b' },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        lineStyle: { type: 'dashed', color: '#cbd5e1' },
+        data: [{ yAxis: 0 }],
+      },
+    }],
+  }
+}
+
+export function buildDebtBalanceChart(series: DebtYearPoint[]): EChartsOption {
+  const partialYears = series.filter((x) => x.partial).map((x) => String(x.year))
+  const labels = series.map((p) => yearColumnLabel(p.year, partialYears))
+  const hasBalance = series.some((p) => p.estimatedBalance != null)
+  if (!hasBalance) return {}
+  return {
+    grid: { left: 52, right: 16, top: 28, bottom: 28 },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: unknown) => {
+        const row = Array.isArray(params) ? params[0] : params
+        const idx = Number((row as { dataIndex?: number }).dataIndex ?? 0)
+        const pt = series[idx]
+        if (!pt) return ''
+        return [
+          `<b>${labels[idx]}</b>`,
+          `Est. outstanding ${formatMoney(pt.estimatedBalance ?? 0)}`,
+          `Net ${formatMoney(pt.net)} (${debtDirectionLabel(pt.debtDirection)})`,
+        ].join('<br/>')
+      },
+    },
+    xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 10 }, min: 0 },
+    series: [{
+      name: 'Outstanding debt',
+      type: 'line',
+      smooth: true,
+      data: series.map((p) => ({
+        value: p.estimatedBalance ?? 0,
+        itemStyle: { color: p.partial ? '#f97316' : '#7c2d12' },
+      })),
+      lineStyle: { color: '#9a3412', width: 2.5 },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(124, 45, 18, 0.18)' },
+            { offset: 1, color: 'rgba(124, 45, 18, 0.02)' },
+          ],
+        },
+      },
     }],
   }
 }

@@ -2,6 +2,8 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.classification.FinanceSemanticsCatalog;
+import com.finsight.application.finance.FinancialAccountService;
+import com.finsight.domain.model.KeyValue;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -13,13 +15,18 @@ import java.util.Map;
 @Service
 public class DebtTrendAnalysisService {
 
+    private static final double FLAT_THRESHOLD = 500.0;
+
     private final AuthenticationFacade authenticationFacade;
     private final FinanceSemanticMetricsRepository semanticMetricsRepository;
+    private final FinancialAccountService accountService;
 
     public DebtTrendAnalysisService(AuthenticationFacade authenticationFacade,
-                                    FinanceSemanticMetricsRepository semanticMetricsRepository) {
+                                    FinanceSemanticMetricsRepository semanticMetricsRepository,
+                                    FinancialAccountService accountService) {
         this.authenticationFacade = authenticationFacade;
         this.semanticMetricsRepository = semanticMetricsRepository;
+        this.accountService = accountService;
     }
 
     public Map<String, Object> trends(int fromYear, int toYear) throws Exception {
@@ -44,7 +51,8 @@ public class DebtTrendAnalysisService {
         double netDelta = netTo - netFrom;
         boolean debtPressure = debtPressureDetected(borrowingPct, repaymentPct, repaymentTo - repaymentFrom, netDelta);
 
-        List<Map<String, Object>> debtYearSeries = buildDebtYearSeries(matrixFrom, toYear, asOf);
+        double currentLiabilities = currentLiabilities();
+        List<Map<String, Object>> debtYearSeries = buildDebtYearSeries(matrixFrom, toYear, asOf, currentLiabilities);
         List<Map<String, Object>> repaymentRows = loadTagRows(matrixFrom, toYear, userId, asOf, "outflow");
         List<Map<String, Object>> borrowingRows = loadTagRows(matrixFrom, toYear, userId, asOf, "inflow");
         List<Map<String, Object>> topRepaymentGrowth = enrichTypeMovers(
@@ -72,6 +80,7 @@ public class DebtTrendAnalysisService {
         out.put("compareMode", ytdCompare ? "ytd_aligned" : "full_year");
         out.put("summary", summary);
         out.put("debtYearSeries", debtYearSeries);
+        out.put("debtBalance", buildDebtBalanceBlock(debtYearSeries, currentLiabilities, asOf, matrixFrom));
         out.put("repaymentTypeMatrix", buildTypeYearMatrix(
                 repaymentRows, matrixFrom, toYear, debtYearSeries, "repayment"));
         out.put("borrowingTypeMatrix", buildTypeYearMatrix(
@@ -99,30 +108,116 @@ public class DebtTrendAnalysisService {
         return rows;
     }
 
-    private List<Map<String, Object>> buildDebtYearSeries(int fromYear, int toYear, LocalDate asOf) {
+    private List<Map<String, Object>> buildDebtYearSeries(int fromYear, int toYear, LocalDate asOf,
+                                                           double anchorBalance) {
         Map<Integer, FinanceSemanticMetricsRepository.LiabilityYearFlow> byYear = new LinkedHashMap<>();
         for (FinanceSemanticMetricsRepository.LiabilityYearFlow flow
                 : semanticMetricsRepository.sumLiabilityFlowByYear(userKey(), fromYear, toYear, asOf)) {
             byYear.put(flow.year(), flow);
         }
         List<Map<String, Object>> series = new ArrayList<>();
+        double cumulative = 0;
+        Double priorNet = null;
         for (int y = fromYear; y <= toYear; y++) {
             FinanceSemanticMetricsRepository.LiabilityYearFlow flow = byYear.get(y);
             double borrowing = flow == null ? 0.0 : flow.borrowing();
             double repayment = flow == null ? 0.0 : flow.repayment();
+            double net = borrowing - repayment;
+            cumulative += net;
             boolean partial = AnalyticsDateRange.isPartialConsumptionYear(y, asOf);
             Map<String, Object> pt = new LinkedHashMap<>();
             pt.put("year", y);
             pt.put("borrowing", round(borrowing));
             pt.put("repayment", round(repayment));
-            pt.put("net", round(borrowing - repayment));
+            pt.put("net", round(net));
+            pt.put("cumulativeNet", round(cumulative));
+            pt.put("debtDirection", debtDirection(net));
+            if (priorNet != null) {
+                pt.put("yoyNetDelta", round(net - priorNet));
+            }
             pt.put("partial", partial);
             if (partial) {
                 pt.put("throughDate", asOf.toString());
             }
             series.add(pt);
+            priorNet = net;
         }
+        attachEstimatedBalances(series, anchorBalance);
         return series;
+    }
+
+    private static void attachEstimatedBalances(List<Map<String, Object>> series, double anchorBalance) {
+        if (series.isEmpty()) {
+            return;
+        }
+        double endBalance = Math.max(0, anchorBalance);
+        for (int i = series.size() - 1; i >= 0; i--) {
+            Map<String, Object> pt = series.get(i);
+            double net = ((Number) pt.get("net")).doubleValue();
+            pt.put("estimatedBalance", round(endBalance));
+            endBalance = Math.max(0, endBalance - net);
+        }
+    }
+
+    private Map<String, Object> buildDebtBalanceBlock(List<Map<String, Object>> series,
+                                                      double currentLiabilities,
+                                                      LocalDate asOf,
+                                                      int historyFromYear) {
+        Map<String, Object> block = new LinkedHashMap<>();
+        block.put("currentLiabilities", round(currentLiabilities));
+        block.put("asOfDate", asOf.toString());
+        block.put("historyFromYear", historyFromYear);
+        block.put("source", "bank_card_balances");
+        block.put("note",
+                "Year-end balances are estimated by working back from current credit/loan card balances "
+                        + "using classified borrowing and repayment flows.");
+        if (!series.isEmpty()) {
+            double balanceBeforeFirst = currentLiabilities;
+            for (int i = series.size() - 1; i >= 0; i--) {
+                double net = ((Number) series.get(i).get("net")).doubleValue();
+                balanceBeforeFirst -= net;
+            }
+            double periodStart = Math.max(0, balanceBeforeFirst);
+            double periodChange = currentLiabilities - periodStart;
+            block.put("periodStartBalance", round(periodStart));
+            block.put("periodBalanceChange", round(periodChange));
+            block.put("periodTrend", periodChange > FLAT_THRESHOLD ? "increase"
+                    : periodChange < -FLAT_THRESHOLD ? "decrease" : "flat");
+        }
+        return block;
+    }
+
+    private double currentLiabilities() {
+        double total = 0;
+        for (KeyValue kv : accountService.latestBalances()) {
+            double v = parseAmount(kv.getValue());
+            String name = kv.getKey() == null ? "" : kv.getKey().toLowerCase();
+            if (name.contains("credit") || v < 0) {
+                total += Math.abs(v);
+            }
+        }
+        return total;
+    }
+
+    private static String debtDirection(double net) {
+        if (net > FLAT_THRESHOLD) {
+            return "increase";
+        }
+        if (net < -FLAT_THRESHOLD) {
+            return "decrease";
+        }
+        return "flat";
+    }
+
+    private static double parseAmount(String v) {
+        if (v == null || v.isBlank()) {
+            return 0;
+        }
+        try {
+            return Double.parseDouble(v);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private Map<String, Object> buildTypeYearMatrix(List<Map<String, Object>> tagRows,

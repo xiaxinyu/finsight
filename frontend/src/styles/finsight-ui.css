@@ -4952,6 +4952,117 @@
 }
 
 /* Debt Trends overrides */
+.fs-debt-balance-hero {
+  border: 1px solid #fecdd3 !important;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffffff 55%) !important;
+  margin-bottom: 4px;
+}
+
+.fs-debt-balance-hero__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 40px;
+  align-items: flex-start;
+}
+
+.fs-debt-balance-hero__primary,
+.fs-debt-balance-hero__change {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.fs-debt-balance-hero__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9f1239;
+}
+
+.fs-debt-balance-hero__value {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #881337;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-debt-balance-hero__delta {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-debt-balance-hero__meta {
+  font-size: 12px !important;
+}
+
+.fs-debt-balance-hero__note {
+  display: block;
+  margin-top: 12px;
+  font-size: 11px !important;
+  line-height: 1.45;
+  max-width: 720px;
+}
+
+.fs-debt-chart-caption {
+  display: block;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.fs-debt-charts-row--triple {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 960px) {
+  .fs-debt-charts-row--triple {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.85fr);
+  }
+}
+
+.fs-debt-chart-card--balance {
+  border-color: #fecaca !important;
+}
+
+.fs-debt-year-strip {
+  margin-top: 4px;
+}
+
+.fs-debt-year-strip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.fs-debt-direction-tag {
+  margin: 0 !important;
+  font-size: 10px !important;
+  line-height: 16px !important;
+  padding: 0 6px !important;
+}
+
+.fs-debt-year-strip__balance {
+  font-size: 15px;
+  font-weight: 700;
+  color: #881337;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-debt-year-strip__item--increase {
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+
+.fs-debt-year-strip__item--decrease {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
 .fs-debt-trends .fs-debt-stat--hero {
   background: linear-gradient(180deg, #fff1f2 0%, #ffffff 100%);
 }

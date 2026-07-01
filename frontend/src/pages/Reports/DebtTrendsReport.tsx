@@ -17,11 +17,14 @@ import { formatMoney } from '../../utils/format'
 import { DeltaPercentCell } from '../../components/FsTableCellViews'
 import {
   buildCategoryYearTrendChart,
+  buildDebtBalanceChart,
   buildDebtInsights,
   buildDebtYearChart,
   buildDebtYoYCards,
   buildNetDebtLineChart,
   buildRepaymentMoverChart,
+  debtDirectionLabel,
+  debtDirectionTone,
   debtMatrixTotals,
   downloadCategoryYearMatrixCsv,
   moverKey,
@@ -99,6 +102,8 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
 
   const yearChart = useMemo(() => (yearSeries.length ? buildDebtYearChart(yearSeries) : {}), [yearSeries])
   const netChart = useMemo(() => (yearSeries.length ? buildNetDebtLineChart(yearSeries) : {}), [yearSeries])
+  const balanceChart = useMemo(() => (yearSeries.length ? buildDebtBalanceChart(yearSeries) : {}), [yearSeries])
+  const debtBalance = data?.debtBalance
   const typeTrendChart = useMemo(() => (matrix ? buildCategoryYearTrendChart(matrix, 6) : {}), [matrix])
   const moverChart = useMemo(
     () => (data?.topRepaymentGrowth.length ? buildRepaymentMoverChart(data.topRepaymentGrowth) : {}),
@@ -345,6 +350,43 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
             />
           )}
 
+          <section className="fs-trend-section" aria-label="Outstanding debt">
+            {debtBalance && (
+              <ContentCard className="fs-debt-balance-hero" styles={{ body: { padding: '18px 22px' } }}>
+                <div className="fs-debt-balance-hero__grid">
+                  <div className="fs-debt-balance-hero__primary">
+                    <span className="fs-debt-balance-hero__label">Outstanding debt today</span>
+                    <span className="fs-debt-balance-hero__value">{formatMoney(debtBalance.currentLiabilities)}</span>
+                    <Typography.Text type="secondary" className="fs-debt-balance-hero__meta">
+                      From credit cards &amp; liability accounts · as of {debtBalance.asOfDate ?? 'today'}
+                    </Typography.Text>
+                  </div>
+                  {debtBalance.periodBalanceChange != null && (
+                    <div className="fs-debt-balance-hero__change">
+                      <span className="fs-debt-balance-hero__label">
+                        Since {debtBalance.historyFromYear ?? historyFromYear}
+                      </span>
+                      <span className={`fs-debt-balance-hero__delta${(debtBalance.periodBalanceChange ?? 0) > 0 ? ' fs-delta--up' : (debtBalance.periodBalanceChange ?? 0) < 0 ? ' fs-delta--down' : ''}`}>
+                        {(debtBalance.periodBalanceChange ?? 0) >= 0 ? '+' : ''}
+                        {formatMoney(debtBalance.periodBalanceChange ?? 0)}
+                      </span>
+                      {debtBalance.periodStartBalance != null && (
+                        <Typography.Text type="secondary" className="fs-debt-balance-hero__meta">
+                          Was {formatMoney(debtBalance.periodStartBalance)} at start of period
+                        </Typography.Text>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {debtBalance.note && (
+                  <Typography.Text type="secondary" className="fs-debt-balance-hero__note">
+                    {debtBalance.note}
+                  </Typography.Text>
+                )}
+              </ContentCard>
+            )}
+          </section>
+
           <section className="fs-trend-section" aria-label="Overview">
             <ContentCard className="fs-trend-overview-card fs-debt-overview-card" styles={{ body: { padding: '20px 24px' } }}>
               <div className="fs-trend-overview">
@@ -385,11 +427,22 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
           {yearSeries.length > 0 && (
             <section className="fs-trend-section" aria-label="Yearly debt flows">
               <TrendSectionHead
-                title="Yearly flows"
-                description="Borrowing vs repayments · negative net means debt load increased"
+                title="Debt trajectory"
+                description="Estimated outstanding balance and yearly net flows · negative net = debt reduced"
               />
-              <div className="fs-debt-charts-row">
+              <div className="fs-debt-charts-row fs-debt-charts-row--triple">
+                <ContentCard className="fs-trend-chart-card fs-debt-chart-card--balance" styles={{ body: { padding: '12px 16px 8px' } }}>
+                  <Typography.Text type="secondary" className="fs-debt-chart-caption">Estimated outstanding</Typography.Text>
+                  <FsChart
+                    profile="compareBars"
+                    height={240}
+                    loading={loading}
+                    option={balanceChart}
+                    empty={<EmptyState compact title="No balance estimate" description="Link credit cards with balances." />}
+                  />
+                </ContentCard>
                 <ContentCard className="fs-trend-chart-card" styles={{ body: { padding: '12px 16px 8px' } }}>
+                  <Typography.Text type="secondary" className="fs-debt-chart-caption">Borrowing vs repayments</Typography.Text>
                   <FsChart
                     profile="compareBars"
                     height={240}
@@ -399,6 +452,7 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
                   />
                 </ContentCard>
                 <ContentCard className="fs-trend-chart-card" styles={{ body: { padding: '12px 16px 8px' } }}>
+                  <Typography.Text type="secondary" className="fs-debt-chart-caption">Net flow by year</Typography.Text>
                   <FsChart
                     profile="compareBars"
                     height={240}
@@ -408,13 +462,26 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
                   />
                 </ContentCard>
               </div>
-              <div className="fs-trend-year-strip">
+              <div className="fs-trend-year-strip fs-debt-year-strip">
                 {yearSeries.map((pt) => (
-                  <div key={pt.year} className="fs-trend-year-strip__item fs-debt-year-strip__item">
-                    <span className="fs-trend-year-strip__label">
-                      {yearColumnLabel(pt.year, data.repaymentTypeMatrix?.partialYears)}
+                  <div
+                    key={pt.year}
+                    className={`fs-trend-year-strip__item fs-debt-year-strip__item fs-debt-year-strip__item--${pt.debtDirection ?? 'flat'}`}
+                  >
+                    <div className="fs-debt-year-strip__head">
+                      <span className="fs-trend-year-strip__label">
+                        {yearColumnLabel(pt.year, data.repaymentTypeMatrix?.partialYears)}
+                      </span>
+                      <Tag color={debtDirectionTone(pt.debtDirection)} className="fs-debt-direction-tag">
+                        {debtDirectionLabel(pt.debtDirection)}
+                      </Tag>
+                    </div>
+                    {pt.estimatedBalance != null && (
+                      <span className="fs-debt-year-strip__balance">{formatMoney(pt.estimatedBalance)} est.</span>
+                    )}
+                    <span className={`fs-debt-year-strip__net${pt.net < 0 ? ' fs-delta--down' : pt.net > 0 ? ' fs-delta--up' : ''}`}>
+                      {formatMoney(pt.net)} net
                     </span>
-                    <span className="fs-debt-year-strip__net">{formatMoney(pt.net)} net</span>
                     <span className="fs-debt-year-strip__detail">
                       {formatMoney(pt.borrowing)} in · {formatMoney(pt.repayment)} out
                     </span>

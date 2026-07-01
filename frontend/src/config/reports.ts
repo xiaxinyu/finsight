@@ -86,7 +86,7 @@ export const reportConfigs: Record<string, ReportConfig> = {
   },
   'debt-trends': {
     title: 'Debt Trends',
-    subtitle: 'Year-over-year borrowing, repayments, and net debt flow',
+    subtitle: 'Outstanding balance, yearly change, and borrowing vs repayments',
     type: 'debtTrends',
     compareYear: true,
   },

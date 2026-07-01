@@ -1,6 +1,8 @@
 package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.finance.FinancialAccountService;
+import com.finsight.domain.model.KeyValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,12 +29,17 @@ class DebtTrendAnalysisServiceTest {
     @Mock
     private FinanceSemanticMetricsRepository semanticMetricsRepository;
 
+    @Mock
+    private FinancialAccountService accountService;
+
     private DebtTrendAnalysisService service;
 
     @BeforeEach
     void setUp() {
-        service = new DebtTrendAnalysisService(authenticationFacade, semanticMetricsRepository);
+        service = new DebtTrendAnalysisService(authenticationFacade, semanticMetricsRepository, accountService);
         when(authenticationFacade.getUserName()).thenReturn("user1");
+        when(accountService.latestBalances()).thenReturn(List.of(
+                new KeyValue("Visa credit", "-50000")));
     }
 
     @Test
@@ -72,6 +79,13 @@ class DebtTrendAnalysisServiceTest {
         Map<String, Object> repayment = (Map<String, Object>) summary.get("repayment");
         assertEquals(6000.0, ((Number) repayment.get("deltaAmount")).doubleValue());
         assertNotNull(out.get("debtYearSeries"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> balance = (Map<String, Object>) out.get("debtBalance");
+        assertEquals(50000.0, ((Number) balance.get("currentLiabilities")).doubleValue());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> series = (List<Map<String, Object>>) out.get("debtYearSeries");
+        assertEquals("decrease", series.get(1).get("debtDirection"));
+        assertEquals(50000.0, ((Number) series.get(1).get("estimatedBalance")).doubleValue());
         @SuppressWarnings("unchecked")
         Map<String, Object> matrix = (Map<String, Object>) out.get("repaymentTypeMatrix");
         @SuppressWarnings("unchecked")
