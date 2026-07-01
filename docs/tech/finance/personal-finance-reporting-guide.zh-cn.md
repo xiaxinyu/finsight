@@ -72,9 +72,10 @@ Canonical view：`v_transaction_finance_semantics`（Flyway V32+，V49 tag-drive
 
 1. Dashboard Net ≈ 同 period Cashflow  
 2. Budget vs Actual Spent 为 consumption scope  
-3. Transfer & Finance ∉ Consumption  
+3. Transfers & Investments ∉ Consumption  
 4. Profile Refresh 更新 `asOf`  
-5. Metric gate mismatch 显示 warning，GET 不 silent 重算
+5. Metric gate mismatch 显示 warning，GET 不 silent 重算  
+6. v2.0.3+：Consumption / Income / Debt Trends 矩阵有金额时下钻应有交易
 
 ---
 
@@ -92,3 +93,29 @@ Canonical view：`v_transaction_finance_semantics`（Flyway V32+，V49 tag-drive
 1. Inclusion 变更 → 同步 contract、Flyway view、测试  
 2. 禁止默认将 refund/赎回/借款计入 income trend  
 3. 禁止默认将 还款/转账/投资买入计入 expense trend
+
+---
+
+## 9. 年度趋势 API（v2.0.3）
+
+| 报表 | 路径 | Service |
+| :--- | :--- | :--- |
+| Consumption Trends | `GET /api/v1/analytics/trends` | `TrendAnalysisService` |
+| Income Trends | `GET /api/v1/analytics/income-trends` | `IncomeTrendAnalysisService` |
+| Debt Trends | `GET /api/v1/analytics/debt-trends` | `DebtTrendAnalysisService` |
+
+**Query：** `fromYear`、`toYear`、可选 `historyFromYear`（矩阵起始年）。
+
+**Inclusion：**
+
+| 报表 | SQL inclusion |
+| :--- | :--- |
+| Income Trends | `include_in_income_trend = 1` |
+| Consumption Trends | `include_in_expense_trend = 1` |
+| Debt Trends | 负债语义标签（借贷流入 / 还款流出） |
+
+**Drill（v2.0.3）：** 存在 `semanticFilter` 时**不要**同时传 `consumeName`（展示标签）。前端：`buildDrillContext.ts`、`UnifiedDrillDrawer.tsx`。
+
+**导航：** `frontend/src/config/reportNavigation.ts` — 菜单分组与面包屑。
+
+发布说明：[v2.0.3-release-notes.zh-cn.md](../ops/v2.0.3-release-notes.zh-cn.md)

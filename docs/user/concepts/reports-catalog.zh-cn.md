@@ -4,7 +4,8 @@
 | :--- | :--- |
 | **Language** | 简体中文 · [English](reports-catalog.md) |
 
-> 口径：[data-semantics.zh-cn.md](data-semantics.zh-cn.md) · 路径：`/app/reports/*` · KPI **?** 说明 scope
+> 口径：[data-semantics.zh-cn.md](data-semantics.zh-cn.md) · 路径：`/app/reports/*` · KPI **?** 说明 scope  
+> **v2.0.3：** 年度趋势三件套 + 六组导航 — [version-highlights.zh-cn.md](version-highlights.zh-cn.md)
 
 每张报表对应**一个决策问题**。date range 一致时，total 与 Dashboard 使用同一 semantic layer。
 

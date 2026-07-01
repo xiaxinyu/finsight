@@ -32,7 +32,7 @@ FinSight **Consumption** ≠ 银行「总支出」。见 [数据语义](../conce
 | :--- | :--- | :--- |
 | 生活消费 | Dashboard Consumption / Cashflow | Expense trend |
 | 银行全部流出 | 银行 App | 含转账、贷款、税 |
-| 转账/投资 | Transfer & Finance | `non_pnl` |
+| 转账/投资 | Transfers & Investments | `non_pnl` |
 | 税务 | Tax Summary | `tax` |
 
 ---
@@ -52,7 +52,7 @@ FinSight **Consumption** ≠ 银行「总支出」。见 [数据语义](../conce
 | :--- | :--- |
 | unclassified 多 | [classify-unclassified-transactions.zh-cn.md](classify-unclassified-transactions.zh-cn.md) |
 | Reconciliation mismatch | 先补分类；等待 metric repair |
-| 图表有数、drill 为 0 | 硬刷新；确认 v2.0.2+ semantic drill 已部署 |
+| 图表有数、drill 为 0 | 硬刷新；v2.0.3+ 确认趋势矩阵 semantic drill 已部署；见 [drill-down-from-reports.zh-cn.md](drill-down-from-reports.zh-cn.md) |
 
 ---
 
@@ -65,7 +65,7 @@ FinSight **Consumption** ≠ 银行「总支出」。见 [数据语义](../conce
 | Dashboard Net | ≈ Real income − Consumption |
 | Dashboard vs Cashflow | Real income、Consumption 一致 |
 | Consumption vs Budget Spent | 同为 consumption scope |
-| Transfer & Finance | 不计入 Consumption |
+| Transfer & Investments | 不计入 Consumption |
 
 ---
 

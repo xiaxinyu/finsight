@@ -36,7 +36,7 @@
 | :--- | :--- | :--- |
 | Real income | Earned money in the Period | Check [data-semantics.md](data-semantics.md); exclude refunds |
 | Consumption | Living spend in the Period | Open donut; compare with Budget vs Actual |
-| Net | Surplus (+) or gap (−) | If negative, open Spending Drift or Budget vs Actual |
+| Net | Surplus (+) or gap (−) | If negative, open Period Comparison or Budget vs Actual |
 
 **Drill-down:** Clicking a donut slice (e.g. Social) filters by **semantic tag**, not the old category tree only.
 
@@ -83,8 +83,8 @@
 | How often | Dashboard | Profile | Reports |
 | :--- | :--- | :--- | :--- |
 | Daily (5 min) | Net + top 3 donut slices | — | — |
-| Monthly (15 min) | Confirm Period | — | Cashflow · Budget vs Actual · Spending Drift |
-| Quarterly (30 min) | — | Refresh; review 3 weakest dimensions | Trend Changes · Annual Outlook · Cash Risk |
+| Monthly (15 min) | Confirm Period | — | Cashflow · Budget vs Actual · Period Comparison |
+| Quarterly (30 min) | — | Refresh; review 3 weakest dimensions | Income / Consumption / Debt Trends · Annual Outlook · Cash Risk |
 
 ---
 

@@ -10,7 +10,22 @@
 
 ---
 
-## v2.0.2 — 专业财务语义（当前主线）
+## v2.0.3 — 年度趋势与报表导航（当前主线）
+
+**主题：** 收入 / 消费 / 负债 YoY 分析闭环 + Reports 信息架构。
+
+| 域 | 变更摘要 |
+| :--- | :--- |
+| **YoY 报表** | Income Trends · Consumption Trends（改版）· Debt Trends |
+| **API** | `/analytics/income-trends` · `/analytics/debt-trends` · 增强 `/analytics/trends` |
+| **导航** | 6 组：Monthly overview · YoY trends · Spending analysis · Capital & taxes · Forecast & risk · Merchants |
+| **命名** | Period Comparison · Transfers & Investments · Top Merchants / Merchant Changes |
+| **Drill** | 修复趋势矩阵 semantic 下钻 0 行；面包屑与菜单一致 |
+| **文档** | [reports-catalog.zh-cn.md](reports-catalog.zh-cn.md) · [v2.0.3 发布说明](../../tech/ops/v2.0.3-release-notes.zh-cn.md) |
+
+---
+
+## v2.0.2 — 专业财务语义
 
 **主题：** Dashboard、Profile、Reports 共用同一 semantic layer。
 

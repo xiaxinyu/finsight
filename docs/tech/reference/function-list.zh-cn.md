@@ -23,15 +23,24 @@
 *   **Profile 物化**：10 维度 · weighted score · confidence · user type · Refresh
 *   **Metric hints**：KPI 旁 ? 口径说明
 
-### 6.3 报表（决策导向）
+### 6.3 报表（决策导向 · v2.0.3 导航）
 
-*   **Cashflow & budget**：Cashflow · Budget vs Actual · Fund Flow · Transfer & Finance · Tax Summary
-*   **Spending**：Fixed vs Variable · Spending Drift · Trend Changes
-*   **Cash & outlook**：Bills Calendar · Annual Outlook · Cash Risk
-*   **Merchants**：Subscriptions · Concentration · Drift
-*   **共用**：Unified Drill Drawer · Reports Data quality bar · semantic drill
+*   **Monthly overview**：Cashflow · Budget vs Actual · Bills Calendar
+*   **Year-over-year trends**：Income Trends · Consumption Trends · Debt Trends
+*   **Spending analysis**：Fixed vs Variable · Period Comparison（原 Spending Drift）
+*   **Capital & taxes**：Fund Flow · Transfers & Investments · Tax Summary
+*   **Forecast & risk**：Annual Outlook · Cash Risk
+*   **Merchants**：Subscriptions · Top Merchants · Merchant Changes
+*   **共用**：Unified Drill Drawer · Reports Data quality bar · semantic drill · metric hints
 
-### 6.4 质量与 CI（v2.0.0–v2.0.1）
+### 6.4 年度趋势分析（v2.0.3）
+
+*   **Income Trends**：`IncomeTrendAnalysisService` · `GET /api/v1/analytics/income-trends`
+*   **Consumption Trends**：`TrendAnalysisService` · `GET /api/v1/analytics/trends` · 矩阵 CSV / L1 切换
+*   **Debt Trends**：`DebtTrendAnalysisService` · `GET /api/v1/analytics/debt-trends` · 借贷/还款/净流
+*   **导航配置**：`frontend/src/config/reportNavigation.ts`（菜单分组与面包屑单一数据源）
+
+### 6.5 质量与 CI（v2.0.0–v2.0.1）
 
 *   Metric gate / reconciliation · read-path 稳定 · 可索引 date range SQL
 *   Forecast hybrid_projection · Profile GET read-only
@@ -114,6 +123,7 @@ FinSight 的技术基石。
 
 ## 5. 版本历史 (Release History)
 
+*   **v2.0.3** (2026-06): Income / Consumption / Debt 年度趋势三件套；Consumption Trends 页面改版；Reports 导航六组重构；Period Comparison 等命名统一；趋势 semantic drill 修复。详见 [version-highlights.zh-cn.md](../../user/concepts/version-highlights.zh-cn.md) · [v2.0.3-release-notes.zh-cn.md](../ops/v2.0.3-release-notes.zh-cn.md)。
 *   **v2.0.2** (2026-06): 专业财务语义层；Dashboard/Profile/报表口径统一；Profile 物化；Transfer & Finance · Tax Summary 报表；Reporting Classification drill；metric hints。详见 [version-highlights.zh-cn.md](../../user/concepts/version-highlights.zh-cn.md)。
 *   **v2.0.1** (2026-06): 质量优化；Forecast hybrid；可索引 date range；Profile read-path。
 *   **v2.0.0** (2026-06): Metric gate；read-path 稳定；L2 分类 seed。

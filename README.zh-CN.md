@@ -17,6 +17,8 @@ FinSight 导入银行/卡流水，对每笔交易做**分类与语义标注**，
 
 自 **v2.0.2** 起，核心指标统一走 **finance semantic layer（财务语义层）**。在同一 date range 下，Dashboard 的 Real income 与 Cashflow 报表应一致。
 
+**v2.0.3** 新增 **Income / Consumption / Debt** 三条年度趋势报表，并重构 Reports 导航 — 详见 [版本要点](docs/user/concepts/version-highlights.zh-cn.md)。
+
 **适用对象：** 需要专业级个人财务视图、且要求**数据自主托管**的个人或小团队。
 
 ---
@@ -42,7 +44,7 @@ FinSight 导入银行/卡流水，对每笔交易做**分类与语义标注**，
 | **导入与归类** | 流水导入、规则引擎、category、semantic tag |
 | **Dashboard** | Real income · Consumption · Net · 支出结构 · drill-down |
 | **Profile** | 10 维度评分、user type、evidence |
-| **Reports** | 现金流、预算、drift、forecast、merchant、tax、transfer |
+| **Reports** | 月度概览、YoY 趋势（收入/消费/负债）、预算、Period Comparison、forecast、merchant、tax、transfer |
 | **隐私与部署** | Self-hosted；secrets 经 environment variables 注入 |
 
 ---

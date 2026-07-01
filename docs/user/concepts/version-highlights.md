@@ -10,7 +10,22 @@ User-visible changes by release. Use this page to match the UI with documentatio
 
 ---
 
-## v2.0.2 — Professional finance semantics *(current)*
+## v2.0.3 — Year-over-year trends & navigation *(current)*
+
+**Theme:** Income / consumption / debt YoY analytics and a clearer Reports sidebar.
+
+| Area | What changed |
+| :--- | :--- |
+| **YoY reports** | Income Trends · Consumption Trends (redesign) · Debt Trends |
+| **API** | `/analytics/income-trends` · `/analytics/debt-trends` · enhanced `/analytics/trends` |
+| **Navigation** | Six groups: Monthly overview · YoY trends · Spending analysis · Capital & taxes · Forecast & risk · Merchants |
+| **Names** | Period Comparison · Transfers & Investments · Top Merchants / Merchant Changes |
+| **Drill-down** | Fixed semantic matrix drill returning zero rows; breadcrumbs match menu |
+| **Docs** | [reports-catalog.md](reports-catalog.md) · [v2.0.3 release notes](../../tech/ops/v2.0.3-release-notes.md) |
+
+---
+
+## v2.0.2 — Professional finance semantics
 
 **Theme:** One semantic layer for Dashboard, Profile, and all reports.
 

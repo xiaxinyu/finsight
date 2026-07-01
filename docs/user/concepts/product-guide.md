@@ -6,7 +6,7 @@
 
 FinSight is a **self-hosted personal finance application**. You import bank data, classify transactions with rules, and review Dashboard, Profile, and Reports on your own server.
 
-**Read these first (v2.0.2+):**
+**Read these first (v2.0.2 semantics · v2.0.3 YoY trends):**
 
 | Step | Document |
 | :---: | :--- |

@@ -32,7 +32,7 @@ FinSight **Consumption** is **not** the same as bank “total spend”. See [dat
 | :--- | :--- | :--- |
 | Living spend | Dashboard **Consumption** or Cashflow | Expense trend |
 | All bank outflows | Bank app only | Includes transfers, loans, tax |
-| Transfers / investments | **Transfer & Finance** | `non_pnl` |
+| Transfers / investments | **Transfers & Investments** | `non_pnl` |
 | Tax | **Tax Summary** | `tax` |
 
 ---
@@ -52,7 +52,7 @@ FinSight **Consumption** is **not** the same as bank “total spend”. See [dat
 | :--- | :--- |
 | High unclassified count | [classify-unclassified-transactions.md](classify-unclassified-transactions.md) |
 | Profile **Reconciliation mismatch** | Wait for metric repair or re-import; classify first |
-| Drill shows 0 rows but chart has slice | Hard refresh; confirm v2.0.2+ semantic drill fix deployed |
+| Drill shows 0 rows but chart has slice | Hard refresh; v2.0.3+ trend matrix semantic drill; see [drill-down-from-reports.md](drill-down-from-reports.md) |
 
 ---
 
@@ -65,7 +65,7 @@ When fixed, these should hold (same Period, same user):
 | Dashboard Net | ≈ Real income − Consumption on Dashboard |
 | Dashboard vs Cashflow | Same Real income and Consumption totals |
 | Consumption vs Budget vs Actual **Spent** | Same consumption scope |
-| Transfer & Finance | Not included in Consumption |
+| Transfer & Investments | Not included in Consumption |
 
 ---
 

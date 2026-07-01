@@ -12,17 +12,19 @@ Open the **Unified Drill Drawer** from a chart or table row to see merchants and
 
 - Transactions imported and classified.
 - Dashboard **Period** matches the report you review.
-- FinSight v2.0.2+ (semantic drill).
+- FinSight v2.0.2+ (semantic drill); v2.0.3 fixes year-over-year trend matrix drill.
 
 ---
 
 ## Steps
 
-1. Open a report, e.g. **Fixed vs Variable** or **Spending Drift** (`/app/reports/*`).
+1. Open a report, for example:
+   - **Fixed vs Variable** or **Period Comparison** (any two periods)
+   - **Consumption / Income / Debt Trends** (year-over-year matrix)
 
-2. Set **Period** (and optional Card / Category filters).
+2. Set **Period** or **compare years** (trend reports); optional Card / Category filters.
 
-3. Click a **chart slice** or **table row** (e.g. Dining, Housing).
+3. Click a **chart slice**, **bar**, or **matrix row** (e.g. Dining, Transport).
 
 4. In the drill drawer:
    - **Insight** — totals for the slice.
@@ -42,7 +44,8 @@ Open the **Unified Drill Drawer** from a chart or table row to see merchants and
 | Drawer title | Shows report context + semantic label (e.g. Dining) |
 | Transaction count | Greater than zero when the slice has amount |
 | Amount total | Matches the slice (same Period and filters) |
-| Semantic drill | Uses **Reporting Classification**, not legacy expense-only filter |
+| Semantic drill | Uses **Reporting Classification** (`semanticFilter`), not legacy expense-only filter |
+| Trend matrix | v2.0.3+ no longer returns zero rows from `consumeName` + semantic conflict |
 
 ---
 
@@ -50,7 +53,8 @@ Open the **Unified Drill Drawer** from a chart or table row to see merchants and
 
 - **Other** rollup slices may not be drillable (virtual bucket).
 - Drill inherits report **Card** / **Category** filters when set.
-- Spending Drift: click the bar for the period you want (current vs compare).
+- **Period Comparison**: click the bar for the period you want (current vs compare).
+- **Consumption / Income Trends**: matrix rows drill by semantic tag; calendar-year dates as `YYYY-MM-DD`.
 
 ---
 

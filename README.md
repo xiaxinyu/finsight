@@ -17,6 +17,8 @@ FinSight imports bank and card statements, **classifies each transaction**, and 
 
 From **v2.0.2**, all main numbers use the same **finance semantic layer**. That means Real income on the Dashboard matches the Cashflow report when you use the same date range.
 
+**v2.0.3** adds **Income / Consumption / Debt** year-over-year trend reports and a reorganized Reports sidebar — see [version highlights](docs/user/concepts/version-highlights.md).
+
 **Who is it for?** Individuals and small teams who want professional-grade personal finance views on **their own server**.
 
 ---
@@ -42,7 +44,7 @@ Full definitions: [Data semantics](docs/user/concepts/data-semantics.md)
 | **Import & classify** | Statement import, rules, categories, semantic tags |
 | **Dashboard** | Real income · Consumption · Net · expense breakdown · drill-down |
 | **Profile** | 10-dimension score, user type, evidence per dimension |
-| **Reports** | Cashflow, budget, spending drift, forecast, merchants, tax, transfers |
+| **Reports** | Monthly overview, YoY trends (income / consumption / debt), budget, period comparison, forecast, merchants, tax, transfers |
 | **Privacy** | Self-hosted; configure secrets with environment variables |
 
 ---

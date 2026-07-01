@@ -36,7 +36,7 @@
 | :--- | :--- | :--- |
 | Real income | 区间内真实收入 | 查 [data-semantics.zh-cn.md](data-semantics.zh-cn.md) |
 | Consumption | 区间内生活消费 | 看饼图 + Budget vs Actual |
-| Net | 盈余（+）或缺口（−） | 负值 → Spending Drift |
+| Net | 盈余（+）或缺口（−） | 负值 → Period Comparison 或 Budget vs Actual |
 
 **Drill-down：** 饼图按 **semantic tag** 过滤，不仅依赖 legacy category tree。
 
@@ -83,8 +83,8 @@
 | 频率 | Dashboard | Profile | Reports |
 | :--- | :--- | :--- | :--- |
 | 每日（5 min） | Net + 饼图 top3 | — | — |
-| 每月（15 min） | 确认 Period | — | Cashflow · Budget vs Actual · Spending Drift |
-| 每季（30 min） | — | Refresh + weakest 3 | Trend Changes · Outlook · Cash Risk |
+| 每月（15 min） | 确认 Period | — | Cashflow · Budget vs Actual · Period Comparison |
+| 每季（30 min） | — | Refresh + weakest 3 | Income / Consumption / Debt Trends · Annual Outlook · Cash Risk |
 
 ---
 

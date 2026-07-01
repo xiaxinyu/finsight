@@ -4,7 +4,8 @@
 | :--- | :--- |
 | **Language** | English · [简体中文](reports-catalog.zh-cn.md) |
 
-> KPI rules: [data-semantics.md](data-semantics.md) · UI path: `/app/reports/*` · Hover **?** on KPIs for scope text
+> KPI rules: [data-semantics.md](data-semantics.md) · UI path: `/app/reports/*` · Hover **?** on KPIs for scope text  
+> **v2.0.3:** YoY trend trio + six-group navigation — [version-highlights.md](version-highlights.md)
 
 Each report answers **one decision question**. Totals use the same semantic layer as the Dashboard when the date range matches.
 

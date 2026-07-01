@@ -23,15 +23,24 @@ Feature inventory aligned to the codebase. Product tiers: [product-guide.md](../
 *   Materialized Profile: 10 dimensions · confidence · user type · Refresh
 *   Metric hints on KPIs
 
-### 6.3 Decision-oriented reports
+### 6.3 Decision-oriented reports (v2.0.3 navigation)
 
-*   Cashflow & budget: Cashflow · Budget vs Actual · Fund Flow · Transfer & Finance · Tax Summary
-*   Spending: Fixed vs Variable · Spending Drift · Trend Changes
-*   Cash & outlook: Bills Calendar · Annual Outlook · Cash Risk
-*   Merchants: Subscriptions · Concentration · Drift
-*   Shared: Unified Drill Drawer · Reports data quality bar · semantic drill
+*   **Monthly overview**: Cashflow · Budget vs Actual · Bills Calendar
+*   **Year-over-year trends**: Income Trends · Consumption Trends · Debt Trends
+*   **Spending analysis**: Fixed vs Variable · Period Comparison (formerly Spending Drift)
+*   **Capital & taxes**: Fund Flow · Transfers & Investments · Tax Summary
+*   **Forecast & risk**: Annual Outlook · Cash Risk
+*   **Merchants**: Subscriptions · Top Merchants · Merchant Changes
+*   **Shared**: Unified Drill Drawer · Reports data quality bar · semantic drill · metric hints
 
-### 6.4 Quality & CI (v2.0.0–v2.0.1)
+### 6.4 Year-over-year analytics (v2.0.3)
+
+*   **Income Trends**: `IncomeTrendAnalysisService` · `GET /api/v1/analytics/income-trends`
+*   **Consumption Trends**: `TrendAnalysisService` · `GET /api/v1/analytics/trends` · matrix CSV / L1 toggle
+*   **Debt Trends**: `DebtTrendAnalysisService` · `GET /api/v1/analytics/debt-trends` · borrowing / repayment / net flow
+*   **Nav config**: `frontend/src/config/reportNavigation.ts` (single source for menu groups and breadcrumbs)
+
+### 6.5 Quality & CI (v2.0.0–v2.0.1)
 
 *   Metric gate / reconciliation · read-path stability · index-friendly date-range SQL
 *   Forecast hybrid_projection · Profile GET read-only
@@ -113,6 +122,7 @@ The technical foundation of FinSight.
 
 ## 5. Release History (版本历史)
 
+*   **v2.0.3** (2026-06): Income / Consumption / Debt YoY trend trio; Consumption Trends redesign; six-group Reports navigation; Period Comparison and related renames; trend semantic drill fix. See [version-highlights.md](../../user/concepts/version-highlights.md) · [v2.0.3-release-notes.md](../ops/v2.0.3-release-notes.md).
 *   **v2.0.2** (2026-06): Professional finance semantic layer; unified Dashboard/Profile/report scopes; Profile materialization; Transfer & Finance · Tax Summary; semantic drill; metric hints. See [version-highlights.md](../../user/concepts/version-highlights.md).
 *   **v2.0.1** (2026-06): Quality optimization; Forecast hybrid; index-friendly date range; Profile read-path.
 *   **v2.0.0** (2026-06): Metric gate; read-path stability; L2 category seed.
