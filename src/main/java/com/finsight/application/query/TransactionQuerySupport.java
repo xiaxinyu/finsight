@@ -1,5 +1,6 @@
 package com.finsight.application.query;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.domain.model.ConsumeCategory;
 import com.finsight.domain.port.CategoryRepository;
 import org.apache.commons.lang3.StringUtils;
@@ -16,15 +17,19 @@ import java.util.Set;
 public class TransactionQuerySupport {
 
     private final CategoryRepository categoryRepository;
+    private final LedgerUserScope ledgerUserScope;
 
-    public TransactionQuerySupport(CategoryRepository categoryRepository) {
+    public TransactionQuerySupport(CategoryRepository categoryRepository,
+                                   LedgerUserScope ledgerUserScope) {
         this.categoryRepository = categoryRepository;
+        this.ledgerUserScope = ledgerUserScope;
     }
 
     public void enrich(TransactionQuery query) {
         if (query == null) {
             return;
         }
+        query.setOwnerUserId(ledgerUserScope.resolve());
         expandCategoryFilter(query);
     }
 

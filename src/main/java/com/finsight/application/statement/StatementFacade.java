@@ -2,6 +2,8 @@ package com.finsight.application.statement;
 
 import com.alibaba.fastjson.JSON;
 import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.authentication.LedgerUserScope;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.common.security.SensitiveDataMasker;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.domain.model.Statement;
@@ -52,11 +54,15 @@ public class StatementFacade {
     @Autowired
     private StatementSkippedLinesService statementSkippedLinesService;
 
+    @Autowired
+    private LedgerUserScope ledgerUserScope;
+
     public CollectionResult<Statement> list(int page, int rows) {
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<Statement> p =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, rows);
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Statement> query =
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        query.eq(Statement::getCreatedBy, ledgerUserScope.resolve());
         query.orderByDesc(Statement::getCreatedAt);
         statementService.page(p, query);
 
@@ -219,7 +225,7 @@ public class StatementFacade {
             return empty;
         }
         try {
-            Statement statement = statementService.getById(statementId);
+            Statement statement = requireOwnedStatement(statementId);
             if (statement == null) {
                 return empty;
             }
@@ -239,7 +245,7 @@ public class StatementFacade {
             return new ArrayList<>();
         }
         try {
-            Statement statement = statementService.getById(statementId);
+            Statement statement = requireOwnedStatement(statementId);
             if (statement == null) {
                 return new ArrayList<>();
             }
@@ -258,6 +264,7 @@ public class StatementFacade {
             return new ArrayList<>();
         }
         try {
+            requireOwnedStatement(statementId);
             List<TransactionTemp> list = transactionTempRepository.findByStatementId(statementId);
             if (list != null && !list.isEmpty()) {
                 java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
@@ -294,6 +301,7 @@ public class StatementFacade {
             return CommonResult.fail("Invalid Statement ID");
         }
         try {
+            requireOwnedStatement(statementId);
             List<TransactionTemp> temps = transactionTempRepository.findByStatementId(statementId);
             if (temps == null || temps.isEmpty()) {
                 return CommonResult.fail("No transactions found to commit");
@@ -353,6 +361,7 @@ public class StatementFacade {
     }
 
     public List<List<String>> exportData(String statementId) {
+        requireOwnedStatement(statementId);
         List<TransactionTemp> list = transactionTempRepository.findByStatementId(statementId);
         List<List<String>> data = new ArrayList<>();
         data.add(java.util.Arrays.asList("Card Name", "Posting Date", "Narration", "Currency", "Amount", "Category", "Remarks"));
@@ -372,6 +381,18 @@ public class StatementFacade {
             }
         }
         return data;
+    }
+
+    private Statement requireOwnedStatement(String statementId) throws AppServiceException {
+        if (StringUtils.isBlank(statementId)) {
+            return null;
+        }
+        Statement statement = statementService.getById(statementId);
+        if (statement == null) {
+            return null;
+        }
+        ledgerUserScope.assertOwned(statement.getCreatedBy());
+        return statement;
     }
 
     private String friendlyError(Exception e) {

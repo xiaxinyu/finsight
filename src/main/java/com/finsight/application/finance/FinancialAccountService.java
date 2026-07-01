@@ -1,9 +1,9 @@
 package com.finsight.application.finance;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.card.BankCardService;
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.KeyValue;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -17,15 +17,21 @@ import java.util.Map;
 public class FinancialAccountService {
 
     private final BankCardService bankCardService;
-    private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
+    private final LedgerUserScope ledgerUserScope;
 
-    public FinancialAccountService(BankCardService bankCardService, FinancialMapper financialMapper) {
+    public FinancialAccountService(BankCardService bankCardService,
+                                   UserScopedFinancialQueries scopedFinancialQueries,
+                                   LedgerUserScope ledgerUserScope) {
         this.bankCardService = bankCardService;
-        this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
+        this.ledgerUserScope = ledgerUserScope;
     }
 
     public List<Map<String, Object>> listAccounts() {
-        List<BankCard> cards = bankCardService.listAllEnabled();
+        List<BankCard> cards = bankCardService.listAllEnabled().stream()
+                .filter(c -> ledgerUserScope.owns(c.getCreatedBy()))
+                .toList();
         List<Map<String, Object>> out = new ArrayList<>();
         for (BankCard card : cards) {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -41,7 +47,7 @@ public class FinancialAccountService {
     }
 
     public List<KeyValue> latestBalances() {
-        return financialMapper.latestBalancesFromBankCards();
+        return scopedFinancialQueries.latestBalancesFromBankCards();
     }
 
     public Map<String, Object> recordSnapshot(String bankCardId, Date date, BigDecimal balance, String source) {

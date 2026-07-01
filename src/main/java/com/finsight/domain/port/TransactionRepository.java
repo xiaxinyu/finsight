@@ -36,19 +36,19 @@ public interface TransactionRepository {
 
     List<KeyValue> monthExpenseReport(TransactionQuery query);
 
-    List<KeyValue> homeSummaryExpenseBuckets(Integer year);
+    List<KeyValue> homeSummaryExpenseBuckets(Integer year, String ownerUserId);
 
-    List<KeyValue> homeSummaryExpenseBucketsPrev(Integer year);
+    List<KeyValue> homeSummaryExpenseBucketsPrev(Integer year, String ownerUserId);
 
-    List<KeyValue> homeSummaryExpenseBucketsForRange(java.util.Date start, java.util.Date end);
+    List<KeyValue> homeSummaryExpenseBucketsForRange(java.util.Date start, java.util.Date end, String ownerUserId);
 
-    Double sumIncomeForRange(java.util.Date start, java.util.Date end);
+    Double sumIncomeForRange(java.util.Date start, java.util.Date end, String ownerUserId);
 
-    Double sumIncomeByYear(Integer year);
+    Double sumIncomeByYear(Integer year, String ownerUserId);
 
-    Double sumDebtPaymentsByYear(Integer year);
+    Double sumDebtPaymentsByYear(Integer year, String ownerUserId);
 
-    Integer countRefundsByYear(Integer year);
+    Integer countRefundsByYear(Integer year, String ownerUserId);
 
     List<String> listIdsNeedingAmountNormalization();
 }

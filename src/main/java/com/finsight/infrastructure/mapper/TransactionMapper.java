@@ -24,15 +24,17 @@ public interface TransactionMapper extends BaseMapper<Transaction> {
     List<KeyValue> monthConsumeReport(@Param("q") TransactionQuery query);
     List<KeyValue> monthIncomeReport(@Param("q") TransactionQuery query);
     List<KeyValue> monthExpenseReport(@Param("q") TransactionQuery query);
-    List<KeyValue> homeSummaryExpenseBuckets(@Param("year") Integer year);
-    Double sumIncomeByYear(@Param("year") Integer year);
-    Double sumDebtPaymentsByYear(@Param("year") Integer year);
-    Integer countRefundsByYear(@Param("year") Integer year);
-    List<KeyValue> homeSummaryExpenseBucketsPrev(@Param("year") Integer year);
+    List<KeyValue> homeSummaryExpenseBuckets(@Param("year") Integer year, @Param("ownerUserId") String ownerUserId);
+    Double sumIncomeByYear(@Param("year") Integer year, @Param("ownerUserId") String ownerUserId);
+    Double sumDebtPaymentsByYear(@Param("year") Integer year, @Param("ownerUserId") String ownerUserId);
+    Integer countRefundsByYear(@Param("year") Integer year, @Param("ownerUserId") String ownerUserId);
+    List<KeyValue> homeSummaryExpenseBucketsPrev(@Param("year") Integer year, @Param("ownerUserId") String ownerUserId);
 
-    List<KeyValue> homeSummaryExpenseBucketsForRange(@Param("start") Date start, @Param("end") Date end);
+    List<KeyValue> homeSummaryExpenseBucketsForRange(@Param("start") Date start, @Param("end") Date end,
+                                                     @Param("ownerUserId") String ownerUserId);
 
-    Double sumIncomeForRange(@Param("start") Date start, @Param("end") Date end);
+    Double sumIncomeForRange(@Param("start") Date start, @Param("end") Date end,
+                             @Param("ownerUserId") String ownerUserId);
 
     List<String> listIdsNeedingAmountNormalization();
 

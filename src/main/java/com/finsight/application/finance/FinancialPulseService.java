@@ -1,7 +1,6 @@
 package com.finsight.application.finance;
 
 import com.finsight.domain.model.KeyValue;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
@@ -14,14 +13,14 @@ import java.util.Map;
 public class FinancialPulseService {
 
     private final FinancialAccountService accountService;
-    private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
     private final DataQualityService dataQualityService;
 
     public FinancialPulseService(FinancialAccountService accountService,
-                                 FinancialMapper financialMapper,
+                                 UserScopedFinancialQueries scopedFinancialQueries,
                                  DataQualityService dataQualityService) {
         this.accountService = accountService;
-        this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
         this.dataQualityService = dataQualityService;
     }
 
@@ -31,13 +30,13 @@ public class FinancialPulseService {
         cal.set(Calendar.DAY_OF_MONTH, 1);
         Date monthStart = cal.getTime();
 
-        double incomeMtd = safe(financialMapper.sumIncomeSince(monthStart));
-        double expenseMtd = safe(financialMapper.sumExpenseSince(monthStart));
-        double fixedYear = safe(financialMapper.sumFixedBucketYear(year));
+        double incomeMtd = safe(scopedFinancialQueries.sumIncomeSince(monthStart));
+        double expenseMtd = safe(scopedFinancialQueries.sumExpenseSince(monthStart));
+        double fixedYear = safe(scopedFinancialQueries.sumFixedBucketYear(year));
         Calendar ytd = Calendar.getInstance();
         ytd.set(Calendar.MONTH, 0);
         ytd.set(Calendar.DAY_OF_MONTH, 1);
-        double incomeYtd = safe(financialMapper.sumIncomeSince(ytd.getTime()));
+        double incomeYtd = safe(scopedFinancialQueries.sumIncomeSince(ytd.getTime()));
 
         List<KeyValue> accounts = accountService.latestBalances();
         double liquidAssets = accounts.stream()

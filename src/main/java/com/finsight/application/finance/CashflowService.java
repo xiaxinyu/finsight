@@ -1,7 +1,6 @@
 package com.finsight.application.finance;
 
 import com.finsight.domain.model.Bill;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
@@ -13,14 +12,14 @@ import java.util.Map;
 @Service
 public class CashflowService {
 
-    private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
     private final FinancialAccountService accountService;
     private final BillService billService;
 
-    public CashflowService(FinancialMapper financialMapper,
+    public CashflowService(UserScopedFinancialQueries scopedFinancialQueries,
                            FinancialAccountService accountService,
                            BillService billService) {
-        this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
         this.accountService = accountService;
         this.billService = billService;
     }
@@ -30,7 +29,7 @@ public class CashflowService {
         cal.add(Calendar.DAY_OF_MONTH, -30);
         Date since30 = cal.getTime();
 
-        double expense30 = safe(financialMapper.sumExpenseSince(since30));
+        double expense30 = safe(scopedFinancialQueries.sumExpenseSince(since30));
         double burnRate = expense30 / 30.0;
 
         double liquid = accountService.latestBalances().stream()

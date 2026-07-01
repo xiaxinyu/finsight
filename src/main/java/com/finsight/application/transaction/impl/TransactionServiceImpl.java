@@ -16,7 +16,9 @@ import com.finsight.application.transaction.TransactionCategoryFieldNormalizer;
 import com.finsight.application.transaction.TransactionCategoryFieldSync;
 import com.finsight.application.transaction.TransactionFieldSanitizer;
 import com.finsight.domain.port.TransactionRepository;
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.query.TransactionQuery;
+import com.finsight.application.query.TransactionQuerySupport;
 import com.alibaba.fastjson.JSONArray;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -49,6 +51,12 @@ public class TransactionServiceImpl implements ITransactionService {
     @Autowired
     TransactionCategoryFieldNormalizer categoryFieldNormalizer;
 
+    @Autowired
+    TransactionQuerySupport transactionQuerySupport;
+
+    @Autowired
+    LedgerUserScope ledgerUserScope;
+
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
         try {
@@ -59,6 +67,7 @@ public class TransactionServiceImpl implements ITransactionService {
             if (existing == null) {
                 throw new AppServiceException("Transaction not found");
             }
+            ledgerUserScope.assertOwned(existing.getCreatedBy());
             if ("transfer".equalsIgnoreCase(existing.getTxnKind())) {
                 throw new AppServiceException("Transfer transactions cannot be edited inline. Undo the transfer first.");
             }
@@ -163,6 +172,9 @@ public class TransactionServiceImpl implements ITransactionService {
                 if (tx == null || isDeleted(tx) || "transfer".equalsIgnoreCase(StringUtils.trimToEmpty(tx.getTxnKind()))) {
                     continue;
                 }
+                if (!ledgerUserScope.owns(tx.getCreatedBy())) {
+                    continue;
+                }
                 double before = TransactionAmountNormalizer.canonicalMagnitude(tx);
                 TransactionAmountNormalizer.applyTxnKind(tx, kind);
                 if (before <= 0) {
@@ -199,6 +211,7 @@ public class TransactionServiceImpl implements ITransactionService {
             if (existing == null || (existing.getDeleted() != null && existing.getDeleted() == 1)) {
                 throw new AppServiceException("Transaction not found");
             }
+            ledgerUserScope.assertOwned(existing.getCreatedBy());
             transactionRepository.deleteTransaction(id.trim(), userName);
             invalidateHomeSummaryCache();
             List<Date> dates = new ArrayList<>();
@@ -225,7 +238,7 @@ public class TransactionServiceImpl implements ITransactionService {
         List<Transaction> result = null;
         try {
             log.info("Query transactions：page={}", page);
-            result = transactionRepository.getTransactions(toQuery(transaction), page);
+            result = transactionRepository.getTransactions(enrichQuery(toQuery(transaction)), page);
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -236,7 +249,7 @@ public class TransactionServiceImpl implements ITransactionService {
     public int countTransaction(Transaction transaction) throws AppServiceException {
         int result = 0;
         try {
-            result = transactionRepository.countTransaction(toQuery(transaction));
+            result = transactionRepository.countTransaction(enrichQuery(toQuery(transaction)));
         } catch (Exception e) {
             throw new AppServiceException(e);
         }
@@ -251,7 +264,7 @@ public class TransactionServiceImpl implements ITransactionService {
 
         Map<String, BankCard> cardMap = new java.util.HashMap<>();
         for (BankCard card : bankCardService.listAllEnabled()) {
-            if (card != null && card.getId() != null) {
+            if (card != null && card.getId() != null && ledgerUserScope.owns(card.getCreatedBy())) {
                 cardMap.put(card.getId(), card);
             }
         }
@@ -363,6 +376,11 @@ public class TransactionServiceImpl implements ITransactionService {
         }
     }
 
+    private TransactionQuery enrichQuery(TransactionQuery q) {
+        transactionQuerySupport.enrich(q);
+        return q;
+    }
+
     private static TransactionQuery toQuery(Transaction t) {
         TransactionQuery q = new TransactionQuery();
         if (t == null) {
@@ -383,7 +401,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<com.finsight.domain.model.CategoryAggregate> list = transactionRepository.consumeReport(toQuery(transaction));
+            List<com.finsight.domain.model.CategoryAggregate> list = transactionRepository.consumeReport(enrichQuery(toQuery(transaction)));
             result = JSONArray.toJSONString(list);
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -396,7 +414,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionRepository.weekConsumeReport(toQuery(transaction));
+            List<KeyValue> list = transactionRepository.weekConsumeReport(enrichQuery(toQuery(transaction)));
             result = JSONArray.toJSONString(list);
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -409,7 +427,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionRepository.monthConsumeReport(toQuery(transaction));
+            List<KeyValue> list = transactionRepository.monthConsumeReport(enrichQuery(toQuery(transaction)));
             result = JSONArray.toJSONString(list).toString();
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -422,7 +440,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionRepository.monthIncomeReport(toQuery(transaction));
+            List<KeyValue> list = transactionRepository.monthIncomeReport(enrichQuery(toQuery(transaction)));
             result = JSONArray.toJSONString(list).toString();
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -435,7 +453,7 @@ public class TransactionServiceImpl implements ITransactionService {
         String result = StringTool.EMPTY;
         try {
             fetchTransactionParam(transaction);
-            List<KeyValue> list = transactionRepository.monthExpenseReport(toQuery(transaction));
+            List<KeyValue> list = transactionRepository.monthExpenseReport(enrichQuery(toQuery(transaction)));
             result = JSONArray.toJSONString(list).toString();
         } catch (Exception e) {
             throw new AppServiceException(e);
@@ -465,16 +483,17 @@ public class TransactionServiceImpl implements ITransactionService {
                 }
             }
 
+            String owner = ledgerUserScope.resolve();
             List<KeyValue> buckets = ranged
-                    ? transactionRepository.homeSummaryExpenseBucketsForRange(rangeStart, rangeEnd)
-                    : transactionRepository.homeSummaryExpenseBuckets(year);
+                    ? transactionRepository.homeSummaryExpenseBucketsForRange(rangeStart, rangeEnd, owner)
+                    : transactionRepository.homeSummaryExpenseBuckets(year, owner);
             List<KeyValue> bucketsPrev = ranged ? java.util.Collections.emptyList()
-                    : transactionRepository.homeSummaryExpenseBucketsPrev(year);
+                    : transactionRepository.homeSummaryExpenseBucketsPrev(year, owner);
             Double incomeResult = ranged
-                    ? transactionRepository.sumIncomeForRange(rangeStart, rangeEnd)
-                    : transactionRepository.sumIncomeByYear(year);
-            Double debtResult = transactionRepository.sumDebtPaymentsByYear(year);
-            Integer refundsResult = transactionRepository.countRefundsByYear(year);
+                    ? transactionRepository.sumIncomeForRange(rangeStart, rangeEnd, owner)
+                    : transactionRepository.sumIncomeByYear(year, owner);
+            Double debtResult = transactionRepository.sumDebtPaymentsByYear(year, owner);
+            Integer refundsResult = transactionRepository.countRefundsByYear(year, owner);
             double income = incomeResult == null ? 0.0 : incomeResult;
             double debt = debtResult == null ? 0.0 : debtResult;
             int refunds = refundsResult == null ? 0 : refundsResult;

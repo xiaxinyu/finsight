@@ -22,7 +22,11 @@ public class TransactionQuery {
     private String sortOrder;
     private String merchantToken;
     private String semanticFilter;
+    /** Ledger owner (Spring Security username) for row-level isolation. */
+    private String ownerUserId;
 
+    public String getOwnerUserId() { return ownerUserId; }
+    public void setOwnerUserId(String ownerUserId) { this.ownerUserId = ownerUserId; }
     public String getSemanticFilter() { return semanticFilter; }
     public void setSemanticFilter(String semanticFilter) { this.semanticFilter = semanticFilter; }
     public String getTxnTypes() { return txnTypes; }

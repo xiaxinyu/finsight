@@ -10,6 +10,30 @@
         and (t.deleted is null or t.deleted = 0)
     </sql>
 
+    <sql id="filterOwnerParamT">
+        <if test="ownerUserId != null and ownerUserId != ''">
+            and (
+                t.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (t.created_by is null or trim(t.created_by) = '')
+                )
+            )
+        </if>
+    </sql>
+
+    <sql id="filterOwnerParamBc">
+        <if test="ownerUserId != null and ownerUserId != ''">
+            and (
+                bc.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (bc.created_by is null or trim(bc.created_by) = '')
+                )
+            )
+        </if>
+    </sql>
+
     <sql id="rowIncomeAmountT">
         case when coalesce(t.income_money,0) &gt; 0 then t.income_money
              when coalesce(t.balance_money,0) &lt; 0 then abs(t.balance_money)
@@ -59,6 +83,7 @@
         where (t.consume_name is null or length(trim(t.consume_name)) = 0 or t.consume_code is null or length(trim(t.consume_code)) = 0)
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="countTransferGroups" resultType="int">
@@ -68,6 +93,7 @@
           and t.transfer_group_id is not null
           and length(trim(t.transfer_group_id)) &gt; 0
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="listTransferGroups" resultType="map">
@@ -79,6 +105,7 @@
           and t.transfer_group_id is not null
           and length(trim(t.transfer_group_id)) &gt; 0
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
         group by t.transfer_group_id
         order by transferDate desc
     </select>
@@ -95,16 +122,27 @@
               and t.bank_card_id is not null
               and length(trim(t.bank_card_id)) &gt; 0
               <include refid="activeTransaction"/>
+              <include refid="filterOwnerParamT"/>
               and t.id = (
                 select t2.id from transaction t2
                 where t2.bank_card_id = t.bank_card_id
                   and t2.account_balance is not null
                   and (t2.deleted is null or t2.deleted = 0)
+                  <if test="ownerUserId != null and ownerUserId != ''">
+                  and (
+                    t2.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                    or (
+                        #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                        and (t2.created_by is null or trim(t2.created_by) = '')
+                    )
+                  )
+                  </if>
                 order by t2.transaction_date desc, t2.id desc
                 limit 1
               )
         ) bal on bal.bank_card_id = bc.id
         where coalesce(bc.deleted, 0) != 1
+        <include refid="filterOwnerParamBc"/>
         order by bc.card_name, bc.bank_code
     </select>
 
@@ -116,6 +154,7 @@
         <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="sumIncomeSince" resultType="double">
@@ -130,6 +169,7 @@
         where t.transaction_date &gt;= #{since,jdbcType=DATE}
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="sumFixedBucketYear" resultType="double">
@@ -143,6 +183,7 @@
         )
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="latestInferredBalancePerCard" resultType="com.finsight.domain.model.KeyValue">
@@ -152,11 +193,21 @@
           and t.bank_card_id is not null
           and length(trim(t.bank_card_id)) &gt; 0
           <include refid="activeTransaction"/>
+          <include refid="filterOwnerParamT"/>
           and t.id = (
             select t2.id from transaction t2
             where t2.bank_card_id = t.bank_card_id
               and t2.account_balance is not null
               and (t2.deleted is null or t2.deleted = 0)
+              <if test="ownerUserId != null and ownerUserId != ''">
+              and (
+                t2.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (t2.created_by is null or trim(t2.created_by) = '')
+                )
+              )
+              </if>
             order by t2.transaction_date desc, t2.id desc
             limit 1
           )
@@ -170,6 +221,7 @@
         <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
         <choose>
             <when test="bucketKey == 'fixed'">
                 and (cat.parent_id = 'FIXED' or cat.code like 'FIXED%' or t.transaction_desc like '%房租%' or t.transaction_desc like '%房贷%')
@@ -199,6 +251,7 @@
         and t.consume_code = #{categoryCode,jdbcType=VARCHAR}
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="sumExpenseBetween" resultType="double">
@@ -210,6 +263,7 @@
         <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="sumExpenseByBucketBetween" resultType="double">
@@ -221,6 +275,7 @@
         <include refid="filterTxnTypeExpenseT"/>
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
         <choose>
             <when test="bucketKey == 'fixed'">
                 and (cat.parent_id = 'FIXED' or cat.code like 'FIXED%' or t.transaction_desc like '%房租%' or t.transaction_desc like '%房贷%')
@@ -251,6 +306,7 @@
         and t.consume_code = #{categoryCode,jdbcType=VARCHAR}
         <include refid="excludeTransfer"/>
         <include refid="activeTransaction"/>
+        <include refid="filterOwnerParamT"/>
     </select>
 
     <select id="findDuplicatePreviewTempIds" resultType="string">

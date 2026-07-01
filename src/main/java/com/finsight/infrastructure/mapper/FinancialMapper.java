@@ -10,33 +10,38 @@ import java.util.Map;
 public interface FinancialMapper {
     void markTransactionsTransfer(@Param("ids") List<String> ids, @Param("groupId") String groupId);
 
-    int countUnclassified();
+    int countUnclassified(@Param("ownerUserId") String ownerUserId);
 
-    int countTransferGroups();
+    int countTransferGroups(@Param("ownerUserId") String ownerUserId);
 
-    List<Map<String, Object>> listTransferGroups();
+    List<Map<String, Object>> listTransferGroups(@Param("ownerUserId") String ownerUserId);
 
-    List<KeyValue> latestBalancesFromBankCards();
+    List<KeyValue> latestBalancesFromBankCards(@Param("ownerUserId") String ownerUserId);
 
-    Double sumExpenseSince(@Param("since") Date since);
+    Double sumExpenseSince(@Param("since") Date since, @Param("ownerUserId") String ownerUserId);
 
-    Double sumIncomeSince(@Param("since") Date since);
+    Double sumIncomeSince(@Param("since") Date since, @Param("ownerUserId") String ownerUserId);
 
-    Double sumFixedBucketYear(@Param("year") int year);
+    Double sumFixedBucketYear(@Param("year") int year, @Param("ownerUserId") String ownerUserId);
 
     List<String> findDuplicatePreviewTempIds(@Param("statementId") String statementId);
 
-    List<KeyValue> latestInferredBalancePerCard();
+    List<KeyValue> latestInferredBalancePerCard(@Param("ownerUserId") String ownerUserId);
 
-    Double sumExpenseByBucketSince(@Param("since") Date since, @Param("bucketKey") String bucketKey);
+    Double sumExpenseByBucketSince(@Param("since") Date since, @Param("bucketKey") String bucketKey,
+                                   @Param("ownerUserId") String ownerUserId);
 
-    Double sumExpenseByCategorySince(@Param("since") Date since, @Param("categoryCode") String categoryCode);
+    Double sumExpenseByCategorySince(@Param("since") Date since, @Param("categoryCode") String categoryCode,
+                                     @Param("ownerUserId") String ownerUserId);
 
-    Double sumExpenseBetween(@Param("start") Date start, @Param("end") Date end);
+    Double sumExpenseBetween(@Param("start") Date start, @Param("end") Date end,
+                             @Param("ownerUserId") String ownerUserId);
 
     Double sumExpenseByBucketBetween(@Param("start") Date start, @Param("end") Date end,
-                                     @Param("bucketKey") String bucketKey);
+                                     @Param("bucketKey") String bucketKey,
+                                     @Param("ownerUserId") String ownerUserId);
 
     Double sumExpenseByCategoryBetween(@Param("start") Date start, @Param("end") Date end,
-                                       @Param("categoryCode") String categoryCode);
+                                       @Param("categoryCode") String categoryCode,
+                                       @Param("ownerUserId") String ownerUserId);
 }

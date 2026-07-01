@@ -1,6 +1,7 @@
 package com.finsight.application.finance;
 
 import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.domain.model.Transaction;
 import com.finsight.infrastructure.mapper.FinancialMapper;
 import com.finsight.infrastructure.mapper.TransactionMapper;
@@ -20,14 +21,20 @@ public class TransferService {
 
     private final TransactionMapper transactionMapper;
     private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
     private final AuthenticationFacade authenticationFacade;
+    private final LedgerUserScope ledgerUserScope;
 
     public TransferService(TransactionMapper transactionMapper,
                            FinancialMapper financialMapper,
-                           AuthenticationFacade authenticationFacade) {
+                           UserScopedFinancialQueries scopedFinancialQueries,
+                           AuthenticationFacade authenticationFacade,
+                           LedgerUserScope ledgerUserScope) {
         this.transactionMapper = transactionMapper;
         this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
         this.authenticationFacade = authenticationFacade;
+        this.ledgerUserScope = ledgerUserScope;
     }
 
     @Transactional
@@ -37,6 +44,8 @@ public class TransferService {
         if (from == null || to == null) {
             throw new IllegalArgumentException("Both transactions must exist");
         }
+        ledgerUserScope.assertOwned(from.getCreatedBy());
+        ledgerUserScope.assertOwned(to.getCreatedBy());
         String groupId = UUID.randomUUID().toString();
         financialMapper.markTransactionsTransfer(Arrays.asList(fromTransactionId, toTransactionId), groupId);
 
@@ -58,7 +67,7 @@ public class TransferService {
     }
 
     public List<Map<String, Object>> listTransfers() {
-        return financialMapper.listTransferGroups();
+        return scopedFinancialQueries.listTransferGroups();
     }
 
     private static double amountOf(Transaction t) {

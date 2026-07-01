@@ -9,7 +9,7 @@ import com.finsight.domain.model.KeyValue;
 import com.finsight.domain.model.MetricCode;
 import com.finsight.domain.port.MetricMonthlyRepository;
 import com.finsight.domain.port.TransactionRepository;
-import com.finsight.infrastructure.mapper.FinancialMapper;
+import com.finsight.application.finance.UserScopedFinancialQueries;
 import com.finsight.web.api.dto.TransactionParam;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -32,20 +32,20 @@ public class MetricMonthlyService {
     private final MetricMonthlyRepository metricRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionQuerySupport querySupport;
-    private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
     private final AuthenticationFacade authenticationFacade;
     private final FinanceSemanticMetricsRepository semanticMetricsRepository;
 
     public MetricMonthlyService(MetricMonthlyRepository metricRepository,
                                 TransactionRepository transactionRepository,
                                 TransactionQuerySupport querySupport,
-                                FinancialMapper financialMapper,
+                                UserScopedFinancialQueries scopedFinancialQueries,
                                 AuthenticationFacade authenticationFacade,
                                 FinanceSemanticMetricsRepository semanticMetricsRepository) {
         this.metricRepository = metricRepository;
         this.transactionRepository = transactionRepository;
         this.querySupport = querySupport;
-        this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
         this.authenticationFacade = authenticationFacade;
         this.semanticMetricsRepository = semanticMetricsRepository;
     }
@@ -127,7 +127,7 @@ public class MetricMonthlyService {
             out.put(e.getKey(), e.getValue());
         }
         if (!semantic.containsKey(MetricCode.UNCLASSIFIED_COUNT.name())) {
-            out.put(MetricCode.UNCLASSIFIED_COUNT.name(), bd(financialMapper.countUnclassified()));
+            out.put(MetricCode.UNCLASSIFIED_COUNT.name(), bd(scopedFinancialQueries.countUnclassified()));
         }
         return out;
     }

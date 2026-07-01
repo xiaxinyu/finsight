@@ -1,7 +1,6 @@
 package com.finsight.application.finance;
 
 import com.finsight.domain.model.KeyValue;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.Calendar;
@@ -13,14 +12,14 @@ import java.util.Map;
 public class WealthService {
 
     private final FinancialAccountService accountService;
-    private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
     private final CashflowService cashflowService;
 
     public WealthService(FinancialAccountService accountService,
-                         FinancialMapper financialMapper,
+                         UserScopedFinancialQueries scopedFinancialQueries,
                          CashflowService cashflowService) {
         this.accountService = accountService;
-        this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
         this.cashflowService = cashflowService;
     }
 
@@ -40,8 +39,8 @@ public class WealthService {
 
         Calendar cal = Calendar.getInstance();
         int year = cal.get(Calendar.YEAR);
-        double incomeYtd = safe(financialMapper.sumIncomeSince(yearStart(year)));
-        double expenseYtd = safe(financialMapper.sumExpenseSince(yearStart(year)));
+        double incomeYtd = safe(scopedFinancialQueries.sumIncomeSince(yearStart(year)));
+        double expenseYtd = safe(scopedFinancialQueries.sumExpenseSince(yearStart(year)));
         double savingsRate = incomeYtd > 0 ? (incomeYtd - expenseYtd) / incomeYtd : 0;
 
         Map<String, Object> health = new LinkedHashMap<>();
@@ -49,7 +48,7 @@ public class WealthService {
         double runway = ((Number) cashflow.get("runwayMonths")).doubleValue();
         health.put("liquidity", Math.min(100, runway * 16.67));
         health.put("savingsRate", Math.min(100, savingsRate * 100));
-        health.put("fixedBurden", incomeYtd > 0 ? Math.min(100, safe(financialMapper.sumFixedBucketYear(year)) / incomeYtd * 100) : 0);
+        health.put("fixedBurden", incomeYtd > 0 ? Math.min(100, safe(scopedFinancialQueries.sumFixedBucketYear(year)) / incomeYtd * 100) : 0);
         health.put("debtPressure", liabilities > 0 && assets > 0 ? Math.min(100, liabilities / assets * 100) : 0);
         health.put("emergencyMonths", runway);
         health.put("total", average(health));

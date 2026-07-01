@@ -48,6 +48,50 @@
     <sql id="activeTransactionT">
         and (t.deleted is null or t.deleted = 0)
     </sql>
+    <sql id="filterOwnerT">
+        <if test="q != null and q.ownerUserId != null and q.ownerUserId != ''">
+            and (
+                t.created_by = #{q.ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{q.ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (t.created_by is null or trim(t.created_by) = '')
+                )
+            )
+        </if>
+    </sql>
+    <sql id="filterOwnerC">
+        <if test="q != null and q.ownerUserId != null and q.ownerUserId != ''">
+            and (
+                c.created_by = #{q.ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{q.ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (c.created_by is null or trim(c.created_by) = '')
+                )
+            )
+        </if>
+    </sql>
+    <sql id="filterOwnerParamT">
+        <if test="ownerUserId != null and ownerUserId != ''">
+            and (
+                t.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (t.created_by is null or trim(t.created_by) = '')
+                )
+            )
+        </if>
+    </sql>
+    <sql id="filterOwnerParamC">
+        <if test="ownerUserId != null and ownerUserId != ''">
+            and (
+                c.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (c.created_by is null or trim(c.created_by) = '')
+                )
+            )
+        </if>
+    </sql>
     <sql id="categoryJoinT">
         left join cls_category cat on cat.code = coalesce(nullif(trim(t.consume_code), ''), nullif(trim(t.category_code), '')) and cat.deleted != 1
     </sql>
@@ -213,6 +257,7 @@
     </sql>
     <sql id="transactionDrillFilterT">
         <include refid="activeTransactionT"/>
+        <include refid="filterOwnerT"/>
         <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
             <include refid="filterTxnTypesT"/>
@@ -601,6 +646,7 @@
         left join v_transaction_finance_semantics sem on sem.id = t.id
         where 1 = 1
         <include refid="activeTransactionT"/>
+        <include refid="filterOwnerT"/>
         <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
             <include refid="filterTxnTypesT"/>
@@ -676,6 +722,7 @@
         <include refid="categoryJoinT"/>
         where 1 = 1
         <include refid="activeTransactionT"/>
+        <include refid="filterOwnerT"/>
         <include refid="excludeTransferUnlessSemanticT"/>
         <if test="q != null">
             <include refid="filterTxnTypesT"/>
@@ -761,6 +808,7 @@
         left join cls_category parent on parent.id = cat.parent_id and parent.deleted != 1
         where 1 = 1
         <include refid="activeTransactionC"/>
+        <include refid="filterOwnerC"/>
         and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes != ''">
@@ -819,6 +867,7 @@
         left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="activeTransactionC"/>
+        <include refid="filterOwnerC"/>
         <include refid="excludeTransferC"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
@@ -874,6 +923,7 @@
         left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
         where 1 = 1
         <include refid="activeTransactionC"/>
+        <include refid="filterOwnerC"/>
         <include refid="excludeTransferC"/>
         <if test="q != null">
             <if test="q.txnTypes != null and q.txnTypes == 'income'">
@@ -932,6 +982,7 @@
             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
             <include refid="activeTransactionC"/>
+            <include refid="filterOwnerC"/>
             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
                 <if test="q.year != null and q.year != ''">
@@ -991,6 +1042,7 @@
             left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
             where 1 = 1
             <include refid="activeTransactionC"/>
+            <include refid="filterOwnerC"/>
             and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
             <if test="q != null">
                 <if test="q.year != null and q.year != ''">
@@ -1036,6 +1088,8 @@
              from transaction c
              left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
              where 1 = 1
+             and (c.deleted is null or c.deleted = 0)
+             <include refid="filterOwnerParamC"/>
              and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
              and year(c.transaction_date) = #{year,jdbcType=NUMERIC}
@@ -1061,6 +1115,8 @@
              from transaction c
              left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
              where 1 = 1
+             and (c.deleted is null or c.deleted = 0)
+             <include refid="filterOwnerParamC"/>
              and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
              and year(c.transaction_date) = (#{year,jdbcType=NUMERIC} - 1)
@@ -1085,6 +1141,7 @@
              from transaction c
              left join cls_category cat on cat.code = c.consume_code and cat.deleted != 1
              where (c.deleted is null or c.deleted = 0)
+             <include refid="filterOwnerParamC"/>
              and (c.txn_kind is null or c.txn_kind = '' or c.txn_kind != 'transfer')
              and cat.txn_types like '%expense%'
              and c.transaction_date &gt;= #{start,jdbcType=DATE}
@@ -1099,6 +1156,7 @@
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where t.transaction_date &gt;= #{start,jdbcType=DATE}
           and t.transaction_date &lt;= #{end,jdbcType=DATE}
+        <include refid="filterOwnerParamT"/>
         <include refid="excludeTransferT"/>
         and (
             coalesce(t.income_money,0) &gt; 0
@@ -1113,6 +1171,7 @@
         from transaction t
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+        <include refid="filterOwnerParamT"/>
         <include refid="excludeTransferT"/>
         and (
             coalesce(t.income_money,0) &gt; 0
@@ -1127,6 +1186,7 @@
         from transaction t
         left join cls_category cat on cat.code = t.consume_code and cat.deleted != 1
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+        <include refid="filterOwnerParamT"/>
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
           and (
               cat.parent_id = 'LIABILITY'
@@ -1140,6 +1200,7 @@
     <select id="countRefundsByYear" resultType="java.lang.Integer">
         select count(1) from transaction t
         where year(t.transaction_date) = #{year,jdbcType=NUMERIC}
+        <include refid="filterOwnerParamT"/>
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
           and (t.transaction_desc like '%退款%' or t.memo like '%退款%')
     </select>

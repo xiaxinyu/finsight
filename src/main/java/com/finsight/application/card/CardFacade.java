@@ -2,6 +2,9 @@ package com.finsight.application.card;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.authentication.LedgerUserScope;
+import com.finsight.common.exception.AppServiceException;
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.KeyValue;
 import com.finsight.web.api.dto.TreeNode;
@@ -21,6 +24,12 @@ public class CardFacade {
     @Autowired
     private BankCardService bankCardService;
 
+    @Autowired
+    private AuthenticationFacade authenticationFacade;
+
+    @Autowired
+    private LedgerUserScope ledgerUserScope;
+
     public List<KeyValue> listNumbers(String bankCode, String cardTypeCode) {
         String b = bankCode == null ? "" : bankCode.trim().toUpperCase();
         String t = cardTypeCode == null ? "" : cardTypeCode.trim().toLowerCase();
@@ -31,7 +40,9 @@ public class CardFacade {
         if (cards == null || cards.isEmpty()) {
             return Collections.emptyList();
         }
-        return cards.stream().map(c -> {
+        return cards.stream()
+                .filter(c -> ledgerUserScope.owns(c.getCreatedBy()))
+                .map(c -> {
             KeyValue kv = new KeyValue();
             kv.setKey(c.getCardNo());
             kv.setValue(displayName(c));
@@ -50,6 +61,9 @@ public class CardFacade {
             return kv;
         }
         BankCard card = bankCardService.getByBankTypeNo(b, t, n);
+        if (card != null && !ledgerUserScope.owns(card.getCreatedBy())) {
+            card = null;
+        }
         kv.put("value", card == null ? "" : safe(card.getCardName()));
         return kv;
     }
@@ -65,7 +79,9 @@ public class CardFacade {
         if (cards == null || cards.isEmpty()) {
             return result;
         }
-        result.addAll(cards.stream().map(c -> {
+        result.addAll(cards.stream()
+                .filter(c -> ledgerUserScope.owns(c.getCreatedBy()))
+                .map(c -> {
             KeyValue kv = new KeyValue();
             kv.setKey(c.getId());
             kv.setValue(displayName(c));
@@ -81,6 +97,7 @@ public class CardFacade {
         if (cardTypeCode != null && !cardTypeCode.trim().isEmpty()) {
             qw.eq(BankCard::getCardTypeCode, cardTypeCode.trim().toLowerCase());
         }
+        applyOwnerFilter(qw);
         qw.orderByAsc(BankCard::getBankCode).orderByAsc(BankCard::getCardTypeCode).orderByAsc(BankCard::getCardNo);
         return bankCardService.list(qw);
     }
@@ -94,11 +111,12 @@ public class CardFacade {
         if (card.getDeleted() == null) {
             card.setDeleted(0);
         }
+        String user = authenticationFacade.getUserName();
         if (card.getCreateUser() == null) {
-            card.setCreateUser("system");
+            card.setCreateUser(user);
         }
         if (card.getUpdateUser() == null) {
-            card.setUpdateUser("system");
+            card.setUpdateUser(user);
         }
         if (card.getCreateTime() == null) {
             card.setCreateTime(new java.util.Date());
@@ -108,22 +126,29 @@ public class CardFacade {
         return card;
     }
 
-    public BankCard update(String id, BankCard card) {
+    public BankCard update(String id, BankCard card) throws AppServiceException {
+        BankCard existing = bankCardService.getById(id);
+        if (existing == null) {
+            throw new AppServiceException("Card not found");
+        }
+        ledgerUserScope.assertOwned(existing.getCreatedBy());
         card.setId(id);
         if (card.getDeleted() == null) {
             card.setDeleted(0);
         }
+        String user = authenticationFacade.getUserName();
         if (card.getUpdateUser() == null) {
-            card.setUpdateUser("system");
+            card.setUpdateUser(user);
         }
         card.setUpdateTime(new java.util.Date());
         bankCardService.updateById(card);
         return card;
     }
 
-    public void delete(String id) {
+    public void delete(String id) throws AppServiceException {
         BankCard c = bankCardService.getById(id);
         if (c != null) {
+            ledgerUserScope.assertOwned(c.getCreatedBy());
             c.setDeleted(1);
             bankCardService.updateById(c);
         }
@@ -145,6 +170,7 @@ public class CardFacade {
                     .eq(BankCard::getDeleted, 0)
                     .orderByAsc(BankCard::getBankCode)
                     .orderByAsc(BankCard::getCardNo);
+            applyOwnerFilter(qw);
             List<BankCard> children = bankCardService.list(qw);
             List<TreeNode> childNodes = children.stream().map(c -> {
                 TreeNode n = new TreeNode();
@@ -159,6 +185,11 @@ public class CardFacade {
             parents.add(p);
         }
         return parents;
+    }
+
+    private void applyOwnerFilter(LambdaQueryWrapper<BankCard> qw) {
+        String owner = ledgerUserScope.resolve();
+        qw.eq(BankCard::getCreatedBy, owner);
     }
 
     private String displayName(BankCard c) {

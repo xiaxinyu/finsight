@@ -2,7 +2,6 @@ package com.finsight.application.finance;
 
 import com.finsight.application.classification.ConfigVersionService;
 import com.finsight.infrastructure.mapper.DataQualityMapper;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +17,7 @@ import static org.mockito.Mockito.when;
 class DataQualityServiceTest {
 
     @Mock
-    private FinancialMapper financialMapper;
+    private UserScopedFinancialQueries scopedFinancialQueries;
     @Mock
     private DataQualityMapper dataQualityMapper;
     @Mock
@@ -28,13 +27,13 @@ class DataQualityServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DataQualityService(financialMapper, dataQualityMapper, configVersionService);
+        service = new DataQualityService(scopedFinancialQueries, dataQualityMapper, configVersionService);
     }
 
     @Test
     void reportStrip_includesConfidenceFromUnclassifiedPct() {
-        when(financialMapper.countUnclassified()).thenReturn(40);
-        when(financialMapper.countTransferGroups()).thenReturn(3);
+        when(scopedFinancialQueries.countUnclassified()).thenReturn(40);
+        when(scopedFinancialQueries.countTransferGroups()).thenReturn(3);
         when(dataQualityMapper.classificationCoverage()).thenReturn(Map.of(
                 "totalTxns", 400,
                 "unclassifiedPct", 10.0,

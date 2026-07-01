@@ -2,7 +2,6 @@ package com.finsight.application.finance;
 
 import com.finsight.application.classification.ConfigVersionService;
 import com.finsight.infrastructure.mapper.DataQualityMapper;
-import com.finsight.infrastructure.mapper.FinancialMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -11,22 +10,22 @@ import java.util.Map;
 @Service
 public class DataQualityService {
 
-    private final FinancialMapper financialMapper;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
     private final DataQualityMapper dataQualityMapper;
     private final ConfigVersionService configVersionService;
 
-    public DataQualityService(FinancialMapper financialMapper,
+    public DataQualityService(UserScopedFinancialQueries scopedFinancialQueries,
                               DataQualityMapper dataQualityMapper,
                               ConfigVersionService configVersionService) {
-        this.financialMapper = financialMapper;
+        this.scopedFinancialQueries = scopedFinancialQueries;
         this.dataQualityMapper = dataQualityMapper;
         this.configVersionService = configVersionService;
     }
 
     public Map<String, Object> summary() {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("unclassifiedCount", financialMapper.countUnclassified());
-        m.put("transferPairCount", financialMapper.countTransferGroups());
+        m.put("unclassifiedCount", scopedFinancialQueries.countUnclassified());
+        m.put("transferPairCount", scopedFinancialQueries.countTransferGroups());
         putCoverage(m);
         m.put("orphanCategoryTxnCount", safeOrphanCount());
         m.put("refundExcludedCount", safeRefundCount());

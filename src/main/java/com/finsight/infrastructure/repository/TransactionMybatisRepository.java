@@ -92,38 +92,38 @@ public class TransactionMybatisRepository implements TransactionRepository {
     }
 
     @Override
-    public List<KeyValue> homeSummaryExpenseBuckets(Integer year) {
-        return transactionMapper.homeSummaryExpenseBuckets(year);
+    public List<KeyValue> homeSummaryExpenseBuckets(Integer year, String ownerUserId) {
+        return transactionMapper.homeSummaryExpenseBuckets(year, ownerUserId);
     }
 
     @Override
-    public List<KeyValue> homeSummaryExpenseBucketsPrev(Integer year) {
-        return transactionMapper.homeSummaryExpenseBucketsPrev(year);
+    public List<KeyValue> homeSummaryExpenseBucketsPrev(Integer year, String ownerUserId) {
+        return transactionMapper.homeSummaryExpenseBucketsPrev(year, ownerUserId);
     }
 
     @Override
-    public List<KeyValue> homeSummaryExpenseBucketsForRange(java.util.Date start, java.util.Date end) {
-        return transactionMapper.homeSummaryExpenseBucketsForRange(start, end);
+    public List<KeyValue> homeSummaryExpenseBucketsForRange(java.util.Date start, java.util.Date end, String ownerUserId) {
+        return transactionMapper.homeSummaryExpenseBucketsForRange(start, end, ownerUserId);
     }
 
     @Override
-    public Double sumIncomeForRange(java.util.Date start, java.util.Date end) {
-        return transactionMapper.sumIncomeForRange(start, end);
+    public Double sumIncomeForRange(java.util.Date start, java.util.Date end, String ownerUserId) {
+        return transactionMapper.sumIncomeForRange(start, end, ownerUserId);
     }
 
     @Override
-    public Double sumIncomeByYear(Integer year) {
-        return transactionMapper.sumIncomeByYear(year);
+    public Double sumIncomeByYear(Integer year, String ownerUserId) {
+        return transactionMapper.sumIncomeByYear(year, ownerUserId);
     }
 
     @Override
-    public Double sumDebtPaymentsByYear(Integer year) {
-        return transactionMapper.sumDebtPaymentsByYear(year);
+    public Double sumDebtPaymentsByYear(Integer year, String ownerUserId) {
+        return transactionMapper.sumDebtPaymentsByYear(year, ownerUserId);
     }
 
     @Override
-    public Integer countRefundsByYear(Integer year) {
-        return transactionMapper.countRefundsByYear(year);
+    public Integer countRefundsByYear(Integer year, String ownerUserId) {
+        return transactionMapper.countRefundsByYear(year, ownerUserId);
     }
 
     @Override
