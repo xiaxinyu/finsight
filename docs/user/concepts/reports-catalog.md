@@ -14,56 +14,74 @@ Each report answers **one decision question**. Totals use the same semantic laye
 
 | Group | Question it helps answer |
 | :--- | :--- |
-| **Cashflow & budget** | Did I earn, spend, and stay within plan? |
-| **Spending** | How is my spend structured and changing? |
-| **Cash & outlook** | What bills and risks are ahead? |
+| **Monthly overview** | How did I earn, spend, and what bills are due? |
+| **Year-over-year trends** | How are income, consumption, and debt changing by calendar year? |
+| **Spending analysis** | How is spend structured? How do two periods compare? |
+| **Capital & taxes** | Transfers, investments, loans, tax — outside daily spending |
+| **Forecast & risk** | What bills and liquidity risks are ahead? |
 | **Merchants** | Who receives my money? |
 
 ---
 
-## 2. Cashflow & budget
+## 2. Monthly overview
 
 | Report | Purpose | When to open | Scope |
 | :--- | :--- | :--- | :--- |
 | **Cashflow** | Monthly Real income, Consumption, Net | Month-end review | Semantic metrics |
 | **Budget vs Actual** | Budget limit vs actual spend per bucket | After setting budgets in Planning | Consumption |
-| **Fund Flow** | Internal transfer pairs | Reconcile card-to-card moves | Transfers |
-| **Transfer & Finance** | Transfers, loans, investments | Bank outflow ≠ Consumption | `non_pnl` |
-| **Tax Summary** | Tax paid and refunds | Annual tax review | `tax` |
+| **Bills Calendar** | Bills due in next 30 days | Cash planning | Bills |
 
 ---
 
-## 3. Spending
+## 3. Year-over-year trends
+
+| Report | Purpose | When to open |
+| :--- | :--- | :--- |
+| **Income Trends** | Calendar-year income YoY + source matrix | Is income growing? |
+| **Consumption Trends** | Calendar-year spend YoY + matrix · CSV export | Historical spend analysis |
+| **Debt Trends** | Borrowing, repayments, net debt flow YoY | Liability trend |
+
+---
+
+## 4. Spending analysis
 
 | Report | Purpose | When to open |
 | :--- | :--- | :--- |
 | **Fixed vs Variable** | Share of fixed vs flexible spend | Cut costs; understand rigid bills |
-| **Spending Drift** | Compare two periods by classification | Custom range (quarter, half-year) |
-| **Consumption Trends** | YoY + matrix (Classification / Category L1) · CSV export | Calendar year analysis |
+| **Period Comparison** | Compare two periods by classification | Custom range (quarter, half-year) |
 
 ---
 
-## 4. Cash & outlook
+## 5. Capital & taxes
+
+| Report | Purpose | When to open | Scope |
+| :--- | :--- | :--- | :--- |
+| **Fund Flow** | Internal transfer pairs | Reconcile card-to-card moves | Transfers |
+| **Transfers & Investments** | Transfers, loans, investments | Bank outflow ≠ Consumption | `non_pnl` |
+| **Tax Summary** | Tax paid and refunds | Annual tax review | `tax` |
+
+---
+
+## 6. Forecast & risk
 
 | Report | Purpose | When to open |
 | :--- | :--- | :--- |
-| **Bills Calendar** | Bills due in next 30 days | Cash planning |
 | **Annual Outlook** | Forecast with scenario bands | Year plan; large purchases |
 | **Cash Risk** | Months that may show negative net | Liquidity stress test |
 
 ---
 
-## 5. Merchants
+## 7. Merchants
 
 | Report | Purpose | When to open |
 | :--- | :--- | :--- |
 | **Subscriptions** | Recurring merchants | Reduce recurring fees |
-| **Merchant Concentration** | Spend share at top merchants | Dependency risk |
-| **Merchant Drift** | Year-over-year change by merchant | Find rising vendors |
+| **Top Merchants** | Spend share at top merchants | Dependency risk |
+| **Merchant Changes** | Year-over-year change by merchant | Find rising vendors |
 
 ---
 
-## 6. Shared UI (v2.0.2+)
+## 8. Shared UI (v2.0.2+)
 
 | Feature | What it does |
 | :--- | :--- |
@@ -75,18 +93,20 @@ Each report answers **one decision question**. Totals use the same semantic laye
 
 ---
 
-## 7. Quick lookup
+## 9. Quick lookup
 
 | I need to know… | Open |
 | :--- | :--- |
 | Earn / spend / save this period | Dashboard |
 | Trend by month | Cashflow |
 | Over budget? | Budget vs Actual |
-| Transfers / loans / investments | Transfer & Finance |
+| Transfers / loans / investments | Transfers & Investments |
 | Tax | Tax Summary |
 | Fixed vs flexible mix | Fixed vs Variable |
-| Spend vs custom period | Spending Drift |
-| Year-over-year by classification | Consumption Trends |
+| Spend vs custom period | Period Comparison |
+| Year-over-year income | Income Trends |
+| Year-over-year consumption | Consumption Trends |
+| Year-over-year debt | Debt Trends |
 | Upcoming bills | Bills Calendar |
 | Full-year forecast | Annual Outlook |
 | Risk of running short | Cash Risk |
@@ -95,7 +115,7 @@ Each report answers **one decision question**. Totals use the same semantic laye
 
 ---
 
-## 8. Related docs
+## 10. Related docs
 
 - [dashboard-profile.md](dashboard-profile.md)  
 - [version-highlights.md](version-highlights.md)  

@@ -37,7 +37,7 @@ export const reportConfigs: Record<string, ReportConfig> = {
     dateRange: true,
   },
   'transfer-finance': {
-    title: 'Transfer & Finance',
+    title: 'Transfers & Investments',
     subtitle: 'Account transfers, loans, and investments — excluded from spending',
     type: 'semanticScope',
     semanticScope: 'non_pnl',
@@ -60,8 +60,8 @@ export const reportConfigs: Record<string, ReportConfig> = {
     legacyIds: ['weekly-summary'],
   },
   'spending-drift': {
-    title: 'Spending Drift',
-    subtitle: 'Compare any two periods by classification — use for quarters or custom ranges',
+    title: 'Period Comparison',
+    subtitle: 'Compare spending between any two date ranges by classification',
     type: 'yearCompare',
     txnType: 'expense',
     compareYear: true,
@@ -80,19 +80,19 @@ export const reportConfigs: Record<string, ReportConfig> = {
   },
   'trend-changes': {
     title: 'Consumption Trends',
-    subtitle: 'See how spending changes year by year — totals, categories, and drill-down',
+    subtitle: 'Year-over-year living spend — totals, categories, and drill-down',
     type: 'trendChanges',
     compareYear: true,
   },
   'debt-trends': {
     title: 'Debt Trends',
-    subtitle: 'Track borrowing, repayments, and net debt flow year over year',
+    subtitle: 'Year-over-year borrowing, repayments, and net debt flow',
     type: 'debtTrends',
     compareYear: true,
   },
   'income-trends': {
     title: 'Income Trends',
-    subtitle: 'See if your income is growing — totals, sources, and drill-down',
+    subtitle: 'Year-over-year income — totals, sources, and drill-down',
     type: 'incomeTrends',
     compareYear: true,
   },
@@ -107,13 +107,13 @@ export const reportConfigs: Record<string, ReportConfig> = {
     type: 'merchantSubscriptions',
   },
   'merchant-concentration': {
-    title: 'Merchant Concentration',
+    title: 'Top Merchants',
     subtitle: 'Where spending clusters across merchants',
     type: 'merchantConcentration',
   },
   'merchant-drift': {
-    title: 'Merchant Drift',
-    subtitle: 'Year-over-year merchant spend movers',
+    title: 'Merchant Changes',
+    subtitle: 'Year-over-year merchant spending movers',
     type: 'merchantDrift',
   },
 }

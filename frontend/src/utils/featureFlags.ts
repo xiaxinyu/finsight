@@ -3,7 +3,6 @@ import type { FsMenuItem } from '../config/menuConfig'
 
 const FORECAST_REPORT_PATHS = new Set([
   '/reports/annual-outlook',
-  '/reports/trend-changes',
   '/reports/cash-risk',
 ])
 

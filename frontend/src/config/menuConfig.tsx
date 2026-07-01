@@ -7,6 +7,7 @@ import {
   ClusterOutlined,
   CreditCardOutlined,
   DashboardOutlined,
+  DollarOutlined,
   FileTextOutlined,
   FundOutlined,
   HistoryOutlined,
@@ -25,6 +26,13 @@ import {
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
+import { reportConfigs } from './reports'
+import {
+  REPORT_MENU_LABELS,
+  REPORT_NAV_GROUPS,
+  menuOpenKeysForReportId,
+  type ReportNavGroupKey,
+} from './reportNavigation'
 
 export type FsMenuItem = {
   key: string
@@ -38,6 +46,59 @@ export type FsMenuItem = {
 
 /** Root submenus that participate in sidebar accordion (one open at a time). */
 export const menuAccordionRoots = ['transactions', 'reports', 'ledgers', 'admin'] as const
+
+const REPORT_ICONS: Record<string, ReactNode> = {
+  cashflow: <SwapOutlined />,
+  'budget-vs-actual': <PieChartOutlined />,
+  'bills-calendar': <CalendarOutlined />,
+  'income-trends': <WalletOutlined />,
+  'trend-changes': <LineChartOutlined />,
+  'debt-trends': <CreditCardOutlined />,
+  'fixed-vs-variable': <CalendarOutlined />,
+  'spending-drift': <SwapOutlined />,
+  'fund-flow': <SwapOutlined />,
+  'transfer-finance': <BankOutlined />,
+  'tax-summary': <FundOutlined />,
+  'annual-outlook': <ThunderboltOutlined />,
+  'cash-risk': <FundOutlined />,
+  subscriptions: <ClusterOutlined />,
+  'merchant-concentration': <ShopOutlined />,
+  'merchant-drift': <RiseOutlined />,
+}
+
+const GROUP_ICONS: Partial<Record<ReportNavGroupKey, ReactNode>> = {
+  'reports-monthly': <DollarOutlined />,
+  'reports-yoy': <LineChartOutlined />,
+  'reports-spending': <PieChartOutlined />,
+  'reports-capital': <BankOutlined />,
+  'reports-forecast': <ThunderboltOutlined />,
+  'reports-merchants': <ShopOutlined />,
+}
+
+function reportMenuItem(reportId: string): FsMenuItem {
+  const cfg = reportConfigs[reportId]
+  const label = REPORT_MENU_LABELS[reportId] ?? cfg?.title ?? reportId
+  return {
+    key: `/reports/${reportId}`,
+    icon: REPORT_ICONS[reportId],
+    label,
+    path: `/reports/${reportId}`,
+  }
+}
+
+function buildReportsMenu(): FsMenuItem {
+  return {
+    key: 'reports',
+    icon: <BarChartOutlined />,
+    label: 'Reports',
+    children: REPORT_NAV_GROUPS.map((group) => ({
+      key: group.key,
+      icon: GROUP_ICONS[group.key],
+      label: group.label,
+      children: group.reportIds.map(reportMenuItem),
+    })),
+  }
+}
 
 export const menuItems: FsMenuItem[] = [
   {
@@ -72,55 +133,7 @@ export const menuItems: FsMenuItem[] = [
     type: 'group',
     key: 'grp-insights',
     label: 'Insights',
-    children: [
-      {
-        key: 'reports',
-        icon: <BarChartOutlined />,
-        label: 'Reports',
-        children: [
-          {
-            key: 'reports-cashflow',
-            label: 'Cashflow & budget',
-            children: [
-              { key: '/reports/cashflow', icon: <SwapOutlined />, label: 'Cashflow', path: '/reports/cashflow' },
-              { key: '/reports/budget-vs-actual', icon: <PieChartOutlined />, label: 'Budget vs Actual', path: '/reports/budget-vs-actual' },
-              { key: '/reports/fund-flow', icon: <SwapOutlined />, label: 'Fund flow', path: '/reports/fund-flow' },
-              { key: '/reports/transfer-finance', icon: <BankOutlined />, label: 'Transfer & Finance', path: '/reports/transfer-finance' },
-              { key: '/reports/tax-summary', icon: <FundOutlined />, label: 'Tax summary', path: '/reports/tax-summary' },
-            ],
-          },
-          {
-            key: 'reports-spending',
-            label: 'Spending',
-            children: [
-              { key: '/reports/fixed-vs-variable', icon: <CalendarOutlined />, label: 'Fixed vs Variable', path: '/reports/fixed-vs-variable' },
-              { key: '/reports/spending-drift', icon: <SwapOutlined />, label: 'Spending drift', path: '/reports/spending-drift' },
-              { key: '/reports/income-trends', icon: <WalletOutlined />, label: 'Income trends', path: '/reports/income-trends' },
-              { key: '/reports/trend-changes', icon: <LineChartOutlined />, label: 'Consumption trends', path: '/reports/trend-changes' },
-              { key: '/reports/debt-trends', icon: <CreditCardOutlined />, label: 'Debt trends', path: '/reports/debt-trends' },
-            ],
-          },
-          {
-            key: 'reports-outlook',
-            label: 'Cash & outlook',
-            children: [
-              { key: '/reports/bills-calendar', icon: <LineChartOutlined />, label: 'Bills calendar', path: '/reports/bills-calendar' },
-              { key: '/reports/annual-outlook', icon: <ThunderboltOutlined />, label: 'Annual outlook', path: '/reports/annual-outlook' },
-              { key: '/reports/cash-risk', icon: <FundOutlined />, label: 'Cash risk', path: '/reports/cash-risk' },
-            ],
-          },
-          {
-            key: 'reports-merchants',
-            label: 'Merchants',
-            children: [
-              { key: '/reports/subscriptions', icon: <ClusterOutlined />, label: 'Subscriptions', path: '/reports/subscriptions' },
-              { key: '/reports/merchant-concentration', icon: <ShopOutlined />, label: 'Concentration', path: '/reports/merchant-concentration' },
-              { key: '/reports/merchant-drift', icon: <RiseOutlined />, label: 'Drift', path: '/reports/merchant-drift' },
-            ],
-          },
-        ],
-      },
-    ],
+    children: [buildReportsMenu()],
   },
   {
     type: 'group',
@@ -163,7 +176,7 @@ export const menuItems: FsMenuItem[] = [
         children: [
           { key: '/admin/users', icon: <TeamOutlined />, label: 'Users', path: '/admin/users' },
           { key: '/admin/cards', icon: <CreditCardOutlined />, label: 'Cards', path: '/admin/cards' },
-          { key: '/admin/rules', icon: <ThunderboltOutlined />, label: 'Rule engine', path: '/admin/rules' },
+          { key: '/admin/rules', icon: <ThunderboltOutlined />, label: 'Rules', path: '/admin/rules' },
           { key: '/admin/categories', icon: <ClusterOutlined />, label: 'Categories', path: '/admin/categories' },
         ],
       },
@@ -173,25 +186,17 @@ export const menuItems: FsMenuItem[] = [
 
 /** Open keys for the current route so the active item stays visible. */
 export function menuOpenKeysForPath(pathname: string): string[] {
-  const keys: string[] = []
-
   if (pathname.startsWith('/transactions') || pathname.startsWith('/statements')) {
-    keys.push('transactions')
-    return keys
+    return ['transactions']
   }
 
   if (pathname.startsWith('/reports/')) {
-    keys.push('reports')
-    const id = pathname.replace('/reports/', '')
-    if (['cashflow', 'budget-vs-actual', 'fund-flow', 'transfer-finance', 'tax-summary'].includes(id)) keys.push('reports-cashflow')
-    else if (['fixed-vs-variable', 'spending-drift', 'income-trends', 'trend-changes', 'debt-trends'].includes(id)) keys.push('reports-spending')
-    else if (['bills-calendar', 'annual-outlook', 'cash-risk'].includes(id)) keys.push('reports-outlook')
-    else if (['subscriptions', 'merchant-concentration', 'merchant-drift'].includes(id)) keys.push('reports-merchants')
-    return keys
+    const id = pathname.replace('/reports/', '').split('/')[0]
+    return menuOpenKeysForReportId(id)
   }
 
   if (pathname.startsWith('/ledgers/')) {
-    keys.push('ledgers')
+    const keys: string[] = ['ledgers']
     const id = pathname.replace('/ledgers/', '')
     if (['endowment', 'accumulation', 'medical', 'unemployment'].includes(id)) {
       keys.push('ledgers-benefits')
@@ -200,10 +205,10 @@ export function menuOpenKeysForPath(pathname: string): string[] {
   }
 
   if (pathname.startsWith('/admin')) {
-    keys.push('admin')
+    return ['admin']
   }
 
-  return keys
+  return []
 }
 
 /** Keep one root accordion section open; preserve nested keys under that root. */

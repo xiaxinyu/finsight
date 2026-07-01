@@ -1,3 +1,6 @@
+import { reportConfigs } from './reports'
+import { reportNavGroupForId } from './reportNavigation'
+
 export type RouteMeta = {
   path: string
   title: string
@@ -20,31 +23,16 @@ const staticRoutes: RouteMeta[] = [
   { path: '/admin/categories', title: 'Categories', breadcrumb: ['Admin', 'Categories'] },
 ]
 
-const reportTitles: Record<string, string> = {
-  cashflow: 'Cashflow',
-  'fund-flow': 'Fund Flow',
-  'transfer-finance': 'Transfer & Finance',
-  'tax-summary': 'Tax Summary',
-  'budget-vs-actual': 'Budget vs Actual',
-  'fixed-vs-variable': 'Fixed vs Variable',
-  'spending-drift': 'Spending Drift',
-  'bills-calendar': 'Bills Calendar',
+/** Legacy report slugs not wired in reportConfigs (deep links, tests). */
+const legacyReportTitles: Record<string, string> = {
   'transaction-trend': 'Transaction Trend',
   'category-breakdown': 'Category Breakdown',
   'category-comparison': 'Category Comparison',
   'weekly-summary': 'Weekly Summary',
   'monthly-comparison': 'Monthly Comparison',
   'income-vs-expense': 'Income vs Expense',
-  'income-curve': 'Income Curve',
   'expense-curve': 'Expense Curve',
-  'annual-outlook': 'Annual Outlook',
-  'trend-changes': 'Trend Changes',
-  'debt-trends': 'Debt Trends',
-  'income-trends': 'Income Trends',
-  'cash-risk': 'Cash Risk',
-  subscriptions: 'Subscriptions',
-  'merchant-concentration': 'Merchant Concentration',
-  'merchant-drift': 'Merchant Drift',
+  'income-curve': 'Income Curve',
 }
 
 const ledgerTitles: Record<string, string> = {
@@ -62,10 +50,12 @@ export function resolveRouteMeta(pathname: string): RouteMeta {
   if (exact) return exact
 
   if (pathname.startsWith('/reports/')) {
-    const id = pathname.replace('/reports/', '')
-    const title = reportTitles[id] || 'Report'
-    const group = id.includes('income') ? 'Income' : id.includes('expense') ? 'Expense' : 'Reports'
-    return { path: pathname, title, breadcrumb: [group, title], group }
+    const id = pathname.replace('/reports/', '').split('/')[0]
+    const cfg = reportConfigs[id]
+    const title = cfg?.title ?? legacyReportTitles[id] ?? 'Report'
+    const navGroup = reportNavGroupForId(id)
+    const breadcrumb = navGroup ? ['Reports', navGroup.label, title] : ['Reports', title]
+    return { path: pathname, title, breadcrumb, group: navGroup?.label ?? 'Reports' }
   }
 
   if (pathname.startsWith('/ledgers/')) {
