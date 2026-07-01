@@ -1,5 +1,6 @@
 package com.finsight.application.benefit.impl;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.benefit.IEndowmentListingService;
 import com.finsight.application.benefit.IEndowmentService;
 import com.finsight.application.support.ListingDateSupport;
@@ -18,9 +19,13 @@ public class EndowmentListingServiceImpl implements IEndowmentListingService {
     @Autowired
     private IEndowmentService endowmentService;
 
+    @Autowired
+    private LedgerUserScope ledgerUserScope;
+
     @Override
     public CollectionResult<Endowment> listEndowments(EndowmentParam param) throws AppServiceException {
         Endowment endowment = new Endowment();
+        endowment.setCreatedBy(ledgerUserScope.resolve());
         String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {

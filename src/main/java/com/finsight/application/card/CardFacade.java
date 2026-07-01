@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.authentication.LedgerUserScope;
-import com.finsight.common.exception.AppServiceException;
+import com.finsight.common.exception.AppException;
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.KeyValue;
 import com.finsight.web.api.dto.TreeNode;
@@ -126,10 +126,10 @@ public class CardFacade {
         return card;
     }
 
-    public BankCard update(String id, BankCard card) throws AppServiceException {
+    public BankCard update(String id, BankCard card) {
         BankCard existing = bankCardService.getById(id);
         if (existing == null) {
-            throw new AppServiceException("Card not found");
+            throw new AppException("Card not found");
         }
         ledgerUserScope.assertOwned(existing.getCreatedBy());
         card.setId(id);
@@ -145,7 +145,7 @@ public class CardFacade {
         return card;
     }
 
-    public void delete(String id) throws AppServiceException {
+    public void delete(String id) {
         BankCard c = bankCardService.getById(id);
         if (c != null) {
             ledgerUserScope.assertOwned(c.getCreatedBy());

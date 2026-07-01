@@ -1,6 +1,6 @@
 package com.finsight.application.authentication;
 
-import com.finsight.common.exception.AppServiceException;
+import com.finsight.common.exception.AppException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.finsight.common.exception.AppException;
 
 class LedgerUserScopeTest {
 
@@ -43,6 +45,6 @@ class LedgerUserScopeTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("xiaxinyu", "n/a", List.of()));
         assertDoesNotThrow(() -> scope.assertOwned("xiaxinyu"));
-        assertThrows(AppServiceException.class, () -> scope.assertOwned("admin"));
+        assertThrows(AppException.class, () -> scope.assertOwned("admin"));
     }
 }

@@ -81,6 +81,9 @@
         select id, unit_no, unit_name, period_label, pay_base, personal_pay, unit_pay, total_pay, personal_reserved, memo
         from ben_contribution
         where benefit_type = 'UNEMPLOYMENT'
+        <if test="unEmployment != null and unEmployment.createdBy != null and unEmployment.createdBy != ''">
+            and created_by = #{unEmployment.createdBy,jdbcType=VARCHAR}
+        </if>
         <if test="unEmployment != null">
             <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
                 and period_label &gt;= #{unEmployment.timeFrom}
@@ -102,6 +105,9 @@
     <select id="countUnEmployments" resultType="java.lang.Integer">
         select count(id) from ben_contribution
         where benefit_type = 'UNEMPLOYMENT'
+        <if test="unEmployment != null and unEmployment.createdBy != null and unEmployment.createdBy != ''">
+            and created_by = #{unEmployment.createdBy,jdbcType=VARCHAR}
+        </if>
         <if test="unEmployment != null">
             <if test="unEmployment.timeFrom != null and unEmployment.timeFrom != ''">
                 and period_label &gt;= #{unEmployment.timeFrom}

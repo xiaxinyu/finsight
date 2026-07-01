@@ -323,6 +323,7 @@
           and coalesce(tt.deleted, 0) = 0
           and (t.deleted is null or t.deleted = 0)
           and (t.txn_kind is null or t.txn_kind = '' or t.txn_kind != 'transfer')
+          and t.created_by = #{ownerUserId,jdbcType=VARCHAR}
     </select>
 
 </mapper>

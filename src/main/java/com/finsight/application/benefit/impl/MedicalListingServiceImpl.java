@@ -1,5 +1,6 @@
 package com.finsight.application.benefit.impl;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.benefit.IMedicalListingService;
 import com.finsight.application.benefit.IMedicalService;
 import com.finsight.application.support.ListingDateSupport;
@@ -18,9 +19,13 @@ public class MedicalListingServiceImpl implements IMedicalListingService {
     @Autowired
     private IMedicalService medicalService;
 
+    @Autowired
+    private LedgerUserScope ledgerUserScope;
+
     @Override
     public CollectionResult<Medical> listMedicals(MedicalParam param) throws AppServiceException {
         Medical medical = new Medical();
+        medical.setCreatedBy(ledgerUserScope.resolve());
         String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {

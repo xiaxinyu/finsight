@@ -1,6 +1,6 @@
 package com.finsight.application.authentication;
 
-import com.finsight.common.exception.AppServiceException;
+import com.finsight.common.exception.AppException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -33,9 +33,9 @@ public class LedgerUserScope {
         return owner.equals(createdBy.trim());
     }
 
-    public void assertOwned(String createdBy) throws AppServiceException {
+    public void assertOwned(String createdBy) {
         if (!owns(createdBy)) {
-            throw new AppServiceException("Access denied: resource belongs to another user");
+            throw new AppException("Access denied: resource belongs to another user");
         }
     }
 }

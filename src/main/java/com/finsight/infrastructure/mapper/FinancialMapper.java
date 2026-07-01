@@ -24,7 +24,8 @@ public interface FinancialMapper {
 
     Double sumFixedBucketYear(@Param("year") int year, @Param("ownerUserId") String ownerUserId);
 
-    List<String> findDuplicatePreviewTempIds(@Param("statementId") String statementId);
+    List<String> findDuplicatePreviewTempIds(@Param("statementId") String statementId,
+                                             @Param("ownerUserId") String ownerUserId);
 
     List<KeyValue> latestInferredBalancePerCard(@Param("ownerUserId") String ownerUserId);
 

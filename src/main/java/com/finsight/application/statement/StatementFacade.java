@@ -383,7 +383,7 @@ public class StatementFacade {
         return data;
     }
 
-    private Statement requireOwnedStatement(String statementId) throws AppServiceException {
+    private Statement requireOwnedStatement(String statementId) {
         if (StringUtils.isBlank(statementId)) {
             return null;
         }

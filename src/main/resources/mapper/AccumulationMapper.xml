@@ -81,6 +81,9 @@
         select id, unit_no, unit_name, period_label, pay_base, personal_pay, unit_pay, total_pay, personal_reserved, memo
         from ben_contribution
         where benefit_type = 'ACCUMULATION'
+        <if test="accumulation != null and accumulation.createdBy != null and accumulation.createdBy != ''">
+            and created_by = #{accumulation.createdBy,jdbcType=VARCHAR}
+        </if>
         <if test="accumulation != null">
             <if test="accumulation.timeFrom != null and accumulation.timeFrom != ''">
                 and period_label &gt;= #{accumulation.timeFrom}
@@ -102,6 +105,9 @@
     <select id="countAccumulations" resultType="java.lang.Integer">
         select count(id) from ben_contribution
         where benefit_type = 'ACCUMULATION'
+        <if test="accumulation != null and accumulation.createdBy != null and accumulation.createdBy != ''">
+            and created_by = #{accumulation.createdBy,jdbcType=VARCHAR}
+        </if>
         <if test="accumulation != null">
             <if test="accumulation.timeFrom != null and accumulation.timeFrom != ''">
                 and period_label &gt;= #{accumulation.timeFrom}

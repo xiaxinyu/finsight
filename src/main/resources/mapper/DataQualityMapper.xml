@@ -2,19 +2,26 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.finsight.infrastructure.mapper.DataQualityMapper">
 
+    <sql id="filterOwner">
+        <if test="ownerUserId != null and ownerUserId != ''">
+            and t.created_by = #{ownerUserId,jdbcType=VARCHAR}
+        </if>
+    </sql>
+
     <select id="classificationCoverage" resultType="map">
         select
             count(*) as totalTxns,
-            sum(case when coalesce(trim(consume_code), '') = ''
-                      and coalesce(trim(consume_name), '') = '' then 1 else 0 end) as unclassifiedTxns,
-            round(sum(case when coalesce(trim(consume_code), '') = ''
-                      and coalesce(trim(consume_name), '') = '' then 1 else 0 end)
+            sum(case when coalesce(trim(t.consume_code), '') = ''
+                      and coalesce(trim(t.consume_name), '') = '' then 1 else 0 end) as unclassifiedTxns,
+            round(sum(case when coalesce(trim(t.consume_code), '') = ''
+                      and coalesce(trim(t.consume_name), '') = '' then 1 else 0 end)
                   / nullif(count(*), 0) * 100, 2) as unclassifiedPct,
-            round(sum(case when coalesce(trim(consume_code), '') = ''
-                      and coalesce(trim(consume_name), '') = ''
-                 then abs(coalesce(balance_money, 0) + coalesce(income_money, 0)) else 0 end), 2) as unclassifiedAmount
-        from `transaction`
-        where deleted is null or deleted = 0
+            round(sum(case when coalesce(trim(t.consume_code), '') = ''
+                      and coalesce(trim(t.consume_name), '') = ''
+                 then abs(coalesce(t.balance_money, 0) + coalesce(t.income_money, 0)) else 0 end), 2) as unclassifiedAmount
+        from `transaction` t
+        where (t.deleted is null or t.deleted = 0)
+        <include refid="filterOwner"/>
     </select>
 
     <select id="countOrphanCategoryTransactions" resultType="int">
@@ -24,12 +31,15 @@
         where (t.deleted is null or t.deleted = 0)
           and coalesce(trim(t.consume_code), '') &lt;&gt; ''
           and (c.id is null or coalesce(c.deleted, 0) = 1)
+        <include refid="filterOwner"/>
     </select>
 
     <select id="countRefundExcluded" resultType="int">
         select count(*)
         from v_transaction_analytics v
+        inner join `transaction` t on t.id = v.id
         where v.is_refund = 1
+        <include refid="filterOwner"/>
     </select>
 
     <select id="merchantTokenCoverage" resultType="map">
@@ -39,6 +49,8 @@
             round(sum(case when coalesce(trim(v.merchant_token), '') &lt;&gt; '' then 1 else 0 end)
                   / nullif(count(*), 0) * 100, 2) as tokenCoveragePct
         from v_transaction_analytics v
+        inner join `transaction` t on t.id = v.id
         where v.is_transfer = 0
+        <include refid="filterOwner"/>
     </select>
 </mapper>

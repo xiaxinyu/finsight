@@ -1,5 +1,6 @@
 package com.finsight.application.benefit.impl;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.benefit.IAccumulationListingService;
 import com.finsight.application.benefit.IAccumulationService;
 import com.finsight.application.support.ListingDateSupport;
@@ -18,9 +19,13 @@ public class AccumulationListingServiceImpl implements IAccumulationListingServi
     @Autowired
     private IAccumulationService accumulationService;
 
+    @Autowired
+    private LedgerUserScope ledgerUserScope;
+
     @Override
     public CollectionResult<Accumulation> listAccumulations(AccumulationParam param) throws AppServiceException {
         Accumulation accumulation = new Accumulation();
+        accumulation.setCreatedBy(ledgerUserScope.resolve());
         String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {

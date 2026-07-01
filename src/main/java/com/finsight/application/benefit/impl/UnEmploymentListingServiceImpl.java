@@ -1,5 +1,6 @@
 package com.finsight.application.benefit.impl;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.benefit.IUnEmploymentListingService;
 import com.finsight.application.benefit.IUnEmploymentService;
 import com.finsight.application.support.ListingDateSupport;
@@ -18,9 +19,13 @@ public class UnEmploymentListingServiceImpl implements IUnEmploymentListingServi
     @Autowired
     private IUnEmploymentService unEmploymentService;
 
+    @Autowired
+    private LedgerUserScope ledgerUserScope;
+
     @Override
     public CollectionResult<UnEmployment> listUnEmployments(UnEmploymentParam param) throws AppServiceException {
         UnEmployment unEmployment = new UnEmployment();
+        unEmployment.setCreatedBy(ledgerUserScope.resolve());
         String[] ym = ListingDateSupport.monthRangeOrDefaultOneYear(
                 param.getTransactionDateStartStr(), param.getTransactionDateEndStr());
         if (ym[0] != null) {

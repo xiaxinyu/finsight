@@ -15,6 +15,8 @@ import com.finsight.application.transaction.TransactionAmountNormalizer;
 import com.finsight.application.transaction.TransactionCategoryFieldNormalizer;
 import com.finsight.application.transaction.TransactionCategoryFieldSync;
 import com.finsight.application.transaction.TransactionFieldSanitizer;
+import com.finsight.application.statement.IStatementService;
+import com.finsight.domain.model.Statement;
 import com.finsight.domain.port.TransactionRepository;
 import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.query.TransactionQuery;
@@ -38,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TransactionServiceImpl implements ITransactionService {
     private static final Logger log = LoggerFactory.getLogger(TransactionServiceImpl.class);
     private static final long HOME_SUMMARY_CACHE_TTL_MS = 120_000L;
-    private final Map<Integer, CacheEntry> homeSummaryCache = new ConcurrentHashMap<>();
+    private final Map<String, CacheEntry> homeSummaryCache = new ConcurrentHashMap<>();
     @Autowired
     BankCardService bankCardService;
 
@@ -56,6 +58,9 @@ public class TransactionServiceImpl implements ITransactionService {
 
     @Autowired
     LedgerUserScope ledgerUserScope;
+
+    @Autowired
+    IStatementService statementService;
 
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
@@ -228,7 +233,14 @@ public class TransactionServiceImpl implements ITransactionService {
 
     @Override
     public void deleteByStatementId(String statementId, String userName) {
-        transactionRepository.deleteByStatementId(statementId, userName);
+        if (StringUtils.isBlank(statementId)) {
+            return;
+        }
+        Statement statement = statementService.getById(statementId.trim());
+        if (statement == null || !ledgerUserScope.owns(statement.getCreatedBy())) {
+            throw new AppException("Statement not found");
+        }
+        transactionRepository.deleteByStatementId(statementId.trim(), userName);
         invalidateHomeSummaryCache();
         metricRefreshTrigger.afterTransactionsChanged(List.of(), userName);
     }
@@ -475,15 +487,16 @@ public class TransactionServiceImpl implements ITransactionService {
                 year = cal.get(java.util.Calendar.YEAR);
             }
             boolean ranged = rangeStart != null && rangeEnd != null;
+            String owner = ledgerUserScope.resolve();
             if (!ranged) {
-                CacheEntry cached = homeSummaryCache.get(year);
+                String cacheKey = owner + ":" + year;
+                CacheEntry cached = homeSummaryCache.get(cacheKey);
                 long now = System.currentTimeMillis();
                 if (cached != null && (now - cached.getCreatedAt()) <= HOME_SUMMARY_CACHE_TTL_MS) {
                     return cached.getPayload();
                 }
             }
 
-            String owner = ledgerUserScope.resolve();
             List<KeyValue> buckets = ranged
                     ? transactionRepository.homeSummaryExpenseBucketsForRange(rangeStart, rangeEnd, owner)
                     : transactionRepository.homeSummaryExpenseBuckets(year, owner);
@@ -597,7 +610,7 @@ public class TransactionServiceImpl implements ITransactionService {
             String payload = com.alibaba.fastjson.JSONObject.toJSONString(json);
             if (!ranged) {
                 long now = System.currentTimeMillis();
-                homeSummaryCache.put(year, new CacheEntry(now, payload));
+                homeSummaryCache.put(owner + ":" + year, new CacheEntry(now, payload));
             }
             return payload;
         } catch (Exception e) {

@@ -1,5 +1,6 @@
 package com.finsight.application.finance;
 
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.classification.ConfigVersionService;
 import com.finsight.infrastructure.mapper.DataQualityMapper;
 import org.springframework.stereotype.Service;
@@ -13,23 +14,27 @@ public class DataQualityService {
     private final UserScopedFinancialQueries scopedFinancialQueries;
     private final DataQualityMapper dataQualityMapper;
     private final ConfigVersionService configVersionService;
+    private final LedgerUserScope ledgerUserScope;
 
     public DataQualityService(UserScopedFinancialQueries scopedFinancialQueries,
                               DataQualityMapper dataQualityMapper,
-                              ConfigVersionService configVersionService) {
+                              ConfigVersionService configVersionService,
+                              LedgerUserScope ledgerUserScope) {
         this.scopedFinancialQueries = scopedFinancialQueries;
         this.dataQualityMapper = dataQualityMapper;
         this.configVersionService = configVersionService;
+        this.ledgerUserScope = ledgerUserScope;
     }
 
     public Map<String, Object> summary() {
+        String owner = ledgerUserScope.resolve();
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("unclassifiedCount", scopedFinancialQueries.countUnclassified());
         m.put("transferPairCount", scopedFinancialQueries.countTransferGroups());
-        putCoverage(m);
-        m.put("orphanCategoryTxnCount", safeOrphanCount());
-        m.put("refundExcludedCount", safeRefundCount());
-        putMerchantCoverage(m);
+        putCoverage(m, owner);
+        m.put("orphanCategoryTxnCount", safeOrphanCount(owner));
+        m.put("refundExcludedCount", safeRefundCount(owner));
+        putMerchantCoverage(m, owner);
         m.put("versions", configVersionService.asMap());
         return m;
     }
@@ -41,9 +46,9 @@ public class DataQualityService {
         return strip;
     }
 
-    private void putCoverage(Map<String, Object> m) {
+    private void putCoverage(Map<String, Object> m, String owner) {
         try {
-            Map<String, Object> cov = dataQualityMapper.classificationCoverage();
+            Map<String, Object> cov = dataQualityMapper.classificationCoverage(owner);
             if (cov != null) {
                 m.put("totalTxnCount", cov.get("totalTxns"));
                 m.put("unclassifiedPct", cov.get("unclassifiedPct"));
@@ -54,25 +59,25 @@ public class DataQualityService {
         }
     }
 
-    private int safeOrphanCount() {
+    private int safeOrphanCount(String owner) {
         try {
-            return dataQualityMapper.countOrphanCategoryTransactions();
+            return dataQualityMapper.countOrphanCategoryTransactions(owner);
         } catch (Exception e) {
             return 0;
         }
     }
 
-    private int safeRefundCount() {
+    private int safeRefundCount(String owner) {
         try {
-            return dataQualityMapper.countRefundExcluded();
+            return dataQualityMapper.countRefundExcluded(owner);
         } catch (Exception e) {
             return 0;
         }
     }
 
-    private void putMerchantCoverage(Map<String, Object> m) {
+    private void putMerchantCoverage(Map<String, Object> m, String owner) {
         try {
-            Map<String, Object> mc = dataQualityMapper.merchantTokenCoverage();
+            Map<String, Object> mc = dataQualityMapper.merchantTokenCoverage(owner);
             if (mc != null) {
                 m.put("merchantTokenCoveragePct", mc.get("tokenCoveragePct"));
             }
