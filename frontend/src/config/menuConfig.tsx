@@ -94,8 +94,10 @@ export const menuItems: FsMenuItem[] = [
             label: 'Spending',
             children: [
               { key: '/reports/fixed-vs-variable', icon: <CalendarOutlined />, label: 'Fixed vs Variable', path: '/reports/fixed-vs-variable' },
-              { key: '/reports/spending-drift', icon: <RiseOutlined />, label: 'Spending drift', path: '/reports/spending-drift' },
-              { key: '/reports/trend-changes', icon: <RiseOutlined />, label: 'Trend changes', path: '/reports/trend-changes' },
+              { key: '/reports/spending-drift', icon: <SwapOutlined />, label: 'Spending drift', path: '/reports/spending-drift' },
+              { key: '/reports/income-trends', icon: <WalletOutlined />, label: 'Income trends', path: '/reports/income-trends' },
+              { key: '/reports/trend-changes', icon: <LineChartOutlined />, label: 'Consumption trends', path: '/reports/trend-changes' },
+              { key: '/reports/debt-trends', icon: <CreditCardOutlined />, label: 'Debt trends', path: '/reports/debt-trends' },
             ],
           },
           {
@@ -182,7 +184,7 @@ export function menuOpenKeysForPath(pathname: string): string[] {
     keys.push('reports')
     const id = pathname.replace('/reports/', '')
     if (['cashflow', 'budget-vs-actual', 'fund-flow', 'transfer-finance', 'tax-summary'].includes(id)) keys.push('reports-cashflow')
-    else if (['fixed-vs-variable', 'spending-drift', 'trend-changes'].includes(id)) keys.push('reports-spending')
+    else if (['fixed-vs-variable', 'spending-drift', 'income-trends', 'trend-changes', 'debt-trends'].includes(id)) keys.push('reports-spending')
     else if (['bills-calendar', 'annual-outlook', 'cash-risk'].includes(id)) keys.push('reports-outlook')
     else if (['subscriptions', 'merchant-concentration', 'merchant-drift'].includes(id)) keys.push('reports-merchants')
     return keys

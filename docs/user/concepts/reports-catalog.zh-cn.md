@@ -38,8 +38,8 @@
 | 报表 | 用途 | 何时打开 |
 | :--- | :--- | :--- |
 | **Fixed vs Variable** | 固定 vs 可变占比 | 成本结构分析 |
-| **Spending Drift** | 两期 semantic 桶对比 | 「多花在哪儿？」 |
-| **Trend Changes** | 分类增减、储蓄率拐点 | 结构性变化 |
+| **Spending Drift** | 任意两期按 Classification 对比 | 季度、半年等自定义区间 |
+| **Consumption Trends** | YoY + 分类/L1 矩阵 · CSV 导出 | 日历年消费历史 |
 
 ---
 
@@ -85,8 +85,8 @@
 | 转账/贷款/投资 | Transfer & Finance |
 | 税务 | Tax Summary |
 | 固定 vs 可变 | Fixed vs Variable |
-| 两期对比 | Spending Drift |
-| 哪类在涨 | Trend Changes |
+| 自定义两期对比 | Spending Drift |
+| 逐年 / 分类消费 | Consumption Trends |
 | 未来账单 | Bills Calendar |
 | 全年预测 | Annual Outlook |
 | 流动性风险 | Cash Risk |

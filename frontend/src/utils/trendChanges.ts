@@ -47,6 +47,11 @@ export type TrendChangesReport = {
   }
   topCategoryGrowth: TrendMover[]
   topMerchantMovers: TrendMover[]
+  categoryYearMatrix?: CategoryYearMatrix
+  categoryL1YearMatrix?: CategoryYearMatrix
+  consumptionYearSeries?: ConsumptionYearPoint[]
+  compareMode?: 'ytd_aligned' | 'full_year'
+  historyFromYear?: number
   lifestyleInflation: {
     detected: boolean
     incomePctChange: number
@@ -57,6 +62,30 @@ export type TrendChangesReport = {
   trends: TrendItem[]
 }
 
+export type CategoryYearMatrixRow = {
+  tagId: string
+  label: string
+  amountsByYear: Record<string, number>
+  shareByYear?: Record<string, number>
+  deltaAmount: number
+  deltaPercent: number
+  yoyPercent?: number
+  drillDown?: Record<string, string>
+}
+
+export type CategoryYearMatrix = {
+  years: number[]
+  partialYears?: string[]
+  rows: CategoryYearMatrixRow[]
+}
+
+export type ConsumptionYearPoint = {
+  year: number
+  amount: number
+  partial: boolean
+  throughDate?: string
+}
+
 export function buildTrendKpis(report: TrendChangesReport) {
   const exp = report.summary.expense
   const sav = report.summary.savingsRate
@@ -64,7 +93,7 @@ export function buildTrendKpis(report: TrendChangesReport) {
   return [
     {
       key: 'exp',
-      label: 'Expense Δ',
+      label: 'Consumption Δ',
       value: formatMoney(exp.deltaAmount),
       tone: exp.deltaAmount > 0 ? 'expense' as const : 'income' as const,
       hint: `${report.fromYear}→${report.toYear}`,
@@ -85,7 +114,7 @@ export function buildTrendKpis(report: TrendChangesReport) {
     },
     {
       key: 'expGrowth',
-      label: 'Expense growth',
+      label: 'Consumption growth',
       value: `${life.expensePctChange >= 0 ? '+' : ''}${life.expensePctChange.toFixed(1)}%`,
       tone: life.expensePctChange > life.incomePctChange ? 'expense' as const : 'neutral' as const,
     },
@@ -129,7 +158,7 @@ export function buildTrendYoYCards(report: TrendChangesReport): TrendYoYCard[] {
     },
     {
       key: 'expense',
-      label: 'Expense',
+      label: 'Consumption',
       from: exp.from,
       to: exp.to,
       deltaAmount: exp.deltaAmount,
@@ -298,4 +327,132 @@ export function moverFromTo(row: TrendMover | TrendItem, summary?: TrendDeltaMet
     return { from: summary.from, to: summary.to }
   }
   return { from: null, to: null }
+}
+
+/** Total consumption by calendar year (official semantic totals). */
+export function buildConsumptionTotalYearChart(series: ConsumptionYearPoint[]): EChartsOption {
+  const labels = series.map((p) => (p.partial ? `${p.year} YTD` : String(p.year)))
+  const amounts = series.map((p) => p.amount)
+  const yoy = series.map((p, i) => {
+    if (i === 0) return null
+    const prev = series[i - 1].amount
+    return prev > 0 ? ((p.amount - prev) / prev) * 100 : null
+  })
+  return {
+    grid: { left: 48, right: 48, top: 36, bottom: 28 },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: unknown) => {
+        const rows = Array.isArray(params) ? params : [params]
+        const idx = Number((rows[0] as { dataIndex?: number }).dataIndex ?? 0)
+        const pt = series[idx]
+        if (!pt) return ''
+        const lines = [`<b>${labels[idx]}</b>`, `Consumption ${formatMoney(pt.amount)}`]
+        const pct = yoy[idx]
+        if (pct != null) {
+          lines.push(`YoY ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`)
+        }
+        if (pt.partial && pt.throughDate) {
+          lines.push(`Through ${pt.throughDate}`)
+        }
+        return lines.join('<br/>')
+      },
+    },
+    xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+    series: [{
+      name: 'Consumption',
+      type: 'bar',
+      data: amounts.map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: series[i].partial ? '#94a3b8' : '#2563eb',
+          borderRadius: [4, 4, 0, 0],
+        },
+      })),
+      barMaxWidth: 48,
+    }],
+  }
+}
+
+/** Stacked bar: top classifications per year. */
+export function buildCategoryYearTrendChart(matrix: CategoryYearMatrix, topN = 6): EChartsOption {
+  const years = matrix.years.map(String)
+  const rows = matrix.rows.slice(0, topN)
+  const palette = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#64748b', '#dc2626']
+  return {
+    grid: { left: 48, right: 16, top: 40, bottom: 28 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: rows.map((r) => r.label), top: 4, type: 'scroll', textStyle: { fontSize: 11 } },
+    xAxis: { type: 'category', data: years, axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+    series: rows.map((row, i) => ({
+      name: row.label,
+      type: 'bar' as const,
+      stack: 'consumption',
+      data: years.map((y) => Number(row.amountsByYear[y] ?? 0)),
+      itemStyle: { color: palette[i % palette.length] },
+      barMaxWidth: 36,
+    })),
+  }
+}
+
+export function categoryYearMatrixTotals(matrix: CategoryYearMatrix): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const y of matrix.years) {
+    totals[String(y)] = matrix.rows.reduce((s, r) => s + Number(r.amountsByYear[String(y)] ?? 0), 0)
+  }
+  return totals
+}
+
+export function officialConsumptionTotals(series: ConsumptionYearPoint[]): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const p of series) {
+    totals[String(p.year)] = p.amount
+  }
+  return totals
+}
+
+export function yearColumnLabel(year: number, partialYears?: string[]): string {
+  return partialYears?.includes(String(year)) ? `${year} YTD` : String(year)
+}
+
+function csvEscape(value: string | number): string {
+  const s = String(value)
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  return s
+}
+
+/** Export classification × year matrix for spreadsheet analysis. */
+export function downloadCategoryYearMatrixCsv(
+  matrix: CategoryYearMatrix,
+  officialTotals: Record<string, number>,
+  filename: string,
+): void {
+  const partial = matrix.partialYears
+  const headers = [
+    'Bucket',
+    ...matrix.years.map((y) => yearColumnLabel(y, partial)),
+    'YoY %',
+    `Δ ${matrix.years[0]}→${matrix.years[matrix.years.length - 1]}`,
+  ]
+  const rows = matrix.rows.map((row) => [
+    row.label,
+    ...matrix.years.map((y) => String(row.amountsByYear[String(y)] ?? 0)),
+    row.yoyPercent != null ? row.yoyPercent.toFixed(1) : '',
+    String(row.deltaAmount),
+  ].map(csvEscape).join(','))
+  const totalRow = [
+    'Total',
+    ...matrix.years.map((y) => String(officialTotals[String(y)] ?? 0)),
+    '',
+    '',
+  ].map(csvEscape).join(',')
+  const blob = new Blob([[headers.map(csvEscape).join(','), ...rows, totalRow].join('\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }

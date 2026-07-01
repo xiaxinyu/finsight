@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Alert } from 'antd'
-import { BarChartOutlined } from '@ant-design/icons'
+import { Alert, Button } from 'antd'
+import { BarChartOutlined, LineChartOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { reportConfigs } from '../../config/reports'
 import { fetchReport } from '../../api/report'
@@ -33,6 +33,8 @@ import { AnnualOutlookReport } from './AnnualOutlookReport'
 import { CashRiskReport } from './CashRiskReport'
 import { MerchantReport } from './MerchantReport'
 import { TrendChangesReport } from './TrendChangesReport'
+import { DebtTrendsReport } from './DebtTrendsReport'
+import { IncomeTrendsReport } from './IncomeTrendsReport'
 import { SpendingDriftReport } from './SpendingDriftReport'
 
 type ReportFilters = {
@@ -84,6 +86,12 @@ export function ReportsPage() {
         return { calendar: await billCalendar() }
       }
       if (cfg.type === 'trendChanges') {
+        return null
+      }
+      if (cfg.type === 'debtTrends') {
+        return null
+      }
+      if (cfg.type === 'incomeTrends') {
         return null
       }
       if (cfg.type === 'budgetVsActual') {
@@ -309,6 +317,14 @@ export function ReportsPage() {
     return <TrendChangesReport title={cfg.title} subtitle={cfg.subtitle} />
   }
 
+  if (cfg.type === 'debtTrends') {
+    return <DebtTrendsReport title={cfg.title} subtitle={cfg.subtitle} />
+  }
+
+  if (cfg.type === 'incomeTrends') {
+    return <IncomeTrendsReport title={cfg.title} subtitle={cfg.subtitle} />
+  }
+
   if (cfg.type === 'billsCalendar') {
     const rows = (data && 'calendar' in data ? data.calendar : []) as Record<string, unknown>[]
     const total = rows.reduce((s, r) => s + Number(r.amount || 0), 0)
@@ -390,6 +406,22 @@ export function ReportsPage() {
       {view && (
         <>
           <ReportKpiStrip items={view.kpis} />
+          {reportId === 'cashflow' && (
+            <Alert
+              type="info"
+              showIcon
+              className="fs-report-related-link"
+              message="Year-over-year consumption by category"
+              description="Cashflow shows monthly totals. For calendar-year and classification trends, open Consumption Trends."
+              action={(
+                <Link to="/reports/trend-changes">
+                  <Button size="small" type="primary" icon={<LineChartOutlined />}>
+                    Consumption trends
+                  </Button>
+                </Link>
+              )}
+            />
+          )}
           <InsightPanel bullets={view.insights} title="Analysis" />
 
           <div className={`fs-report-split${view.tableData.length ? ' fs-report-split--with-table' : ''}`}>

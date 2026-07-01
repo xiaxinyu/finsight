@@ -30,9 +30,13 @@ export function buildReportDrillContext(input: {
   source?: DrillDownContext['source']
   provenance?: DrillDownContext['provenance']
 }): DrillDownContext {
-  const category = input.params.consumeName
-  const categoryGroup = input.params.consumeID
-  const semanticTag = input.params.semanticFilter
+  const params = { ...input.params }
+  if (params.semanticFilter) {
+    delete params.consumeName
+  }
+  const category = params.consumeName
+  const categoryGroup = params.consumeID
+  const semanticTag = params.semanticFilter
   const explanation = input.explanation?.length
     ? input.explanation
     : [
@@ -49,11 +53,11 @@ export function buildReportDrillContext(input: {
     title: input.title,
     metricLabel: input.metricLabel,
     explanation,
-    params: input.params,
+    params,
     actions: mergeDrillActions(input.actions),
     source: input.source ?? 'report',
     provenance: {
-      filterParams: { ...input.params },
+      filterParams: { ...params },
       ...input.provenance,
     },
   }

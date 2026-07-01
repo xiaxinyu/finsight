@@ -1,4 +1,6 @@
 import type { TrendChangesReport } from '../utils/trendChanges'
+import type { DebtTrendsReport } from '../utils/debtTrends'
+import type { IncomeTrendsReport } from '../utils/incomeTrends'
 import { getJson, postJson } from './client'
 import { normalizeResult } from './normalize'
 import type {
@@ -264,9 +266,24 @@ export async function fetchCashRiskCalendar(year: number, scenario = 'stress') {
   )
 }
 
-export async function fetchTrends(fromYear: number, toYear: number) {
+export async function fetchTrends(fromYear: number, toYear: number, historyFromYear?: number) {
+  const history = historyFromYear != null ? `&historyFromYear=${historyFromYear}` : ''
   return unwrap<TrendChangesReport>(
-    await getJson(`/api/v1/analytics/trends?fromYear=${fromYear}&toYear=${toYear}`),
+    await getJson(`/api/v1/analytics/trends?fromYear=${fromYear}&toYear=${toYear}${history}`),
+  )
+}
+
+export async function fetchDebtTrends(fromYear: number, toYear: number, historyFromYear?: number) {
+  const history = historyFromYear != null ? `&historyFromYear=${historyFromYear}` : ''
+  return unwrap<DebtTrendsReport>(
+    await getJson(`/api/v1/analytics/debt-trends?fromYear=${fromYear}&toYear=${toYear}${history}`),
+  )
+}
+
+export async function fetchIncomeTrends(fromYear: number, toYear: number, historyFromYear?: number) {
+  const history = historyFromYear != null ? `&historyFromYear=${historyFromYear}` : ''
+  return unwrap<IncomeTrendsReport>(
+    await getJson(`/api/v1/analytics/income-trends?fromYear=${fromYear}&toYear=${toYear}${history}`),
   )
 }
 

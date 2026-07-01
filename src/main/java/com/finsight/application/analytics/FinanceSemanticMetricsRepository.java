@@ -151,8 +151,14 @@ public class FinanceSemanticMetricsRepository {
     /** Expense-trend totals grouped by calendar year and semantic_tag. */
     public java.util.List<SemanticTagYearAmount> sumExpenseBySemanticTagYears(
             String userId, int fromYear, int toYear) {
+        return sumExpenseBySemanticTagYears(userId, fromYear, toYear, LocalDate.now());
+    }
+
+    /** Expense-trend totals grouped by calendar year and semantic_tag (YTD-safe for current year). */
+    public java.util.List<SemanticTagYearAmount> sumExpenseBySemanticTagYears(
+            String userId, int fromYear, int toYear, LocalDate asOf) {
         LocalDate start = LocalDate.of(fromYear, 1, 1);
-        LocalDate end = LocalDate.of(toYear, 12, 31);
+        LocalDate endInc = AnalyticsDateRange.consumptionYearEndInclusive(toYear, asOf);
         return jdbcTemplate.query(
                 """
                         select year(s.txn_date) as yr,
@@ -170,6 +176,172 @@ public class FinanceSemanticMetricsRepository {
                         rs.getString("tag_id"),
                         rs.getInt("yr"),
                         rs.getDouble("amount")),
-                start, end, userId, userId);
+                start, endInc, userId, userId);
+    }
+
+    public record CategoryL1YearAmount(String l1Code, String l1Name, int year, double amount) {
+    }
+
+    /** Expense-trend totals grouped by calendar year and category L1 (YTD-safe for current year). */
+    public java.util.List<CategoryL1YearAmount> sumExpenseByCategoryL1Years(
+            String userId, int fromYear, int toYear, LocalDate asOf) {
+        LocalDate start = LocalDate.of(fromYear, 1, 1);
+        LocalDate endInc = AnalyticsDateRange.consumptionYearEndInclusive(toYear, asOf);
+        return jdbcTemplate.query(
+                """
+                        select year(s.txn_date) as yr,
+                               coalesce(nullif(trim(s.category_l1_code), ''), '__UNCLASSIFIED__') as l1_code,
+                               coalesce(nullif(trim(s.category_l1_name), ''), 'Unclassified') as l1_name,
+                               coalesce(sum(s.amount), 0) as amount
+                        from v_transaction_finance_semantics s
+                        inner join transaction t on t.id = s.id
+                        where s.include_in_expense_trend = 1
+                          and s.txn_date >= ? and s.txn_date <= ?
+                          and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+                        group by year(s.txn_date),
+                                 coalesce(nullif(trim(s.category_l1_code), ''), '__UNCLASSIFIED__'),
+                                 coalesce(nullif(trim(s.category_l1_name), ''), 'Unclassified')
+                        order by yr, amount desc
+                        """,
+                (rs, rowNum) -> new CategoryL1YearAmount(
+                        rs.getString("l1_code"),
+                        rs.getString("l1_name"),
+                        rs.getInt("yr"),
+                        rs.getDouble("amount")),
+                start, endInc, userId, userId);
+    }
+
+    /** Income-trend totals grouped by calendar year and semantic_tag (YTD-safe for current year). */
+    public java.util.List<SemanticTagYearAmount> sumIncomeBySemanticTagYears(
+            String userId, int fromYear, int toYear, LocalDate asOf) {
+        LocalDate start = LocalDate.of(fromYear, 1, 1);
+        LocalDate endInc = AnalyticsDateRange.consumptionYearEndInclusive(toYear, asOf);
+        return jdbcTemplate.query(
+                """
+                        select year(s.txn_date) as yr,
+                               coalesce(nullif(trim(s.semantic_tag), ''), 'other') as tag_id,
+                               coalesce(sum(s.amount), 0) as amount
+                        from v_transaction_finance_semantics s
+                        inner join transaction t on t.id = s.id
+                        where s.include_in_income_trend = 1
+                          and s.txn_date >= ? and s.txn_date <= ?
+                          and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+                        group by year(s.txn_date), coalesce(nullif(trim(s.semantic_tag), ''), 'other')
+                        order by yr, amount desc
+                        """,
+                (rs, rowNum) -> new SemanticTagYearAmount(
+                        rs.getString("tag_id"),
+                        rs.getInt("yr"),
+                        rs.getDouble("amount")),
+                start, endInc, userId, userId);
+    }
+
+    /** Income-trend totals grouped by calendar year and category L1 (YTD-safe for current year). */
+    public java.util.List<CategoryL1YearAmount> sumIncomeByCategoryL1Years(
+            String userId, int fromYear, int toYear, LocalDate asOf) {
+        LocalDate start = LocalDate.of(fromYear, 1, 1);
+        LocalDate endInc = AnalyticsDateRange.consumptionYearEndInclusive(toYear, asOf);
+        return jdbcTemplate.query(
+                """
+                        select year(s.txn_date) as yr,
+                               coalesce(nullif(trim(s.category_l1_code), ''), '__UNCLASSIFIED__') as l1_code,
+                               coalesce(nullif(trim(s.category_l1_name), ''), 'Unclassified') as l1_name,
+                               coalesce(sum(s.amount), 0) as amount
+                        from v_transaction_finance_semantics s
+                        inner join transaction t on t.id = s.id
+                        where s.include_in_income_trend = 1
+                          and s.txn_date >= ? and s.txn_date <= ?
+                          and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+                        group by year(s.txn_date),
+                                 coalesce(nullif(trim(s.category_l1_code), ''), '__UNCLASSIFIED__'),
+                                 coalesce(nullif(trim(s.category_l1_name), ''), 'Unclassified')
+                        order by yr, amount desc
+                        """,
+                (rs, rowNum) -> new CategoryL1YearAmount(
+                        rs.getString("l1_code"),
+                        rs.getString("l1_name"),
+                        rs.getInt("yr"),
+                        rs.getDouble("amount")),
+                start, endInc, userId, userId);
+    }
+
+    public record LiabilityYearFlow(int year, double borrowing, double repayment) {
+        public double net() {
+            return borrowing - repayment;
+        }
+    }
+
+    public record LiabilityTagYearAmount(String tagId, int year, double amount) {
+    }
+
+    private static final String LIABILITY_BASE = """
+            from v_transaction_finance_semantics s
+            inner join transaction t on t.id = s.id
+            where s.economic_nature = 'liability'
+              and s.txn_date >= ? and s.txn_date <= ?
+              and (t.created_by = ? or (? = '_anonymous' and t.created_by is null))
+            """;
+
+    /** Sum liability inflow (borrowing) or outflow (repayment) in an inclusive date range. */
+    public double sumLiabilityFlow(String userId, LocalDate start, LocalDate endInc, String cashDirection) {
+        Double v = jdbcTemplate.queryForObject(
+                """
+                        select coalesce(sum(s.amount), 0)
+                        """
+                        + LIABILITY_BASE
+                        + " and s.cash_direction = ? ",
+                Double.class,
+                start, endInc, userId, userId, cashDirection);
+        return v == null ? 0 : v;
+    }
+
+    /** Borrowing vs repayment totals grouped by calendar year (YTD-safe for current year). */
+    public java.util.List<LiabilityYearFlow> sumLiabilityFlowByYear(
+            String userId, int fromYear, int toYear, LocalDate asOf) {
+        LocalDate start = LocalDate.of(fromYear, 1, 1);
+        LocalDate endInc = AnalyticsDateRange.consumptionYearEndInclusive(toYear, asOf);
+        return jdbcTemplate.query(
+                """
+                        select year(s.txn_date) as yr,
+                               coalesce(sum(case when s.cash_direction = 'inflow' then s.amount else 0 end), 0)
+                                   as borrowing,
+                               coalesce(sum(case when s.cash_direction = 'outflow' then s.amount else 0 end), 0)
+                                   as repayment
+                        """
+                        + LIABILITY_BASE
+                        + """
+                        group by year(s.txn_date)
+                        order by yr
+                        """,
+                (rs, rowNum) -> new LiabilityYearFlow(
+                        rs.getInt("yr"),
+                        rs.getDouble("borrowing"),
+                        rs.getDouble("repayment")),
+                start, endInc, userId, userId);
+    }
+
+    /** Liability flows grouped by calendar year and semantic tag (inflow or outflow). */
+    public java.util.List<LiabilityTagYearAmount> sumLiabilityBySemanticTagYears(
+            String userId, int fromYear, int toYear, LocalDate asOf, String cashDirection) {
+        LocalDate start = LocalDate.of(fromYear, 1, 1);
+        LocalDate endInc = AnalyticsDateRange.consumptionYearEndInclusive(toYear, asOf);
+        return jdbcTemplate.query(
+                """
+                        select year(s.txn_date) as yr,
+                               coalesce(nullif(trim(s.semantic_tag), ''), 'liability') as tag_id,
+                               coalesce(sum(s.amount), 0) as amount
+                        """
+                        + LIABILITY_BASE
+                        + " and s.cash_direction = ? "
+                        + """
+                        group by year(s.txn_date),
+                                 coalesce(nullif(trim(s.semantic_tag), ''), 'liability')
+                        order by yr, amount desc
+                        """,
+                (rs, rowNum) -> new LiabilityTagYearAmount(
+                        rs.getString("tag_id"),
+                        rs.getInt("yr"),
+                        rs.getDouble("amount")),
+                start, endInc, userId, userId, cashDirection);
     }
 }

@@ -4383,158 +4383,456 @@
   margin-bottom: 0;
 }
 
-.fs-trend-changes .fs-report-kpi-strip {
-  margin-top: 0;
+.fs-trend-changes .fs-page-body {
+  gap: 0;
 }
 
-.fs-trend-toolbar {
+/* ── Consumption Trends layout ── */
+
+.fs-trend-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.fs-trend-controls__group {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.fs-trend-toolbar__label {
+.fs-trend-controls__label {
   font-size: 12px;
   font-weight: 600;
   color: #64748b;
+  white-space: nowrap;
 }
 
-.fs-trend-toolbar__year {
+.fs-trend-controls__vs {
+  font-size: 12px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-trend-controls__divider {
+  width: 1px;
+  height: 20px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.fs-trend-controls__select {
+  width: 96px !important;
+}
+
+.fs-trend-controls__select--narrow {
+  width: 88px !important;
+}
+
+.fs-trend-controls__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fs-trend-controls__tag {
+  margin: 0;
+}
+
+.fs-trend-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 4px;
+}
+
+.fs-trend-ytd-banner {
+  border-radius: 10px;
+  margin-bottom: -8px;
+}
+
+.fs-trend-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fs-trend-section--secondary {
+  margin-top: -4px;
+}
+
+.fs-trend-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fs-trend-section-head__title {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em;
+}
+
+.fs-trend-section-head__desc {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
+  line-height: 1.4;
+  max-width: 560px;
+}
+
+.fs-trend-section-head__actions {
+  flex-shrink: 0;
+}
+
+.fs-trend-section-head__actions-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Overview card */
+.fs-trend-overview-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e8edf3 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.fs-trend-overview {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+@media (max-width: 960px) {
+  .fs-trend-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fs-trend-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px 20px;
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fs-trend-stat:last-child {
+  border-right: none;
+}
+
+@media (max-width: 960px) {
+  .fs-trend-stat {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .fs-trend-stat:last-child {
+    border-bottom: none;
+  }
+}
+
+.fs-trend-stat:hover {
+  background: #f8fafc;
+}
+
+.fs-trend-stat--hero {
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.fs-trend-stat--hero:hover {
+  background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
+}
+
+.fs-trend-stat--hero .fs-trend-stat__label {
+  color: #c2410c;
+}
+
+.fs-trend-stat--hero .fs-trend-stat__to {
+  font-size: 22px;
+}
+
+.fs-trend-stat--income .fs-trend-stat__label { color: #15803d; }
+.fs-trend-stat--expense .fs-trend-stat__label { color: #c2410c; }
+.fs-trend-stat--warn .fs-trend-stat__label { color: #b45309; }
+
+.fs-trend-stat__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.fs-trend-stat__values {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.fs-trend-stat__from {
+  font-size: 14px;
+  font-weight: 500;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-trend-stat__to {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.fs-trend-stat__arrow {
+  color: #cbd5e1;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.fs-trend-stat__delta {
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.fs-trend-toolbar__arrow {
-  color: #94a3b8;
-  font-size: 11px;
+.fs-trend-stat__pct {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
-.fs-trend-toolbar__select {
-  width: 96px !important;
-}
-
-.fs-trend-toolbar__tag {
-  margin-inline-start: 4px;
-}
-
-.fs-trend-yoy-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-@media (max-width: 900px) {
-  .fs-trend-yoy-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.fs-trend-yoy-card {
+.fs-trend-overview__insights {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
   border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid #e2e8f0;
 }
 
-.fs-trend-yoy-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+.fs-trend-overview__insights li {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #475569;
+  padding-left: 14px;
+  position: relative;
 }
 
-.fs-trend-yoy-card--income {
-  border-top: 3px solid #16a34a;
+.fs-trend-overview__insights li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #94a3b8;
 }
 
-.fs-trend-yoy-card--expense {
-  border-top: 3px solid #ea580c;
+.fs-trend-overview__insight--warn {
+  color: #9a3412;
 }
 
-.fs-trend-yoy-card--warn {
-  border-top: 3px solid #d97706;
+.fs-trend-overview__insight--warn::before {
+  background: #f97316 !important;
 }
 
-.fs-trend-yoy-card__label {
-  font-size: 11px;
+/* Charts */
+.fs-trend-chart-card {
+  border: 1px solid #e8edf3 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.fs-trend-chart-card--compact {
+  margin-bottom: 0;
+}
+
+.fs-trend-year-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fs-trend-year-strip__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 72px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.fs-trend-year-strip__label {
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #64748b;
 }
 
-.fs-trend-yoy-card__flow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.fs-trend-yoy-card__amount {
-  font-size: 15px;
-  font-weight: 600;
-  color: #334155;
+.fs-trend-year-strip__value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
   font-variant-numeric: tabular-nums;
 }
 
-.fs-trend-yoy-card__amount--to {
+/* Matrix table */
+.fs-trend-matrix-wrap .fs-table-card {
+  border: 1px solid #e8edf3 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.fs-trend-matrix-wrap .fs-table-card .ant-card-head {
+  display: none;
+}
+
+.fs-trend-matrix-wrap .ant-table-thead > tr > th {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc !important;
+  white-space: nowrap;
+  padding: 10px 12px !important;
+}
+
+.fs-trend-matrix-wrap .ant-table-tbody > tr > td {
+  padding: 9px 12px !important;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-trend-matrix-wrap .ant-table-tbody > tr.fs-trend-matrix-row:hover > td {
+  background: #f8fafc !important;
+}
+
+.fs-trend-matrix-wrap .ant-table-tbody > tr.fs-trend-matrix-row:active > td {
+  background: #eff6ff !important;
+}
+
+.fs-trend-matrix-wrap .ant-table-summary .fs-summary-row > td {
+  background: #f1f5f9 !important;
+  font-weight: 600;
+  border-top: 2px solid #e2e8f0;
+}
+
+.fs-trend-matrix-wrap .ant-table-thead > tr > th.fs-col-year--current,
+.fs-trend-matrix-wrap .ant-table-tbody > tr > td.fs-col-year--current {
+  background: #fffbeb !important;
+}
+
+.fs-trend-matrix-label {
+  font-weight: 500;
+  color: #334155;
+}
+
+.fs-trend-matrix-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-trend-matrix-amount--current {
+  font-weight: 600;
   color: #0f172a;
 }
 
-.fs-trend-yoy-card__arrow {
-  color: #94a3b8;
-  font-size: 10px;
+/* Movers panel */
+.fs-trend-movers-panel {
+  background: #fff;
+  border: 1px solid #e8edf3 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
 }
 
-.fs-trend-yoy-card__delta {
+.fs-trend-movers-panel .ant-collapse-item {
+  border: none !important;
+}
+
+.fs-trend-movers-panel .ant-collapse-header {
+  padding: 14px 18px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  background: #fafbfc;
+}
+
+.fs-trend-movers-panel .ant-collapse-content-box {
+  padding: 0 16px 16px !important;
+}
+
+.fs-trend-movers-panel__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
-.fs-trend-yoy-card__pct {
-  margin-left: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  opacity: 0.85;
-}
-
-.fs-trend-drivers {
+.fs-trend-movers {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.fs-trend-drivers__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.fs-trend-movers__toolbar {
+  padding-top: 4px;
+}
+
+.fs-trend-movers__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.fs-trend-drivers__title {
-  margin: 0 !important;
-  font-size: 15px !important;
+@media (min-width: 1100px) {
+  .fs-trend-movers__body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
 }
 
-.fs-trend-drivers__hint {
-  display: block;
-  font-size: 12px;
-  margin-top: 2px;
-  max-width: 520px;
+.fs-trend-movers__table .fs-table-card {
+  border: 1px solid #e8edf3 !important;
+  border-radius: 10px !important;
 }
 
-.fs-trend-drivers__chart-card {
-  height: 100%;
+.fs-trend-movers__table .fs-table-card .ant-card-head {
+  display: none;
 }
 
 .fs-trend-row--selected > td {
@@ -4543,6 +4841,67 @@
 
 .fs-trend-row--selected:hover > td {
   background: #dbeafe !important;
+}
+
+/* Debt Trends overrides */
+.fs-debt-trends .fs-debt-stat--hero {
+  background: linear-gradient(180deg, #fff1f2 0%, #ffffff 100%);
+}
+
+.fs-debt-trends .fs-debt-stat--hero .fs-trend-stat__label {
+  color: #be123c;
+}
+
+.fs-debt-stat__hint {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.fs-debt-charts-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 960px) {
+  .fs-debt-charts-row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+.fs-debt-year-strip__item {
+  min-width: 120px;
+}
+
+.fs-debt-year-strip__net {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-debt-year-strip__detail {
+  font-size: 11px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Income Trends overrides */
+.fs-income-trends .fs-income-stat--hero {
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%);
+}
+
+.fs-income-trends .fs-income-stat--hero .fs-trend-stat__label {
+  color: #15803d;
+}
+
+.fs-income-stat__hint {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin-top: 2px;
 }
 
 .fs-drill-partial-alert {

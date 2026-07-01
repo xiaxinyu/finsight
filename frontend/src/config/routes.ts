@@ -39,6 +39,8 @@ const reportTitles: Record<string, string> = {
   'expense-curve': 'Expense Curve',
   'annual-outlook': 'Annual Outlook',
   'trend-changes': 'Trend Changes',
+  'debt-trends': 'Debt Trends',
+  'income-trends': 'Income Trends',
   'cash-risk': 'Cash Risk',
   subscriptions: 'Subscriptions',
   'merchant-concentration': 'Merchant Concentration',

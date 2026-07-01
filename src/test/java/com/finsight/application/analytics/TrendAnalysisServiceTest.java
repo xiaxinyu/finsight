@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -45,28 +46,33 @@ class TrendAnalysisServiceTest {
 
     @Test
     void trends_returnsDecomposedYoYWithMovers() throws Exception {
-        when(semanticMetricsRepository.aggregateMonth(eq("user1"), eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2025, 12, 31))))
-                .thenReturn(aggregate(10000, 6000, 1200));
-        when(semanticMetricsRepository.aggregateMonth(eq("user1"), eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2026, 12, 31))))
-                .thenReturn(aggregate(12000, 9000, 1500));
-        when(semanticMetricsRepository.sumExpenseBySemanticTagYears("user1", 2025, 2026))
+        when(semanticMetricsRepository.aggregateMonth(eq("user1"), any(LocalDate.class), any(LocalDate.class)))
+                .thenAnswer(inv -> {
+                    LocalDate start = inv.getArgument(1);
+                    if (start.getYear() <= 2025) {
+                        return aggregate(10000, 6000, 1200);
+                    }
+                    return aggregate(12000, 9000, 1500);
+                });
+        when(semanticMetricsRepository.sumExpenseBySemanticTagYears(eq("user1"), eq(2025), eq(2026), any()))
                 .thenReturn(List.of(
                         new FinanceSemanticMetricsRepository.SemanticTagYearAmount("dining_spending", 2025, 1000),
                         new FinanceSemanticMetricsRepository.SemanticTagYearAmount("transport_spending", 2025, 500),
                         new FinanceSemanticMetricsRepository.SemanticTagYearAmount("dining_spending", 2026, 1800),
                         new FinanceSemanticMetricsRepository.SemanticTagYearAmount("transport_spending", 2026, 900)));
-        when(jdbcTemplate.queryForList(contains("v.txn_date >="),
-                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2026, 1, 1)), eq("user1"), eq("user1")))
-                .thenReturn(List.of(Map.of(
-                        "opponent_name", "Uber",
-                        "transaction_desc", "",
-                        "amount", 200)));
-        when(jdbcTemplate.queryForList(contains("v.txn_date >="),
-                eq(LocalDate.of(2026, 1, 1)), eq(LocalDate.of(2027, 1, 1)), eq("user1"), eq("user1")))
-                .thenReturn(List.of(Map.of(
-                        "opponent_name", "Uber",
-                        "transaction_desc", "",
-                        "amount", 500)));
+        when(semanticMetricsRepository.sumExpenseByCategoryL1Years(eq("user1"), eq(2025), eq(2026), any()))
+                .thenReturn(List.of(
+                        new FinanceSemanticMetricsRepository.CategoryL1YearAmount("FOOD", "Food", 2025, 1500),
+                        new FinanceSemanticMetricsRepository.CategoryL1YearAmount("FOOD", "Food", 2026, 2700)));
+        when(jdbcTemplate.queryForList(anyString(), any(LocalDate.class), any(LocalDate.class), eq("user1"), eq("user1")))
+                .thenAnswer(inv -> {
+                    LocalDate start = inv.getArgument(1);
+                    double amount = start.getYear() <= 2025 ? 200.0 : 500.0;
+                    return List.of(Map.of(
+                            "opponent_name", "Uber",
+                            "transaction_desc", "",
+                            "amount", amount));
+                });
 
         Map<String, Object> out = service.trends(2025, 2026);
 
@@ -95,6 +101,25 @@ class TrendAnalysisServiceTest {
         List<Map<String, Object>> categories = (List<Map<String, Object>>) out.get("topCategoryGrowth");
         assertTrue(categories.stream().anyMatch(c -> "dining_spending".equals(c.get("categoryCode"))));
         assertEquals("v_transaction_finance_semantics.semantic_tag", out.get("metricsSource"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> matrix = (Map<String, Object>) out.get("categoryYearMatrix");
+        assertNotNull(matrix);
+        @SuppressWarnings("unchecked")
+        List<Integer> years = (List<Integer>) matrix.get("years");
+        assertEquals(2, years.size());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> matrixRows = (List<Map<String, Object>>) matrix.get("rows");
+        assertTrue(matrixRows.stream().anyMatch(r -> "dining_spending".equals(r.get("tagId"))));
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> series = (List<Map<String, Object>>) out.get("consumptionYearSeries");
+        assertNotNull(series);
+        assertEquals(2, series.size());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> l1Matrix = (Map<String, Object>) out.get("categoryL1YearMatrix");
+        assertNotNull(l1Matrix);
     }
 
     private static Map<String, BigDecimal> aggregate(double income, double expense, double fixed) {

@@ -38,8 +38,8 @@ Each report answers **one decision question**. Totals use the same semantic laye
 | Report | Purpose | When to open |
 | :--- | :--- | :--- |
 | **Fixed vs Variable** | Share of fixed vs flexible spend | Cut costs; understand rigid bills |
-| **Spending Drift** | Compare two periods by semantic bucket | “Where did I spend more?” |
-| **Trend Changes** | Category growth and savings-rate shifts | Structural change, not one-off spikes |
+| **Spending Drift** | Compare two periods by classification | Custom range (quarter, half-year) |
+| **Consumption Trends** | YoY + matrix (Classification / Category L1) · CSV export | Calendar year analysis |
 
 ---
 
@@ -85,8 +85,8 @@ Each report answers **one decision question**. Totals use the same semantic laye
 | Transfers / loans / investments | Transfer & Finance |
 | Tax | Tax Summary |
 | Fixed vs flexible mix | Fixed vs Variable |
-| Spend vs last period | Spending Drift |
-| Which categories grew | Trend Changes |
+| Spend vs custom period | Spending Drift |
+| Year-over-year by classification | Consumption Trends |
 | Upcoming bills | Bills Calendar |
 | Full-year forecast | Annual Outlook |
 | Risk of running short | Cash Risk |

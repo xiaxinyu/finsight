@@ -3,24 +3,38 @@ package com.finsight.application.analytics;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.Calendar;
-import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnalyticsDateRangeTest {
 
     @Test
-    void toLocalDate_convertsUtilDateWithoutLocaleStringParsing() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(2026, Calendar.JANUARY, 1, 0, 0, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        assertEquals(LocalDate.of(2026, 1, 1), AnalyticsDateRange.toLocalDate(cal.getTime()));
+    void consumptionYearEndInclusive_capsCurrentYearAtAsOf() {
+        LocalDate asOf = LocalDate.of(2026, 6, 26);
+        assertEquals(LocalDate.of(2025, 12, 31), AnalyticsDateRange.consumptionYearEndInclusive(2025, asOf));
+        assertEquals(asOf, AnalyticsDateRange.consumptionYearEndInclusive(2026, asOf));
     }
 
     @Test
-    void toLocalDate_parsesIsoString() {
-        assertEquals(LocalDate.of(2026, 6, 30), AnalyticsDateRange.toLocalDate("2026-06-30"));
+    void alignedPriorYearDay_handlesLeapYear() {
+        LocalDate asOf = LocalDate.of(2024, 2, 29);
+        assertEquals(LocalDate.of(2023, 2, 28), AnalyticsDateRange.alignedPriorYearDay(2024, asOf));
+    }
+
+    @Test
+    void yoyCompareYearRange_alignsPriorYearWhenCurrentYear() {
+        LocalDate asOf = LocalDate.of(2026, 6, 26);
+        var range = AnalyticsDateRange.yoyCompareYearRange(2025, 2026, asOf);
+        assertEquals(LocalDate.of(2025, 1, 1), range.startInclusive());
+        assertEquals(LocalDate.of(2025, 6, 27), range.endExclusive());
+    }
+
+    @Test
+    void isPartialConsumptionYear() {
+        LocalDate asOf = LocalDate.of(2026, 6, 26);
+        assertFalse(AnalyticsDateRange.isPartialConsumptionYear(2025, asOf));
+        assertTrue(AnalyticsDateRange.isPartialConsumptionYear(2026, asOf));
     }
 }

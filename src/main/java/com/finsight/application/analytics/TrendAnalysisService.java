@@ -29,24 +29,35 @@ public class TrendAnalysisService {
     }
 
     public Map<String, Object> trends(int fromYear, int toYear) throws Exception {
+        return trends(fromYear, toYear, fromYear);
+    }
+
+    public Map<String, Object> trends(int fromYear, int toYear, int historyFromYear) throws Exception {
         String userId = userKey();
-        double incomeFrom = yearTotal(true, fromYear);
-        double incomeTo = yearTotal(true, toYear);
-        double expenseFrom = yearTotal(false, fromYear);
-        double expenseTo = yearTotal(false, toYear);
-        double fixedFrom = fixedYearTotal(fromYear);
-        double fixedTo = fixedYearTotal(toYear);
+        LocalDate asOf = LocalDate.now();
+        int matrixFrom = Math.min(historyFromYear, fromYear);
+        boolean ytdCompare = toYear == asOf.getYear();
+
+        double incomeFrom = consumptionOrIncomeTotal(true, fromYear, toYear, asOf, true);
+        double incomeTo = consumptionOrIncomeTotal(true, toYear, toYear, asOf, false);
+        double expenseFrom = consumptionOrIncomeTotal(false, fromYear, toYear, asOf, true);
+        double expenseTo = consumptionOrIncomeTotal(false, toYear, toYear, asOf, false);
+        double fixedFrom = fixedCostTotal(fromYear, toYear, asOf, true);
+        double fixedTo = fixedCostTotal(toYear, toYear, asOf, false);
 
         double incomeDelta = incomeTo - incomeFrom;
         double expenseDelta = expenseTo - expenseFrom;
         double savingsFrom = incomeFrom > 0 ? (incomeFrom - expenseFrom) / incomeFrom * 100 : 0;
         double savingsTo = incomeTo > 0 ? (incomeTo - expenseTo) / incomeTo * 100 : 0;
 
-        List<Map<String, Object>> categoryRows = loadSemanticCategoryRows(fromYear, toYear, userId);
+        List<Map<String, Object>> categoryRows = loadSemanticCategoryRows(fromYear, toYear, userId, asOf);
+        List<Map<String, Object>> matrixRows = loadSemanticCategoryRows(matrixFrom, toYear, userId, asOf);
+        List<Map<String, Object>> l1MatrixRows = loadCategoryL1Rows(matrixFrom, toYear, userId, asOf);
+        List<Map<String, Object>> consumptionYearSeries = buildConsumptionYearSeries(matrixFrom, toYear, asOf);
         List<Map<String, Object>> topCategoryGrowth = enrichCategoryMovers(categoryRows, fromYear, toYear, expenseDelta);
 
-        Map<String, Double> merchantFrom = merchantSpendByYear(fromYear, userId);
-        Map<String, Double> merchantTo = merchantSpendByYear(toYear, userId);
+        Map<String, Double> merchantFrom = merchantSpendForYear(fromYear, userId, asOf, toYear, true);
+        Map<String, Double> merchantTo = merchantSpendForYear(toYear, userId, asOf, toYear, false);
         Map<String, String> merchantLabels = merchantLabels(merchantFrom, merchantTo);
         List<Map<String, Object>> topMerchantMovers = enrichMerchantMovers(
                 TrendDecomposition.topMovers(merchantFrom, merchantTo, merchantLabels, expenseDelta, 8),
@@ -81,6 +92,11 @@ public class TrendAnalysisService {
         out.put("summary", summary);
         out.put("topCategoryGrowth", topCategoryGrowth);
         out.put("topMerchantMovers", topMerchantMovers);
+        out.put("consumptionYearSeries", consumptionYearSeries);
+        out.put("compareMode", ytdCompare ? "ytd_aligned" : "full_year");
+        out.put("historyFromYear", matrixFrom);
+        out.put("categoryYearMatrix", buildCategoryYearMatrix(matrixRows, matrixFrom, toYear, consumptionYearSeries, MatrixDrillMode.SEMANTIC_TAG));
+        out.put("categoryL1YearMatrix", buildCategoryYearMatrix(l1MatrixRows, matrixFrom, toYear, consumptionYearSeries, MatrixDrillMode.CATEGORY_L1));
         out.put("savingsInflection", Map.of(
                 "fromYear", fromYear,
                 "toYear", toYear,
@@ -234,10 +250,10 @@ public class TrendAnalysisService {
         return movers;
     }
 
-    private List<Map<String, Object>> loadSemanticCategoryRows(int fromYear, int toYear, String userId) {
+    private List<Map<String, Object>> loadSemanticCategoryRows(int fromYear, int toYear, String userId, LocalDate asOf) {
         List<Map<String, Object>> categoryShifts = new ArrayList<>();
         for (FinanceSemanticMetricsRepository.SemanticTagYearAmount row
-                : semanticMetricsRepository.sumExpenseBySemanticTagYears(userId, fromYear, toYear)) {
+                : semanticMetricsRepository.sumExpenseBySemanticTagYears(userId, fromYear, toYear, asOf)) {
             Map<String, Object> mapped = new LinkedHashMap<>();
             mapped.put("year", row.year());
             mapped.put("categoryCode", row.tagId());
@@ -248,29 +264,143 @@ public class TrendAnalysisService {
         return categoryShifts;
     }
 
-    private double yearTotal(boolean income, int year) {
-        LocalDate start = LocalDate.of(year, 1, 1);
-        LocalDate end = LocalDate.of(year, 12, 31);
-        Map<String, BigDecimal> totals = semanticMetricsRepository.aggregateMonth(userKey(), start, end);
-        if (income) {
-            return d(totals.get("REAL_INCOME"));
+    private List<Map<String, Object>> loadCategoryL1Rows(int fromYear, int toYear, String userId, LocalDate asOf) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (FinanceSemanticMetricsRepository.CategoryL1YearAmount row
+                : semanticMetricsRepository.sumExpenseByCategoryL1Years(userId, fromYear, toYear, asOf)) {
+            Map<String, Object> mapped = new LinkedHashMap<>();
+            mapped.put("year", row.year());
+            mapped.put("categoryCode", row.l1Code());
+            mapped.put("categoryName", row.l1Name());
+            mapped.put("amount", row.amount());
+            rows.add(mapped);
         }
-        return d(totals.get("CONSUMPTION_EXPENSE"));
+        return rows;
     }
 
-    private double fixedYearTotal(int year) {
-        LocalDate start = LocalDate.of(year, 1, 1);
-        LocalDate end = LocalDate.of(year, 12, 31);
-        Map<String, BigDecimal> totals = semanticMetricsRepository.aggregateMonth(userKey(), start, end);
+    private enum MatrixDrillMode {
+        SEMANTIC_TAG, CATEGORY_L1
+    }
+
+    /** Pivot expense rows into years × buckets for multi-year trend tables. */
+    private Map<String, Object> buildCategoryYearMatrix(List<Map<String, Object>> categoryRows,
+                                                        int fromYear,
+                                                        int toYear,
+                                                        List<Map<String, Object>> consumptionYearSeries,
+                                                        MatrixDrillMode drillMode) {
+        List<Integer> years = new ArrayList<>();
+        for (int y = fromYear; y <= toYear; y++) {
+            years.add(y);
+        }
+        Map<Integer, Double> officialTotals = new LinkedHashMap<>();
+        Map<Integer, Boolean> partialYears = new LinkedHashMap<>();
+        for (Map<String, Object> pt : consumptionYearSeries) {
+            int y = ((Number) pt.get("year")).intValue();
+            officialTotals.put(y, ((Number) pt.get("amount")).doubleValue());
+            partialYears.put(y, Boolean.TRUE.equals(pt.get("partial")));
+        }
+        Map<String, String> labels = new LinkedHashMap<>();
+        Map<String, Map<Integer, Double>> byTag = new LinkedHashMap<>();
+        for (Map<String, Object> row : categoryRows) {
+            int year = ((Number) row.get("year")).intValue();
+            String tagId = String.valueOf(row.get("categoryCode"));
+            labels.putIfAbsent(tagId, String.valueOf(row.get("categoryName")));
+            double amt = ((Number) row.get("amount")).doubleValue();
+            byTag.computeIfAbsent(tagId, k -> new LinkedHashMap<>()).merge(year, amt, Double::sum);
+        }
+        List<Map<String, Object>> matrixRows = new ArrayList<>();
+        for (Map.Entry<String, Map<Integer, Double>> entry : byTag.entrySet()) {
+            String tagId = entry.getKey();
+            Map<Integer, Double> yearMap = entry.getValue();
+            double total = yearMap.values().stream().mapToDouble(Double::doubleValue).sum();
+            if (total < 0.01) {
+                continue;
+            }
+            Map<String, Object> amountsByYear = new LinkedHashMap<>();
+            for (int y : years) {
+                amountsByYear.put(String.valueOf(y), round(yearMap.getOrDefault(y, 0.0)));
+            }
+            double first = yearMap.getOrDefault(fromYear, 0.0);
+            double last = yearMap.getOrDefault(toYear, 0.0);
+            int priorYear = toYear - 1;
+            double prior = yearMap.getOrDefault(priorYear, 0.0);
+            Map<String, Object> shareByYear = new LinkedHashMap<>();
+            for (int y : years) {
+                double amt = yearMap.getOrDefault(y, 0.0);
+                double yearTotal = officialTotals.getOrDefault(y, 0.0);
+                shareByYear.put(String.valueOf(y), yearTotal > 0 ? round(amt / yearTotal * 100.0) : 0.0);
+            }
+            Map<String, Object> matrixRow = new LinkedHashMap<>();
+            matrixRow.put("tagId", tagId);
+            matrixRow.put("label", labels.getOrDefault(tagId, tagId));
+            matrixRow.put("amountsByYear", amountsByYear);
+            matrixRow.put("shareByYear", shareByYear);
+            matrixRow.put("deltaAmount", round(last - first));
+            matrixRow.put("deltaPercent", round(TrendDecomposition.pctChange(first, last)));
+            matrixRow.put("yoyPercent", round(TrendDecomposition.pctChange(prior, last)));
+            matrixRow.put("drillDown", drillForMatrix(toYear, tagId, labels.getOrDefault(tagId, tagId), drillMode));
+            matrixRows.add(matrixRow);
+        }
+        matrixRows.sort((a, b) -> {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> aYears = (Map<String, Object>) a.get("amountsByYear");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> bYears = (Map<String, Object>) b.get("amountsByYear");
+            double aLast = ((Number) aYears.getOrDefault(String.valueOf(toYear), 0)).doubleValue();
+            double bLast = ((Number) bYears.getOrDefault(String.valueOf(toYear), 0)).doubleValue();
+            return Double.compare(bLast, aLast);
+        });
+        Map<String, Object> matrix = new LinkedHashMap<>();
+        matrix.put("years", years);
+        matrix.put("partialYears", partialYears.entrySet().stream()
+                .filter(Map.Entry::getValue)
+                .map(e -> String.valueOf(e.getKey()))
+                .toList());
+        matrix.put("rows", matrixRows);
+        return matrix;
+    }
+
+    private List<Map<String, Object>> buildConsumptionYearSeries(int fromYear, int toYear, LocalDate asOf) {
+        List<Map<String, Object>> series = new ArrayList<>();
+        for (int y = fromYear; y <= toYear; y++) {
+            double amount = consumptionOrIncomeTotal(false, y, toYear, asOf, false);
+            boolean partial = AnalyticsDateRange.isPartialConsumptionYear(y, asOf);
+            Map<String, Object> pt = new LinkedHashMap<>();
+            pt.put("year", y);
+            pt.put("amount", round(amount));
+            pt.put("partial", partial);
+            if (partial) {
+                pt.put("throughDate", asOf.toString());
+            }
+            series.add(pt);
+        }
+        return series;
+    }
+
+    private double consumptionOrIncomeTotal(boolean income, int year, int toYear, LocalDate asOf, boolean yoyFromYear) {
+        AnalyticsDateRange.HalfOpen range = yoyFromYear
+                ? AnalyticsDateRange.yoyCompareYearRange(year, toYear, asOf)
+                : AnalyticsDateRange.consumptionYearRange(year, asOf);
+        LocalDate start = range.startInclusive();
+        LocalDate endInc = range.endExclusive().minusDays(1);
+        Map<String, BigDecimal> totals = semanticMetricsRepository.aggregateMonth(userKey(), start, endInc);
+        return d(income ? totals.get("REAL_INCOME") : totals.get("CONSUMPTION_EXPENSE"));
+    }
+
+    private double fixedCostTotal(int year, int toYear, LocalDate asOf, boolean yoyFromYear) {
+        AnalyticsDateRange.HalfOpen range = yoyFromYear
+                ? AnalyticsDateRange.yoyCompareYearRange(year, toYear, asOf)
+                : AnalyticsDateRange.consumptionYearRange(year, asOf);
+        LocalDate start = range.startInclusive();
+        LocalDate endInc = range.endExclusive().minusDays(1);
+        Map<String, BigDecimal> totals = semanticMetricsRepository.aggregateMonth(userKey(), start, endInc);
         return d(totals.get("FIXED_EXPENSE"));
     }
 
-    private static double d(BigDecimal value) {
-        return value == null ? 0 : value.doubleValue();
-    }
-
-    private Map<String, Double> merchantSpendByYear(int year, String userId) {
-        AnalyticsDateRange.HalfOpen range = AnalyticsDateRange.calendarYear(year);
+    private Map<String, Double> merchantSpendForYear(int year, String userId, LocalDate asOf, int toYear, boolean yoyFromYear) {
+        AnalyticsDateRange.HalfOpen range = yoyFromYear
+                ? AnalyticsDateRange.yoyCompareYearRange(year, toYear, asOf)
+                : AnalyticsDateRange.consumptionYearRange(year, asOf);
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "select v.opponent_name, v.transaction_desc, v.amount "
                         + "from v_transaction_finance_semantics v "
@@ -292,6 +422,10 @@ public class TrendAnalysisService {
             totals.merge(token, amount, Double::sum);
         }
         return totals;
+    }
+
+    private static double d(BigDecimal value) {
+        return value == null ? 0 : value.doubleValue();
     }
 
     private Map<String, String> merchantLabels(Map<String, Double> from, Map<String, Double> to) {
@@ -340,10 +474,23 @@ public class TrendAnalysisService {
                 "txnTypes", txnTypes);
     }
 
+    private static Map<String, String> drillForMatrix(int year, String code, String label, MatrixDrillMode mode) {
+        if (mode == MatrixDrillMode.CATEGORY_L1) {
+            return drillCategoryL1(year, code, label);
+        }
+        return drillSemanticTag(year, code, label);
+    }
+
+    private static Map<String, String> drillCategoryL1(int year, String l1Code, String label) {
+        Map<String, String> drill = new LinkedHashMap<>(drillYear(year, "expense"));
+        drill.put("consumeID", l1Code);
+        drill.put("consumeName", label);
+        return drill;
+    }
+
     private static Map<String, String> drillSemanticTag(int year, String tagId, String label) {
         Map<String, String> drill = new LinkedHashMap<>(drillYear(year, "expense"));
         drill.put("semanticFilter", tagId);
-        drill.put("consumeName", label);
         return drill;
     }
 

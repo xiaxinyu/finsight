@@ -1,7 +1,9 @@
 package com.finsight.web.api.analytics;
 
 import com.finsight.application.analytics.CashRiskCalendarService;
+import com.finsight.application.analytics.DebtTrendAnalysisService;
 import com.finsight.application.analytics.ForecastService;
+import com.finsight.application.analytics.IncomeTrendAnalysisService;
 import com.finsight.application.analytics.TrendAnalysisService;
 import com.finsight.application.config.FeatureFlagService;
 import com.finsight.web.api.dto.CommonResult;
@@ -22,15 +24,21 @@ public class AnalyticsForecastController {
 
     private final ForecastService forecastService;
     private final TrendAnalysisService trendAnalysisService;
+    private final DebtTrendAnalysisService debtTrendAnalysisService;
+    private final IncomeTrendAnalysisService incomeTrendAnalysisService;
     private final CashRiskCalendarService cashRiskCalendarService;
     private final FeatureFlagService featureFlags;
 
     public AnalyticsForecastController(ForecastService forecastService,
                                        TrendAnalysisService trendAnalysisService,
+                                       DebtTrendAnalysisService debtTrendAnalysisService,
+                                       IncomeTrendAnalysisService incomeTrendAnalysisService,
                                        CashRiskCalendarService cashRiskCalendarService,
                                        FeatureFlagService featureFlags) {
         this.forecastService = forecastService;
         this.trendAnalysisService = trendAnalysisService;
+        this.debtTrendAnalysisService = debtTrendAnalysisService;
+        this.incomeTrendAnalysisService = incomeTrendAnalysisService;
         this.cashRiskCalendarService = cashRiskCalendarService;
         this.featureFlags = featureFlags;
     }
@@ -56,9 +64,27 @@ public class AnalyticsForecastController {
     }
 
     @GetMapping("/trends")
-    public CommonResult trends(@RequestParam int fromYear, @RequestParam int toYear) throws Exception {
-        featureFlags.requireForecast();
-        return CommonResult.success(trendAnalysisService.trends(fromYear, toYear));
+    public CommonResult trends(@RequestParam int fromYear,
+                               @RequestParam int toYear,
+                               @RequestParam(required = false) Integer historyFromYear) throws Exception {
+        int matrixFrom = historyFromYear != null ? historyFromYear : fromYear;
+        return CommonResult.success(trendAnalysisService.trends(fromYear, toYear, matrixFrom));
+    }
+
+    @GetMapping("/debt-trends")
+    public CommonResult debtTrends(@RequestParam int fromYear,
+                                   @RequestParam int toYear,
+                                   @RequestParam(required = false) Integer historyFromYear) throws Exception {
+        int matrixFrom = historyFromYear != null ? historyFromYear : fromYear;
+        return CommonResult.success(debtTrendAnalysisService.trends(fromYear, toYear, matrixFrom));
+    }
+
+    @GetMapping("/income-trends")
+    public CommonResult incomeTrends(@RequestParam int fromYear,
+                                     @RequestParam int toYear,
+                                     @RequestParam(required = false) Integer historyFromYear) throws Exception {
+        int matrixFrom = historyFromYear != null ? historyFromYear : fromYear;
+        return CommonResult.success(incomeTrendAnalysisService.trends(fromYear, toYear, matrixFrom));
     }
 
     @PostMapping("/scenarios")

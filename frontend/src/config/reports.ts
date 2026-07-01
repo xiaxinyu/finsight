@@ -1,7 +1,7 @@
 export type ReportConfig = {
   title: string
   subtitle?: string
-  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'cashRisk' | 'merchantSubscriptions' | 'merchantConcentration' | 'merchantDrift' | 'semanticScope'
+  type: 'categoryBar' | 'incomeVsExpense' | 'yearCompare' | 'weekSummary' | 'monthlyCompare' | 'timeCurve' | 'billsCalendar' | 'homeBuckets' | 'budgetVsActual' | 'transfers' | 'annualOutlook' | 'trendChanges' | 'debtTrends' | 'incomeTrends' | 'cashRisk' | 'merchantSubscriptions' | 'merchantConcentration' | 'merchantDrift' | 'semanticScope'
   endpoint?: string
   txnType?: 'income' | 'expense'
   semanticScope?: 'expense' | 'income' | 'non_pnl' | 'tax' | 'refund' | 'all'
@@ -61,7 +61,7 @@ export const reportConfigs: Record<string, ReportConfig> = {
   },
   'spending-drift': {
     title: 'Spending Drift',
-    subtitle: 'Compare semantic buckets between two periods — stable even when categories move',
+    subtitle: 'Compare any two periods by classification — use for quarters or custom ranges',
     type: 'yearCompare',
     txnType: 'expense',
     compareYear: true,
@@ -79,9 +79,21 @@ export const reportConfigs: Record<string, ReportConfig> = {
     type: 'annualOutlook',
   },
   'trend-changes': {
-    title: 'Trend Changes',
-    subtitle: 'Category growth and savings inflection points',
+    title: 'Consumption Trends',
+    subtitle: 'See how spending changes year by year — totals, categories, and drill-down',
     type: 'trendChanges',
+    compareYear: true,
+  },
+  'debt-trends': {
+    title: 'Debt Trends',
+    subtitle: 'Track borrowing, repayments, and net debt flow year over year',
+    type: 'debtTrends',
+    compareYear: true,
+  },
+  'income-trends': {
+    title: 'Income Trends',
+    subtitle: 'See if your income is growing — totals, sources, and drill-down',
+    type: 'incomeTrends',
     compareYear: true,
   },
   'cash-risk': {

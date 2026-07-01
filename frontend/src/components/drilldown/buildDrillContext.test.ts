@@ -23,6 +23,22 @@ describe('buildDrillContext', () => {
     expect(ctx.source).toBe('report')
   })
 
+  it('buildReportDrillContext strips consumeName when semanticFilter is set', () => {
+    const ctx = buildReportDrillContext({
+      title: 'Expense / Transport · 2026 YTD',
+      metricLabel: 'Expense / Transport',
+      params: {
+        transactionDateStartStr: '2026-01-01',
+        transactionDateEndStr: '2026-06-26',
+        txnTypes: 'expense',
+        semanticFilter: 'transport_spending',
+        consumeName: 'Expense / Transport',
+      },
+    })
+    expect(ctx.params.semanticFilter).toBe('transport_spending')
+    expect(ctx.params.consumeName).toBeUndefined()
+  })
+
   it('mergeDrillActions deduplicates by path', () => {
     const actions = mergeDrillActions([
       { label: 'Planning', type: 'planning', path: '/planning' },

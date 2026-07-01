@@ -63,7 +63,9 @@ export function UnifiedDrillDrawer({ open, context, onClose }: Props) {
 function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; context: DrillDownContext; onClose: () => void }) {
   const [layer, setLayer] = useState<DrillDownLayer>('insight')
   const contextMerchantToken = context.params.merchantToken || null
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(() => context.params.consumeName || null)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(() => (
+    context.params.semanticFilter ? null : (context.params.consumeName || null)
+  ))
   const [merchantFilter, setMerchantFilter] = useState<string | null>(() => (
     contextMerchantToken ? contextMerchantToken : (context.params.merchantLabel || null)
   ))
@@ -71,7 +73,12 @@ function UnifiedDrillDrawerInner({ open, context, onClose }: { open: boolean; co
 
   const queryParams = useMemo(() => {
     const next: Record<string, string> = { ...context.params }
-    if (categoryFilter && !next.consumeName) next.consumeName = categoryFilter
+    if (next.semanticFilter) {
+      delete next.consumeName
+    }
+    if (categoryFilter && !next.consumeName && !next.semanticFilter) {
+      next.consumeName = categoryFilter
+    }
     const token = merchantTokenFilter || next.merchantToken
     if (token) {
       next.merchantToken = token
