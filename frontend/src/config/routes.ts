@@ -44,6 +44,7 @@ const ledgerTitles: Record<string, string> = {
   accumulation: 'Provident Fund',
   medical: 'Medical Insurance',
   unemployment: 'Unemployment Insurance',
+  loans: 'Loans',
 }
 
 export function resolveRouteMeta(pathname: string): RouteMeta {

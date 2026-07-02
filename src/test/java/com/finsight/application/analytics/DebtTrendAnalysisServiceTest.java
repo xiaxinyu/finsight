@@ -1,8 +1,7 @@
 package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
-import com.finsight.application.finance.FinancialAccountService;
-import com.finsight.domain.model.KeyValue;
+import com.finsight.application.finance.UserScopedFinancialQueries;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,30 +29,19 @@ class DebtTrendAnalysisServiceTest {
     private FinanceSemanticMetricsRepository semanticMetricsRepository;
 
     @Mock
-    private FinancialAccountService accountService;
+    private UserScopedFinancialQueries scopedFinancialQueries;
 
     private DebtTrendAnalysisService service;
 
     @BeforeEach
     void setUp() {
-        service = new DebtTrendAnalysisService(authenticationFacade, semanticMetricsRepository, accountService);
+        service = new DebtTrendAnalysisService(authenticationFacade, semanticMetricsRepository, scopedFinancialQueries);
         when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(accountService.latestBalances()).thenReturn(List.of(
-                new KeyValue("Visa credit", "-50000")));
+        when(scopedFinancialQueries.sumCurrentLiabilities()).thenReturn(50000.0);
     }
 
     @Test
     void trends_returnsDebtYoYWithMatrices() throws Exception {
-        when(semanticMetricsRepository.sumLiabilityFlow(eq("user1"), any(LocalDate.class), any(LocalDate.class), eq("inflow")))
-                .thenAnswer(inv -> {
-                    LocalDate start = inv.getArgument(1);
-                    return start.getYear() <= 2024 ? 5000.0 : 3000.0;
-                });
-        when(semanticMetricsRepository.sumLiabilityFlow(eq("user1"), any(LocalDate.class), any(LocalDate.class), eq("outflow")))
-                .thenAnswer(inv -> {
-                    LocalDate start = inv.getArgument(1);
-                    return start.getYear() <= 2024 ? 12000.0 : 18000.0;
-                });
         when(semanticMetricsRepository.sumLiabilityFlowByYear(eq("user1"), eq(2024), eq(2025), any()))
                 .thenReturn(List.of(
                         new FinanceSemanticMetricsRepository.LiabilityYearFlow(2024, 5000, 12000),

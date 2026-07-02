@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.finsight.infrastructure.mapper.LoanMapper">
+
+    <sql id="loanColumns">
+        l.id,
+        l.user_id as userId,
+        l.name,
+        l.lender_name as lenderName,
+        l.lender_bank_code as lenderBankCode,
+        l.principal_amount as principalAmount,
+        l.outstanding_balance as outstandingBalance,
+        l.interest_rate_pct as interestRatePct,
+        l.monthly_payment as monthlyPayment,
+        l.repayment_method as repaymentMethod,
+        l.maturity_date as maturityDate,
+        l.disbursement_card_id as disbursementCardId,
+        l.repayment_card_id as repaymentCardId,
+        l.status,
+        l.notes,
+        l.sort_order as sortOrder,
+        l.deleted,
+        l.created_by as createdBy,
+        l.created_at as createdAt,
+        l.updated_by as updatedBy,
+        l.updated_at as updatedAt
+    </sql>
+
+    <sql id="loanCardLabels">
+        coalesce(nullif(trim(dc.card_name), ''),
+            concat(coalesce(dc.bank_code, ''), ' ', coalesce(dc.card_type_code, ''))) as disbursementCardLabel,
+        coalesce(nullif(trim(rc.card_name), ''),
+            concat(coalesce(rc.bank_code, ''), ' ', coalesce(rc.card_type_code, ''))) as repaymentCardLabel
+    </sql>
+
+    <select id="listLoans" resultType="com.finsight.domain.model.Loan">
+        select <include refid="loanColumns"/>, <include refid="loanCardLabels"/>
+        from fin_loan l
+        left join fin_bank_account dc on dc.id = l.disbursement_card_id and coalesce(dc.deleted, 0) != 1
+        left join fin_bank_account rc on rc.id = l.repayment_card_id and coalesce(rc.deleted, 0) != 1
+        where l.user_id = #{userId}
+          and coalesce(l.deleted, 0) = 0
+        order by coalesce(l.interest_rate_pct, 0) desc, l.sort_order, l.lender_name
+    </select>
+
+    <select id="findLoan" resultType="com.finsight.domain.model.Loan">
+        select <include refid="loanColumns"/>, <include refid="loanCardLabels"/>
+        from fin_loan l
+        left join fin_bank_account dc on dc.id = l.disbursement_card_id and coalesce(dc.deleted, 0) != 1
+        left join fin_bank_account rc on rc.id = l.repayment_card_id and coalesce(rc.deleted, 0) != 1
+        where l.id = #{id}
+          and l.user_id = #{userId}
+          and coalesce(l.deleted, 0) = 0
+    </select>
+
+    <insert id="insertLoan">
+        insert into fin_loan (
+            id, user_id, name, lender_name, lender_bank_code,
+            principal_amount, outstanding_balance, interest_rate_pct, monthly_payment,
+            repayment_method, maturity_date, disbursement_card_id, repayment_card_id,
+            status, notes, sort_order, deleted,
+            created_by, created_at, updated_by, updated_at
+        ) values (
+            #{loan.id}, #{userId}, #{loan.name}, #{loan.lenderName}, #{loan.lenderBankCode},
+            #{loan.principalAmount}, #{loan.outstandingBalance}, #{loan.interestRatePct}, #{loan.monthlyPayment},
+            #{loan.repaymentMethod}, #{loan.maturityDate}, #{loan.disbursementCardId}, #{loan.repaymentCardId},
+            #{loan.status}, #{loan.notes}, #{loan.sortOrder}, 0,
+            #{actor}, now(3), #{actor}, now(3)
+        )
+    </insert>
+
+    <update id="updateLoan">
+        update fin_loan
+        set name = #{loan.name},
+            lender_name = #{loan.lenderName},
+            lender_bank_code = #{loan.lenderBankCode},
+            principal_amount = #{loan.principalAmount},
+            outstanding_balance = #{loan.outstandingBalance},
+            interest_rate_pct = #{loan.interestRatePct},
+            monthly_payment = #{loan.monthlyPayment},
+            repayment_method = #{loan.repaymentMethod},
+            maturity_date = #{loan.maturityDate},
+            disbursement_card_id = #{loan.disbursementCardId},
+            repayment_card_id = #{loan.repaymentCardId},
+            status = #{loan.status},
+            notes = #{loan.notes},
+            sort_order = #{loan.sortOrder},
+            updated_by = #{actor},
+            updated_at = now(3)
+        where id = #{loan.id}
+          and user_id = #{loan.userId}
+          and coalesce(deleted, 0) = 0
+    </update>
+
+    <update id="softDeleteLoan">
+        update fin_loan
+        set deleted = 1,
+            updated_by = #{actor},
+            updated_at = now(3)
+        where id = #{id}
+          and user_id = #{userId}
+    </update>
+
+    <select id="listLoanLinks" resultType="com.finsight.domain.model.LoanTxnLink">
+        select id,
+               loan_id as loanId,
+               transaction_id as transactionId,
+               link_type as linkType,
+               user_id as userId,
+               created_by as createdBy,
+               created_at as createdAt
+        from fin_loan_txn_link
+        where loan_id = #{loanId}
+          and user_id = #{userId}
+        order by created_at desc
+    </select>
+
+    <insert id="insertLoanLink">
+        insert into fin_loan_txn_link (
+            id, loan_id, transaction_id, link_type, user_id, created_by, created_at
+        ) values (
+            #{link.id}, #{link.loanId}, #{link.transactionId}, #{link.linkType},
+            #{userId}, #{actor}, now(3)
+        )
+    </insert>
+
+    <delete id="deleteLoanLink">
+        delete from fin_loan_txn_link
+        where loan_id = #{loanId}
+          and transaction_id = #{transactionId}
+          and user_id = #{userId}
+    </delete>
+</mapper>

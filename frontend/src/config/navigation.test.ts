@@ -23,6 +23,7 @@ describe('navigation config', () => {
     const ledgerPaths = collectPaths(menuItems)
       .filter((p) => p.startsWith('/ledgers/'))
       .map((p) => p.replace('/ledgers/', ''))
+      .filter((id) => id !== 'loans')
     ledgerPaths.forEach((id) => expect(ledgerIds).toContain(id))
   })
 })

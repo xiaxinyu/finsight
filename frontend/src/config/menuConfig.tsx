@@ -1,13 +1,13 @@
 import {
   AimOutlined,
   BankOutlined,
+  DollarOutlined,
   BarChartOutlined,
   BookOutlined,
   CalendarOutlined,
   ClusterOutlined,
   CreditCardOutlined,
   DashboardOutlined,
-  DollarOutlined,
   FileTextOutlined,
   FundOutlined,
   HistoryOutlined,
@@ -149,6 +149,7 @@ export const menuItems: FsMenuItem[] = [
           { key: '/ledgers/salary', icon: <WalletOutlined />, label: 'Income', path: '/ledgers/salary' },
           { key: '/ledgers/expense', icon: <FundOutlined />, label: 'Expense', path: '/ledgers/expense' },
           { key: '/ledgers/house-rent', icon: <HomeOutlined />, label: 'Rent', path: '/ledgers/house-rent' },
+          { key: '/ledgers/loans', icon: <DollarOutlined />, label: 'Loans', path: '/ledgers/loans' },
           {
             key: 'ledgers-benefits',
             icon: <BankOutlined />,

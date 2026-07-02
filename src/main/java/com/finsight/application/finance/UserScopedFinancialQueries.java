@@ -43,6 +43,11 @@ public class UserScopedFinancialQueries {
         return financialMapper.latestBalancesFromBankCards(owner());
     }
 
+    public double sumCurrentLiabilities() {
+        Double v = financialMapper.sumCurrentLiabilities(owner());
+        return v == null ? 0.0 : v;
+    }
+
     public Double sumExpenseSince(Date since) {
         return financialMapper.sumExpenseSince(since, owner());
     }

@@ -10,6 +10,7 @@ import { LedgersPage } from '../pages/Ledgers'
 import { PlanningPage } from '../pages/Planning'
 import { WealthPage } from '../pages/Wealth'
 import { GoalsPage } from '../pages/Goals'
+import { LoansPage } from '../pages/Loans'
 import { AccountSecurityPage } from '../pages/Account'
 import { ProfilePage } from '../pages/Profile'
 import { UsersAdminPage } from '../pages/Admin/Users'
@@ -34,7 +35,9 @@ export function AppRoutes() {
         <Route path="/statements/upload" element={<StatementUploadPage />} />
         <Route path="/statements" element={<StatementListPage />} />
         <Route path="/reports/:reportId" element={<ReportRoute />} />
+        <Route path="/ledgers/loans" element={<LoansPage />} />
         <Route path="/ledgers/:ledgerId" element={<LedgersPage />} />
+        <Route path="/loans" element={<Navigate to="/ledgers/loans" replace />} />
         <Route element={<AdminRoute />}>
           <Route path="/admin/users" element={<UsersAdminPage />} />
           <Route path="/admin/cards" element={<CardsAdminPage />} />

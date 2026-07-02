@@ -110,40 +110,52 @@
         order by transferDate desc
     </select>
 
-    <select id="latestBalancesFromBankCards" resultType="com.finsight.domain.model.KeyValue">
-        select coalesce(nullif(trim(bc.card_name), ''),
-               concat(coalesce(bc.bank_code, ''), ' ', coalesce(bc.card_type_code, ''))) as `key`,
-               round(coalesce(bal.balance, 0), 2) as `value`
-        from fin_bank_account bc
-        left join (
-            select t.bank_card_id, round(coalesce(t.account_balance, 0), 2) as balance
+    <sql id="latestBalancePerCardSubquery">
+        select bank_card_id, balance from (
+            select t.bank_card_id,
+                   round(coalesce(t.account_balance, 0), 2) as balance,
+                   row_number() over (
+                       partition by t.bank_card_id
+                       order by t.transaction_date desc, t.id desc
+                   ) as rn
             from transaction t
             where t.account_balance is not null
               and t.bank_card_id is not null
               and length(trim(t.bank_card_id)) &gt; 0
               <include refid="activeTransaction"/>
               <include refid="filterOwnerParamT"/>
-              and t.id = (
-                select t2.id from transaction t2
-                where t2.bank_card_id = t.bank_card_id
-                  and t2.account_balance is not null
-                  and (t2.deleted is null or t2.deleted = 0)
-                  <if test="ownerUserId != null and ownerUserId != ''">
-                  and (
-                    t2.created_by = #{ownerUserId,jdbcType=VARCHAR}
-                    or (
-                        #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
-                        and (t2.created_by is null or trim(t2.created_by) = '')
-                    )
-                  )
-                  </if>
-                order by t2.transaction_date desc, t2.id desc
-                limit 1
-              )
-        ) bal on bal.bank_card_id = bc.id
+        ) ranked
+        where rn = 1
+    </sql>
+
+    <select id="latestBalancesFromBankCards" resultType="com.finsight.domain.model.KeyValue">
+        select coalesce(nullif(trim(bc.card_name), ''),
+               concat(coalesce(bc.bank_code, ''), ' ', coalesce(bc.card_type_code, ''))) as `key`,
+               round(coalesce(latest.balance, 0), 2) as `value`
+        from fin_bank_account bc
+        left join (
+            <include refid="latestBalancePerCardSubquery"/>
+        ) latest on latest.bank_card_id = bc.id
         where coalesce(bc.deleted, 0) != 1
         <include refid="filterOwnerParamBc"/>
         order by bc.card_name, bc.bank_code
+    </select>
+
+    <select id="sumCurrentLiabilities" resultType="double">
+        select coalesce(sum(
+            case
+                when lower(coalesce(bc.card_type_code, '')) = 'credit'
+                    then abs(coalesce(latest.balance, 0))
+                when coalesce(latest.balance, 0) &lt; 0 then abs(latest.balance)
+                else 0
+            end
+        ), 0)
+        from fin_bank_account bc
+        inner join (
+            <include refid="latestBalancePerCardSubquery"/>
+        ) latest on latest.bank_card_id = bc.id
+        where coalesce(bc.deleted, 0) != 1
+        <include refid="filterOwnerParamBc"/>
     </select>
 
     <select id="sumExpenseSince" resultType="double">
@@ -187,30 +199,10 @@
     </select>
 
     <select id="latestInferredBalancePerCard" resultType="com.finsight.domain.model.KeyValue">
-        select t.bank_card_id as `key`, round(coalesce(t.account_balance, 0), 2) as `value`
-        from transaction t
-        where t.account_balance is not null
-          and t.bank_card_id is not null
-          and length(trim(t.bank_card_id)) &gt; 0
-          <include refid="activeTransaction"/>
-          <include refid="filterOwnerParamT"/>
-          and t.id = (
-            select t2.id from transaction t2
-            where t2.bank_card_id = t.bank_card_id
-              and t2.account_balance is not null
-              and (t2.deleted is null or t2.deleted = 0)
-              <if test="ownerUserId != null and ownerUserId != ''">
-              and (
-                t2.created_by = #{ownerUserId,jdbcType=VARCHAR}
-                or (
-                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
-                    and (t2.created_by is null or trim(t2.created_by) = '')
-                )
-              )
-              </if>
-            order by t2.transaction_date desc, t2.id desc
-            limit 1
-          )
+        select latest.bank_card_id as `key`, latest.balance as `value`
+        from (
+            <include refid="latestBalancePerCardSubquery"/>
+        ) latest
     </select>
 
     <select id="sumExpenseByBucketSince" resultType="double">

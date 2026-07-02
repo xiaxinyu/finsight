@@ -2,8 +2,7 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.classification.FinanceSemanticsCatalog;
-import com.finsight.application.finance.FinancialAccountService;
-import com.finsight.domain.model.KeyValue;
+import com.finsight.application.finance.UserScopedFinancialQueries;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,14 +18,14 @@ public class DebtTrendAnalysisService {
 
     private final AuthenticationFacade authenticationFacade;
     private final FinanceSemanticMetricsRepository semanticMetricsRepository;
-    private final FinancialAccountService accountService;
+    private final UserScopedFinancialQueries scopedFinancialQueries;
 
     public DebtTrendAnalysisService(AuthenticationFacade authenticationFacade,
                                     FinanceSemanticMetricsRepository semanticMetricsRepository,
-                                    FinancialAccountService accountService) {
+                                    UserScopedFinancialQueries scopedFinancialQueries) {
         this.authenticationFacade = authenticationFacade;
         this.semanticMetricsRepository = semanticMetricsRepository;
-        this.accountService = accountService;
+        this.scopedFinancialQueries = scopedFinancialQueries;
     }
 
     public Map<String, Object> trends(int fromYear, int toYear) throws Exception {
@@ -39,10 +38,18 @@ public class DebtTrendAnalysisService {
         int matrixFrom = Math.min(historyFromYear, fromYear);
         boolean ytdCompare = toYear == asOf.getYear();
 
-        double borrowingFrom = liabilityFlowTotal(fromYear, toYear, asOf, true, true);
-        double borrowingTo = liabilityFlowTotal(toYear, toYear, asOf, true, false);
-        double repaymentFrom = liabilityFlowTotal(fromYear, toYear, asOf, false, true);
-        double repaymentTo = liabilityFlowTotal(toYear, toYear, asOf, false, false);
+        List<Map<String, Object>> debtYearSeries = buildDebtYearSeries(matrixFrom, toYear, asOf);
+        double borrowingTo = yearFlow(debtYearSeries, toYear, "borrowing");
+        double repaymentTo = yearFlow(debtYearSeries, toYear, "repayment");
+        double borrowingFrom;
+        double repaymentFrom;
+        if (ytdCompare) {
+            borrowingFrom = liabilityFlowTotal(fromYear, toYear, asOf, true, true);
+            repaymentFrom = liabilityFlowTotal(fromYear, toYear, asOf, false, true);
+        } else {
+            borrowingFrom = yearFlow(debtYearSeries, fromYear, "borrowing");
+            repaymentFrom = yearFlow(debtYearSeries, fromYear, "repayment");
+        }
         double netFrom = borrowingFrom - repaymentFrom;
         double netTo = borrowingTo - repaymentTo;
 
@@ -51,8 +58,8 @@ public class DebtTrendAnalysisService {
         double netDelta = netTo - netFrom;
         boolean debtPressure = debtPressureDetected(borrowingPct, repaymentPct, repaymentTo - repaymentFrom, netDelta);
 
-        double currentLiabilities = currentLiabilities();
-        List<Map<String, Object>> debtYearSeries = buildDebtYearSeries(matrixFrom, toYear, asOf, currentLiabilities);
+        double currentLiabilities = scopedFinancialQueries.sumCurrentLiabilities();
+        attachEstimatedBalances(debtYearSeries, currentLiabilities);
         List<Map<String, Object>> repaymentRows = loadTagRows(matrixFrom, toYear, userId, asOf, "outflow");
         List<Map<String, Object>> borrowingRows = loadTagRows(matrixFrom, toYear, userId, asOf, "inflow");
         List<Map<String, Object>> topRepaymentGrowth = enrichTypeMovers(
@@ -108,8 +115,7 @@ public class DebtTrendAnalysisService {
         return rows;
     }
 
-    private List<Map<String, Object>> buildDebtYearSeries(int fromYear, int toYear, LocalDate asOf,
-                                                           double anchorBalance) {
+    private List<Map<String, Object>> buildDebtYearSeries(int fromYear, int toYear, LocalDate asOf) {
         Map<Integer, FinanceSemanticMetricsRepository.LiabilityYearFlow> byYear = new LinkedHashMap<>();
         for (FinanceSemanticMetricsRepository.LiabilityYearFlow flow
                 : semanticMetricsRepository.sumLiabilityFlowByYear(userKey(), fromYear, toYear, asOf)) {
@@ -142,8 +148,16 @@ public class DebtTrendAnalysisService {
             series.add(pt);
             priorNet = net;
         }
-        attachEstimatedBalances(series, anchorBalance);
         return series;
+    }
+
+    private static double yearFlow(List<Map<String, Object>> series, int year, String field) {
+        for (Map<String, Object> pt : series) {
+            if (((Number) pt.get("year")).intValue() == year) {
+                return ((Number) pt.get(field)).doubleValue();
+            }
+        }
+        return 0.0;
     }
 
     private static void attachEstimatedBalances(List<Map<String, Object>> series, double anchorBalance) {
@@ -187,18 +201,6 @@ public class DebtTrendAnalysisService {
         return block;
     }
 
-    private double currentLiabilities() {
-        double total = 0;
-        for (KeyValue kv : accountService.latestBalances()) {
-            double v = parseAmount(kv.getValue());
-            String name = kv.getKey() == null ? "" : kv.getKey().toLowerCase();
-            if (name.contains("credit") || v < 0) {
-                total += Math.abs(v);
-            }
-        }
-        return total;
-    }
-
     private static String debtDirection(double net) {
         if (net > FLAT_THRESHOLD) {
             return "increase";
@@ -207,17 +209,6 @@ public class DebtTrendAnalysisService {
             return "decrease";
         }
         return "flat";
-    }
-
-    private static double parseAmount(String v) {
-        if (v == null || v.isBlank()) {
-            return 0;
-        }
-        try {
-            return Double.parseDouble(v);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 
     private Map<String, Object> buildTypeYearMatrix(List<Map<String, Object>> tagRows,

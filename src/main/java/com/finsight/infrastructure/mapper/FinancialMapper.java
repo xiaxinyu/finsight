@@ -18,6 +18,8 @@ public interface FinancialMapper {
 
     List<KeyValue> latestBalancesFromBankCards(@Param("ownerUserId") String ownerUserId);
 
+    Double sumCurrentLiabilities(@Param("ownerUserId") String ownerUserId);
+
     Double sumExpenseSince(@Param("since") Date since, @Param("ownerUserId") String ownerUserId);
 
     Double sumIncomeSince(@Param("since") Date since, @Param("ownerUserId") String ownerUserId);

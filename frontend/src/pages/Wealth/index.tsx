@@ -33,7 +33,7 @@ export function WealthPage() {
   return (
     <DataPageLayout
       title="Wealth"
-      subtitle="Net worth, balance sheet, and health score"
+      subtitle="Net worth, balance sheet, and health score · See also Loans for facilities"
       icon={<BankOutlined />}
     >
       {isError && (
@@ -44,7 +44,7 @@ export function WealthPage() {
       {accounts.length === 0 && !isLoading && (
         <Alert type="info" showIcon style={{ marginBottom: 8 }}
           message="No account balances yet"
-          description={<>Import statements or <Link to="/admin/cards">add bank cards</Link> — balances are inferred from the latest imported closing balance.</>} />
+          description={<>Import statements or <Link to="/admin/cards">add bank cards</Link> — balances are inferred from the latest imported closing balance. Track loan facilities under <Link to="/ledgers/loans">Ledgers → Loans</Link>.</>} />
       )}
       <KpiGrid items={[
         { key: 'nw', label: 'Net worth', value: formatMoney(netWorth) },

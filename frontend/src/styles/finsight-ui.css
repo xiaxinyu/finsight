@@ -4952,6 +4952,14 @@
 }
 
 /* Debt Trends overrides */
+.fs-debt-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 48px 24px;
+}
+
 .fs-debt-balance-hero {
   border: 1px solid #fecdd3 !important;
   background: linear-gradient(135deg, #fff1f2 0%, #ffffff 55%) !important;
@@ -6235,4 +6243,53 @@
 
 .fs-user-ts {
   font-size: 12px !important;
+}
+
+/* Loans portfolio */
+.fs-loans-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.fs-loans-summary-card {
+  border: 1px solid #e2e8f0 !important;
+}
+
+.fs-loans-summary-card--rate {
+  border-color: #fecaca !important;
+  background: linear-gradient(135deg, #fff1f2 0%, #fff 100%) !important;
+}
+
+.fs-loans-summary__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.fs-loans-summary__value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.fs-loan-rate {
+  font-weight: 700;
+  color: #be123c;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-loan-lender {
+  font-weight: 600;
+}
+
+.fs-loan-sub {
+  font-size: 11px !important;
+  display: block;
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Button, Collapse, Segmented, Select, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Button, Collapse, Segmented, Select, Spin, Tag, Tooltip, Typography } from 'antd'
 import { ArrowRightOutlined, CreditCardOutlined, DownloadOutlined, RiseOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchDebtTrends } from '../../api/analytics'
@@ -336,6 +336,12 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
     >
       {isError && (
         <Alert type="error" showIcon message="Failed to load debt trends" description={error instanceof Error ? error.message : 'Try another year.'} />
+      )}
+
+      {loading && !data && (
+        <div className="fs-debt-loading">
+          <Spin size="large" tip="Loading debt trends…" />
+        </div>
       )}
 
       {data && (
