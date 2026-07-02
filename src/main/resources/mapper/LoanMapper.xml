@@ -102,6 +102,26 @@
     </update>
 
     <select id="listLoanLinks" resultType="com.finsight.domain.model.LoanTxnLink">
+        select l.id,
+               l.loan_id as loanId,
+               l.transaction_id as transactionId,
+               l.link_type as linkType,
+               l.user_id as userId,
+               l.created_by as createdBy,
+               l.created_at as createdAt,
+               t.transaction_date as transactionDate,
+               t.transaction_desc as transactionDesc,
+               t.income_money as incomeMoney,
+               t.expense_amount as expenseAmount,
+               t.bank_card_name as bankCardName
+        from fin_loan_txn_link l
+        left join transaction t on t.id = l.transaction_id and coalesce(t.deleted, 0) != 1
+        where l.loan_id = #{loanId}
+          and l.user_id = #{userId}
+        order by coalesce(t.transaction_date, l.created_at) desc, l.created_at desc
+    </select>
+
+    <select id="findLoanLink" resultType="com.finsight.domain.model.LoanTxnLink">
         select id,
                loan_id as loanId,
                transaction_id as transactionId,
@@ -111,8 +131,9 @@
                created_at as createdAt
         from fin_loan_txn_link
         where loan_id = #{loanId}
+          and transaction_id = #{transactionId}
           and user_id = #{userId}
-        order by created_at desc
+        limit 1
     </select>
 
     <insert id="insertLoanLink">
@@ -128,6 +149,12 @@
         delete from fin_loan_txn_link
         where loan_id = #{loanId}
           and transaction_id = #{transactionId}
+          and user_id = #{userId}
+    </delete>
+
+    <delete id="deleteAllLoanLinks">
+        delete from fin_loan_txn_link
+        where loan_id = #{loanId}
           and user_id = #{userId}
     </delete>
 </mapper>

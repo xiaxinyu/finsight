@@ -18,7 +18,11 @@ public interface LoanRepository {
 
     List<LoanTxnLink> listLinks(String loanId, String userId);
 
+    Optional<LoanTxnLink> findLink(String loanId, String transactionId, String userId);
+
     LoanTxnLink addLink(LoanTxnLink link, String userId, String actor);
 
     void removeLink(String loanId, String transactionId, String userId);
+
+    void removeAllLinks(String loanId, String userId);
 }

@@ -22,9 +22,15 @@ public interface LoanMapper {
 
     List<LoanTxnLink> listLoanLinks(@Param("loanId") String loanId, @Param("userId") String userId);
 
+    LoanTxnLink findLoanLink(@Param("loanId") String loanId,
+                             @Param("transactionId") String transactionId,
+                             @Param("userId") String userId);
+
     int insertLoanLink(@Param("link") LoanTxnLink link, @Param("userId") String userId, @Param("actor") String actor);
 
     int deleteLoanLink(@Param("loanId") String loanId,
                        @Param("transactionId") String transactionId,
                        @Param("userId") String userId);
+
+    int deleteAllLoanLinks(@Param("loanId") String loanId, @Param("userId") String userId);
 }

@@ -5,7 +5,9 @@ import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.card.BankCardService;
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.Loan;
+import com.finsight.domain.model.LoanTxnLink;
 import com.finsight.domain.port.LoanRepository;
+import com.finsight.domain.port.TransactionRepository;
 import com.finsight.web.api.dto.LoanWriteRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -31,6 +34,8 @@ class LoanServiceTest {
     @Mock
     private BankCardService bankCardService;
     @Mock
+    private TransactionRepository transactionRepository;
+    @Mock
     private LedgerUserScope ledgerUserScope;
     @Mock
     private AuthenticationFacade authenticationFacade;
@@ -39,7 +44,7 @@ class LoanServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new LoanService(loanRepository, bankCardService, ledgerUserScope, authenticationFacade);
+        service = new LoanService(loanRepository, bankCardService, transactionRepository, ledgerUserScope, authenticationFacade);
         when(authenticationFacade.getUserName()).thenReturn("user1");
     }
 
@@ -71,6 +76,29 @@ class LoanServiceTest {
 
         Loan saved = service.create(req);
         assertEquals("card-1", saved.getDisbursementCardId());
+    }
+
+    @Test
+    void linkTransaction_rejectsDuplicate() {
+        Loan loan = loan("l1", "5.0", "100000", "5000");
+        loan.setDisbursementCardId("card-1");
+        when(loanRepository.findById("l1", "user1")).thenReturn(Optional.of(loan));
+        when(loanRepository.findLink("l1", "tx-1", "user1")).thenReturn(Optional.of(new LoanTxnLink()));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.linkTransaction("l1", "tx-1", "DISBURSEMENT"));
+    }
+
+    @Test
+    void linkTransaction_requiresOwnedTransaction() {
+        Loan loan = loan("l1", "5.0", "100000", "5000");
+        loan.setDisbursementCardId("card-1");
+        when(loanRepository.findById("l1", "user1")).thenReturn(Optional.of(loan));
+        when(loanRepository.findLink("l1", "tx-1", "user1")).thenReturn(Optional.empty());
+        when(transactionRepository.selectById("tx-1")).thenReturn(null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.linkTransaction("l1", "tx-1", "DISBURSEMENT"));
     }
 
     private static Loan loan(String id, String rate, String balance, String monthly) {

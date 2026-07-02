@@ -6293,3 +6293,24 @@
   font-size: 11px !important;
   display: block;
 }
+
+.fs-loans-summary__hint {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.fs-loan-row--closed {
+  opacity: 0.55;
+}
+
+.fs-loan-row--closed .fs-loan-rate {
+  color: #64748b;
+}
+
+.fs-loan-links-add {
+  padding: 12px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}

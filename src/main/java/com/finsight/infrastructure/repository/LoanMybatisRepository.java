@@ -51,12 +51,18 @@ public class LoanMybatisRepository implements LoanRepository {
 
     @Override
     public void softDelete(String id, String userId, String actor) {
+        mapper.deleteAllLoanLinks(id, userId);
         mapper.softDeleteLoan(id, userId, actor);
     }
 
     @Override
     public List<LoanTxnLink> listLinks(String loanId, String userId) {
         return mapper.listLoanLinks(loanId, userId);
+    }
+
+    @Override
+    public Optional<LoanTxnLink> findLink(String loanId, String transactionId, String userId) {
+        return Optional.ofNullable(mapper.findLoanLink(loanId, transactionId, userId));
     }
 
     @Override
@@ -72,5 +78,10 @@ public class LoanMybatisRepository implements LoanRepository {
     @Override
     public void removeLink(String loanId, String transactionId, String userId) {
         mapper.deleteLoanLink(loanId, transactionId, userId);
+    }
+
+    @Override
+    public void removeAllLinks(String loanId, String userId) {
+        mapper.deleteAllLoanLinks(loanId, userId);
     }
 }

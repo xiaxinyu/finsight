@@ -89,3 +89,37 @@ export async function updateLoan(id: string, payload: LoanWritePayload) {
 export async function deleteLoan(id: string) {
   return unwrap<unknown>(await deleteReq(`/api/v1/loans/${id}`))
 }
+
+export type LoanLinkType = 'DISBURSEMENT' | 'REPAYMENT' | 'INTEREST' | 'OTHER'
+
+export type LoanTxnLinkRow = {
+  id?: string
+  loanId?: string
+  transactionId?: string
+  linkType?: LoanLinkType
+  transactionDate?: string
+  transactionDesc?: string
+  incomeMoney?: number
+  expenseAmount?: number
+  bankCardName?: string
+  createdAt?: string
+}
+
+export const LOAN_LINK_TYPE_LABELS: Record<LoanLinkType, string> = {
+  DISBURSEMENT: '放款',
+  REPAYMENT: '还款',
+  INTEREST: '付息',
+  OTHER: '其他',
+}
+
+export async function fetchLoanLinks(loanId: string) {
+  return unwrap<LoanTxnLinkRow[]>(await getJson(`/api/v1/loans/${loanId}/links`))
+}
+
+export async function addLoanLink(loanId: string, transactionId: string, linkType: LoanLinkType) {
+  return unwrap<LoanTxnLinkRow>(await postJson(`/api/v1/loans/${loanId}/links`, { transactionId, linkType }))
+}
+
+export async function removeLoanLink(loanId: string, transactionId: string) {
+  return unwrap<unknown>(await deleteReq(`/api/v1/loans/${loanId}/links/${transactionId}`))
+}

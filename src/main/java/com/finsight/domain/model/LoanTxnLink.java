@@ -15,4 +15,11 @@ public class LoanTxnLink extends AuditableEntity {
     private String linkType;
     private String userId;
     private Date createdAt;
+
+    /** Enriched from transaction join (not persisted). */
+    private Date transactionDate;
+    private String transactionDesc;
+    private Double incomeMoney;
+    private Double expenseAmount;
+    private String bankCardName;
 }

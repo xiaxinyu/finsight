@@ -6,7 +6,9 @@ import com.finsight.application.card.BankCardService;
 import com.finsight.domain.model.BankCard;
 import com.finsight.domain.model.Loan;
 import com.finsight.domain.model.LoanTxnLink;
+import com.finsight.domain.model.Transaction;
 import com.finsight.domain.port.LoanRepository;
+import com.finsight.domain.port.TransactionRepository;
 import com.finsight.web.api.dto.LoanWriteRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,15 +33,18 @@ public class LoanService {
 
     private final LoanRepository loanRepository;
     private final BankCardService bankCardService;
+    private final TransactionRepository transactionRepository;
     private final LedgerUserScope ledgerUserScope;
     private final AuthenticationFacade authenticationFacade;
 
     public LoanService(LoanRepository loanRepository,
                        BankCardService bankCardService,
+                       TransactionRepository transactionRepository,
                        LedgerUserScope ledgerUserScope,
                        AuthenticationFacade authenticationFacade) {
         this.loanRepository = loanRepository;
         this.bankCardService = bankCardService;
+        this.transactionRepository = transactionRepository;
         this.ledgerUserScope = ledgerUserScope;
         this.authenticationFacade = authenticationFacade;
     }
@@ -85,16 +90,23 @@ public class LoanService {
 
     @Transactional
     public LoanTxnLink linkTransaction(String loanId, String transactionId, String linkType) {
-        get(loanId);
+        Loan loan = get(loanId);
         String type = normalizeLinkType(linkType);
         if (transactionId == null || transactionId.isBlank()) {
             throw new IllegalArgumentException("transactionId is required");
         }
+        String txnId = transactionId.trim();
+        String userId = userKey();
+        if (loanRepository.findLink(loanId, txnId, userId).isPresent()) {
+            throw new IllegalArgumentException("This transaction is already linked to the loan");
+        }
+        Transaction tx = requireOwnedTransaction(txnId);
+        assertTransactionOnLoanCard(loan, tx, type);
         LoanTxnLink link = new LoanTxnLink();
         link.setLoanId(loanId);
-        link.setTransactionId(transactionId.trim());
+        link.setTransactionId(txnId);
         link.setLinkType(type);
-        return loanRepository.addLink(link, userKey(), actor());
+        return loanRepository.addLink(link, userId, actor());
     }
 
     @Transactional
@@ -117,6 +129,12 @@ public class LoanService {
         BigDecimal outstanding = req.getOutstandingBalance() != null
                 ? req.getOutstandingBalance()
                 : req.getPrincipalAmount();
+        if (outstanding.signum() < 0) {
+            throw new IllegalArgumentException("Outstanding balance cannot be negative");
+        }
+        if (outstanding.compareTo(req.getPrincipalAmount()) > 0) {
+            throw new IllegalArgumentException("Outstanding balance cannot exceed principal");
+        }
         loan.setOutstandingBalance(outstanding);
         loan.setInterestRatePct(req.getInterestRatePct());
         loan.setMonthlyPayment(req.getMonthlyPayment());
@@ -152,6 +170,32 @@ public class LoanService {
             throw new IllegalArgumentException("Bank card not found: " + cardId);
         }
         ledgerUserScope.assertOwned(card.getCreatedBy());
+    }
+
+    private Transaction requireOwnedTransaction(String transactionId) {
+        Transaction tx = transactionRepository.selectById(transactionId);
+        if (tx == null || (tx.getDeleted() != null && tx.getDeleted() == 1)) {
+            throw new IllegalArgumentException("Transaction not found");
+        }
+        ledgerUserScope.assertOwned(tx.getCreatedBy());
+        return tx;
+    }
+
+    private void assertTransactionOnLoanCard(Loan loan, Transaction tx, String linkType) {
+        String cardId = tx.getBankCardId() != null ? tx.getBankCardId() : tx.getCardId();
+        if (cardId == null || cardId.isBlank()) {
+            return;
+        }
+        String disbursement = loan.getDisbursementCardId();
+        String repayment = loan.getRepaymentCardId() != null ? loan.getRepaymentCardId() : disbursement;
+        boolean onDisbursement = disbursement != null && disbursement.equals(cardId);
+        boolean onRepayment = repayment != null && repayment.equals(cardId);
+        if ("DISBURSEMENT".equals(linkType) && !onDisbursement) {
+            throw new IllegalArgumentException("Disbursement links must use the loan disbursement card");
+        }
+        if (("REPAYMENT".equals(linkType) || "INTEREST".equals(linkType)) && !onRepayment && !onDisbursement) {
+            throw new IllegalArgumentException("Repayment links must use the loan repayment or disbursement card");
+        }
     }
 
     private static Map<String, Object> buildSummary(List<Loan> loans) {

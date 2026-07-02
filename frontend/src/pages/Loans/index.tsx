@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Badge, Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Typography, message,
+  Alert, Badge, Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Typography, message,
 } from 'antd'
-import { BankOutlined, PlusOutlined } from '@ant-design/icons'
+import { BankOutlined, LinkOutlined, PlusOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import {
   REPAYMENT_METHOD_LABELS,
@@ -21,6 +22,7 @@ import { ContentCard } from '../../components/ContentCard'
 import { EmptyState } from '../../components/EmptyState'
 import { FsDataTable } from '../../components/FsDataTable'
 import { formatMoney } from '../../utils/format'
+import { LoanLinksDrawer } from './LoanLinksDrawer'
 
 type LoanFormValues = {
   name?: string
@@ -48,11 +50,18 @@ function formatDate(v?: string) {
   return dayjs(v).format('YYYY-MM-DD')
 }
 
+function isActive(row: LoanRow) {
+  return row.status !== 'CLOSED'
+}
+
 export function LoansPage() {
   const queryClient = useQueryClient()
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<LoanRow | null>(null)
+  const [linksLoan, setLinksLoan] = useState<LoanRow | null>(null)
+  const [saveLoading, setSaveLoading] = useState(false)
   const [form] = Form.useForm<LoanFormValues>()
+  const principalWatch = Form.useWatch('principalAmount', form)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['loans'],
@@ -104,35 +113,52 @@ export function LoansPage() {
   }
 
   const saveLoan = async () => {
-    const values = await form.validateFields()
-    const payload: LoanWritePayload = {
-      name: values.name?.trim() || null,
-      lenderName: values.lenderName!.trim(),
-      lenderBankCode: values.lenderBankCode?.trim() || null,
-      principalAmount: values.principalAmount!,
-      outstandingBalance: values.outstandingBalance ?? values.principalAmount,
-      interestRatePct: values.interestRatePct ?? null,
-      monthlyPayment: values.monthlyPayment ?? null,
-      repaymentMethod: values.repaymentMethod ?? null,
-      maturityDate: values.maturityDate ? values.maturityDate.format('YYYY-MM-DD') : null,
-      disbursementCardId: values.disbursementCardId!,
-      repaymentCardId: values.repaymentCardId || null,
-      status: values.status ?? 'ACTIVE',
-      notes: values.notes?.trim() || null,
+    try {
+      const values = await form.validateFields()
+      const payload: LoanWritePayload = {
+        name: values.name?.trim() || null,
+        lenderName: values.lenderName!.trim(),
+        lenderBankCode: values.lenderBankCode?.trim() || null,
+        principalAmount: values.principalAmount!,
+        outstandingBalance: values.outstandingBalance ?? values.principalAmount,
+        interestRatePct: values.interestRatePct ?? null,
+        monthlyPayment: values.monthlyPayment ?? null,
+        repaymentMethod: values.repaymentMethod ?? null,
+        maturityDate: values.maturityDate ? values.maturityDate.format('YYYY-MM-DD') : null,
+        disbursementCardId: values.disbursementCardId!,
+        repaymentCardId: values.repaymentCardId || null,
+        status: values.status ?? 'ACTIVE',
+        notes: values.notes?.trim() || null,
+      }
+      setSaveLoading(true)
+      if (editing?.id) {
+        await updateLoan(editing.id, payload)
+        message.success('Loan updated')
+      } else {
+        await createLoan(payload)
+        message.success('Loan added')
+      }
+      setModalOpen(false)
+      reload()
+    } catch (e) {
+      if (e instanceof Error && e.message) {
+        message.error(e.message)
+      }
+    } finally {
+      setSaveLoading(false)
     }
-    if (editing?.id) {
-      await updateLoan(editing.id, payload)
-      message.success('Loan updated')
-    } else {
-      await createLoan(payload)
-      message.success('Loan added')
-    }
-    setModalOpen(false)
-    reload()
   }
 
   const summary = data?.summary
   const loans = data?.loans ?? []
+
+  const tableSummary = useMemo(() => {
+    const active = loans.filter(isActive)
+    return {
+      outstandingBalance: active.reduce((s, r) => s + (r.outstandingBalance ?? r.principalAmount ?? 0), 0),
+      monthlyPayment: active.reduce((s, r) => s + (r.monthlyPayment ?? 0), 0),
+    }
+  }, [loans])
 
   const columns = [
     {
@@ -185,11 +211,18 @@ export function LoansPage() {
       render: (v: string) => formatDate(v),
     },
     {
-      title: 'Disbursement card',
+      title: 'Disbursement',
       dataIndex: 'disbursementCardLabel',
       ellipsis: true,
-      width: 140,
+      width: 120,
       render: (v: string) => v || '—',
+    },
+    {
+      title: 'Repayment card',
+      dataIndex: 'repaymentCardLabel',
+      ellipsis: true,
+      width: 120,
+      render: (v: string, row: LoanRow) => v || row.disbursementCardLabel || '—',
     },
     {
       title: 'Status',
@@ -205,23 +238,29 @@ export function LoansPage() {
       title: 'Notes',
       dataIndex: 'notes',
       ellipsis: true,
-      width: 160,
+      width: 140,
     },
     {
       title: '',
       key: 'actions',
-      width: 120,
+      width: 160,
       fixed: 'right' as const,
       render: (_: unknown, row: LoanRow) => (
         <Space size={4}>
+          <a onClick={() => setLinksLoan(row)}><LinkOutlined /> Links</a>
           <a onClick={() => openEdit(row)}>Edit</a>
           <Popconfirm
             title="Remove this loan?"
+            description="Linked transactions will also be unlinked."
             onConfirm={async () => {
               if (!row.id) return
-              await deleteLoan(row.id)
-              message.success('Removed')
-              reload()
+              try {
+                await deleteLoan(row.id)
+                message.success('Removed')
+                reload()
+              } catch (e) {
+                message.error(e instanceof Error ? e.message : 'Failed to remove')
+              }
             }}
           >
             <a>Delete</a>
@@ -234,7 +273,7 @@ export function LoansPage() {
   return (
     <DataPageLayout
       title="Loans"
-      subtitle="Lender → disbursement card · track rates, balances, and monthly payments"
+      subtitle="Lender → disbursement card · track rates, balances, and link repayments to ledger transactions"
       icon={<BankOutlined />}
       className="fs-data-page--dense fs-data-page--loans"
       actions={(
@@ -254,6 +293,7 @@ export function LoansPage() {
           <ContentCard className="fs-loans-summary-card" styles={{ body: { padding: '14px 18px' } }}>
             <div className="fs-loans-summary__label">Total outstanding</div>
             <div className="fs-loans-summary__value">{formatMoney(summary.totalOutstanding ?? 0)}</div>
+            <div className="fs-loans-summary__hint">Active loans only</div>
           </ContentCard>
           <ContentCard className="fs-loans-summary-card" styles={{ body: { padding: '14px 18px' } }}>
             <div className="fs-loans-summary__label">Monthly payment</div>
@@ -278,6 +318,9 @@ export function LoansPage() {
           columns={columns}
           size="small"
           scroll={{ x: 'max-content' }}
+          summary={tableSummary}
+          summaryLabel="Active total"
+          rowClassName={(row) => (row.status === 'CLOSED' ? 'fs-loan-row--closed' : '')}
           locale={{
             emptyText: (
               <EmptyState
@@ -295,6 +338,7 @@ export function LoansPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={saveLoan}
+        confirmLoading={saveLoading}
         width={560}
         destroyOnClose
       >
@@ -307,15 +351,39 @@ export function LoansPage() {
           </Form.Item>
           <Space style={{ display: 'flex', width: '100%' }} align="start">
             <Form.Item name="principalAmount" label="Principal (¥)" rules={[{ required: true }]} style={{ flex: 1 }}>
-              <InputNumber min={0} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} />
+              <InputNumber
+                min={0}
+                style={{ width: '100%' }}
+                formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                onChange={(v) => {
+                  if (!editing && v != null) {
+                    form.setFieldValue('outstandingBalance', v)
+                  }
+                }}
+              />
             </Form.Item>
-            <Form.Item name="outstandingBalance" label="Outstanding (¥)" style={{ flex: 1 }}>
-              <InputNumber min={0} style={{ width: '100%' }} />
+            <Form.Item
+              name="outstandingBalance"
+              label="Outstanding (¥)"
+              style={{ flex: 1 }}
+              rules={[
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const principal = getFieldValue('principalAmount')
+                    if (value == null || principal == null) return Promise.resolve()
+                    if (value < 0) return Promise.reject(new Error('Cannot be negative'))
+                    if (value > principal) return Promise.reject(new Error('Cannot exceed principal'))
+                    return Promise.resolve()
+                  },
+                }),
+              ]}
+            >
+              <InputNumber min={0} max={principalWatch ?? undefined} style={{ width: '100%' }} />
             </Form.Item>
           </Space>
           <Space style={{ display: 'flex', width: '100%' }} align="start">
-            <Form.Item name="interestRatePct" label="Rate (% p.a.)" style={{ flex: 1 }}>
-              <InputNumber min={0} max={100} step={0.01} style={{ width: '100%' }} addonAfter="%" />
+            <Form.Item name="interestRatePct" label="Annual rate (%)" style={{ flex: 1 }}>
+              <InputNumber min={0} max={100} step={0.01} style={{ width: '100%' }} />
             </Form.Item>
             <Form.Item name="monthlyPayment" label="Monthly payment (¥)" style={{ flex: 1 }}>
               <InputNumber min={0} style={{ width: '100%' }} />
@@ -327,12 +395,20 @@ export function LoansPage() {
             rules={[{ required: true, message: 'Select the card that receives loan proceeds' }]}
             extra="Loan from the bank is credited to this card in your ledger."
           >
-            <Select
-              showSearch
-              optionFilterProp="label"
-              options={cardOptions}
-              placeholder="Select bank card"
-            />
+            {cardOptions.length === 0 ? (
+              <Alert
+                type="info"
+                showIcon
+                message={<>No bank cards yet. Add cards under <Link to="/admin/cards">Admin → Bank Cards</Link> first.</>}
+              />
+            ) : (
+              <Select
+                showSearch
+                optionFilterProp="label"
+                options={cardOptions}
+                placeholder="Select bank card"
+              />
+            )}
           </Form.Item>
           <Form.Item name="repaymentCardId" label="Repayment card (optional)" extra="Card debited for repayments, if different.">
             <Select allowClear showSearch optionFilterProp="label" options={cardOptions} placeholder="Same as disbursement" />
@@ -359,6 +435,12 @@ export function LoansPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <LoanLinksDrawer
+        loan={linksLoan}
+        open={!!linksLoan}
+        onClose={() => setLinksLoan(null)}
+      />
     </DataPageLayout>
   )
 }
