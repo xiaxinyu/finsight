@@ -12,12 +12,14 @@ import { useFeatureFlags } from '../../hooks/useFeatureFlags'
 import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
 import { buildProfileRadarOption, PROFILE_DIM_LABELS, profileUserTypeLabel } from './profileRadar'
 import { ProfileDimensionDrawer } from './ProfileDimensionDrawer'
+import { ProfileDimensionBarList } from './ProfileDimensionBarList'
 import { profileActionLinks } from './profileActions'
 import { CombinedInsightPanel } from '../../components/CombinedInsightPanel'
 import {
   profileDimensionHighlights,
   profileDimensionLabel,
-  profileLevelTier,
+  profileDimensionVisual,
+  profileLevelDisplay,
   profileScoreColor,
   profileScoreTier,
 } from './profileDisplay'
@@ -85,25 +87,24 @@ function DimensionCard({
   dim: ProfileDimension
   onOpen: () => void
 }) {
-  const tier = profileLevelTier(dim.level)
+  const visual = profileDimensionVisual(dim.id, dim.score, dim.level)
   const primaryEvidence = dim.evidence?.[0]
   const primaryAction = profileActionLinks(dim)[0]
-  const stroke = profileScoreColor(dim.score)
 
   return (
-    <button type="button" className={`fs-profile-dim-card fs-profile-dim-card--${tier}`} onClick={onOpen}>
+    <button type="button" className={`fs-profile-dim-card fs-profile-dim-card--${visual.tier}`} onClick={onOpen}>
       <div className="fs-profile-dim-card__head">
         <span className="fs-profile-dim-card__title">{profileDimensionLabel(dim.id)}</span>
         <Progress
           type="circle"
           percent={dim.score}
           size={44}
-          strokeColor={stroke}
+          strokeColor={visual.color}
           format={(v) => <span className="fs-profile-dim-card__score">{v}</span>}
         />
       </div>
-      <Tag bordered={false} className={`fs-profile-dim-card__level fs-profile-dim-card__level--${tier}`}>
-        {dim.level}
+      <Tag bordered={false} className={`fs-profile-dim-card__level fs-profile-dim-card__level--${visual.tier}`}>
+        {profileLevelDisplay(dim.level)}
       </Tag>
       <Typography.Paragraph className="fs-profile-dim-card__reason" ellipsis={{ rows: 2, tooltip: dim.reason || dim.summary }}>
         {dim.reason || dim.summary}
@@ -267,19 +268,25 @@ export function ProfilePage() {
             </div>
           </div>
         </div>
-        <div className="fs-profile-hero__radar">
-          <FsChart
-            option={radarOption}
-            height={280}
-            onEvents={{
-              click: (p) => {
-                const name = (p as { name?: string }).name
-                if (!name) return
-                const dimId = dimensionIdFromRadarName(name)
-                const dim = data.dimensions.find((d) => d.id === dimId)
-                if (dim) setActiveDimension(dim)
-              },
-            }}
+        <div className="fs-profile-hero__radar-wrap">
+          <div className="fs-profile-hero__radar">
+            <FsChart
+              option={radarOption}
+              height={280}
+              onEvents={{
+                click: (p) => {
+                  const name = (p as { name?: string }).name
+                  if (!name) return
+                  const dimId = dimensionIdFromRadarName(name)
+                  const dim = data.dimensions.find((d) => d.id === dimId)
+                  if (dim) setActiveDimension(dim)
+                },
+              }}
+            />
+          </div>
+          <ProfileDimensionBarList
+            dimensions={data.dimensions}
+            onSelect={setActiveDimension}
           />
         </div>
       </section>

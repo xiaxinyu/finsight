@@ -19,7 +19,7 @@ const staticRoutes: RouteMeta[] = [
   { path: '/statements/upload', title: 'Import Statement', breadcrumb: ['Transactions', 'Import'] },
   { path: '/statements', title: 'Import History', breadcrumb: ['Transactions', 'Import History'] },
   { path: '/admin/users', title: 'Users', breadcrumb: ['Admin', 'Users'] },
-  { path: '/admin/cards', title: '银行卡', breadcrumb: ['Admin', '银行卡'] },
+  { path: '/admin/cards', title: 'Bank cards', breadcrumb: ['Admin', 'Bank cards'] },
   { path: '/admin/rules', title: 'Rule Engine', breadcrumb: ['Admin', 'Rule Engine'] },
   { path: '/admin/categories', title: 'Categories', breadcrumb: ['Admin', 'Categories'] },
 ]

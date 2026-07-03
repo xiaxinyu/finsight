@@ -1,5 +1,6 @@
 import type { EChartsOption } from 'echarts'
 import type { ProfileDimension } from '../../api/analytics'
+import { profileScoreColor } from './profileDisplay'
 
 export const PROFILE_DIM_LABELS: Record<string, string> = {
   income_stability: 'Income stability',
@@ -40,8 +41,10 @@ export function buildProfileRadarOption(dimensions: ProfileDimension[] | undefin
     return EMPTY_RADAR_OPTION
   }
 
+  const pointColors = dimensions.map((d) => profileScoreColor(d.score, d.id))
+
   return {
-    color: ['#2563eb'],
+    color: pointColors,
     tooltip: { trigger: 'item' },
     radar: {
       indicator: dimensions.map((d) => ({ name: PROFILE_DIM_LABELS[d.id] || d.id, max: 100 })),
@@ -54,11 +57,19 @@ export function buildProfileRadarOption(dimensions: ProfileDimension[] | undefin
     },
     series: [{
       type: 'radar' as const,
-      data: [{ value: dimensions.map((d) => d.score), name: 'Profile' }],
-      areaStyle: { opacity: 0.22, color: '#2563eb' },
-      lineStyle: { width: 2, color: '#2563eb' },
-      itemStyle: { color: '#2563eb' },
-      symbolSize: 5,
+      data: [{
+        value: dimensions.map((d) => d.score),
+        name: 'Profile',
+        lineStyle: { width: 2, color: '#64748b' },
+        areaStyle: { opacity: 0.12, color: '#94a3b8' },
+        itemStyle: {
+          color: (params: { dimensionIndex?: number }) => {
+            const idx = params.dimensionIndex ?? 0
+            return pointColors[idx] ?? '#2563eb'
+          },
+        },
+        symbolSize: 6,
+      }],
     }],
   }
 }

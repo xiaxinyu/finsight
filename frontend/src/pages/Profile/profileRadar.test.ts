@@ -35,18 +35,23 @@ describe('buildProfileRadarOption', () => {
     })
   })
 
-  it('maps dimension scores into radar series', () => {
+  it('maps dimension scores into radar series with per-dimension colors', () => {
     const option = buildProfileRadarOption(sampleDimensions)
-    const series = option.series as { type: string; data: { value: number[]; name: string }[] }[]
+    const series = option.series as {
+      type: string
+      data: { value: number[]; name: string; itemStyle: { color: unknown } }[]
+    }[]
 
-    expect(option.radar).toEqual({
+    expect(option.radar).toMatchObject({
       indicator: [
         { name: 'Income stability', max: 100 },
         { name: 'Spending control', max: 100 },
       ],
-      radius: '62%',
+      radius: '68%',
     })
-    expect(series[0].data[0]).toEqual({ value: [72, 58], name: 'Profile' })
+    expect(series[0].data[0].value).toEqual([72, 58])
+    expect(series[0].data[0].name).toBe('Profile')
+    expect(typeof series[0].data[0].itemStyle.color).toBe('function')
   })
 
   it('labels known user types', () => {

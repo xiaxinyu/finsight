@@ -11,6 +11,7 @@ import { ANALYTICS_STALE_MS, QUERY_KEYS } from '../../constants/queryKeys'
 import { PROFILE_DIM_LABELS } from './profileRadar'
 import { buildProfileHistoryOption, historyDateRange } from './profileHistoryChart'
 import { profileActionLinks } from './profileActions'
+import { profileDimensionVisual, profileLevelDisplay } from './profileDisplay'
 
 type Props = {
   open: boolean
@@ -35,6 +36,9 @@ export function ProfileDimensionDrawer({ open, dimension, asOf, onClose }: Props
     [dimensionId, history],
   )
   const actions = profileActionLinks(dimension ?? undefined)
+  const visual = dimension
+    ? profileDimensionVisual(dimension.id, dimension.score, dimension.level)
+    : null
 
   return (
     <Drawer
@@ -47,10 +51,12 @@ export function ProfileDimensionDrawer({ open, dimension, asOf, onClose }: Props
       {!dimension ? null : (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Tag color={dimension.level === 'strong' ? 'green' : dimension.level === 'moderate' ? 'blue' : 'orange'}>
-              {dimension.level.replace(/_/g, ' ')}
+            <Tag color={visual?.antTagColor ?? 'default'}>
+              {profileLevelDisplay(dimension.level)}
             </Tag>
-            <Typography.Title level={3} style={{ margin: 0 }}>{dimension.score}</Typography.Title>
+            <Typography.Title level={3} style={{ margin: 0, color: visual?.color }}>
+              {dimension.score}
+            </Typography.Title>
           </div>
 
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
