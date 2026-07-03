@@ -31,6 +31,7 @@ export type LoanRow = {
   repaymentCardId?: string
   disbursementCardLabel?: string
   repaymentCardLabel?: string
+  linkCount?: number
   status?: LoanStatus
   notes?: string
   sortOrder?: number

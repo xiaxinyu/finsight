@@ -6246,6 +6246,471 @@
 }
 
 /* Loans portfolio */
+.fs-loans-hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .fs-loans-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fs-loans-hero-card {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.fs-loans-hero-card--primary {
+  background: linear-gradient(135deg, #f0f9ff 0%, #fff 100%) !important;
+  border-color: #bae6fd !important;
+}
+
+.fs-loans-hero-card--rate {
+  background: linear-gradient(135deg, #fff1f2 0%, #fff 100%) !important;
+  border-color: #fecaca !important;
+}
+
+.fs-loans-hero-card .ant-card-body {
+  padding: 16px 20px !important;
+}
+
+.fs-loans-hero-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.02em;
+}
+
+.fs-loans-hero-card__value {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.fs-loans-hero-card__value--rate {
+  color: #be123c;
+}
+
+.fs-loans-hero-card__hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.fs-loans-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.fs-loan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.fs-loan-card {
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.fs-loan-card:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.fs-loan-card--closed {
+  opacity: 0.65;
+}
+
+.fs-loan-card-inner {
+  padding: 14px 16px;
+  cursor: pointer;
+  border-left: 3px solid var(--loan-accent, #475569);
+  border-radius: 11px;
+}
+
+.fs-loan-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fs-loan-card-bank {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fs-loan-card-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--loan-accent, #475569);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fs-loan-card-lender {
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.fs-loan-card-alias {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.fs-loan-card-head-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.fs-loan-card-rate {
+  font-weight: 800;
+  font-size: 16px;
+  color: #be123c;
+  font-variant-numeric: tabular-nums;
+  padding-right: 2px;
+}
+
+.fs-loan-card-balance {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.fs-loan-card-balance-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.fs-loan-card-balance-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.fs-loan-card-ratebar {
+  height: 3px;
+  background: #f1f5f9;
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.fs-loan-card-ratebar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--loan-accent, #475569), #be123c);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.fs-loan-card-progress {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.fs-loan-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.fs-loan-card-tag {
+  margin: 0 !important;
+  font-size: 11px !important;
+  line-height: 18px !important;
+}
+
+.fs-loan-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fs-loan-card-card-label {
+  font-size: 11px;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.fs-loan-card-actions {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+/* Loan detail drawer */
+.fs-loan-detail-drawer .ant-drawer-body {
+  padding-top: 12px;
+}
+
+.fs-loan-drawer-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: -4px -4px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--loan-accent) 12%, #fff), #fff);
+  border: 1px solid color-mix(in srgb, var(--loan-accent) 20%, #e2e8f0);
+}
+
+.fs-loan-drawer-hero-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--loan-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-loan-drawer-hero-title {
+  font-weight: 700;
+  font-size: 17px;
+  color: #0f172a;
+}
+
+.fs-loan-drawer-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.fs-loan-drawer-hero-rate {
+  font-weight: 800;
+  color: #be123c;
+  font-size: 14px;
+}
+
+.fs-loan-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 9px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fs-loan-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.fs-loan-form-col {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Transaction link panel */
+.fs-loan-link-panel-hint {
+  margin-bottom: 12px !important;
+}
+
+.fs-loan-link-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+
+.fs-loan-link-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #475569;
+}
+
+.fs-loan-link-summary-item--in {
+  color: #059669;
+}
+
+.fs-loan-link-summary-item--out {
+  color: #dc2626;
+}
+
+.fs-loan-link-summary-label {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.fs-loan-link-section {
+  margin-bottom: 20px;
+}
+
+.fs-loan-link-section-title {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.fs-loan-link-section--pick {
+  padding-top: 4px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.fs-loan-link-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.fs-loan-link-search {
+  max-width: 100%;
+}
+
+.fs-loan-link-center {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.fs-loan-txn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.fs-loan-txn-list--pick {
+  max-height: 360px;
+}
+
+.fs-loan-txn-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.fs-loan-txn-item--linked {
+  background: #fafafa;
+}
+
+.fs-loan-txn-item:hover {
+  border-color: #cbd5e1;
+}
+
+.fs-loan-txn-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fs-loan-txn-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fs-loan-txn-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.fs-loan-txn-tag {
+  margin: 0 !important;
+  font-size: 11px !important;
+}
+
+.fs-loan-txn-amt {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+.fs-loan-txn-amt--in {
+  color: #059669;
+}
+
+.fs-loan-txn-amt--out {
+  color: #dc2626;
+}
+
+.fs-loan-txn-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-loan-txn-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* legacy aliases */
 .fs-loans-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -6306,11 +6771,4 @@
 
 .fs-loan-row--closed .fs-loan-rate {
   color: #64748b;
-}
-
-.fs-loan-links-add {
-  padding: 12px 14px;
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
-  background: #f8fafc;
 }

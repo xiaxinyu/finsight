@@ -1,67 +1,30 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useMemo, useState, type CSSProperties } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Alert, Badge, Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Typography, message,
+  Badge, Button, Dropdown, Progress, Spin, Tag, Tooltip, Typography, message, type MenuProps,
 } from 'antd'
-import { BankOutlined, LinkOutlined, PlusOutlined } from '@ant-design/icons'
-import dayjs, { type Dayjs } from 'dayjs'
 import {
-  REPAYMENT_METHOD_LABELS,
-  createLoan,
-  deleteLoan,
-  fetchLoans,
-  updateLoan,
-  type LoanRow,
-  type LoanWritePayload,
-  type RepaymentMethod,
-} from '../../api/loans'
+  BankOutlined, DeleteOutlined, EditOutlined, LinkOutlined, MoreOutlined, PlusOutlined,
+} from '@ant-design/icons'
+import { deleteLoan, fetchLoans, type LoanRow } from '../../api/loans'
 import { listAccounts } from '../../api/finance'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { ContentCard } from '../../components/ContentCard'
 import { EmptyState } from '../../components/EmptyState'
-import { FsDataTable } from '../../components/FsDataTable'
 import { formatMoney } from '../../utils/format'
-import { LoanLinksDrawer } from './LoanLinksDrawer'
+import { LoanDetailDrawer } from './LoanDetailDrawer'
+import {
+  bankAccent, bankInitial, formatDate, formatRate, isActiveLoan, payoffPct, repaymentLabel,
+} from './loanDisplay'
 
-type LoanFormValues = {
-  name?: string
-  lenderName?: string
-  lenderBankCode?: string
-  principalAmount?: number
-  outstandingBalance?: number
-  interestRatePct?: number
-  monthlyPayment?: number
-  repaymentMethod?: RepaymentMethod
-  maturityDate?: Dayjs
-  disbursementCardId?: string
-  repaymentCardId?: string
-  status?: 'ACTIVE' | 'CLOSED'
-  notes?: string
-}
-
-function formatRate(v?: number) {
-  if (v == null) return '—'
-  return `${v.toFixed(2)}%`
-}
-
-function formatDate(v?: string) {
-  if (!v) return '—'
-  return dayjs(v).format('YYYY-MM-DD')
-}
-
-function isActive(row: LoanRow) {
-  return row.status !== 'CLOSED'
+type DrawerState = {
+  loan: LoanRow | null
+  tab: 'detail' | 'links'
 }
 
 export function LoansPage() {
   const queryClient = useQueryClient()
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editing, setEditing] = useState<LoanRow | null>(null)
-  const [linksLoan, setLinksLoan] = useState<LoanRow | null>(null)
-  const [saveLoading, setSaveLoading] = useState(false)
-  const [form] = Form.useForm<LoanFormValues>()
-  const principalWatch = Form.useWatch('principalAmount', form)
+  const [drawer, setDrawer] = useState<DrawerState | null>(null)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['loans'],
@@ -85,361 +48,227 @@ export function LoansPage() {
     queryClient.invalidateQueries({ queryKey: ['loans'] })
   }, [queryClient])
 
-  const openCreate = () => {
-    setEditing(null)
-    form.resetFields()
-    form.setFieldsValue({ status: 'ACTIVE' })
-    setModalOpen(true)
-  }
+  const openCreate = () => setDrawer({ loan: null, tab: 'detail' })
+  const openDetail = (loan: LoanRow, tab: 'detail' | 'links' = 'detail') => setDrawer({ loan, tab })
+  const closeDrawer = () => setDrawer(null)
 
-  const openEdit = (row: LoanRow) => {
-    setEditing(row)
-    form.setFieldsValue({
-      name: row.name,
-      lenderName: row.lenderName,
-      lenderBankCode: row.lenderBankCode,
-      principalAmount: row.principalAmount,
-      outstandingBalance: row.outstandingBalance ?? row.principalAmount,
-      interestRatePct: row.interestRatePct,
-      monthlyPayment: row.monthlyPayment,
-      repaymentMethod: row.repaymentMethod,
-      maturityDate: row.maturityDate ? dayjs(row.maturityDate) : undefined,
-      disbursementCardId: row.disbursementCardId,
-      repaymentCardId: row.repaymentCardId,
-      status: row.status ?? 'ACTIVE',
-      notes: row.notes,
-    })
-    setModalOpen(true)
-  }
-
-  const saveLoan = async () => {
+  const onDelete = async (loan: LoanRow) => {
+    if (!loan.id) return
     try {
-      const values = await form.validateFields()
-      const payload: LoanWritePayload = {
-        name: values.name?.trim() || null,
-        lenderName: values.lenderName!.trim(),
-        lenderBankCode: values.lenderBankCode?.trim() || null,
-        principalAmount: values.principalAmount!,
-        outstandingBalance: values.outstandingBalance ?? values.principalAmount,
-        interestRatePct: values.interestRatePct ?? null,
-        monthlyPayment: values.monthlyPayment ?? null,
-        repaymentMethod: values.repaymentMethod ?? null,
-        maturityDate: values.maturityDate ? values.maturityDate.format('YYYY-MM-DD') : null,
-        disbursementCardId: values.disbursementCardId!,
-        repaymentCardId: values.repaymentCardId || null,
-        status: values.status ?? 'ACTIVE',
-        notes: values.notes?.trim() || null,
-      }
-      setSaveLoading(true)
-      if (editing?.id) {
-        await updateLoan(editing.id, payload)
-        message.success('Loan updated')
-      } else {
-        await createLoan(payload)
-        message.success('Loan added')
-      }
-      setModalOpen(false)
+      await deleteLoan(loan.id)
+      message.success('已删除')
       reload()
     } catch (e) {
-      if (e instanceof Error && e.message) {
-        message.error(e.message)
-      }
-    } finally {
-      setSaveLoading(false)
+      message.error(e instanceof Error ? e.message : '删除失败')
     }
   }
 
   const summary = data?.summary
   const loans = data?.loans ?? []
 
-  const tableSummary = useMemo(() => {
-    const active = loans.filter(isActive)
-    return {
-      outstandingBalance: active.reduce((s, r) => s + (r.outstandingBalance ?? r.principalAmount ?? 0), 0),
-      monthlyPayment: active.reduce((s, r) => s + (r.monthlyPayment ?? 0), 0),
-    }
-  }, [loans])
+  const drawerLoan = useMemo(() => {
+    if (!drawer) return null
+    if (!drawer.loan?.id) return drawer.loan
+    return loans.find((l) => l.id === drawer.loan?.id) ?? drawer.loan
+  }, [drawer, loans])
+  const maxRate = useMemo(
+    () => Math.max(...loans.map((l) => l.interestRatePct ?? 0), 1),
+    [loans],
+  )
 
-  const columns = [
+  const menuItems = (loan: LoanRow): MenuProps['items'] => [
     {
-      title: 'Rate',
-      dataIndex: 'interestRatePct',
-      width: 72,
-      align: 'right' as const,
-      sortType: 'number' as const,
-      render: (v: number) => <span className="fs-loan-rate">{formatRate(v)}</span>,
+      key: 'edit',
+      icon: <EditOutlined />,
+      label: '编辑详情',
+      onClick: () => openDetail(loan, 'detail'),
     },
     {
-      title: 'Lender',
-      dataIndex: 'lenderName',
-      width: 120,
-      sortType: 'text' as const,
-      render: (v: string, row: LoanRow) => (
-        <div>
-          <div className="fs-loan-lender">{v}</div>
-          {row.name && <Typography.Text type="secondary" className="fs-loan-sub">{row.name}</Typography.Text>}
-        </div>
+      key: 'links',
+      icon: <LinkOutlined />,
+      label: (
+        <span>
+          关联交易
+          {(loan.linkCount ?? 0) > 0 && (
+            <Badge count={loan.linkCount} size="small" style={{ marginLeft: 8 }} />
+          )}
+        </span>
       ),
+      onClick: () => openDetail(loan, 'links'),
     },
+    { type: 'divider' },
     {
-      title: 'Outstanding',
-      dataIndex: 'outstandingBalance',
-      align: 'right' as const,
-      sortType: 'number' as const,
-      width: 120,
-      render: (_: unknown, row: LoanRow) => formatMoney(row.outstandingBalance ?? row.principalAmount ?? 0),
-    },
-    {
-      title: 'Monthly',
-      dataIndex: 'monthlyPayment',
-      align: 'right' as const,
-      sortType: 'number' as const,
-      width: 100,
-      render: (v: number) => (v == null ? '—' : formatMoney(v)),
-    },
-    {
-      title: 'Repayment',
-      dataIndex: 'repaymentMethod',
-      width: 100,
-      render: (v: RepaymentMethod) => (v ? REPAYMENT_METHOD_LABELS[v] : '—'),
-    },
-    {
-      title: 'Maturity',
-      dataIndex: 'maturityDate',
-      width: 100,
-      sortType: 'date' as const,
-      render: (v: string) => formatDate(v),
-    },
-    {
-      title: 'Disbursement',
-      dataIndex: 'disbursementCardLabel',
-      ellipsis: true,
-      width: 120,
-      render: (v: string) => v || '—',
-    },
-    {
-      title: 'Repayment card',
-      dataIndex: 'repaymentCardLabel',
-      ellipsis: true,
-      width: 120,
-      render: (v: string, row: LoanRow) => v || row.disbursementCardLabel || '—',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      width: 80,
-      render: (v: string) => (
-        v === 'CLOSED'
-          ? <Badge status="default" text="Closed" />
-          : <Badge status="processing" text="Active" />
-      ),
-    },
-    {
-      title: 'Notes',
-      dataIndex: 'notes',
-      ellipsis: true,
-      width: 140,
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 160,
-      fixed: 'right' as const,
-      render: (_: unknown, row: LoanRow) => (
-        <Space size={4}>
-          <a onClick={() => setLinksLoan(row)}><LinkOutlined /> Links</a>
-          <a onClick={() => openEdit(row)}>Edit</a>
-          <Popconfirm
-            title="Remove this loan?"
-            description="Linked transactions will also be unlinked."
-            onConfirm={async () => {
-              if (!row.id) return
-              try {
-                await deleteLoan(row.id)
-                message.success('Removed')
-                reload()
-              } catch (e) {
-                message.error(e instanceof Error ? e.message : 'Failed to remove')
-              }
-            }}
-          >
-            <a>Delete</a>
-          </Popconfirm>
-        </Space>
-      ),
+      key: 'delete',
+      icon: <DeleteOutlined />,
+      label: '删除',
+      danger: true,
+      onClick: () => {
+        if (window.confirm(`确定删除 ${loan.lenderName} 的贷款记录？关联流水也会解除。`)) {
+          onDelete(loan)
+        }
+      },
     },
   ]
 
   return (
     <DataPageLayout
-      title="Loans"
-      subtitle="Lender → disbursement card · track rates, balances, and link repayments to ledger transactions"
+      title="贷款"
+      subtitle="管理各银行贷款 · 追踪利率与月供 · 关联账本流水"
       icon={<BankOutlined />}
-      className="fs-data-page--dense fs-data-page--loans"
+      className="fs-data-page--loans"
       actions={(
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Add loan
+          添加贷款
         </Button>
       )}
     >
       {isError && (
         <Typography.Paragraph type="danger">
-          {error instanceof Error ? error.message : 'Failed to load loans'}
+          {error instanceof Error ? error.message : '加载失败'}
         </Typography.Paragraph>
       )}
 
       {summary && (
-        <div className="fs-loans-summary">
-          <ContentCard className="fs-loans-summary-card" styles={{ body: { padding: '14px 18px' } }}>
-            <div className="fs-loans-summary__label">Total outstanding</div>
-            <div className="fs-loans-summary__value">{formatMoney(summary.totalOutstanding ?? 0)}</div>
-            <div className="fs-loans-summary__hint">Active loans only</div>
+        <div className="fs-loans-hero">
+          <ContentCard className="fs-loans-hero-card fs-loans-hero-card--primary">
+            <div className="fs-loans-hero-card__label">总剩余本金</div>
+            <div className="fs-loans-hero-card__value">{formatMoney(summary.totalOutstanding ?? 0)}</div>
+            <div className="fs-loans-hero-card__hint">{summary.loanCount ?? 0} 笔在贷</div>
           </ContentCard>
-          <ContentCard className="fs-loans-summary-card" styles={{ body: { padding: '14px 18px' } }}>
-            <div className="fs-loans-summary__label">Monthly payment</div>
-            <div className="fs-loans-summary__value">{formatMoney(summary.totalMonthlyPayment ?? 0)}</div>
+          <ContentCard className="fs-loans-hero-card">
+            <div className="fs-loans-hero-card__label">月供合计</div>
+            <div className="fs-loans-hero-card__value">{formatMoney(summary.totalMonthlyPayment ?? 0)}</div>
           </ContentCard>
-          <ContentCard className="fs-loans-summary-card fs-loans-summary-card--rate" styles={{ body: { padding: '14px 18px' } }}>
-            <div className="fs-loans-summary__label">Weighted avg rate</div>
-            <div className="fs-loans-summary__value">{formatRate(summary.weightedAvgRatePct)}</div>
-          </ContentCard>
-          <ContentCard className="fs-loans-summary-card" styles={{ body: { padding: '14px 18px' } }}>
-            <div className="fs-loans-summary__label">Active loans</div>
-            <div className="fs-loans-summary__value">{summary.loanCount ?? 0}</div>
+          <ContentCard className="fs-loans-hero-card fs-loans-hero-card--rate">
+            <div className="fs-loans-hero-card__label">加权平均利率</div>
+            <div className="fs-loans-hero-card__value fs-loans-hero-card__value--rate">
+              {formatRate(summary.weightedAvgRatePct)}
+            </div>
           </ContentCard>
         </div>
       )}
 
-      <ContentCard styles={{ body: { padding: 0 } }}>
-        <FsDataTable
-          rowKey="id"
-          loading={isLoading}
-          dataSource={loans}
-          columns={columns}
-          size="small"
-          scroll={{ x: 'max-content' }}
-          summary={tableSummary}
-          summaryLabel="Active total"
-          rowClassName={(row) => (row.status === 'CLOSED' ? 'fs-loan-row--closed' : '')}
-          locale={{
-            emptyText: (
-              <EmptyState
-                compact
-                title="No loans yet"
-                description="Add each facility: lender bank, amount, rate, and the card that receives the funds."
-              />
-            ),
-          }}
-        />
-      </ContentCard>
+      {isLoading ? (
+        <div className="fs-loans-loading"><Spin size="large" /></div>
+      ) : loans.length === 0 ? (
+        <ContentCard>
+          <EmptyState
+            title="暂无贷款"
+            description="添加银行贷款：利率、剩余本金、月供，并指定放款到账卡。"
+            action={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>添加第一笔</Button>}
+          />
+        </ContentCard>
+      ) : (
+        <div className="fs-loan-grid">
+          {loans.map((loan) => {
+            const accent = bankAccent(loan.lenderBankCode, loan.lenderName)
+            const active = isActiveLoan(loan)
+            const paidPct = payoffPct(loan)
+            const ratePct = loan.interestRatePct ?? 0
+            const rateBar = maxRate > 0 ? Math.round((ratePct / maxRate) * 100) : 0
+            const repayLabel = repaymentLabel(loan.repaymentMethod)
 
-      <Modal
-        title={editing ? `Edit loan — ${editing.lenderName}` : 'Add loan'}
-        open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        onOk={saveLoan}
-        confirmLoading={saveLoading}
-        width={560}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
-          <Form.Item name="lenderName" label="Lender bank" rules={[{ required: true }]}>
-            <Input placeholder="e.g. 交通银行" />
-          </Form.Item>
-          <Form.Item name="name" label="Label (optional)">
-            <Input placeholder="e.g. 经营贷 A" />
-          </Form.Item>
-          <Space style={{ display: 'flex', width: '100%' }} align="start">
-            <Form.Item name="principalAmount" label="Principal (¥)" rules={[{ required: true }]} style={{ flex: 1 }}>
-              <InputNumber
-                min={0}
-                style={{ width: '100%' }}
-                formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                onChange={(v) => {
-                  if (!editing && v != null) {
-                    form.setFieldValue('outstandingBalance', v)
-                  }
-                }}
-              />
-            </Form.Item>
-            <Form.Item
-              name="outstandingBalance"
-              label="Outstanding (¥)"
-              style={{ flex: 1 }}
-              rules={[
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    const principal = getFieldValue('principalAmount')
-                    if (value == null || principal == null) return Promise.resolve()
-                    if (value < 0) return Promise.reject(new Error('Cannot be negative'))
-                    if (value > principal) return Promise.reject(new Error('Cannot exceed principal'))
-                    return Promise.resolve()
-                  },
-                }),
-              ]}
-            >
-              <InputNumber min={0} max={principalWatch ?? undefined} style={{ width: '100%' }} />
-            </Form.Item>
-          </Space>
-          <Space style={{ display: 'flex', width: '100%' }} align="start">
-            <Form.Item name="interestRatePct" label="Annual rate (%)" style={{ flex: 1 }}>
-              <InputNumber min={0} max={100} step={0.01} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="monthlyPayment" label="Monthly payment (¥)" style={{ flex: 1 }}>
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
-          </Space>
-          <Form.Item
-            name="disbursementCardId"
-            label="Disbursement card"
-            rules={[{ required: true, message: 'Select the card that receives loan proceeds' }]}
-            extra="Loan from the bank is credited to this card in your ledger."
-          >
-            {cardOptions.length === 0 ? (
-              <Alert
-                type="info"
-                showIcon
-                message={<>No bank cards yet. Add cards under <Link to="/admin/cards">Admin → Bank Cards</Link> first.</>}
-              />
-            ) : (
-              <Select
-                showSearch
-                optionFilterProp="label"
-                options={cardOptions}
-                placeholder="Select bank card"
-              />
-            )}
-          </Form.Item>
-          <Form.Item name="repaymentCardId" label="Repayment card (optional)" extra="Card debited for repayments, if different.">
-            <Select allowClear showSearch optionFilterProp="label" options={cardOptions} placeholder="Same as disbursement" />
-          </Form.Item>
-          <Space style={{ display: 'flex', width: '100%' }} align="start">
-            <Form.Item name="repaymentMethod" label="Repayment method" style={{ flex: 1 }}>
-              <Select
-                allowClear
-                options={(Object.keys(REPAYMENT_METHOD_LABELS) as RepaymentMethod[]).map((k) => ({
-                  value: k,
-                  label: REPAYMENT_METHOD_LABELS[k],
-                }))}
-              />
-            </Form.Item>
-            <Form.Item name="maturityDate" label="Maturity" style={{ flex: 1 }}>
-              <DatePicker style={{ width: '100%' }} />
-            </Form.Item>
-          </Space>
-          <Form.Item name="status" label="Status">
-            <Select options={[{ value: 'ACTIVE', label: 'Active' }, { value: 'CLOSED', label: 'Closed' }]} />
-          </Form.Item>
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={2} placeholder="e.g. 2028年3月到期" />
-          </Form.Item>
-        </Form>
-      </Modal>
+            return (
+              <ContentCard
+                key={loan.id}
+                className={`fs-loan-card${active ? '' : ' fs-loan-card--closed'}`}
+                styles={{ body: { padding: 0 } }}
+              >
+                <div
+                  className="fs-loan-card-inner"
+                  style={{ '--loan-accent': accent } as CSSProperties}
+                  onClick={() => openDetail(loan, 'detail')}
+                  onKeyDown={(e) => e.key === 'Enter' && openDetail(loan, 'detail')}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="fs-loan-card-head">
+                    <div className="fs-loan-card-bank">
+                      <div className="fs-loan-card-avatar">{bankInitial(loan.lenderName)}</div>
+                      <div>
+                        <div className="fs-loan-card-lender">{loan.lenderName}</div>
+                        {loan.name && <div className="fs-loan-card-alias">{loan.name}</div>}
+                      </div>
+                    </div>
+                    <div className="fs-loan-card-head-right" onClick={(e) => e.stopPropagation()}>
+                      <span className="fs-loan-card-rate">{formatRate(ratePct)}</span>
+                      <Dropdown menu={{ items: menuItems(loan) }} trigger={['click']}>
+                        <Button type="text" size="small" icon={<MoreOutlined />} aria-label="操作" />
+                      </Dropdown>
+                    </div>
+                  </div>
 
-      <LoanLinksDrawer
-        loan={linksLoan}
-        open={!!linksLoan}
-        onClose={() => setLinksLoan(null)}
+                  <div className="fs-loan-card-balance">
+                    <span className="fs-loan-card-balance-label">剩余</span>
+                    <span className="fs-loan-card-balance-value">
+                      {formatMoney(loan.outstandingBalance ?? loan.principalAmount ?? 0)}
+                    </span>
+                  </div>
+
+                  <div className="fs-loan-card-ratebar" aria-hidden>
+                    <div className="fs-loan-card-ratebar-fill" style={{ width: `${rateBar}%` }} />
+                  </div>
+
+                  {paidPct > 0 && (
+                    <Progress
+                      percent={paidPct}
+                      size="small"
+                      showInfo={false}
+                      strokeColor={accent}
+                      className="fs-loan-card-progress"
+                    />
+                  )}
+
+                  <div className="fs-loan-card-meta">
+                    {loan.monthlyPayment != null && (
+                      <span>月供 {formatMoney(loan.monthlyPayment)}</span>
+                    )}
+                    {repayLabel && <Tag className="fs-loan-card-tag">{repayLabel}</Tag>}
+                    {loan.maturityDate && <span>到期 {formatDate(loan.maturityDate)}</span>}
+                    {!active && <Tag>已结清</Tag>}
+                  </div>
+
+                  <div className="fs-loan-card-foot">
+                    <Tooltip title={loan.disbursementCardLabel || '未设置放款卡'}>
+                      <span className="fs-loan-card-card-label">
+                        放款卡 · {loan.disbursementCardLabel || '—'}
+                      </span>
+                    </Tooltip>
+                    <div className="fs-loan-card-actions" onClick={(e) => e.stopPropagation()}>
+                      <Tooltip title="关联交易">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<LinkOutlined />}
+                          onClick={() => openDetail(loan, 'links')}
+                        >
+                          {(loan.linkCount ?? 0) > 0 ? loan.linkCount : '关联'}
+                        </Button>
+                      </Tooltip>
+                      <Tooltip title="编辑">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => openDetail(loan, 'detail')}
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
+                </div>
+              </ContentCard>
+            )
+          })}
+        </div>
+      )}
+
+      <LoanDetailDrawer
+        loan={drawerLoan}
+        open={!!drawer}
+        initialTab={drawer?.tab ?? 'detail'}
+        cardOptions={cardOptions}
+        onClose={closeDrawer}
+        onSaved={reload}
       />
     </DataPageLayout>
   )

@@ -34,4 +34,5 @@ public class Loan extends AuditableEntity {
     /** Enriched for API responses (not persisted on fin_loan). */
     private String disbursementCardLabel;
     private String repaymentCardLabel;
+    private Integer linkCount;
 }

@@ -30,7 +30,9 @@
         coalesce(nullif(trim(dc.card_name), ''),
             concat(coalesce(dc.bank_code, ''), ' ', coalesce(dc.card_type_code, ''))) as disbursementCardLabel,
         coalesce(nullif(trim(rc.card_name), ''),
-            concat(coalesce(rc.bank_code, ''), ' ', coalesce(rc.card_type_code, ''))) as repaymentCardLabel
+            concat(coalesce(rc.bank_code, ''), ' ', coalesce(rc.card_type_code, ''))) as repaymentCardLabel,
+        (select count(*) from fin_loan_txn_link lk
+         where lk.loan_id = l.id and lk.user_id = l.user_id) as linkCount
     </sql>
 
     <select id="listLoans" resultType="com.finsight.domain.model.Loan">
