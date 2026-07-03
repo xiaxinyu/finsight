@@ -1,5 +1,6 @@
 package com.finsight.application.importer;
 
+import com.finsight.application.importer.impl.AbcTransactionStatementImporter;
 import com.finsight.application.importer.impl.CcbTransactionStatementImporter;
 import com.finsight.application.importer.impl.CcbDebitTransactionStatementImporter;
 import com.finsight.application.importer.impl.CrbankDebitTransactionStatementImporter;
@@ -35,6 +36,8 @@ public final class StatementImporterFactory {
             if ("debit".equalsIgnoreCase(cardTypeCode) || "credit".equalsIgnoreCase(cardTypeCode)) {
                 return new CmbDebitTransactionStatementImporter();
             }
+        } else if ("ABC".equalsIgnoreCase(bankCode) || "农业银行".equalsIgnoreCase(bankCode)) {
+            return new AbcTransactionStatementImporter();
         } else if ("ALIPAY".equalsIgnoreCase(bankCode) || "WECHAT".equalsIgnoreCase(bankCode)) {
             return new AlipayWeChatCsvImporter();
         }

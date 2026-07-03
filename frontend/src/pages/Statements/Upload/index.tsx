@@ -22,6 +22,7 @@ const { Dragger } = Upload
 const BANK_OPTIONS = [
   { value: 'CMB', label: 'CMB — China Merchants Bank' },
   { value: 'CCB', label: 'CCB — China Construction Bank' },
+  { value: 'ABC', label: 'ABC — Agricultural Bank of China' },
   { value: 'CGB', label: 'CGB — China Guangfa Bank' },
   { value: 'CRBANK', label: 'CRBANK — China Resources Bank' },
   { value: 'ALIPAY', label: 'Alipay' },
@@ -48,6 +49,7 @@ function guessBankFromFilename(filename: string): string | null {
   const name = filename.toLowerCase()
   if (name.includes('招商') || name.includes('cmb') || name.includes('merchants')) return 'CMB'
   if (name.includes('建设') || name.includes('ccb') || name.includes('construction')) return 'CCB'
+  if (name.includes('农业') || name.includes('abc') || name.includes('agricultural')) return 'ABC'
   if (name.includes('广发') || name.includes('cgb') || name.includes('guangfa')) return 'CGB'
   if (name.includes('华润') || name.includes('crbank')) return 'CRBANK'
   if (name.includes('支付宝') || name.includes('alipay')) return 'ALIPAY'
@@ -348,7 +350,7 @@ export function StatementUploadPage() {
           >
             <p className="ant-upload-drag-icon"><InboxOutlined /></p>
             <p className="ant-upload-text">Drop your statement here, or click to browse</p>
-            <p className="ant-upload-hint">CSV, Excel, or PDF exports (CMB, CCB, CGB, Alipay, WeChat)</p>
+            <p className="ant-upload-hint">CSV, Excel, or PDF exports (CMB, CCB, ABC, CGB, Alipay, WeChat)</p>
             <Button type="primary" icon={<CloudUploadOutlined />} loading={loading}>
               Select statement file
             </Button>

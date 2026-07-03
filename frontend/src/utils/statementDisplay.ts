@@ -6,6 +6,7 @@ dayjs.extend(relativeTime)
 export const BANK_LABELS: Record<string, string> = {
   CMB: 'China Merchants Bank',
   CCB: 'China Construction Bank',
+  ABC: 'Agricultural Bank of China',
   CGB: 'China Guangfa Bank',
   CRBANK: 'China Resources Bank',
   ALIPAY: 'Alipay',

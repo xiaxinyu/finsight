@@ -29,6 +29,9 @@ public class ImportCategoryHeuristic {
 
     private static final RuleGroup[] GROUPS = {
             new RuleGroup(Family.INSTALLMENT,
+                    new String[]{"还款转出", "信用卡还款", "本行还款", "自动还款"},
+                    new String[]{"DEBT-01", "信用卡还款", "DEBT"}),
+            new RuleGroup(Family.INSTALLMENT,
                     new String[]{"账单分期", "分期单期", "邮购分期"},
                     new String[]{"LOAN", "贷款", "分期", "还款", "INSTALL"}),
             new RuleGroup(Family.TRANSIT,
