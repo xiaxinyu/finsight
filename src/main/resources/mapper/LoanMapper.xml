@@ -12,6 +12,8 @@
         l.outstanding_balance as outstandingBalance,
         l.interest_rate_pct as interestRatePct,
         l.monthly_payment as monthlyPayment,
+        l.term_months as termMonths,
+        l.paid_installments as paidInstallments,
         l.repayment_method as repaymentMethod,
         l.maturity_date as maturityDate,
         l.disbursement_card_id as disbursementCardId,
@@ -26,13 +28,31 @@
         l.updated_at as updatedAt
     </sql>
 
+    <sql id="repaymentTxnAmount">
+        coalesce(t.expense_amount, abs(coalesce(t.balance_money, 0)), 0)
+    </sql>
+
     <sql id="loanCardLabels">
         coalesce(nullif(trim(dc.card_name), ''),
             concat(coalesce(dc.bank_code, ''), ' ', coalesce(dc.card_type_code, ''))) as disbursementCardLabel,
         coalesce(nullif(trim(rc.card_name), ''),
             concat(coalesce(rc.bank_code, ''), ' ', coalesce(rc.card_type_code, ''))) as repaymentCardLabel,
         (select count(*) from fin_loan_txn_link lk
-         where lk.loan_id = l.id and lk.user_id = l.user_id) as linkCount
+         where lk.loan_id = l.id and lk.user_id = l.user_id) as linkCount,
+        (select count(*)
+         from fin_loan_txn_link lk
+         inner join transaction t on t.id = lk.transaction_id and coalesce(t.deleted, 0) != 1
+         where lk.loan_id = l.id
+           and lk.user_id = l.user_id
+           and lk.link_type = 'REPAYMENT'
+           and <include refid="repaymentTxnAmount"/> &gt; 100) as linkedRepaymentCount,
+        (select coalesce(sum(<include refid="repaymentTxnAmount"/>), 0)
+         from fin_loan_txn_link lk
+         inner join transaction t on t.id = lk.transaction_id and coalesce(t.deleted, 0) != 1
+         where lk.loan_id = l.id
+           and lk.user_id = l.user_id
+           and lk.link_type = 'REPAYMENT'
+           and <include refid="repaymentTxnAmount"/> &gt; 100) as linkedRepaymentAmount
     </sql>
 
     <select id="listLoans" resultType="com.finsight.domain.model.Loan">
@@ -59,12 +79,14 @@
         insert into fin_loan (
             id, user_id, name, lender_name, lender_bank_code,
             principal_amount, outstanding_balance, interest_rate_pct, monthly_payment,
+            term_months, paid_installments,
             repayment_method, maturity_date, disbursement_card_id, repayment_card_id,
             status, notes, sort_order, deleted,
             created_by, created_at, updated_by, updated_at
         ) values (
             #{loan.id}, #{userId}, #{loan.name}, #{loan.lenderName}, #{loan.lenderBankCode},
             #{loan.principalAmount}, #{loan.outstandingBalance}, #{loan.interestRatePct}, #{loan.monthlyPayment},
+            #{loan.termMonths}, #{loan.paidInstallments},
             #{loan.repaymentMethod}, #{loan.maturityDate}, #{loan.disbursementCardId}, #{loan.repaymentCardId},
             #{loan.status}, #{loan.notes}, #{loan.sortOrder}, 0,
             #{actor}, now(3), #{actor}, now(3)
@@ -80,6 +102,8 @@
             outstanding_balance = #{loan.outstandingBalance},
             interest_rate_pct = #{loan.interestRatePct},
             monthly_payment = #{loan.monthlyPayment},
+            term_months = #{loan.termMonths},
+            paid_installments = #{loan.paidInstallments},
             repayment_method = #{loan.repaymentMethod},
             maturity_date = #{loan.maturityDate},
             disbursement_card_id = #{loan.disbursementCardId},

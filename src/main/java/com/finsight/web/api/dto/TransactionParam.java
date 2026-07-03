@@ -21,6 +21,16 @@ public class TransactionParam extends PageParam {
     private String sortOrder;
     private String merchantToken;
     private String semanticFilter;
+    /** When '1' or 'true', cardId filter matches bank_card_id exactly (no same-bank fallback). */
+    private String strictCard;
+
+    public String getStrictCard() {
+        return strictCard;
+    }
+
+    public void setStrictCard(String strictCard) {
+        this.strictCard = strictCard;
+    }
 
     public String getSemanticFilter() {
         return semanticFilter;

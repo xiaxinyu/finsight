@@ -2,6 +2,9 @@ import dayjs from 'dayjs'
 import type { LoanRow, RepaymentMethod } from '../../api/loans'
 import { REPAYMENT_METHOD_LABELS } from '../../api/loans'
 
+/** Repayment links at or below this amount are ignored (fees, rounding). */
+export const MIN_REPAYMENT_INSTALLMENT = 100
+
 const BANK_COLORS: Record<string, string> = {
   BOCOM: '#003087',
   ABC: '#009174',
@@ -44,12 +47,34 @@ export function repaymentLabel(v?: RepaymentMethod) {
   return v ? REPAYMENT_METHOD_LABELS[v] : null
 }
 
+/** Sum of linked REPAYMENT transactions above minimum installment threshold. */
+export function linkedRepaymentTotal(row: LoanRow): number {
+  return row.linkedRepaymentAmount ?? 0
+}
+
+/** Count of linked REPAYMENT transactions above minimum installment threshold. */
+export function paidInstallmentCount(row: LoanRow): number {
+  return row.linkedRepaymentCount ?? 0
+}
+
 export function payoffPct(row: LoanRow): number {
   const principal = row.principalAmount ?? 0
-  const outstanding = row.outstandingBalance ?? principal
   if (principal <= 0) return 0
+  const repaid = linkedRepaymentTotal(row)
+  if (repaid > 0) {
+    return Math.min(100, Math.round((repaid / principal) * 100))
+  }
+  const outstanding = row.outstandingBalance ?? principal
   const paid = Math.max(0, principal - outstanding)
   return Math.min(100, Math.round((paid / principal) * 100))
+}
+
+export function formatInstallmentProgress(row: LoanRow): string {
+  const paid = paidInstallmentCount(row)
+  const total = row.termMonths
+  if (total != null && total > 0) return `${paid} / ${total} 期`
+  if (paid > 0) return `${paid} 期`
+  return '0 期'
 }
 
 export function isActiveLoan(row: LoanRow) {

@@ -18,6 +18,10 @@ public class Loan extends AuditableEntity {
     private BigDecimal outstandingBalance;
     private BigDecimal interestRatePct;
     private BigDecimal monthlyPayment;
+    /** Total loan term in months (optional). */
+    private Integer termMonths;
+    /** Installments already paid before / outside linked transactions. */
+    private Integer paidInstallments;
     /** EQUAL_INSTALLMENT | EQUAL_PRINCIPAL | INTEREST_FIRST | BULLET | OTHER */
     private String repaymentMethod;
     private Date maturityDate;
@@ -35,4 +39,8 @@ public class Loan extends AuditableEntity {
     private String disbursementCardLabel;
     private String repaymentCardLabel;
     private Integer linkCount;
+    /** Enriched: REPAYMENT links with txn amount above minimum installment threshold. */
+    private Integer linkedRepaymentCount;
+    /** Enriched: sum of qualifying linked REPAYMENT transaction amounts. */
+    private BigDecimal linkedRepaymentAmount;
 }

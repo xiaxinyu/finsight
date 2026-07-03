@@ -30,6 +30,10 @@ public final class TransactionQueryAssembler {
         if (!StringTool.isNullOrEmpty(param.getCardId())) {
             q.setBankCardId(StringUtils.trim(param.getCardId()));
         }
+        if (!StringTool.isNullOrEmpty(param.getStrictCard())) {
+            String v = StringUtils.trim(param.getStrictCard());
+            q.setStrictBankCard("1".equals(v) || "true".equalsIgnoreCase(v));
+        }
         if (!StringTool.isNullOrEmpty(param.getConsumeName())) {
             q.setConsumeName(StringUtils.trim(param.getConsumeName()));
         }

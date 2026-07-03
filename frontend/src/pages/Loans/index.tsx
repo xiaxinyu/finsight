@@ -15,7 +15,8 @@ import { EmptyState } from '../../components/EmptyState'
 import { formatMoney } from '../../utils/format'
 import { LoanDetailDrawer } from './LoanDetailDrawer'
 import {
-  bankAccent, bankInitial, formatDate, formatRate, isActiveLoan, payoffPct, repaymentLabel,
+  bankAccent, bankInitial, formatDate, formatInstallmentProgress, formatRate, isActiveLoan,
+  linkedRepaymentTotal, payoffPct, repaymentLabel,
 } from './loanDisplay'
 
 type DrawerState = {
@@ -173,6 +174,10 @@ export function LoansPage() {
             const ratePct = loan.interestRatePct ?? 0
             const rateBar = maxRate > 0 ? Math.round((ratePct / maxRate) * 100) : 0
             const repayLabel = repaymentLabel(loan.repaymentMethod)
+            const totalPrincipal = loan.principalAmount ?? 0
+            const remaining = loan.outstandingBalance ?? totalPrincipal
+            const repaidAmount = linkedRepaymentTotal(loan)
+            const installmentText = formatInstallmentProgress(loan)
 
             return (
               <ContentCard
@@ -204,11 +209,31 @@ export function LoansPage() {
                     </div>
                   </div>
 
-                  <div className="fs-loan-card-balance">
-                    <span className="fs-loan-card-balance-label">剩余</span>
-                    <span className="fs-loan-card-balance-value">
-                      {formatMoney(loan.outstandingBalance ?? loan.principalAmount ?? 0)}
-                    </span>
+                  <div className="fs-loan-card-stats">
+                    <div className="fs-loan-card-stat">
+                      <span className="fs-loan-card-stat-label">总贷款</span>
+                      <span className="fs-loan-card-stat-value">{formatMoney(totalPrincipal)}</span>
+                    </div>
+                    <div className="fs-loan-card-stat fs-loan-card-stat--primary">
+                      <span className="fs-loan-card-stat-label">剩余</span>
+                      <span className="fs-loan-card-stat-value">{formatMoney(remaining)}</span>
+                    </div>
+                    <div className="fs-loan-card-stat">
+                      <span className="fs-loan-card-stat-label">已还金额</span>
+                      <span className="fs-loan-card-stat-value fs-loan-card-stat-value--paid">
+                        {formatMoney(repaidAmount)}
+                      </span>
+                      {(loan.linkedRepaymentCount ?? 0) > 0 && (
+                        <span className="fs-loan-card-stat-hint">
+                          来自 {loan.linkedRepaymentCount} 笔关联还款
+                        </span>
+                      )}
+                    </div>
+                    <div className="fs-loan-card-stat">
+                      <span className="fs-loan-card-stat-label">已还期数</span>
+                      <span className="fs-loan-card-stat-value">{installmentText}</span>
+                      <span className="fs-loan-card-stat-hint">单笔 &gt; ¥100 计 1 期</span>
+                    </div>
                   </div>
 
                   <div className="fs-loan-card-ratebar" aria-hidden>

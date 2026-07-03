@@ -8,6 +8,7 @@ public class TransactionQuery {
     private Date transactionDateEnd;
     private Integer consumptionType;
     private String bankCardId;
+    private Boolean strictBankCard;
     private String cardTypeName;
     private String consumeID;
     private String consumeCode;
@@ -39,6 +40,8 @@ public class TransactionQuery {
     public void setConsumptionType(Integer consumptionType) { this.consumptionType = consumptionType; }
     public String getBankCardId() { return bankCardId; }
     public void setBankCardId(String bankCardId) { this.bankCardId = bankCardId; }
+    public Boolean getStrictBankCard() { return strictBankCard; }
+    public void setStrictBankCard(Boolean strictBankCard) { this.strictBankCard = strictBankCard; }
     public String getCardTypeName() { return cardTypeName; }
     public void setCardTypeName(String cardTypeName) { this.cardTypeName = cardTypeName; }
     public String getConsumeID() { return consumeID; }

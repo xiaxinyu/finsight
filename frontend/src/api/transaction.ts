@@ -36,6 +36,8 @@ export interface TransactionQuery {
   transactionDateStartStr?: string
   transactionDateEndStr?: string
   cardId?: string
+  /** Exact bank_card_id match only (for loan linking). */
+  strictCard?: string | boolean
   cardTypeName?: string
   consumeID?: string
   consumeName?: string

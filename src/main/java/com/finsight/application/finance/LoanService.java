@@ -138,6 +138,9 @@ public class LoanService {
         loan.setOutstandingBalance(outstanding);
         loan.setInterestRatePct(req.getInterestRatePct());
         loan.setMonthlyPayment(req.getMonthlyPayment());
+        loan.setTermMonths(req.getTermMonths());
+        loan.setPaidInstallments(null);
+        validateTermMonths(req.getTermMonths());
         loan.setRepaymentMethod(normalizeRepaymentMethod(req.getRepaymentMethod()));
         loan.setMaturityDate(parseDate(req.getMaturityDate()));
         loan.setDisbursementCardId(requireOwnedCard(req.getDisbursementCardId(), "Disbursement card"));
@@ -146,6 +149,12 @@ public class LoanService {
         loan.setNotes(trimOrNull(req.getNotes()));
         loan.setSortOrder(req.getSortOrder() != null ? req.getSortOrder() : 0);
         return loan;
+    }
+
+    private static void validateTermMonths(Integer termMonths) {
+        if (termMonths != null && termMonths <= 0) {
+            throw new IllegalArgumentException("Term months must be positive");
+        }
     }
 
     private String requireOwnedCard(String cardId, String label) {

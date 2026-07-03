@@ -100,18 +100,25 @@
     </sql>
     <sql id="filterBankCardT">
         <if test="q != null and q.bankCardId != null">
-            and (
-                t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
-                or (
-                    (t.bank_card_id is null or trim(t.bank_card_id) = '')
-                    and exists (
-                        select 1 from fin_bank_account fc
-                        where fc.id = #{q.bankCardId,jdbcType=VARCHAR}
-                        and (fc.deleted is null or fc.deleted != 1)
-                        and upper(trim(coalesce(st.source_bank_code, ''))) = upper(trim(coalesce(fc.bank_code, '')))
+            <choose>
+                <when test="q.strictBankCard != null and q.strictBankCard">
+                    and t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
+                </when>
+                <otherwise>
+                    and (
+                        t.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
+                        or (
+                            (t.bank_card_id is null or trim(t.bank_card_id) = '')
+                            and exists (
+                                select 1 from fin_bank_account fc
+                                where fc.id = #{q.bankCardId,jdbcType=VARCHAR}
+                                and (fc.deleted is null or fc.deleted != 1)
+                                and upper(trim(coalesce(st.source_bank_code, ''))) = upper(trim(coalesce(fc.bank_code, '')))
+                            )
+                        )
                     )
-                )
-            )
+                </otherwise>
+            </choose>
         </if>
     </sql>
     <sql id="excludeTransferUnlessSemanticT">
@@ -182,18 +189,25 @@
     </sql>
     <sql id="filterBankCardC">
         <if test="q != null and q.bankCardId != null">
-            and (
-                c.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
-                or (
-                    (c.bank_card_id is null or trim(c.bank_card_id) = '')
-                    and exists (
-                        select 1 from fin_bank_account fc
-                        where fc.id = #{q.bankCardId,jdbcType=VARCHAR}
-                        and (fc.deleted is null or fc.deleted != 1)
-                        and upper(trim(coalesce(st.source_bank_code, ''))) = upper(trim(coalesce(fc.bank_code, '')))
+            <choose>
+                <when test="q.strictBankCard != null and q.strictBankCard">
+                    and c.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
+                </when>
+                <otherwise>
+                    and (
+                        c.bank_card_id = #{q.bankCardId,jdbcType=VARCHAR}
+                        or (
+                            (c.bank_card_id is null or trim(c.bank_card_id) = '')
+                            and exists (
+                                select 1 from fin_bank_account fc
+                                where fc.id = #{q.bankCardId,jdbcType=VARCHAR}
+                                and (fc.deleted is null or fc.deleted != 1)
+                                and upper(trim(coalesce(st.source_bank_code, ''))) = upper(trim(coalesce(fc.bank_code, '')))
+                            )
+                        )
                     )
-                )
-            )
+                </otherwise>
+            </choose>
         </if>
     </sql>
     <sql id="filterCategoryCodesC">

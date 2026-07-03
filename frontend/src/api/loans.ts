@@ -25,6 +25,7 @@ export type LoanRow = {
   outstandingBalance?: number
   interestRatePct?: number
   monthlyPayment?: number
+  termMonths?: number
   repaymentMethod?: RepaymentMethod
   maturityDate?: string
   disbursementCardId?: string
@@ -32,6 +33,10 @@ export type LoanRow = {
   disbursementCardLabel?: string
   repaymentCardLabel?: string
   linkCount?: number
+  /** Auto: REPAYMENT links with txn amount > ¥100. */
+  linkedRepaymentCount?: number
+  /** Auto: sum of qualifying linked REPAYMENT amounts. */
+  linkedRepaymentAmount?: number
   status?: LoanStatus
   notes?: string
   sortOrder?: number
@@ -58,6 +63,7 @@ export type LoanWritePayload = {
   outstandingBalance?: number | null
   interestRatePct?: number | null
   monthlyPayment?: number | null
+  termMonths?: number | null
   repaymentMethod?: RepaymentMethod | null
   maturityDate?: string | null
   disbursementCardId: string

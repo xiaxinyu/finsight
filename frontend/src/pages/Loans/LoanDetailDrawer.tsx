@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Alert, Button, DatePicker, Drawer, Form, Input, InputNumber, Select, Tabs, message,
@@ -14,8 +14,7 @@ import {
   type RepaymentMethod,
 } from '../../api/loans'
 import { LoanTxnLinkPanel } from './LoanTxnLinkPanel'
-import { bankAccent, bankInitial, formatRate } from './loanDisplay'
-import { formatMoney } from '../../utils/format'
+import { LoanDrawerHero } from './LoanDrawerHero'
 import { BankCardFormDrawer } from '../../components/BankCardFormDrawer'
 
 type LoanFormValues = {
@@ -26,6 +25,7 @@ type LoanFormValues = {
   outstandingBalance?: number
   interestRatePct?: number
   monthlyPayment?: number
+  termMonths?: number
   repaymentMethod?: RepaymentMethod
   maturityDate?: Dayjs
   disbursementCardId?: string
@@ -70,6 +70,7 @@ export function LoanDetailDrawer({
       outstandingBalance: openLoan.outstandingBalance ?? openLoan.principalAmount,
       interestRatePct: openLoan.interestRatePct,
       monthlyPayment: openLoan.monthlyPayment,
+      termMonths: openLoan.termMonths,
       repaymentMethod: openLoan.repaymentMethod,
       maturityDate: openLoan.maturityDate ? dayjs(openLoan.maturityDate) : undefined,
       disbursementCardId: openLoan.disbursementCardId,
@@ -97,6 +98,7 @@ export function LoanDetailDrawer({
         outstandingBalance: values.outstandingBalance ?? values.principalAmount,
         interestRatePct: values.interestRatePct ?? null,
         monthlyPayment: values.monthlyPayment ?? null,
+        termMonths: values.termMonths ?? null,
         repaymentMethod: values.repaymentMethod ?? null,
         maturityDate: values.maturityDate ? values.maturityDate.format('YYYY-MM-DD') : null,
         disbursementCardId: values.disbursementCardId!,
@@ -120,8 +122,6 @@ export function LoanDetailDrawer({
       setSaveLoading(false)
     }
   }
-
-  const accent = bankAccent(openLoan?.lenderBankCode, openLoan?.lenderName)
 
   const detailForm = (
     <Form form={form} layout="vertical" className="fs-loan-form">
@@ -167,6 +167,16 @@ export function LoanDetailDrawer({
         </Form.Item>
         <Form.Item name="monthlyPayment" label="月供 (¥)" className="fs-loan-form-col">
           <InputNumber min={0} style={{ width: '100%' }} />
+        </Form.Item>
+      </div>
+      <div className="fs-loan-form-row">
+        <Form.Item name="termMonths" label="贷款期数（月）" className="fs-loan-form-col"
+          extra="总期数，如 60；已还期数由关联还款流水自动统计"
+        >
+          <InputNumber min={1} max={600} style={{ width: '100%' }} placeholder="如 60" />
+        </Form.Item>
+        <Form.Item name="maturityDate" label="到期日" className="fs-loan-form-col">
+          <DatePicker style={{ width: '100%' }} />
         </Form.Item>
       </div>
       <Form.Item
@@ -235,13 +245,10 @@ export function LoanDetailDrawer({
             }))}
           />
         </Form.Item>
-        <Form.Item name="maturityDate" label="到期日" className="fs-loan-form-col">
-          <DatePicker style={{ width: '100%' }} />
+        <Form.Item name="status" label="状态" className="fs-loan-form-col">
+          <Select options={[{ value: 'ACTIVE', label: '在贷' }, { value: 'CLOSED', label: '已结清' }]} />
         </Form.Item>
       </div>
-      <Form.Item name="status" label="状态">
-        <Select options={[{ value: 'ACTIVE', label: '在贷' }, { value: 'CLOSED', label: '已结清' }]} />
-      </Form.Item>
       <Form.Item name="notes" label="备注">
         <Input.TextArea rows={2} placeholder="到期说明、放款卡核对等" />
       </Form.Item>
@@ -254,28 +261,15 @@ export function LoanDetailDrawer({
   return (
     <Drawer
       title={isCreate ? '添加贷款' : undefined}
-      width={520}
+      width={Math.min(920, typeof window !== 'undefined' ? Math.floor(window.innerWidth * 0.92) : 920)}
       open={open}
       onClose={onClose}
       destroyOnClose
       afterOpenChange={handleAfterOpen}
       className="fs-loan-detail-drawer"
+      styles={{ body: { paddingTop: 8 } }}
     >
-      {!isCreate && openLoan && (
-        <div className="fs-loan-drawer-hero" style={{ '--loan-accent': accent } as CSSProperties}>
-          <div className="fs-loan-drawer-hero-badge">{bankInitial(openLoan.lenderName)}</div>
-          <div className="fs-loan-drawer-hero-body">
-            <div className="fs-loan-drawer-hero-title">{openLoan.lenderName}</div>
-            <div className="fs-loan-drawer-hero-stats">
-              <span className="fs-loan-drawer-hero-rate">{formatRate(openLoan.interestRatePct)}</span>
-              <span>{formatMoney(openLoan.outstandingBalance ?? openLoan.principalAmount ?? 0)} 剩余</span>
-              {openLoan.monthlyPayment != null && (
-                <span>月供 {formatMoney(openLoan.monthlyPayment)}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {!isCreate && openLoan && <LoanDrawerHero loan={openLoan} />}
 
       {isCreate ? (
         detailForm

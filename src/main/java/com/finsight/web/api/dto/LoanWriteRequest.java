@@ -10,6 +10,8 @@ public class LoanWriteRequest {
     private BigDecimal outstandingBalance;
     private BigDecimal interestRatePct;
     private BigDecimal monthlyPayment;
+    private Integer termMonths;
+    private Integer paidInstallments;
     private String repaymentMethod;
     private String maturityDate;
     private String disbursementCardId;
@@ -32,6 +34,10 @@ public class LoanWriteRequest {
     public void setInterestRatePct(BigDecimal interestRatePct) { this.interestRatePct = interestRatePct; }
     public BigDecimal getMonthlyPayment() { return monthlyPayment; }
     public void setMonthlyPayment(BigDecimal monthlyPayment) { this.monthlyPayment = monthlyPayment; }
+    public Integer getTermMonths() { return termMonths; }
+    public void setTermMonths(Integer termMonths) { this.termMonths = termMonths; }
+    public Integer getPaidInstallments() { return paidInstallments; }
+    public void setPaidInstallments(Integer paidInstallments) { this.paidInstallments = paidInstallments; }
     public String getRepaymentMethod() { return repaymentMethod; }
     public void setRepaymentMethod(String repaymentMethod) { this.repaymentMethod = repaymentMethod; }
     public String getMaturityDate() { return maturityDate; }
