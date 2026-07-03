@@ -101,9 +101,9 @@ public class SecurityConfig {
 
             auth.requestMatchers("/api/v1/users/**").hasRole(SecurityRoles.ADMIN);
             auth.requestMatchers("/api/v1/maintenance/**").hasRole(SecurityRoles.ADMIN);
-            auth.requestMatchers(HttpMethod.POST, "/api/v1/cards").hasRole(SecurityRoles.ADMIN);
-            auth.requestMatchers(HttpMethod.PUT, "/api/v1/cards/**").hasRole(SecurityRoles.ADMIN);
-            auth.requestMatchers(HttpMethod.DELETE, "/api/v1/cards/**").hasRole(SecurityRoles.ADMIN);
+            auth.requestMatchers(HttpMethod.POST, "/api/v1/cards").authenticated();
+            auth.requestMatchers(HttpMethod.PUT, "/api/v1/cards/**").authenticated();
+            auth.requestMatchers(HttpMethod.DELETE, "/api/v1/cards/**").authenticated();
             auth.requestMatchers(HttpMethod.POST, "/api/v1/classification/**").hasRole(SecurityRoles.ADMIN);
             auth.requestMatchers(HttpMethod.PUT, "/api/v1/classification/**").hasRole(SecurityRoles.ADMIN);
             auth.requestMatchers(HttpMethod.DELETE, "/api/v1/classification/**").hasRole(SecurityRoles.ADMIN);

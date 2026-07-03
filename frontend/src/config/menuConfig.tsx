@@ -178,7 +178,7 @@ export const menuItems: FsMenuItem[] = [
         label: 'Admin',
         children: [
           { key: '/admin/users', icon: <TeamOutlined />, label: 'Users', path: '/admin/users' },
-          { key: '/admin/cards', icon: <CreditCardOutlined />, label: 'Cards', path: '/admin/cards' },
+          { key: '/admin/cards', icon: <CreditCardOutlined />, label: '银行卡', path: '/admin/cards' },
           { key: '/admin/rules', icon: <ThunderboltOutlined />, label: 'Rules', path: '/admin/rules' },
           { key: '/admin/categories', icon: <ClusterOutlined />, label: 'Categories', path: '/admin/categories' },
         ],

@@ -7,7 +7,8 @@ import {
   BankOutlined, DeleteOutlined, EditOutlined, LinkOutlined, MoreOutlined, PlusOutlined,
 } from '@ant-design/icons'
 import { deleteLoan, fetchLoans, type LoanRow } from '../../api/loans'
-import { listAccounts } from '../../api/finance'
+import { listBankCards } from '../../api/transaction'
+import { displayCardTitle } from '../../utils/bankCardDisplay'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { ContentCard } from '../../components/ContentCard'
 import { EmptyState } from '../../components/EmptyState'
@@ -31,18 +32,23 @@ export function LoansPage() {
     queryFn: fetchLoans,
   })
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: listAccounts,
+  const { data: bankCards = [] } = useQuery({
+    queryKey: ['bank-cards'],
+    queryFn: () => listBankCards(),
   })
 
   const cardOptions = useMemo(
-    () => accounts.map((a) => ({
-      value: String(a.id ?? ''),
-      label: String(a.name ?? a.id ?? ''),
+    () => bankCards.map((c) => ({
+      value: String(c.id ?? ''),
+      label: displayCardTitle(c),
     })).filter((o) => o.value),
-    [accounts],
+    [bankCards],
   )
+
+  const reloadCards = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['bank-cards'] })
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
+  }, [queryClient])
 
   const reload = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['loans'] })
@@ -269,6 +275,7 @@ export function LoansPage() {
         cardOptions={cardOptions}
         onClose={closeDrawer}
         onSaved={reload}
+        onCardsChanged={reloadCards}
       />
     </DataPageLayout>
   )

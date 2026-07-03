@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Alert, Button, DatePicker, Drawer, Form, Input, InputNumber, Select, Tabs, message,
 } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import {
   REPAYMENT_METHOD_LABELS,
@@ -15,6 +16,7 @@ import {
 import { LoanTxnLinkPanel } from './LoanTxnLinkPanel'
 import { bankAccent, bankInitial, formatRate } from './loanDisplay'
 import { formatMoney } from '../../utils/format'
+import { BankCardFormDrawer } from '../../components/BankCardFormDrawer'
 
 type LoanFormValues = {
   name?: string
@@ -39,14 +41,16 @@ type Props = {
   cardOptions: { value: string; label: string }[]
   onClose: () => void
   onSaved: () => void
+  onCardsChanged?: () => void
 }
 
 export function LoanDetailDrawer({
-  loan, open, initialTab = 'detail', cardOptions, onClose, onSaved,
+  loan, open, initialTab = 'detail', cardOptions, onClose, onSaved, onCardsChanged,
 }: Props) {
   const isCreate = !loan?.id
   const [tab, setTab] = useState<'detail' | 'links'>(initialTab)
   const [saveLoading, setSaveLoading] = useState(false)
+  const [cardDrawerOpen, setCardDrawerOpen] = useState(false)
   const [form] = Form.useForm<LoanFormValues>()
   const principalWatch = Form.useWatch('principalAmount', form)
 
@@ -172,17 +176,54 @@ export function LoanDetailDrawer({
         extra="银行贷款发放后进入此卡的流水"
       >
         {cardOptions.length === 0 ? (
-          <Alert
-            type="info"
-            showIcon
-            message={<>请先在 <Link to="/admin/cards">Admin → Bank Cards</Link> 添加银行卡</>}
-          />
+          <div className="fs-loan-card-empty">
+            <Alert
+              type="info"
+              showIcon
+              message="还没有可用的银行卡"
+              description="添加银行卡后即可选择放款到账卡，并关联交易流水。"
+            />
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setCardDrawerOpen(true)}
+              style={{ marginTop: 12 }}
+            >
+              添加银行卡
+            </Button>
+          </div>
         ) : (
-          <Select showSearch optionFilterProp="label" options={cardOptions} placeholder="选择银行卡" />
+          <Select
+            showSearch
+            optionFilterProp="label"
+            options={cardOptions}
+            placeholder="选择银行卡"
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <div className="fs-loan-card-select-footer">
+                  <Button type="link" size="small" icon={<PlusOutlined />} onClick={() => setCardDrawerOpen(true)}>
+                    添加新卡
+                  </Button>
+                  <Link to="/admin/cards">管理银行卡</Link>
+                </div>
+              </>
+            )}
+          />
         )}
       </Form.Item>
       <Form.Item name="repaymentCardId" label="还款扣款卡（可选）" extra="与放款卡不同时填写">
-        <Select allowClear showSearch optionFilterProp="label" options={cardOptions} placeholder="默认同放款卡" />
+        {cardOptions.length === 0 ? (
+          <Select disabled placeholder="请先添加银行卡" />
+        ) : (
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            options={cardOptions}
+            placeholder="默认同放款卡"
+          />
+        )}
       </Form.Item>
       <div className="fs-loan-form-row">
         <Form.Item name="repaymentMethod" label="还款方式" className="fs-loan-form-col">
@@ -262,6 +303,15 @@ export function LoanDetailDrawer({
           ]}
         />
       )}
+      <BankCardFormDrawer
+        open={cardDrawerOpen}
+        onClose={() => setCardDrawerOpen(false)}
+        onSaved={(cardId) => {
+          onCardsChanged?.()
+          if (cardId) form.setFieldValue('disbursementCardId', cardId)
+          setCardDrawerOpen(false)
+        }}
+      />
     </Drawer>
   )
 }
