@@ -112,12 +112,11 @@ public class CardFacade {
             card.setDeleted(0);
         }
         String user = authenticationFacade.getUserName();
-        if (card.getCreateUser() == null) {
-            card.setCreateUser(user);
+        if (user == null || user.isBlank()) {
+            throw new AppException("Authentication required");
         }
-        if (card.getUpdateUser() == null) {
-            card.setUpdateUser(user);
-        }
+        card.setCreatedBy(user);
+        card.setUpdatedBy(user);
         if (card.getCreateTime() == null) {
             card.setCreateTime(new java.util.Date());
         }
@@ -133,13 +132,15 @@ public class CardFacade {
         }
         ledgerUserScope.assertOwned(existing.getCreatedBy());
         card.setId(id);
+        card.setCreatedBy(existing.getCreatedBy());
         if (card.getDeleted() == null) {
             card.setDeleted(0);
         }
         String user = authenticationFacade.getUserName();
-        if (card.getUpdateUser() == null) {
-            card.setUpdateUser(user);
+        if (user == null || user.isBlank()) {
+            throw new AppException("Authentication required");
         }
+        card.setUpdatedBy(user);
         card.setUpdateTime(new java.util.Date());
         bankCardService.updateById(card);
         return card;
@@ -150,6 +151,8 @@ public class CardFacade {
         if (c != null) {
             ledgerUserScope.assertOwned(c.getCreatedBy());
             c.setDeleted(1);
+            c.setUpdatedBy(authenticationFacade.getUserName());
+            c.setUpdateTime(new java.util.Date());
             bankCardService.updateById(c);
         }
     }
