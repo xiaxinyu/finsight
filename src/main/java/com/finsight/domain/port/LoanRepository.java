@@ -2,13 +2,23 @@ package com.finsight.domain.port;
 
 import com.finsight.domain.model.Loan;
 import com.finsight.domain.model.LoanTxnLink;
+import com.finsight.domain.model.LoanLenderYearFlow;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 public interface LoanRepository {
 
     List<Loan> listActive(String userId);
+
+    BigDecimal sumActiveOutstanding(String userId);
+
+    BigDecimal sumActiveMonthlyPayment(String userId);
+
+    List<LoanLenderYearFlow> sumLinkFlowByLenderYear(String userId,
+                                                       java.sql.Date rangeStart,
+                                                       java.sql.Date rangeEndExclusive);
 
     Optional<Loan> findById(String id, String userId);
 

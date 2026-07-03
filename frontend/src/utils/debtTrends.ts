@@ -39,13 +39,34 @@ export type DebtYearPoint = {
 
 export type DebtBalanceSummary = {
   currentLiabilities: number
+  loanOutstanding?: number
+  creditCardLiabilities?: number
   asOfDate?: string
   historyFromYear?: number
   periodStartBalance?: number
   periodBalanceChange?: number
   periodTrend?: 'increase' | 'decrease' | 'flat'
-  source?: string
+  source?: 'loan_ledger' | 'bank_card_balances'
   note?: string
+}
+
+export type LoanLedgerLender = {
+  loanId?: string
+  lenderName?: string
+  outstandingBalance?: number
+  monthlyPayment?: number
+  interestRatePct?: number
+  linkCount?: number
+  maturityDate?: string
+}
+
+export type LoanLedgerSummary = {
+  activeLoanCount?: number
+  totalOutstanding?: number
+  totalMonthlyPayment?: number
+  weightedAvgRatePct?: number
+  annualizedRepaymentEstimate?: number
+  lenders?: LoanLedgerLender[]
 }
 
 export type DebtTrendsReport = {
@@ -54,6 +75,7 @@ export type DebtTrendsReport = {
   historyFromYear?: number
   compareMode?: 'ytd_aligned' | 'full_year'
   debtBalance?: DebtBalanceSummary
+  loanLedger?: LoanLedgerSummary
   summary: {
     borrowing: TrendDeltaMetric
     repayment: TrendDeltaMetric
@@ -63,6 +85,8 @@ export type DebtTrendsReport = {
   debtYearSeries: DebtYearPoint[]
   repaymentTypeMatrix: CategoryYearMatrix
   borrowingTypeMatrix: CategoryYearMatrix
+  loanRepaymentMatrix?: CategoryYearMatrix
+  loanBorrowingMatrix?: CategoryYearMatrix
   topRepaymentGrowth: DebtTrendMover[]
   debtPressure: {
     detected: boolean
@@ -94,36 +118,37 @@ export function buildDebtYoYCards(report: DebtTrendsReport): DebtYoYCard[] {
   const rep = report.summary.repayment
   const bor = report.summary.borrowing
   const net = report.summary.netFlow
+  const fromLedger = (report.loanLedger?.activeLoanCount ?? 0) > 0
   return [
     {
       key: 'repayment',
-      label: 'Repayments',
+      label: fromLedger ? '还款' : 'Repayments',
       from: rep.from,
       to: rep.to,
       deltaAmount: rep.deltaAmount,
       deltaPercent: rep.deltaPercent,
       tone: rep.deltaAmount > 0 ? 'warn' : 'income',
-      hint: 'Money paid toward loans & credit',
+      hint: fromLedger ? '贷款月供与关联流水（含信用卡还款）' : 'Money paid toward loans & credit',
     },
     {
       key: 'borrowing',
-      label: 'New borrowing',
+      label: fromLedger ? '新增借款' : 'New borrowing',
       from: bor.from,
       to: bor.to,
       deltaAmount: bor.deltaAmount,
       deltaPercent: bor.deltaPercent,
       tone: bor.deltaAmount > 0 ? 'expense' : 'neutral',
-      hint: 'Loans received & credit drawn',
+      hint: fromLedger ? '放款与信用类借款流水' : 'Loans received & credit drawn',
     },
     {
       key: 'netFlow',
-      label: 'Net flow',
+      label: fromLedger ? '净现金流' : 'Net flow',
       from: net.from,
       to: net.to,
       deltaAmount: net.deltaAmount,
       deltaPercent: net.deltaPercent,
       tone: net.to < 0 ? 'warn' : net.to > 0 ? 'income' : 'neutral',
-      hint: 'Borrowing minus repayments (negative = debt load up)',
+      hint: fromLedger ? '借款减还款（负值 = 负债上升）' : 'Borrowing minus repayments (negative = debt load up)',
     },
   ]
 }
@@ -149,18 +174,26 @@ export function debtDirectionTone(direction?: DebtYearPoint['debtDirection']): '
 export function buildDebtInsights(report: DebtTrendsReport) {
   const bullets: { text: string; warn?: boolean }[] = []
   const balance = report.debtBalance
+  const ledger = report.loanLedger
+  if (ledger?.activeLoanCount && ledger.activeLoanCount > 0) {
+    bullets.push({
+      text: `Loan ledger: ${ledger.activeLoanCount} active facilities, ${formatMoney(ledger.totalOutstanding ?? 0)} outstanding, ${formatMoney(ledger.totalMonthlyPayment ?? 0)}/mo (${(ledger.weightedAvgRatePct ?? 0).toFixed(2)}% avg rate).`,
+      warn: (ledger.totalOutstanding ?? 0) > 0,
+    })
+  }
   if (balance?.currentLiabilities != null) {
     const change = balance.periodBalanceChange ?? 0
     const from = balance.historyFromYear ?? report.historyFromYear ?? report.fromYear
+    const sourceLabel = balance.source === 'loan_ledger' ? 'Loan outstanding' : 'Outstanding debt'
     if (Math.abs(change) >= 500) {
       const dir = change > 0 ? 'increased' : 'reduced'
       bullets.push({
-        text: `Outstanding debt ${dir} by ${formatMoney(Math.abs(change))} since ${from} (now ${formatMoney(balance.currentLiabilities)}).`,
+        text: `${sourceLabel} ${dir} by ${formatMoney(Math.abs(change))} since ${from} (now ${formatMoney(balance.currentLiabilities)}).`,
         warn: change > 0,
       })
     } else {
       bullets.push({
-        text: `Outstanding debt is about ${formatMoney(balance.currentLiabilities)} as of today.`,
+        text: `${sourceLabel} is ${formatMoney(balance.currentLiabilities)} as of today${balance.creditCardLiabilities ? ` (incl. ${formatMoney(balance.creditCardLiabilities)} credit cards)` : ''}.`,
         warn: balance.currentLiabilities > 0,
       })
     }

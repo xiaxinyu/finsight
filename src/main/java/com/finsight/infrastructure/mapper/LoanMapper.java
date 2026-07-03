@@ -2,9 +2,11 @@ package com.finsight.infrastructure.mapper;
 
 import com.finsight.domain.model.Loan;
 import com.finsight.domain.model.LoanTxnLink;
+import com.finsight.domain.model.LoanLenderYearFlow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Mapper
@@ -33,4 +35,12 @@ public interface LoanMapper {
                        @Param("userId") String userId);
 
     int deleteAllLoanLinks(@Param("loanId") String loanId, @Param("userId") String userId);
+
+    BigDecimal sumActiveLoanOutstanding(@Param("userId") String userId);
+
+    BigDecimal sumActiveLoanMonthlyPayment(@Param("userId") String userId);
+
+    List<LoanLenderYearFlow> sumLoanLinkFlowByLenderYear(@Param("userId") String userId,
+                                                           @Param("rangeStart") java.sql.Date rangeStart,
+                                                           @Param("rangeEndExclusive") java.sql.Date rangeEndExclusive);
 }

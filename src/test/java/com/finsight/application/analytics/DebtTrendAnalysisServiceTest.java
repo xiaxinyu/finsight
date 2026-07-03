@@ -2,13 +2,16 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.authentication.AuthenticationFacade;
 import com.finsight.application.finance.UserScopedFinancialQueries;
+import com.finsight.domain.port.LoanRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -31,13 +34,22 @@ class DebtTrendAnalysisServiceTest {
     @Mock
     private UserScopedFinancialQueries scopedFinancialQueries;
 
+    @Mock
+    private LoanRepository loanRepository;
+
     private DebtTrendAnalysisService service;
 
     @BeforeEach
     void setUp() {
-        service = new DebtTrendAnalysisService(authenticationFacade, semanticMetricsRepository, scopedFinancialQueries);
+        service = new DebtTrendAnalysisService(
+                authenticationFacade, semanticMetricsRepository, scopedFinancialQueries, loanRepository);
         when(authenticationFacade.getUserName()).thenReturn("user1");
-        when(scopedFinancialQueries.sumCurrentLiabilities()).thenReturn(50000.0);
+        when(scopedFinancialQueries.sumCurrentLiabilities()).thenReturn(0.0);
+        when(loanRepository.sumActiveOutstanding("user1")).thenReturn(new BigDecimal("7691000"));
+        when(loanRepository.sumActiveMonthlyPayment("user1")).thenReturn(new BigDecimal("41641"));
+        when(loanRepository.listActive("user1")).thenReturn(Collections.emptyList());
+        when(loanRepository.sumLinkFlowByLenderYear(
+                eq("user1"), any(), any())).thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -69,11 +81,13 @@ class DebtTrendAnalysisServiceTest {
         assertNotNull(out.get("debtYearSeries"));
         @SuppressWarnings("unchecked")
         Map<String, Object> balance = (Map<String, Object>) out.get("debtBalance");
-        assertEquals(50000.0, ((Number) balance.get("currentLiabilities")).doubleValue());
+        assertEquals(7691000.0, ((Number) balance.get("currentLiabilities")).doubleValue());
+        assertEquals(7691000.0, ((Number) balance.get("loanOutstanding")).doubleValue());
+        assertEquals("loan_ledger", balance.get("source"));
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> series = (List<Map<String, Object>>) out.get("debtYearSeries");
         assertEquals("decrease", series.get(1).get("debtDirection"));
-        assertEquals(50000.0, ((Number) series.get(1).get("estimatedBalance")).doubleValue());
+        assertEquals(7691000.0, ((Number) series.get(1).get("estimatedBalance")).doubleValue());
         @SuppressWarnings("unchecked")
         Map<String, Object> matrix = (Map<String, Object>) out.get("repaymentTypeMatrix");
         @SuppressWarnings("unchecked")

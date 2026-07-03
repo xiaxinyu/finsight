@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Button, Collapse, Segmented, Select, Spin, Tag, Tooltip, Typography } from 'antd'
-import { ArrowRightOutlined, CreditCardOutlined, DownloadOutlined, RiseOutlined } from '@ant-design/icons'
+import { ArrowRightOutlined, BankOutlined, CreditCardOutlined, DownloadOutlined, RiseOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchDebtTrends } from '../../api/analytics'
 import type { CategoryYearMatrixRow, DebtTrendMover, DebtYoYCard } from '../../utils/debtTrends'
@@ -43,6 +44,7 @@ type DebtTrendsReportProps = {
 }
 
 type MatrixView = 'repayment' | 'borrowing'
+type MatrixBreakdown = 'lender' | 'semantic'
 type YearsShown = 2 | 3 | 4 | 5
 
 function formatDelta(card: DebtYoYCard): string {
@@ -77,6 +79,7 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
   const [toYear, setToYear] = useState(dayjs().year())
   const [yearsShown, setYearsShown] = useState<YearsShown>(3)
   const [matrixView, setMatrixView] = useState<MatrixView>('repayment')
+  const [matrixBreakdown, setMatrixBreakdown] = useState<MatrixBreakdown>('lender')
 
   const fromYear = toYear - 1
   const historyFromYear = toYear - yearsShown + 1
@@ -89,10 +92,14 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
   const loading = isLoading || isFetching
   const yoyCards = useMemo(() => (data ? orderedDebtCards(buildDebtYoYCards(data)) : []), [data])
   const insights = useMemo(() => (data ? buildDebtInsights(data) : []), [data])
+  const hasLoanLedger = (data?.loanLedger?.activeLoanCount ?? 0) > 0
   const matrix = useMemo(() => {
     if (!data) return undefined
+    if (matrixBreakdown === 'lender') {
+      return matrixView === 'repayment' ? data.loanRepaymentMatrix : data.loanBorrowingMatrix
+    }
     return matrixView === 'repayment' ? data.repaymentTypeMatrix : data.borrowingTypeMatrix
-  }, [data, matrixView])
+  }, [data, matrixView, matrixBreakdown])
   const yearSeries = data?.debtYearSeries ?? []
   const matrixTotals = useMemo(() => (matrix ? debtMatrixTotals(matrix) : {}), [matrix])
   const officialTotals = useMemo(
@@ -189,7 +196,7 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
     }))
     return [
       {
-        title: 'Debt type',
+        title: matrixBreakdown === 'lender' ? '银行' : 'Debt type',
         dataIndex: 'label',
         sortType: 'text' as const,
         ellipsis: true,
@@ -223,7 +230,7 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
         ),
       },
     ]
-  }, [matrix])
+  }, [matrix, matrixBreakdown, toYear])
 
   const moverCols = [
     {
@@ -361,13 +368,36 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
               <ContentCard className="fs-debt-balance-hero" styles={{ body: { padding: '18px 22px' } }}>
                 <div className="fs-debt-balance-hero__grid">
                   <div className="fs-debt-balance-hero__primary">
-                    <span className="fs-debt-balance-hero__label">Outstanding debt today</span>
+                    <span className="fs-debt-balance-hero__label">
+                      {debtBalance.source === 'loan_ledger' ? '贷款剩余本金' : 'Outstanding debt today'}
+                    </span>
                     <span className="fs-debt-balance-hero__value">{formatMoney(debtBalance.currentLiabilities)}</span>
                     <Typography.Text type="secondary" className="fs-debt-balance-hero__meta">
-                      From credit cards &amp; liability accounts · as of {debtBalance.asOfDate ?? 'today'}
+                      {debtBalance.source === 'loan_ledger'
+                        ? <>来自 Ledgers → Loans 台账 · {debtBalance.asOfDate ?? 'today'}</>
+                        : <>From credit cards &amp; liability accounts · as of {debtBalance.asOfDate ?? 'today'}</>}
                     </Typography.Text>
+                    {debtBalance.source === 'loan_ledger' && (debtBalance.loanOutstanding ?? 0) > 0 && (
+                      <Typography.Text type="secondary" className="fs-debt-balance-hero__meta">
+                        银行贷款 {formatMoney(debtBalance.loanOutstanding ?? 0)}
+                        {(debtBalance.creditCardLiabilities ?? 0) > 0
+                          ? ` · 信用卡 ${formatMoney(debtBalance.creditCardLiabilities ?? 0)}`
+                          : ''}
+                      </Typography.Text>
+                    )}
                   </div>
-                  {debtBalance.periodBalanceChange != null && (
+                  {data.loanLedger && (data.loanLedger.totalMonthlyPayment ?? 0) > 0 && (
+                    <div className="fs-debt-balance-hero__change">
+                      <span className="fs-debt-balance-hero__label">月供合计</span>
+                      <span className="fs-debt-balance-hero__value fs-debt-balance-hero__value--monthly">
+                        {formatMoney(data.loanLedger.totalMonthlyPayment ?? 0)}
+                      </span>
+                      <Typography.Text type="secondary" className="fs-debt-balance-hero__meta">
+                        {(data.loanLedger.weightedAvgRatePct ?? 0).toFixed(2)}% 加权平均利率 · {data.loanLedger.activeLoanCount} 笔
+                      </Typography.Text>
+                    </div>
+                  )}
+                  {debtBalance.periodBalanceChange != null && !(data.loanLedger?.totalMonthlyPayment) && (
                     <div className="fs-debt-balance-hero__change">
                       <span className="fs-debt-balance-hero__label">
                         Since {debtBalance.historyFromYear ?? historyFromYear}
@@ -392,6 +422,60 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
               </ContentCard>
             )}
           </section>
+
+          {hasLoanLedger && data.loanLedger?.lenders && data.loanLedger.lenders.length > 0 && (
+            <section className="fs-trend-section" aria-label="Loan ledger">
+              <TrendSectionHead
+                title="贷款台账"
+                description="按银行汇总 · 数据来自 Ledgers → Loans"
+                actions={(
+                  <Link to="/ledgers/loans">
+                    <Button size="small" type="link" icon={<BankOutlined />}>管理贷款</Button>
+                  </Link>
+                )}
+              />
+              <ContentCard styles={{ body: { padding: 0 } }}>
+                <FsDataTable
+                  rowKey="loanId"
+                  size="small"
+                  loading={loading}
+                  scroll={{ x: 'max-content' }}
+                  dataSource={data.loanLedger.lenders}
+                  columns={[
+                    { title: '银行', dataIndex: 'lenderName', width: 120, ellipsis: true },
+                    {
+                      title: '剩余本金',
+                      dataIndex: 'outstandingBalance',
+                      align: 'right',
+                      width: 120,
+                      render: (v: number) => formatMoney(v),
+                    },
+                    {
+                      title: '月供',
+                      dataIndex: 'monthlyPayment',
+                      align: 'right',
+                      width: 100,
+                      render: (v: number) => (v ? formatMoney(v) : '—'),
+                    },
+                    {
+                      title: '利率',
+                      dataIndex: 'interestRatePct',
+                      align: 'right',
+                      width: 72,
+                      render: (v: number) => (v != null ? `${v.toFixed(2)}%` : '—'),
+                    },
+                    {
+                      title: '关联流水',
+                      dataIndex: 'linkCount',
+                      align: 'right',
+                      width: 80,
+                      render: (v: number) => v ?? 0,
+                    },
+                  ]}
+                />
+              </ContentCard>
+            </section>
+          )}
 
           <section className="fs-trend-section" aria-label="Overview">
             <ContentCard className="fs-trend-overview-card fs-debt-overview-card" styles={{ body: { padding: '20px 24px' } }}>
@@ -433,8 +517,10 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
           {yearSeries.length > 0 && (
             <section className="fs-trend-section" aria-label="Yearly debt flows">
               <TrendSectionHead
-                title="Debt trajectory"
-                description="Estimated outstanding balance and yearly net flows · negative net = debt reduced"
+                title={hasLoanLedger ? '负债走势' : 'Debt trajectory'}
+                description={hasLoanLedger
+                  ? '余额来自贷款台账；历史曲线由流水反推估算'
+                  : 'Estimated outstanding balance and yearly net flows · negative net = debt reduced'}
               />
               <div className="fs-debt-charts-row fs-debt-charts-row--triple">
                 <ContentCard className="fs-trend-chart-card fs-debt-chart-card--balance" styles={{ body: { padding: '12px 16px 8px' } }}>
@@ -500,16 +586,26 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
           {matrix && matrix.rows.length > 0 && (
             <section className="fs-trend-section" aria-label="Breakdown by debt type">
               <TrendSectionHead
-                title="Breakdown by type"
-                description={`${matrixView === 'repayment' ? 'Repayments' : 'New borrowing'} · ${historyFromYear}–${toYear}`}
+                title={matrixBreakdown === 'lender' ? '按银行分解' : 'Breakdown by type'}
+                description={`${matrixView === 'repayment' ? 'Repayments' : 'New borrowing'} · ${historyFromYear}–${toYear}${matrixBreakdown === 'lender' ? ' · 台账 + 关联流水' : ''}`}
                 actions={(
                   <div className="fs-trend-section-head__actions-inner">
+                    {hasLoanLedger && (
+                      <Segmented<MatrixBreakdown>
+                        value={matrixBreakdown}
+                        onChange={setMatrixBreakdown}
+                        options={[
+                          { label: '按银行', value: 'lender' },
+                          { label: '按分类', value: 'semantic' },
+                        ]}
+                      />
+                    )}
                     <Segmented<MatrixView>
                       value={matrixView}
                       onChange={setMatrixView}
                       options={[
-                        { label: 'Repayments', value: 'repayment' },
-                        { label: 'Borrowing', value: 'borrowing' },
+                        { label: hasLoanLedger ? '还款' : 'Repayments', value: 'repayment' },
+                        { label: hasLoanLedger ? '借款' : 'Borrowing', value: 'borrowing' },
                       ]}
                     />
                     <Button size="small" type="text" icon={<DownloadOutlined />} onClick={exportMatrixCsv}>

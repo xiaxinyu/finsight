@@ -1,11 +1,13 @@
 package com.finsight.infrastructure.repository;
 
 import com.finsight.domain.model.Loan;
+import com.finsight.domain.model.LoanLenderYearFlow;
 import com.finsight.domain.model.LoanTxnLink;
 import com.finsight.domain.port.LoanRepository;
 import com.finsight.infrastructure.mapper.LoanMapper;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +24,25 @@ public class LoanMybatisRepository implements LoanRepository {
     @Override
     public List<Loan> listActive(String userId) {
         return mapper.listLoans(userId);
+    }
+
+    @Override
+    public BigDecimal sumActiveOutstanding(String userId) {
+        BigDecimal v = mapper.sumActiveLoanOutstanding(userId);
+        return v == null ? BigDecimal.ZERO : v;
+    }
+
+    @Override
+    public BigDecimal sumActiveMonthlyPayment(String userId) {
+        BigDecimal v = mapper.sumActiveLoanMonthlyPayment(userId);
+        return v == null ? BigDecimal.ZERO : v;
+    }
+
+    @Override
+    public List<LoanLenderYearFlow> sumLinkFlowByLenderYear(String userId,
+                                                              java.sql.Date rangeStart,
+                                                              java.sql.Date rangeEndExclusive) {
+        return mapper.sumLoanLinkFlowByLenderYear(userId, rangeStart, rangeEndExclusive);
     }
 
     @Override

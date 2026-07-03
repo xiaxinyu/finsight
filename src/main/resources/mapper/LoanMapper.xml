@@ -159,4 +159,46 @@
         where loan_id = #{loanId}
           and user_id = #{userId}
     </delete>
+
+    <select id="sumActiveLoanOutstanding" resultType="java.math.BigDecimal">
+        select coalesce(sum(coalesce(l.outstanding_balance, l.principal_amount)), 0)
+        from fin_loan l
+        where l.user_id = #{userId}
+          and coalesce(l.deleted, 0) = 0
+          and upper(coalesce(l.status, 'ACTIVE')) = 'ACTIVE'
+    </select>
+
+    <select id="sumActiveLoanMonthlyPayment" resultType="java.math.BigDecimal">
+        select coalesce(sum(l.monthly_payment), 0)
+        from fin_loan l
+        where l.user_id = #{userId}
+          and coalesce(l.deleted, 0) = 0
+          and upper(coalesce(l.status, 'ACTIVE')) = 'ACTIVE'
+    </select>
+
+    <select id="sumLoanLinkFlowByLenderYear" resultType="com.finsight.domain.model.LoanLenderYearFlow">
+        select year(t.transaction_date) as year,
+               fl.id as loanId,
+               fl.lender_name as lenderName,
+               lk.link_type as linkType,
+               sum(
+                   case
+                       when lk.link_type = 'DISBURSEMENT' then coalesce(t.income_money, 0)
+                       when lk.link_type in ('REPAYMENT', 'INTEREST')
+                           then coalesce(t.expense_amount, abs(coalesce(t.balance_money, 0)))
+                       else 0
+                   end
+               ) as amount
+        from fin_loan_txn_link lk
+        inner join fin_loan fl on fl.id = lk.loan_id
+            and fl.user_id = lk.user_id
+            and coalesce(fl.deleted, 0) = 0
+        inner join transaction t on t.id = lk.transaction_id
+            and coalesce(t.deleted, 0) != 1
+        where lk.user_id = #{userId}
+          and t.transaction_date is not null
+          and t.transaction_date &gt;= #{rangeStart}
+          and t.transaction_date &lt; #{rangeEndExclusive}
+        group by year(t.transaction_date), fl.id, fl.lender_name, lk.link_type
+    </select>
 </mapper>
