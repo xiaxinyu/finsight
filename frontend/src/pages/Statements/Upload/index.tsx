@@ -270,10 +270,11 @@ export function StatementUploadPage() {
       setCommitResult(result)
       const dupNote = result.skippedDuplicates ? ` · ${result.skippedDuplicates} already in ledger (skipped)` : ''
       message.success(`Imported ${result.imported} of ${result.total} transactions${dupNote}`)
-      qc.invalidateQueries({ queryKey: ['home-summary'] })
       qc.invalidateQueries({ queryKey: ['financial-pulse'] })
+      qc.invalidateQueries({ queryKey: ['wealth'] })
       qc.invalidateQueries({ queryKey: ['budget-vs-actual'] })
-      qc.invalidateQueries({ queryKey: ['dash-totals'] })
+      qc.invalidateQueries({ queryKey: ['dash-semantic'] })
+      qc.invalidateQueries({ queryKey: ['dash-breakdown'] })
       qc.invalidateQueries({ queryKey: ['tx-stats'] })
       setCommittedCardId(effectiveBankCardId)
       setStep(2)

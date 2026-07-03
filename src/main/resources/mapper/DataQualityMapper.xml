@@ -4,7 +4,13 @@
 
     <sql id="filterOwner">
         <if test="ownerUserId != null and ownerUserId != ''">
-            and t.created_by = #{ownerUserId,jdbcType=VARCHAR}
+            and (
+                t.created_by = #{ownerUserId,jdbcType=VARCHAR}
+                or (
+                    #{ownerUserId,jdbcType=VARCHAR} = '_anonymous'
+                    and (t.created_by is null or trim(t.created_by) = '')
+                )
+            )
         </if>
     </sql>
 

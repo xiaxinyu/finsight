@@ -4,6 +4,7 @@ import { createCard, updateCard } from '../api/admin'
 import {
   BANK_OPTIONS, CARD_TYPE_OPTIONS, bankAccent, bankInitial, type CardTypeCode,
 } from '../utils/bankCardDisplay'
+import { adminCardsCopy as copy } from '../pages/Admin/adminLabels'
 
 export type BankCardFormValues = {
   bankCode: string
@@ -60,11 +61,11 @@ export function BankCardFormDrawer({ open, card, onClose, onSaved }: Props) {
       }
       if (isEdit && card?.id) {
         await updateCard(card.id, payload)
-        message.success('银行卡已更新')
+        message.success(copy.cardUpdated)
         onSaved(card.id)
       } else {
         const saved = await createCard(payload) as BankCardRow
-        message.success('银行卡已添加')
+        message.success(copy.cardAdded)
         onSaved(String(saved.id ?? ''))
         onClose()
       }
@@ -79,7 +80,7 @@ export function BankCardFormDrawer({ open, card, onClose, onSaved }: Props) {
 
   return (
     <Drawer
-      title={isEdit ? '编辑银行卡' : '添加银行卡'}
+      title={isEdit ? copy.drawerEditTitle : copy.drawerAddTitle}
       width={440}
       open={open}
       onClose={onClose}
@@ -88,7 +89,7 @@ export function BankCardFormDrawer({ open, card, onClose, onSaved }: Props) {
       className="fs-bank-card-drawer"
       footer={(
         <Button type="primary" block loading={loading} onClick={save}>
-          {isEdit ? '保存' : '添加'}
+          {isEdit ? copy.drawerSave : copy.drawerAdd}
         </Button>
       )}
     >
@@ -96,33 +97,33 @@ export function BankCardFormDrawer({ open, card, onClose, onSaved }: Props) {
         <div className="fs-bank-card-drawer-preview__chip">{bankInitial(bankWatch)}</div>
         <div>
           <div className="fs-bank-card-drawer-preview__title">
-            {BANK_OPTIONS.find((b) => b.value === bankWatch)?.label ?? '选择银行'}
+            {BANK_OPTIONS.find((b) => b.value === bankWatch)?.label ?? copy.selectBank}
           </div>
-          <div className="fs-bank-card-drawer-preview__hint">用于账单导入与贷款流水关联</div>
+          <div className="fs-bank-card-drawer-preview__hint">{copy.drawerHint}</div>
         </div>
       </div>
 
       <Form form={form} layout="vertical" className="fs-bank-card-form">
-        <Form.Item name="bankCode" label="银行" rules={[{ required: true, message: '请选择银行' }]}>
+        <Form.Item name="bankCode" label={copy.bankLabel} rules={[{ required: true, message: copy.bankRequired }]}>
           <Select
             showSearch
             optionFilterProp="label"
             options={BANK_OPTIONS.map((b) => ({ value: b.value, label: b.label }))}
           />
         </Form.Item>
-        <Form.Item name="cardTypeCode" label="卡类型" rules={[{ required: true }]}>
+        <Form.Item name="cardTypeCode" label={copy.cardTypeLabel} rules={[{ required: true }]}>
           <Select options={[...CARD_TYPE_OPTIONS]} />
         </Form.Item>
         <Form.Item
           name="cardNo"
-          label="卡号 / 账号"
-          rules={[{ required: true, message: '请输入卡号或账号' }]}
-          extra="可填完整卡号或后四位，仅用于匹配流水"
+          label={copy.cardNoLabel}
+          rules={[{ required: true, message: copy.cardNoRequired }]}
+          extra={copy.cardNoExtra}
         >
-          <Input placeholder="如 6222… 或 1234" />
+          <Input placeholder={copy.cardNoPlaceholder} />
         </Form.Item>
-        <Form.Item name="cardName" label="显示名称（可选）">
-          <Input placeholder="如：建行工资卡" />
+        <Form.Item name="cardName" label={copy.displayNameLabel}>
+          <Input placeholder={copy.displayNamePlaceholder} />
         </Form.Item>
       </Form>
     </Drawer>

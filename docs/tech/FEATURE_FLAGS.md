@@ -27,6 +27,12 @@ See [SECURITY.md](SECURITY.md) for the full security guide.
 
 Use `application-prod.yml` plus environment variables for secrets. Override flags via env, e.g. `FINSIGHT_ADVISOR_ENABLED=false`.
 
+| Env var | Maps to | Notes |
+|---------|---------|--------|
+| `FINSIGHT_METRICS_RECONCILE_GATE` | `finsight.metrics.reconcile-gate` | Set `true` in prod once `fin_metric_monthly` refresh is stable; surfaces mismatches in Reports data quality bar. |
+| `FINSIGHT_ADVISOR_ENABLED` | `finsight.advisor.enabled` | Disable advisor APIs and Dashboard strip. |
+| `FINSIGHT_PLANNING_PERSIST` | `finsight.planning.persist` | Persist budgets/bills/goals to MySQL. |
+
 ## Frontend
 
 `useFeatureFlags()` loads `/api/v1/features` once per session. Menu items and dashboard widgets respect flags; disabled modules are not rendered (no error spam).

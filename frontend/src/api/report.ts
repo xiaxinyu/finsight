@@ -1,4 +1,4 @@
-import { getJson, postForm } from './client'
+import { postForm } from './client'
 import { normalizeResult, parseJsonArray } from './normalize'
 
 export interface ReportPoint {
@@ -29,13 +29,7 @@ export async function fetchReport(endpoint: string, params: Record<string, unkno
   })
 }
 
-export async function homeSummary(year: string | number, range?: { start: string; end: string }) {
-  const params = new URLSearchParams({ year: String(year) })
-  if (range?.start) params.set('transactionDateStartStr', range.start)
-  if (range?.end) params.set('transactionDateEndStr', range.end)
-  const raw = await getJson(`/transaction-report/home-summary?${params.toString()}`)
-  const n = normalizeResult(raw)
-  if (!n.ok) throw new Error(n.message || 'No summary')
-  const data = typeof n.data === 'string' ? JSON.parse(n.data) : n.data
-  return data as Record<string, unknown>
+/** @deprecated Dashboard uses fetchMetricPeriodSummary; endpoint scheduled for removal. */
+export async function homeSummary(_year: string | number, _range?: { start: string; end: string }) {
+  throw new Error('homeSummary is deprecated; use fetchMetricPeriodSummary from api/analytics')
 }

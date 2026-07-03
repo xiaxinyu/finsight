@@ -542,7 +542,7 @@ export function CategoriesAdminPage() {
                     className="fs-admin-category-classification-item"
                     extra={categoryPath ? (
                       <Typography.Text type="secondary" className="fs-category-path-hint">
-                        分类路径：{categoryPath}
+                        Category path: {categoryPath}
                       </Typography.Text>
                     ) : undefined}
                     rules={[{ required: true, message: 'Reporting classification is required' }]}

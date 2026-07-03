@@ -53,6 +53,8 @@ public class TransactionReportController extends ControllerHelper {
 				CommonResult.success(transactionReportFacade.monthExpenseReportJson(param)));
 	}
 
+	/** @deprecated Dashboard uses {@code GET /api/v1/analytics/metrics/period-summary}; scheduled for removal. */
+	@Deprecated(since = "2.0.2", forRemoval = true)
 	@RequestMapping("/transaction-report/home-summary")
 	@ResponseBody
 	public CommonResult homeSummary(String year, TransactionParam param){

@@ -62,6 +62,8 @@ public class TransactionReportFacade {
     /**
      * Dashboard KPI JSON; validates year like the former controller.
      */
+    /** @deprecated Use period metrics API; scheduled for removal. */
+    @Deprecated(since = "2.0.2", forRemoval = true)
     public String homeSummary(String year, String startStr, String endStr) throws AppServiceException {
         Integer y;
         if (year == null || year.trim().isEmpty()) {

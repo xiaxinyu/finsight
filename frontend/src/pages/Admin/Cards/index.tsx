@@ -12,6 +12,7 @@ import { EmptyState } from '../../../components/EmptyState'
 import {
   bankAccent, bankInitial, cardTypeLabel, displayCardTitle, maskCardNo,
 } from '../../../utils/bankCardDisplay'
+import { adminCardsCopy as copy } from '../adminLabels'
 
 export function CardsAdminPage() {
   const queryClient = useQueryClient()
@@ -42,57 +43,57 @@ export function CardsAdminPage() {
     if (!card.id) return
     try {
       await deleteCard(card.id)
-      message.success('已删除')
+      message.success(copy.deleted)
       reload()
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '删除失败')
+      message.error(e instanceof Error ? e.message : copy.deleteFailed)
     }
   }
 
   const menuItems = (card: BankCardRow): MenuProps['items'] => [
-    { key: 'edit', icon: <EditOutlined />, label: '编辑', onClick: () => openEdit(card) },
+    { key: 'edit', icon: <EditOutlined />, label: copy.edit, onClick: () => openEdit(card) },
     { type: 'divider' },
     {
       key: 'delete',
       icon: <DeleteOutlined />,
-      label: '删除',
+      label: copy.delete,
       danger: true,
       onClick: () => {
-        if (window.confirm('确定删除此银行卡？')) onDelete(card)
+        if (window.confirm(copy.deleteConfirm)) onDelete(card)
       },
     },
   ]
 
   return (
     <DataPageLayout
-      title="银行卡"
-      subtitle="管理账户卡号 · 用于账单导入与贷款流水关联"
+      title={copy.title}
+      subtitle={copy.subtitle}
       icon={<CreditCardOutlined />}
       className="fs-data-page--bank-cards"
       actions={(
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          添加银行卡
+          {copy.addCard}
         </Button>
       )}
     >
       {isError && (
         <Typography.Paragraph type="danger">
-          {error instanceof Error ? error.message : '加载失败'}
+          {error instanceof Error ? error.message : copy.loadFailed}
         </Typography.Paragraph>
       )}
 
       {cards.length > 0 && (
         <div className="fs-bank-cards-hero">
           <ContentCard className="fs-bank-cards-hero-card fs-bank-cards-hero-card--primary">
-            <div className="fs-bank-cards-hero-card__label">银行卡总数</div>
+            <div className="fs-bank-cards-hero-card__label">{copy.totalCards}</div>
             <div className="fs-bank-cards-hero-card__value">{stats.total}</div>
           </ContentCard>
           <ContentCard className="fs-bank-cards-hero-card">
-            <div className="fs-bank-cards-hero-card__label">借记卡</div>
+            <div className="fs-bank-cards-hero-card__label">{copy.debitCards}</div>
             <div className="fs-bank-cards-hero-card__value">{stats.debit}</div>
           </ContentCard>
           <ContentCard className="fs-bank-cards-hero-card">
-            <div className="fs-bank-cards-hero-card__label">信用卡</div>
+            <div className="fs-bank-cards-hero-card__label">{copy.creditCards}</div>
             <div className="fs-bank-cards-hero-card__value">{stats.credit}</div>
           </ContentCard>
         </div>
@@ -101,11 +102,11 @@ export function CardsAdminPage() {
       {!isLoading && cards.length === 0 ? (
         <ContentCard>
           <EmptyState
-            title="还没有银行卡"
-            description="添加银行卡后，可导入账单并在贷款页关联放款/还款流水。"
+            title={copy.noCards}
+            description={copy.noCardsHint}
             action={(
               <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-                添加第一张卡
+                {copy.addFirstCard}
               </Button>
             )}
           />
@@ -129,7 +130,7 @@ export function CardsAdminPage() {
                     <div className="fs-bank-card-item-title">{displayCardTitle(card)}</div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <Dropdown menu={{ items: menuItems(card) }} trigger={['click']}>
-                        <Button type="text" size="small" icon={<MoreOutlined />} aria-label="操作" />
+                        <Button type="text" size="small" icon={<MoreOutlined />} aria-label={copy.actions} />
                       </Dropdown>
                     </div>
                   </div>

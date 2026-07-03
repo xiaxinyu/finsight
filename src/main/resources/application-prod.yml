@@ -14,6 +14,9 @@ finsight:
     actuator-public: false
     login-max-attempts: 8
     login-lockout-seconds: 900
+  metrics:
+    # Enable via FINSIGHT_METRICS_RECONCILE_GATE=true when fin_metric_monthly is trusted in prod.
+    reconcile-gate: ${FINSIGHT_METRICS_RECONCILE_GATE:false}
 
 server:
   servlet:
