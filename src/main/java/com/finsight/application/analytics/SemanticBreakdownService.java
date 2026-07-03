@@ -1,6 +1,6 @@
 package com.finsight.application.analytics;
 
-import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.classification.FinanceSemanticsCatalog;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -21,12 +21,12 @@ public class SemanticBreakdownService {
     private static final DateTimeFormatter US = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
     private final SemanticBreakdownRepository breakdownRepository;
-    private final AuthenticationFacade authenticationFacade;
+    private final LedgerUserScope ledgerUserScope;
 
     public SemanticBreakdownService(SemanticBreakdownRepository breakdownRepository,
-            AuthenticationFacade authenticationFacade) {
+            LedgerUserScope ledgerUserScope) {
         this.breakdownRepository = breakdownRepository;
-        this.authenticationFacade = authenticationFacade;
+        this.ledgerUserScope = ledgerUserScope;
     }
 
     public Map<String, Object> expenseBreakdown(String fromStr, String toStr, String cardId, String consumeId) {
@@ -139,7 +139,6 @@ public class SemanticBreakdownService {
     }
 
     private String userKey() {
-        String user = authenticationFacade.getUserName();
-        return user == null || user.isBlank() ? "_anonymous" : user.trim().toLowerCase(Locale.ROOT);
+        return ledgerUserScope.resolve();
     }
 }

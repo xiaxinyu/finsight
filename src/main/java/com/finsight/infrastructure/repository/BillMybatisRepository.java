@@ -45,4 +45,9 @@ public class BillMybatisRepository implements BillRepository {
     public boolean hasAnyForUser(String userId) {
         return mapper.countBillsForUser(userId) > 0;
     }
+
+    @Override
+    public void softDelete(String billId, String userId) {
+        mapper.softDeleteBill(billId, userId);
+    }
 }

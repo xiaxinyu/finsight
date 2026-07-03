@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.finsight.infrastructure.mapper.AccountBalanceSnapshotMapper">
+
+    <insert id="upsertSnapshot">
+        insert into fin_account_balance_snapshot (
+            id, user_id, card_id, balance, snapshot_date, source, created_by, created_at
+        ) values (
+            #{id,jdbcType=VARCHAR},
+            #{userId,jdbcType=VARCHAR},
+            #{cardId,jdbcType=VARCHAR},
+            #{balance,jdbcType=DECIMAL},
+            #{snapshotDate,jdbcType=DATE},
+            #{source,jdbcType=VARCHAR},
+            #{actor,jdbcType=VARCHAR},
+            now(3)
+        )
+        on duplicate key update
+            balance = values(balance),
+            source = values(source),
+            created_by = values(created_by),
+            created_at = now(3)
+    </insert>
+
+</mapper>

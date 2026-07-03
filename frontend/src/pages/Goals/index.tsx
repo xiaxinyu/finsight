@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Col, Form, Input, InputNumber, Progress, Row } from 'antd'
 import { AimOutlined } from '@ant-design/icons'
 import { runForecastScenario } from '../../api/analytics'
-import { goalAdvice, goalProgress, listGoals, saveGoal, simulateScenario } from '../../api/finance'
+import { goalAdvice, goalProgress, listGoals, saveGoal } from '../../api/finance'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { ContentCard } from '../../components/ContentCard'
 import { EmptyState } from '../../components/EmptyState'
@@ -47,11 +47,6 @@ export function GoalsPage() {
   const qc = useQueryClient()
   const [goalForm] = Form.useForm()
   const [scenarioForm] = Form.useForm()
-  const [scenario, setScenario] = useState<{
-    baseline: Record<string, number>
-    scenario: Record<string, number>
-    delta: Record<string, number>
-  } | null>(null)
   const [forecast, setForecast] = useState<Record<string, unknown> | null>(null)
 
   const { data: goals, isError, error } = useQuery({ queryKey: ['goals'], queryFn: listGoals })
@@ -70,12 +65,8 @@ export function GoalsPage() {
       incomeChangePct: Number(v.incomePct || 0),
       newMonthlyBill: Number(v.newBill || 0),
     }
-    const [legacy, next] = await Promise.all([
-      simulateScenario(params),
-      runForecastScenario({ ...params, year: new Date().getFullYear() }),
-    ])
-    setScenario(legacy)
-    setForecast(next)
+    const next = await runForecastScenario({ ...params, year: new Date().getFullYear() })
+    setForecast(next as Record<string, unknown>)
   }
 
   return (
@@ -119,19 +110,8 @@ export function GoalsPage() {
               <Form.Item name="newBill" label="New monthly bill"><InputNumber style={{ width: '100%' }} /></Form.Item>
               <Button onClick={onSimulate}>Simulate</Button>
             </Form>
-            {scenario && (
-              <div style={{ marginTop: 12 }}>
-                <KpiGrid items={[
-                  { key: 'br', label: 'Baseline runway', value: `${scenario.baseline.runwayMonths?.toFixed(1)} mo` },
-                  { key: 'sr', label: 'Scenario runway', value: `${scenario.scenario.runwayMonths?.toFixed(1)} mo` },
-                  { key: 'd', label: 'Runway delta', value: `${scenario.delta.runwayMonths >= 0 ? '+' : ''}${scenario.delta.runwayMonths?.toFixed(1)} mo` },
-                  { key: 'nw', label: 'Net worth delta', value: formatMoney(scenario.delta.netWorth || 0) },
-                ]} />
-              </div>
-            )}
             {forecast && (
-              <div style={{ marginTop: 12, fontSize: 12, opacity: 0.9 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Annual forecast (new API)</div>
+              <div style={{ marginTop: 12 }}>
                 <KpiGrid items={[
                   { key: 'fy', label: 'Forecast net', value: formatMoney(Number(forecast.yearNet || 0)) },
                   { key: 'fi', label: 'Forecast income', value: formatMoney(Number(forecast.yearIncome || 0)) },

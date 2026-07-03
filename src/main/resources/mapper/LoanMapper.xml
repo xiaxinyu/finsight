@@ -52,7 +52,14 @@
          where lk.loan_id = l.id
            and lk.user_id = l.user_id
            and lk.link_type = 'REPAYMENT'
-           and <include refid="repaymentTxnAmount"/> &gt; 100) as linkedRepaymentAmount
+           and <include refid="repaymentTxnAmount"/> &gt; 100) as linkedRepaymentAmount,
+        (select coalesce(sum(<include refid="repaymentTxnAmount"/>), 0)
+         from fin_loan_txn_link lk
+         inner join transaction t on t.id = lk.transaction_id and coalesce(t.deleted, 0) != 1
+         where lk.loan_id = l.id
+           and lk.user_id = l.user_id
+           and lk.link_type = 'INTEREST'
+           and <include refid="repaymentTxnAmount"/> &gt; 100) as linkedInterestAmount
     </sql>
 
     <select id="listLoans" resultType="com.finsight.domain.model.Loan">

@@ -15,6 +15,7 @@ import {
 } from '../../api/loans'
 import { LoanTxnLinkPanel } from './LoanTxnLinkPanel'
 import { LoanDrawerHero } from './LoanDrawerHero'
+import { loanFormCopy } from './loanLabels'
 import { BankCardFormDrawer } from '../../components/BankCardFormDrawer'
 
 type LoanFormValues = {
@@ -109,10 +110,10 @@ export function LoanDetailDrawer({
       setSaveLoading(true)
       if (openLoan?.id) {
         await updateLoan(openLoan.id, payload)
-        message.success('已保存')
+        message.success(loanFormCopy.saved)
       } else {
         await createLoan(payload)
-        message.success('贷款已添加')
+        message.success(loanFormCopy.created)
         onClose()
       }
       onSaved()
@@ -125,14 +126,14 @@ export function LoanDetailDrawer({
 
   const detailForm = (
     <Form form={form} layout="vertical" className="fs-loan-form">
-      <Form.Item name="lenderName" label="贷款银行" rules={[{ required: true, message: '请输入银行名称' }]}>
-        <Input placeholder="如：交通银行" />
+      <Form.Item name="lenderName" label={loanFormCopy.lender} rules={[{ required: true, message: loanFormCopy.lenderRequired }]}>
+        <Input placeholder={loanFormCopy.lenderPlaceholder} />
       </Form.Item>
-      <Form.Item name="name" label="备注名称（可选）">
-        <Input placeholder="如：经营贷 A" />
+      <Form.Item name="name" label={loanFormCopy.alias}>
+        <Input placeholder={loanFormCopy.aliasPlaceholder} />
       </Form.Item>
       <div className="fs-loan-form-row">
-        <Form.Item name="principalAmount" label="本金 (¥)" rules={[{ required: true }]} className="fs-loan-form-col">
+        <Form.Item name="principalAmount" label={loanFormCopy.principal} rules={[{ required: true }]} className="fs-loan-form-col">
           <InputNumber
             min={0}
             style={{ width: '100%' }}
@@ -144,15 +145,15 @@ export function LoanDetailDrawer({
         </Form.Item>
         <Form.Item
           name="outstandingBalance"
-          label="剩余本金 (¥)"
+          label={loanFormCopy.remaining}
           className="fs-loan-form-col"
           rules={[
             ({ getFieldValue }) => ({
               validator(_, value) {
                 const principal = getFieldValue('principalAmount')
                 if (value == null || principal == null) return Promise.resolve()
-                if (value < 0) return Promise.reject(new Error('不能为负'))
-                if (value > principal) return Promise.reject(new Error('不能超过本金'))
+                if (value < 0) return Promise.reject(new Error(loanFormCopy.remainingNegative))
+                if (value > principal) return Promise.reject(new Error(loanFormCopy.remainingExceeds))
                 return Promise.resolve()
               },
             }),
@@ -162,36 +163,36 @@ export function LoanDetailDrawer({
         </Form.Item>
       </div>
       <div className="fs-loan-form-row">
-        <Form.Item name="interestRatePct" label="年利率 (%)" className="fs-loan-form-col">
+        <Form.Item name="interestRatePct" label={loanFormCopy.apr} className="fs-loan-form-col">
           <InputNumber min={0} max={100} step={0.01} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item name="monthlyPayment" label="月供 (¥)" className="fs-loan-form-col">
+        <Form.Item name="monthlyPayment" label={loanFormCopy.monthly} className="fs-loan-form-col">
           <InputNumber min={0} style={{ width: '100%' }} />
         </Form.Item>
       </div>
       <div className="fs-loan-form-row">
-        <Form.Item name="termMonths" label="贷款期数（月）" className="fs-loan-form-col"
-          extra="总期数，如 60；已还期数由关联还款流水自动统计"
+        <Form.Item name="termMonths" label={loanFormCopy.termMonths} className="fs-loan-form-col"
+          extra={loanFormCopy.termExtra}
         >
-          <InputNumber min={1} max={600} style={{ width: '100%' }} placeholder="如 60" />
+          <InputNumber min={1} max={600} style={{ width: '100%' }} placeholder={loanFormCopy.termPlaceholder} />
         </Form.Item>
-        <Form.Item name="maturityDate" label="到期日" className="fs-loan-form-col">
+        <Form.Item name="maturityDate" label={loanFormCopy.maturity} className="fs-loan-form-col">
           <DatePicker style={{ width: '100%' }} />
         </Form.Item>
       </div>
       <Form.Item
         name="disbursementCardId"
-        label="放款到账卡"
-        rules={[{ required: true, message: '请选择放款卡' }]}
-        extra="银行贷款发放后进入此卡的流水"
+        label={loanFormCopy.disbursementCard}
+        rules={[{ required: true, message: loanFormCopy.disbursementRequired }]}
+        extra={loanFormCopy.disbursementExtra}
       >
         {cardOptions.length === 0 ? (
           <div className="fs-loan-card-empty">
             <Alert
               type="info"
               showIcon
-              message="还没有可用的银行卡"
-              description="添加银行卡后即可选择放款到账卡，并关联交易流水。"
+              message={loanFormCopy.noCards}
+              description={loanFormCopy.noCardsHint}
             />
             <Button
               type="primary"
@@ -199,7 +200,7 @@ export function LoanDetailDrawer({
               onClick={() => setCardDrawerOpen(true)}
               style={{ marginTop: 12 }}
             >
-              添加银行卡
+              {loanFormCopy.addCard}
             </Button>
           </div>
         ) : (
@@ -207,36 +208,36 @@ export function LoanDetailDrawer({
             showSearch
             optionFilterProp="label"
             options={cardOptions}
-            placeholder="选择银行卡"
+            placeholder={loanFormCopy.selectCard}
             dropdownRender={(menu) => (
               <>
                 {menu}
                 <div className="fs-loan-card-select-footer">
                   <Button type="link" size="small" icon={<PlusOutlined />} onClick={() => setCardDrawerOpen(true)}>
-                    添加新卡
+                    {loanFormCopy.addNewCard}
                   </Button>
-                  <Link to="/admin/cards">管理银行卡</Link>
+                  <Link to="/admin/cards">{loanFormCopy.manageCards}</Link>
                 </div>
               </>
             )}
           />
         )}
       </Form.Item>
-      <Form.Item name="repaymentCardId" label="还款扣款卡（可选）" extra="与放款卡不同时填写">
+      <Form.Item name="repaymentCardId" label={loanFormCopy.repaymentCard} extra={loanFormCopy.repaymentExtra}>
         {cardOptions.length === 0 ? (
-          <Select disabled placeholder="请先添加银行卡" />
+          <Select disabled placeholder={loanFormCopy.noCards} />
         ) : (
           <Select
             allowClear
             showSearch
             optionFilterProp="label"
             options={cardOptions}
-            placeholder="默认同放款卡"
+            placeholder={loanFormCopy.sameAsDisbursement}
           />
         )}
       </Form.Item>
       <div className="fs-loan-form-row">
-        <Form.Item name="repaymentMethod" label="还款方式" className="fs-loan-form-col">
+        <Form.Item name="repaymentMethod" label={loanFormCopy.repaymentMethod} className="fs-loan-form-col">
           <Select
             allowClear
             options={(Object.keys(REPAYMENT_METHOD_LABELS) as RepaymentMethod[]).map((k) => ({
@@ -245,22 +246,22 @@ export function LoanDetailDrawer({
             }))}
           />
         </Form.Item>
-        <Form.Item name="status" label="状态" className="fs-loan-form-col">
-          <Select options={[{ value: 'ACTIVE', label: '在贷' }, { value: 'CLOSED', label: '已结清' }]} />
+        <Form.Item name="status" label={loanFormCopy.status} className="fs-loan-form-col">
+          <Select options={[{ value: 'ACTIVE', label: loanFormCopy.active }, { value: 'CLOSED', label: loanFormCopy.closed }]} />
         </Form.Item>
       </div>
-      <Form.Item name="notes" label="备注">
-        <Input.TextArea rows={2} placeholder="到期说明、放款卡核对等" />
+      <Form.Item name="notes" label={loanFormCopy.notes}>
+        <Input.TextArea rows={2} placeholder={loanFormCopy.notesPlaceholder} />
       </Form.Item>
       <Button type="primary" block loading={saveLoading} onClick={saveLoan}>
-        {isCreate ? '添加贷款' : '保存修改'}
+        {isCreate ? loanFormCopy.saveCreate : loanFormCopy.saveEdit}
       </Button>
     </Form>
   )
 
   return (
     <Drawer
-      title={isCreate ? '添加贷款' : undefined}
+      title={isCreate ? loanFormCopy.createTitle : undefined}
       width={Math.min(920, typeof window !== 'undefined' ? Math.floor(window.innerWidth * 0.92) : 920)}
       open={open}
       onClose={onClose}
@@ -279,12 +280,12 @@ export function LoanDetailDrawer({
           onChange={(k) => setTab(k as 'detail' | 'links')}
           className="fs-loan-detail-tabs"
           items={[
-            { key: 'detail', label: '详情', children: detailForm },
+            { key: 'detail', label: loanFormCopy.tabDetail, children: detailForm },
             {
               key: 'links',
               label: (
                 <span>
-                  关联交易
+                  {loanFormCopy.tabLinks}
                   {(openLoan?.linkCount ?? 0) > 0 && (
                     <span className="fs-loan-tab-badge">{openLoan?.linkCount}</span>
                   )}

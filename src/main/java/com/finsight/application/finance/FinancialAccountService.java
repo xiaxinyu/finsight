@@ -19,13 +19,16 @@ public class FinancialAccountService {
     private final BankCardService bankCardService;
     private final UserScopedFinancialQueries scopedFinancialQueries;
     private final LedgerUserScope ledgerUserScope;
+    private final AccountBalanceSnapshotService snapshotService;
 
     public FinancialAccountService(BankCardService bankCardService,
                                    UserScopedFinancialQueries scopedFinancialQueries,
-                                   LedgerUserScope ledgerUserScope) {
+                                   LedgerUserScope ledgerUserScope,
+                                   AccountBalanceSnapshotService snapshotService) {
         this.bankCardService = bankCardService;
         this.scopedFinancialQueries = scopedFinancialQueries;
         this.ledgerUserScope = ledgerUserScope;
+        this.snapshotService = snapshotService;
     }
 
     public List<Map<String, Object>> listAccounts() {
@@ -51,6 +54,9 @@ public class FinancialAccountService {
     }
 
     public Map<String, Object> recordSnapshot(String bankCardId, Date date, BigDecimal balance, String source) {
+        if ("manual".equalsIgnoreCase(source)) {
+            return snapshotService.recordManual(bankCardId, date, balance);
+        }
         Map<String, Object> snap = new LinkedHashMap<>();
         snap.put("accountId", bankCardId);
         snap.put("snapshotDate", date);

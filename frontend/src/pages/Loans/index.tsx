@@ -16,8 +16,9 @@ import { formatMoney } from '../../utils/format'
 import { LoanDetailDrawer } from './LoanDetailDrawer'
 import {
   bankAccent, bankInitial, formatDate, formatInstallmentProgress, formatRate, isActiveLoan,
-  linkedRepaymentTotal, payoffPct, repaymentLabel,
+  linkedRepaymentTotal, payoffPct, principalProgressRepaid, repaymentLabel,
 } from './loanDisplay'
+import { loanCopy } from './loanLabels'
 
 type DrawerState = {
   loan: LoanRow | null
@@ -63,10 +64,10 @@ export function LoansPage() {
     if (!loan.id) return
     try {
       await deleteLoan(loan.id)
-      message.success('已删除')
+      message.success(loanCopy.deleted)
       reload()
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '删除失败')
+      message.error(e instanceof Error ? e.message : loanCopy.deleteFailed)
     }
   }
 
@@ -87,7 +88,7 @@ export function LoansPage() {
     {
       key: 'edit',
       icon: <EditOutlined />,
-      label: '编辑详情',
+      label: loanCopy.editDetails,
       onClick: () => openDetail(loan, 'detail'),
     },
     {
@@ -95,7 +96,7 @@ export function LoansPage() {
       icon: <LinkOutlined />,
       label: (
         <span>
-          关联交易
+          {loanCopy.linkTransactions}
           {(loan.linkCount ?? 0) > 0 && (
             <Badge count={loan.linkCount} size="small" style={{ marginLeft: 8 }} />
           )}
@@ -107,10 +108,10 @@ export function LoansPage() {
     {
       key: 'delete',
       icon: <DeleteOutlined />,
-      label: '删除',
+      label: loanCopy.delete,
       danger: true,
       onClick: () => {
-        if (window.confirm(`确定删除 ${loan.lenderName} 的贷款记录？关联流水也会解除。`)) {
+        if (window.confirm(loanCopy.deleteConfirm(loan.lenderName ?? 'this lender'))) {
           onDelete(loan)
         }
       },
@@ -119,35 +120,35 @@ export function LoansPage() {
 
   return (
     <DataPageLayout
-      title="贷款"
-      subtitle="管理各银行贷款 · 追踪利率与月供 · 关联账本流水"
+      title={loanCopy.pageTitle}
+      subtitle={loanCopy.pageSubtitle}
       icon={<BankOutlined />}
       className="fs-data-page--loans"
       actions={(
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          添加贷款
+          {loanCopy.addLoan}
         </Button>
       )}
     >
       {isError && (
         <Typography.Paragraph type="danger">
-          {error instanceof Error ? error.message : '加载失败'}
+          {error instanceof Error ? error.message : loanCopy.loadFailed}
         </Typography.Paragraph>
       )}
 
       {summary && (
         <div className="fs-loans-hero">
           <ContentCard className="fs-loans-hero-card fs-loans-hero-card--primary">
-            <div className="fs-loans-hero-card__label">总剩余本金</div>
+            <div className="fs-loans-hero-card__label">{loanCopy.totalOutstanding}</div>
             <div className="fs-loans-hero-card__value">{formatMoney(summary.totalOutstanding ?? 0)}</div>
-            <div className="fs-loans-hero-card__hint">{summary.loanCount ?? 0} 笔在贷</div>
+            <div className="fs-loans-hero-card__hint">{loanCopy.activeLoans(summary.loanCount ?? 0)}</div>
           </ContentCard>
           <ContentCard className="fs-loans-hero-card">
-            <div className="fs-loans-hero-card__label">月供合计</div>
+            <div className="fs-loans-hero-card__label">{loanCopy.totalMonthly}</div>
             <div className="fs-loans-hero-card__value">{formatMoney(summary.totalMonthlyPayment ?? 0)}</div>
           </ContentCard>
           <ContentCard className="fs-loans-hero-card fs-loans-hero-card--rate">
-            <div className="fs-loans-hero-card__label">加权平均利率</div>
+            <div className="fs-loans-hero-card__label">{loanCopy.weightedAvgRate}</div>
             <div className="fs-loans-hero-card__value fs-loans-hero-card__value--rate">
               {formatRate(summary.weightedAvgRatePct)}
             </div>
@@ -160,9 +161,9 @@ export function LoansPage() {
       ) : loans.length === 0 ? (
         <ContentCard>
           <EmptyState
-            title="暂无贷款"
-            description="添加银行贷款：利率、剩余本金、月供，并指定放款到账卡。"
-            action={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>添加第一笔</Button>}
+            title={loanCopy.noLoans}
+            description={loanCopy.noLoansHint}
+            action={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>{loanCopy.addFirstLoan}</Button>}
           />
         </ContentCard>
       ) : (
@@ -176,7 +177,8 @@ export function LoansPage() {
             const repayLabel = repaymentLabel(loan.repaymentMethod)
             const totalPrincipal = loan.principalAmount ?? 0
             const remaining = loan.outstandingBalance ?? totalPrincipal
-            const repaidAmount = linkedRepaymentTotal(loan)
+            const repaidFlow = linkedRepaymentTotal(loan)
+            const principalRepaid = principalProgressRepaid(loan)
             const installmentText = formatInstallmentProgress(loan)
 
             return (
@@ -204,35 +206,39 @@ export function LoansPage() {
                     <div className="fs-loan-card-head-right" onClick={(e) => e.stopPropagation()}>
                       <span className="fs-loan-card-rate">{formatRate(ratePct)}</span>
                       <Dropdown menu={{ items: menuItems(loan) }} trigger={['click']}>
-                        <Button type="text" size="small" icon={<MoreOutlined />} aria-label="操作" />
+                        <Button type="text" size="small" icon={<MoreOutlined />} aria-label={loanCopy.actions} />
                       </Dropdown>
                     </div>
                   </div>
 
                   <div className="fs-loan-card-stats">
                     <div className="fs-loan-card-stat">
-                      <span className="fs-loan-card-stat-label">总贷款</span>
+                      <span className="fs-loan-card-stat-label">{loanCopy.totalPrincipal}</span>
                       <span className="fs-loan-card-stat-value">{formatMoney(totalPrincipal)}</span>
                     </div>
                     <div className="fs-loan-card-stat fs-loan-card-stat--primary">
-                      <span className="fs-loan-card-stat-label">剩余</span>
+                      <span className="fs-loan-card-stat-label">{loanCopy.remaining}</span>
                       <span className="fs-loan-card-stat-value">{formatMoney(remaining)}</span>
                     </div>
                     <div className="fs-loan-card-stat">
-                      <span className="fs-loan-card-stat-label">已还金额</span>
+                      <span className="fs-loan-card-stat-label">{loanCopy.principalProgress}</span>
                       <span className="fs-loan-card-stat-value fs-loan-card-stat-value--paid">
-                        {formatMoney(repaidAmount)}
+                        {formatMoney(principalRepaid)}
                       </span>
+                    </div>
+                    <div className="fs-loan-card-stat">
+                      <span className="fs-loan-card-stat-label">{loanCopy.linkedRepayments}</span>
+                      <span className="fs-loan-card-stat-value">{formatMoney(repaidFlow)}</span>
                       {(loan.linkedRepaymentCount ?? 0) > 0 && (
                         <span className="fs-loan-card-stat-hint">
-                          来自 {loan.linkedRepaymentCount} 笔关联还款
+                          {loanCopy.linkedRepaymentHint(loan.linkedRepaymentCount ?? 0)}
                         </span>
                       )}
                     </div>
                     <div className="fs-loan-card-stat">
-                      <span className="fs-loan-card-stat-label">已还期数</span>
+                      <span className="fs-loan-card-stat-label">{loanCopy.installments}</span>
                       <span className="fs-loan-card-stat-value">{installmentText}</span>
-                      <span className="fs-loan-card-stat-hint">单笔 &gt; ¥100 计 1 期</span>
+                      <span className="fs-loan-card-stat-hint">{loanCopy.installmentHint}</span>
                     </div>
                   </div>
 
@@ -252,31 +258,31 @@ export function LoansPage() {
 
                   <div className="fs-loan-card-meta">
                     {loan.monthlyPayment != null && (
-                      <span>月供 {formatMoney(loan.monthlyPayment)}</span>
+                      <span>{loanCopy.monthly} {formatMoney(loan.monthlyPayment)}</span>
                     )}
                     {repayLabel && <Tag className="fs-loan-card-tag">{repayLabel}</Tag>}
-                    {loan.maturityDate && <span>到期 {formatDate(loan.maturityDate)}</span>}
-                    {!active && <Tag>已结清</Tag>}
+                    {loan.maturityDate && <span>{loanCopy.maturity} {formatDate(loan.maturityDate)}</span>}
+                    {!active && <Tag>{loanCopy.closed}</Tag>}
                   </div>
 
                   <div className="fs-loan-card-foot">
-                    <Tooltip title={loan.disbursementCardLabel || '未设置放款卡'}>
+                    <Tooltip title={loan.disbursementCardLabel || 'Disbursement card not set'}>
                       <span className="fs-loan-card-card-label">
-                        放款卡 · {loan.disbursementCardLabel || '—'}
+                        {loanCopy.disbursementCard} · {loan.disbursementCardLabel || '—'}
                       </span>
                     </Tooltip>
                     <div className="fs-loan-card-actions" onClick={(e) => e.stopPropagation()}>
-                      <Tooltip title="关联交易">
+                      <Tooltip title={loanCopy.linkTransactions}>
                         <Button
                           type="text"
                           size="small"
                           icon={<LinkOutlined />}
                           onClick={() => openDetail(loan, 'links')}
                         >
-                          {(loan.linkCount ?? 0) > 0 ? loan.linkCount : '关联'}
+                          {(loan.linkCount ?? 0) > 0 ? loan.linkCount : loanCopy.link}
                         </Button>
                       </Tooltip>
-                      <Tooltip title="编辑">
+                      <Tooltip title={loanCopy.edit}>
                         <Button
                           type="text"
                           size="small"

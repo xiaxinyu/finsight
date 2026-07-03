@@ -1,7 +1,9 @@
 package com.finsight.application.finance;
 
+import com.finsight.application.analytics.MetricGateService;
 import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.classification.ConfigVersionService;
+import com.finsight.application.config.FinsightFeatureProperties;
 import com.finsight.infrastructure.mapper.DataQualityMapper;
 import org.springframework.stereotype.Service;
 
@@ -15,15 +17,21 @@ public class DataQualityService {
     private final DataQualityMapper dataQualityMapper;
     private final ConfigVersionService configVersionService;
     private final LedgerUserScope ledgerUserScope;
+    private final MetricGateService metricGateService;
+    private final FinsightFeatureProperties features;
 
     public DataQualityService(UserScopedFinancialQueries scopedFinancialQueries,
                               DataQualityMapper dataQualityMapper,
                               ConfigVersionService configVersionService,
-                              LedgerUserScope ledgerUserScope) {
+                              LedgerUserScope ledgerUserScope,
+                              MetricGateService metricGateService,
+                              FinsightFeatureProperties features) {
         this.scopedFinancialQueries = scopedFinancialQueries;
         this.dataQualityMapper = dataQualityMapper;
         this.configVersionService = configVersionService;
         this.ledgerUserScope = ledgerUserScope;
+        this.metricGateService = metricGateService;
+        this.features = features;
     }
 
     public Map<String, Object> summary() {
@@ -43,6 +51,18 @@ public class DataQualityService {
         Map<String, Object> strip = summary();
         strip.put("metricsSource", metricsSource == null ? "fin_metric_monthly" : metricsSource);
         strip.put("confidence", confidenceLevel(strip));
+        strip.put("reconcileGateEnabled", features.getMetrics().isReconcileGate());
+        if (features.getMetrics().isReconcileGate()) {
+            try {
+                strip.put("metricsGate", metricGateService.status(3));
+            } catch (Exception e) {
+                Map<String, Object> gate = new LinkedHashMap<>();
+                gate.put("gateEnabled", true);
+                gate.put("ok", false);
+                gate.put("warning", "Metrics reconcile check failed: " + e.getMessage());
+                strip.put("metricsGate", gate);
+            }
+        }
         return strip;
     }
 

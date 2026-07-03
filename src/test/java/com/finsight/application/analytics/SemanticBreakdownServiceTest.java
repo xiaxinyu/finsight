@@ -1,6 +1,6 @@
 package com.finsight.application.analytics;
 
-import com.finsight.application.authentication.AuthenticationFacade;
+import com.finsight.application.authentication.LedgerUserScope;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,14 +20,14 @@ class SemanticBreakdownServiceTest {
     @Mock
     private SemanticBreakdownRepository breakdownRepository;
     @Mock
-    private AuthenticationFacade authenticationFacade;
+    private LedgerUserScope ledgerUserScope;
 
     @InjectMocks
     private SemanticBreakdownService semanticBreakdownService;
 
     @Test
     void expenseBreakdown_groupsFixedAndVariableShares() {
-        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(ledgerUserScope.resolve()).thenReturn("alice");
         when(breakdownRepository.bySemanticTag(any())).thenReturn(List.of(
                 new SemanticBreakdownRepository.TagAmountRow("dining_spending", 3000),
                 new SemanticBreakdownRepository.TagAmountRow("fixed_housing", 5000),
@@ -55,7 +55,7 @@ class SemanticBreakdownServiceTest {
 
     @Test
     void expenseBreakdown_countsOtherTagAsVariable() {
-        when(authenticationFacade.getUserName()).thenReturn("alice");
+        when(ledgerUserScope.resolve()).thenReturn("alice");
         when(breakdownRepository.bySemanticTag(any())).thenReturn(List.of(
                 new SemanticBreakdownRepository.TagAmountRow("other", 1000),
                 new SemanticBreakdownRepository.TagAmountRow("fixed_housing", 3000)));

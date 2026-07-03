@@ -37,6 +37,8 @@ export type LoanRow = {
   linkedRepaymentCount?: number
   /** Auto: sum of qualifying linked REPAYMENT amounts. */
   linkedRepaymentAmount?: number
+  /** Auto: sum of qualifying linked INTEREST amounts. */
+  linkedInterestAmount?: number
   status?: LoanStatus
   notes?: string
   sortOrder?: number
@@ -74,11 +76,11 @@ export type LoanWritePayload = {
 }
 
 export const REPAYMENT_METHOD_LABELS: Record<RepaymentMethod, string> = {
-  EQUAL_INSTALLMENT: '等额本息',
-  EQUAL_PRINCIPAL: '等额本金',
-  INTEREST_FIRST: '先息后本',
-  BULLET: '到期还本',
-  OTHER: '其他',
+  EQUAL_INSTALLMENT: 'Equal installment',
+  EQUAL_PRINCIPAL: 'Equal principal',
+  INTEREST_FIRST: 'Interest first',
+  BULLET: 'Bullet',
+  OTHER: 'Other',
 }
 
 export async function fetchLoans() {
@@ -113,10 +115,10 @@ export type LoanTxnLinkRow = {
 }
 
 export const LOAN_LINK_TYPE_LABELS: Record<LoanLinkType, string> = {
-  DISBURSEMENT: '放款',
-  REPAYMENT: '还款',
-  INTEREST: '付息',
-  OTHER: '其他',
+  DISBURSEMENT: 'Disbursement',
+  REPAYMENT: 'Repayment',
+  INTEREST: 'Interest',
+  OTHER: 'Other',
 }
 
 export async function fetchLoanLinks(loanId: string) {

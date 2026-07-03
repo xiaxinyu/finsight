@@ -1,7 +1,9 @@
 package com.finsight.application.finance;
 
+import com.finsight.application.analytics.MetricGateService;
 import com.finsight.application.authentication.LedgerUserScope;
 import com.finsight.application.classification.ConfigVersionService;
+import com.finsight.application.config.FinsightFeatureProperties;
 import com.finsight.infrastructure.mapper.DataQualityMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +27,23 @@ class DataQualityServiceTest {
     private ConfigVersionService configVersionService;
     @Mock
     private LedgerUserScope ledgerUserScope;
+    @Mock
+    private MetricGateService metricGateService;
+    @Mock
+    private FinsightFeatureProperties features;
+    @Mock
+    private FinsightFeatureProperties.Metrics metricsProps;
 
     private DataQualityService service;
 
     @BeforeEach
     void setUp() {
         when(ledgerUserScope.resolve()).thenReturn("xiaxinyu");
-        service = new DataQualityService(scopedFinancialQueries, dataQualityMapper, configVersionService, ledgerUserScope);
+        when(features.getMetrics()).thenReturn(metricsProps);
+        when(metricsProps.isReconcileGate()).thenReturn(false);
+        service = new DataQualityService(
+                scopedFinancialQueries, dataQualityMapper, configVersionService,
+                ledgerUserScope, metricGateService, features);
     }
 
     @Test

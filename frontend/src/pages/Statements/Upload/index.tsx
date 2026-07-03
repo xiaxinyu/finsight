@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useViewportTableHeight } from '../../../hooks/useViewportTableHeight'
 import { EmptyState } from '../../../components/EmptyState'
-import { Alert, Button, message, Result, Segmented, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
+import { Alert, Button, message, Segmented, Select, Space, Steps, Table, Tag, Tooltip, Upload } from 'antd'
 import { CheckCircleOutlined, CloudUploadOutlined, EyeOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   commitStatement, previewStatement, skippedStatementLines, uploadStatement,
@@ -12,6 +12,7 @@ import {
 import { listBankCards, type BankCardRow } from '../../../api/transaction'
 import { DataPageLayout } from '../../../components/DataPageLayout'
 import { MoneyText } from '../../../components/MoneyText'
+import { ImportQualityGate } from '../../../components/ImportQualityGate'
 import { TransactionSummaryBar } from '../../../components/TransactionSummaryBar'
 import { cellText, formatTableDate } from '../../../utils/cell'
 import { formatNumber } from '../../../utils/format'
@@ -141,6 +142,7 @@ export function StatementUploadPage() {
   const [bankCardId, setBankCardId] = useState('')
   const [boundCardName, setBoundCardName] = useState('')
   const [commitResult, setCommitResult] = useState<StatementCommitResult | null>(null)
+  const [commitQuality, setCommitQuality] = useState<{ unclassified: number; possibleDuplicate: number } | null>(null)
   const [committedCardId, setCommittedCardId] = useState('')
 
   const { data: bankCards = [] } = useQuery({
@@ -260,6 +262,10 @@ export function StatementUploadPage() {
     }
     setLoading(true)
     try {
+      setCommitQuality({
+        unclassified: preview.filter((r) => !r.consumeName?.trim()).length,
+        possibleDuplicate: preview.filter((r) => r.possibleDuplicate).length,
+      })
       const result = await commitStatement(statementId)
       setCommitResult(result)
       const dupNote = result.skippedDuplicates ? ` · ${result.skippedDuplicates} already in ledger (skipped)` : ''
@@ -284,6 +290,7 @@ export function StatementUploadPage() {
     setStatementId('')
     setUploadMeta(null)
     setCommitResult(null)
+    setCommitQuality(null)
     setPreviewView('parsed')
     setBoundCardName('')
     setCommittedCardId('')
@@ -547,25 +554,24 @@ export function StatementUploadPage() {
 
       {step === 2 && (
         <div className="fs-import-panel">
-          <Result
-            status="success"
-            title="Statement committed"
-            subTitle={
-              commitResult
-                ? `${commitResult.imported} transaction${commitResult.imported === 1 ? '' : 's'} imported`
-                  + (commitResult.skippedDuplicates ? ` · ${commitResult.skippedDuplicates} already in ledger (skipped)` : '')
-                : 'Import complete.'
-            }
-            extra={[
-              <Link
-                key="view-tx"
-                to={committedCardId ? `/transactions?cardId=${encodeURIComponent(committedCardId)}` : '/transactions'}
-              >
-                <Button type="primary">View in Transactions</Button>
-              </Link>,
-              <Button key="again" onClick={reset}>Import another</Button>,
-            ]}
-          />
+          {commitResult && commitQuality && (
+            <ImportQualityGate
+              imported={commitResult.imported}
+              skippedDuplicates={commitResult.skippedDuplicates}
+              unclassifiedCount={commitQuality.unclassified}
+              possibleDuplicateCount={commitQuality.possibleDuplicate}
+              cardId={committedCardId}
+              cardLabel={boundCardName || undefined}
+            />
+          )}
+          <div className="fs-import-commit-actions">
+            <Link
+              to={committedCardId ? `/transactions?cardId=${encodeURIComponent(committedCardId)}` : '/transactions'}
+            >
+              <Button type="primary">View in Transactions</Button>
+            </Link>
+            <Button onClick={reset}>Import another</Button>
+          </div>
         </div>
       )}
     </DataPageLayout>

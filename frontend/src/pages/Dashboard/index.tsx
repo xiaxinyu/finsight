@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import dayjs from 'dayjs'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Alert, Col, Progress, Row, Typography } from 'antd'
@@ -10,8 +9,7 @@ import {
   LineChartOutlined,
   RiseOutlined,
 } from '@ant-design/icons'
-import { homeSummary } from '../../api/report'
-import { cashflowMetrics, decisionCards, financialPulse } from '../../api/finance'
+import { cashflowMetrics, decisionCards, financialPulse, wealthSnapshot } from '../../api/finance'
 import { advisorFeedback, advisorRecommendations, fetchMetricPeriodSummary, fetchSemanticBreakdown } from '../../api/analytics'
 import type { AdvisorCard } from '../../api/analytics'
 import { FsChart } from '../../components/FsChart'
@@ -58,12 +56,7 @@ export function DashboardPage() {
   const periodKey = periodToStrings(period)
   const chartHeight = Math.min(useViewportTableHeight(280), 360)
 
-  const { data: summary, isLoading, isError, error } = useQuery({
-    queryKey: ['home-summary', periodKey.start, periodKey.end],
-    queryFn: () => homeSummary(dayjs().year(), periodKey.start ? periodKey : undefined),
-  })
-
-  const { data: semanticPeriod, isFetching: semanticLoading } = useQuery({
+  const { data: semanticPeriod, isLoading: semanticLoading, isError: semanticError, error: semanticErr } = useQuery({
     queryKey: ['dash-semantic', periodKey.start, periodKey.end],
     queryFn: () => fetchMetricPeriodSummary(periodKey.start || undefined, periodKey.end || undefined),
     staleTime: ANALYTICS_STALE_MS,
@@ -93,6 +86,12 @@ export function DashboardPage() {
     }
   }, [semanticBreakdown])
 
+  const { data: wealth } = useQuery({
+    queryKey: ['wealth'],
+    queryFn: wealthSnapshot,
+    staleTime: ANALYTICS_STALE_MS,
+  })
+
   const { data: pulse, isError: pulseError, error: pulseErr } = useQuery({
     queryKey: ['financial-pulse'],
     queryFn: financialPulse,
@@ -117,7 +116,7 @@ export function DashboardPage() {
   const expense = periodTotals.consumptionExpense
   const net = periodTotals.net
   const savingsLabel = savingsRateLabel(income, net)
-  const healthScore = (summary?.health_score || summary?.healthScore) as Record<string, number> | undefined
+  const healthScore = (wealth?.healthScore ?? wealth?.health_score) as Record<string, number> | undefined
 
   const dq = pulse?.dataQuality
   const unclassified = dq?.unclassifiedCount ?? 0
@@ -157,8 +156,8 @@ export function DashboardPage() {
     }
   }, [period, periodTotals.months])
 
-  const loadError = isError ? error : pulseError ? pulseErr : cardsError ? cardsErr : null
-  const loading = isLoading || semanticLoading || breakdownLoading
+  const loadError = semanticError ? semanticErr : pulseError ? pulseErr : cardsError ? cardsErr : null
+  const loading = semanticLoading || breakdownLoading
   const periodLabel = formatPeriodPreview(period[0], period[1])
   const needsOnboarding = income === 0 && expense === 0 && Number(pulse?.liquidAssets || 0) === 0
 
@@ -240,7 +239,7 @@ export function DashboardPage() {
           )}
         />
       )}
-      {loading && !summary ? (
+      {loading && !semanticPeriod ? (
         <PageSkeleton />
       ) : (
          <>

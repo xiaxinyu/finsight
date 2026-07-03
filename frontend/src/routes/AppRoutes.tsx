@@ -6,6 +6,8 @@ import { TransactionsPage } from '../pages/Transactions'
 import { StatementUploadPage } from '../pages/Statements/Upload'
 import { StatementListPage } from '../pages/Statements'
 import { ReportRoute } from './ReportRoute'
+import { ReportsIndexPage } from '../pages/Reports/ReportsIndexPage'
+import { NotFoundPage } from '../pages/NotFound'
 import { LedgersPage } from '../pages/Ledgers'
 import { PlanningPage } from '../pages/Planning'
 import { WealthPage } from '../pages/Wealth'
@@ -34,6 +36,7 @@ export function AppRoutes() {
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/statements/upload" element={<StatementUploadPage />} />
         <Route path="/statements" element={<StatementListPage />} />
+        <Route path="/reports" element={<ReportsIndexPage />} />
         <Route path="/reports/:reportId" element={<ReportRoute />} />
         <Route path="/ledgers/loans" element={<LoansPage />} />
         <Route path="/ledgers/:ledgerId" element={<LedgersPage />} />
@@ -45,7 +48,7 @@ export function AppRoutes() {
           <Route path="/admin/categories" element={<CategoriesAdminPage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

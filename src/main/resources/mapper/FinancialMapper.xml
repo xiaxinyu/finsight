@@ -112,18 +112,32 @@
 
     <sql id="latestBalancePerCardSubquery">
         select bank_card_id, balance from (
-            select t.bank_card_id,
-                   round(coalesce(t.account_balance, 0), 2) as balance,
+            select bank_card_id, balance,
                    row_number() over (
-                       partition by t.bank_card_id
-                       order by t.transaction_date desc, t.id desc
+                       partition by bank_card_id
+                       order by as_of_date desc, src_prio desc, tie_break desc
                    ) as rn
-            from transaction t
-            where t.account_balance is not null
-              and t.bank_card_id is not null
-              and length(trim(t.bank_card_id)) &gt; 0
-              <include refid="activeTransaction"/>
-              <include refid="filterOwnerParamT"/>
+            from (
+                select s.card_id as bank_card_id,
+                       round(s.balance, 2) as balance,
+                       s.snapshot_date as as_of_date,
+                       2 as src_prio,
+                       0 as tie_break
+                from fin_account_balance_snapshot s
+                where s.user_id = #{ownerUserId,jdbcType=VARCHAR}
+                union all
+                select t.bank_card_id,
+                       round(coalesce(t.account_balance, 0), 2) as balance,
+                       t.transaction_date as as_of_date,
+                       1 as src_prio,
+                       t.id as tie_break
+                from transaction t
+                where t.account_balance is not null
+                  and t.bank_card_id is not null
+                  and length(trim(t.bank_card_id)) &gt; 0
+                  <include refid="activeTransaction"/>
+                  <include refid="filterOwnerParamT"/>
+            ) combined
         ) ranked
         where rn = 1
     </sql>

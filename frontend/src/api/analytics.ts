@@ -258,6 +258,7 @@ export type CashRiskCalendarResponse = {
     riskLevel: string
     events: { type: string; label: string; amount: number }[]
   }[]
+  incomePayDays?: number[]
 }
 
 export async function fetchCashRiskCalendar(year: number, scenario = 'stress') {

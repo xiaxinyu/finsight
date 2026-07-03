@@ -2,6 +2,7 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.finance.BillService;
 import com.finsight.application.finance.FinancialGoalService;
+import com.finsight.application.finance.UserFinancePreferencesService;
 import com.finsight.domain.model.Bill;
 import com.finsight.domain.model.FinancialGoal;
 import org.junit.jupiter.api.Test;
@@ -32,11 +33,15 @@ class CashRiskCalendarServiceTest {
     @Mock
     private FinancialGoalService goalService;
 
+    @Mock
+    private UserFinancePreferencesService financePreferencesService;
+
     @InjectMocks
     private CashRiskCalendarService service;
 
     @Test
     void calendarIncludesBillIncomeAndGoalEvents() throws Exception {
+        when(financePreferencesService.incomePayDays()).thenReturn(new int[] {5, 20});
         when(forecastService.forecast(anyInt(), anyString())).thenReturn(Map.of(
                 "months", List.of(Map.of(
                         "yearMonth", "2026-03",

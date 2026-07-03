@@ -228,7 +228,17 @@ export function ReportsPage() {
   if (!cfg) {
     return (
       <DataPageLayout title="Report not found" icon={<BarChartOutlined />}>
-        <EmptyState title="Report not found" description="Choose a report from the sidebar." />
+        <EmptyState
+          title="Report not found"
+          description="This report id is not configured. Browse all reports or import data to get started."
+          action={(
+            <>
+              <Link to="/reports"><Button type="primary">All reports</Button></Link>
+              <Link to="/statements/upload"><Button style={{ marginLeft: 8 }}>Import statement</Button></Link>
+              <Link to="/transactions?emptyConsume=1"><Button style={{ marginLeft: 8 }}>Review unclassified</Button></Link>
+            </>
+          )}
+        />
       </DataPageLayout>
     )
   }

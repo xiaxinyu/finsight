@@ -69,6 +69,12 @@
         where id = #{bill.id}
     </update>
 
+    <update id="softDeleteBill">
+        update fin_bill
+        set deleted = 1, enabled = 0, updated_at = now(3)
+        where id = #{billId} and user_id = #{userId} and coalesce(deleted, 0) = 0
+    </update>
+
     <select id="countBillsForUser" resultType="int">
         select count(*) from fin_bill where user_id = #{userId} and coalesce(deleted,0)=0
     </select>

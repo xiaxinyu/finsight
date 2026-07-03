@@ -24,6 +24,9 @@ public class PlanningPreferencesStore {
     private final Map<String, List<BudgetLine>> budgetLines = new ConcurrentHashMap<>();
     private final Map<String, List<Bill>> bills = new ConcurrentHashMap<>();
     private final Map<String, List<FinancialGoal>> goals = new ConcurrentHashMap<>();
+    private final Map<String, int[]> incomePayDays = new ConcurrentHashMap<>();
+
+    private static final int[] DEFAULT_INCOME_PAY_DAYS = {5, 20};
 
     public PlanningPreferencesStore(AuthenticationFacade authenticationFacade) {
         this.authenticationFacade = authenticationFacade;
@@ -90,6 +93,19 @@ public class PlanningPreferencesStore {
         return bill;
     }
 
+    public void deleteBill(String billId) {
+        List<Bill> list = bills.computeIfAbsent(userKey(), k -> new ArrayList<>());
+        for (int i = 0; i < list.size(); i++) {
+            if (billId.equals(list.get(i).getId())) {
+                Bill b = list.get(i);
+                b.setDeleted(1);
+                b.setEnabled(0);
+                list.set(i, b);
+                return;
+            }
+        }
+    }
+
     public List<FinancialGoal> goals() {
         return goals.computeIfAbsent(userKey(), k -> new ArrayList<>()).stream()
                 .filter(g -> g.getDeleted() == null || g.getDeleted() == 0)
@@ -114,6 +130,35 @@ public class PlanningPreferencesStore {
         }
         list.add(goal);
         return goal;
+    }
+
+    public int[] getIncomePayDays() {
+        return incomePayDays.getOrDefault(userKey(), DEFAULT_INCOME_PAY_DAYS).clone();
+    }
+
+    public java.util.List<Integer> setIncomePayDays(java.util.List<Integer> days) {
+        if (days == null || days.isEmpty()) {
+            throw new IllegalArgumentException("At least one pay day is required");
+        }
+        if (days.size() > 4) {
+            throw new IllegalArgumentException("At most 4 pay days allowed");
+        }
+        int[] normalized = days.stream()
+                .filter(d -> d != null)
+                .mapToInt(Integer::intValue)
+                .distinct()
+                .sorted()
+                .peek(d -> {
+                    if (d < 1 || d > 28) {
+                        throw new IllegalArgumentException("Pay day must be between 1 and 28");
+                    }
+                })
+                .toArray();
+        if (normalized.length == 0) {
+            throw new IllegalArgumentException("At least one valid pay day is required");
+        }
+        incomePayDays.put(userKey(), normalized);
+        return java.util.Arrays.stream(normalized).boxed().toList();
     }
 
     private String userKey() {

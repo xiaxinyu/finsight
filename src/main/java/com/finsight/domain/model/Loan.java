@@ -43,4 +43,6 @@ public class Loan extends AuditableEntity {
     private Integer linkedRepaymentCount;
     /** Enriched: sum of qualifying linked REPAYMENT transaction amounts. */
     private BigDecimal linkedRepaymentAmount;
+    /** Enriched: sum of qualifying linked INTEREST transaction amounts. */
+    private BigDecimal linkedInterestAmount;
 }

@@ -10,7 +10,7 @@ Runtime toggles under `finsight.*` in `application.yml`. The SPA reads effective
 | `finsight.profile.enabled` | `true` | Profile analytics API returns **404**; Profile menu hidden. |
 | `finsight.forecast.enabled` | `true` | Forecast/trends/scenarios/cash-risk APIs return **404**; related reports hidden. |
 | `finsight.merchant-mining.enabled` | `true` | Merchant mining APIs return **404**. |
-| `finsight.metrics.reconcile-gate` | `false` | When `true`, read paths show degraded-metrics warning instead of inline report SQL recalculation. |
+| `finsight.metrics.reconcile-gate` | `false` | When `true`, read paths verify `fin_metric_monthly` matches legacy report SQL; mismatches surface in **Reports → data quality bar** and `/api/v1/data-quality` (`metricsGate`). Forecast/Profile block inline SQL fallback. |
 | `finsight.analytics.profile-cache-ttl-seconds` | `600` | In-process TTL for GET `/analytics/profile` (10 min). |
 | `finsight.analytics.advisor-cache-ttl-seconds` | `600` | TTL for GET `/advisor/recommendations`. |
 | `finsight.analytics.forecast-cache-ttl-seconds` | `600` | TTL for forecast preview GET paths. |

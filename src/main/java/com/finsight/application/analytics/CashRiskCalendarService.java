@@ -2,6 +2,7 @@ package com.finsight.application.analytics;
 
 import com.finsight.application.finance.BillService;
 import com.finsight.application.finance.FinancialGoalService;
+import com.finsight.application.finance.UserFinancePreferencesService;
 import com.finsight.domain.model.Bill;
 import com.finsight.domain.model.FinancialGoal;
 import org.springframework.stereotype.Service;
@@ -22,18 +23,21 @@ import java.util.TreeSet;
 public class CashRiskCalendarService {
 
     private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
-    private static final int[] INCOME_PAY_DAYS = {5, 20};
+    private static final int[] DEFAULT_INCOME_PAY_DAYS = {5, 20};
 
     private final ForecastService forecastService;
     private final BillService billService;
     private final FinancialGoalService goalService;
+    private final UserFinancePreferencesService financePreferencesService;
 
     public CashRiskCalendarService(ForecastService forecastService,
                                    BillService billService,
-                                   FinancialGoalService goalService) {
+                                   FinancialGoalService goalService,
+                                   UserFinancePreferencesService financePreferencesService) {
         this.forecastService = forecastService;
         this.billService = billService;
         this.goalService = goalService;
+        this.financePreferencesService = financePreferencesService;
     }
 
     public Map<String, Object> calendar(int year, String scenario) throws Exception {
@@ -92,7 +96,18 @@ public class CashRiskCalendarService {
         out.put("days", new ArrayList<>(dayMap.values()));
         out.put("metricsGate", forecast.get("metricsGate"));
         out.put("metricsSource", forecast.get("metricsSource"));
+        int[] payDays = resolveIncomePayDays();
+        out.put("incomePayDays", java.util.Arrays.stream(payDays).boxed().toList());
         return out;
+    }
+
+    int[] resolveIncomePayDays() {
+        try {
+            int[] configured = financePreferencesService.incomePayDays();
+            return configured == null || configured.length == 0 ? DEFAULT_INCOME_PAY_DAYS : configured;
+        } catch (Exception ex) {
+            return DEFAULT_INCOME_PAY_DAYS;
+        }
     }
 
     static String riskLevelForMonth(double net, boolean deficitMonth) {
@@ -123,10 +138,11 @@ public class CashRiskCalendarService {
         if (income <= 0) {
             return;
         }
-        double half = income / INCOME_PAY_DAYS.length;
-        for (int payDay : INCOME_PAY_DAYS) {
+        int[] payDays = resolveIncomePayDays();
+        double portion = income / payDays.length;
+        for (int payDay : payDays) {
             int day = Math.min(payDay, ym.lengthOfMonth());
-            addEvent(dayMap, ym.atDay(day), "income", "Estimated income", half);
+            addEvent(dayMap, ym.atDay(day), "income", "Estimated income", portion);
         }
     }
 

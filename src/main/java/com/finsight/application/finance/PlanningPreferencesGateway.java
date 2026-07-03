@@ -110,6 +110,17 @@ public class PlanningPreferencesGateway {
         return billRepository.save(bill, userKey());
     }
 
+    public void deleteBill(String billId) {
+        if (billId == null || billId.isBlank()) {
+            throw new IllegalArgumentException("Bill id is required");
+        }
+        if (!features.getPlanning().isPersist()) {
+            memoryStore.deleteBill(billId);
+            return;
+        }
+        billRepository.softDelete(billId, userKey());
+    }
+
     public List<FinancialGoal> goals() {
         if (!features.getPlanning().isPersist()) {
             return memoryStore.goals();

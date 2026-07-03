@@ -1,4 +1,4 @@
-import { getJson, postJson } from './client'
+import { getJson, postJson, deleteReq, putJson } from './client'
 import { normalizeResult } from './normalize'
 
 async function unwrap<T>(raw: unknown): Promise<T> {
@@ -26,7 +26,15 @@ export type PulseData = {
   }
 }
 
-export type ReportDataQuality = PulseData['dataQuality']
+export type ReportDataQuality = PulseData['dataQuality'] & {
+  metricsGate?: {
+    ok?: boolean
+    gateEnabled?: boolean
+    mismatches?: string[]
+    warning?: string
+  }
+  reconcileGateEnabled?: boolean
+}
 
 export type DecisionCard = {
   type: string
@@ -74,6 +82,10 @@ export async function listBills() {
 
 export async function saveBill(bill: Record<string, unknown>) {
   return unwrap<Record<string, unknown>>(await postJson('/api/v1/bills', bill))
+}
+
+export async function deleteBill(billId: string) {
+  return unwrap<unknown>(await deleteReq(`/api/v1/bills/${billId}`))
 }
 
 export async function billCalendar() {
@@ -135,4 +147,14 @@ export async function dataQuality() {
 export async function fetchReportDataQuality(metricsSource = 'fin_metric_monthly') {
   const q = metricsSource ? `?metricsSource=${encodeURIComponent(metricsSource)}` : ''
   return unwrap<ReportDataQuality>(await getJson(`/api/v1/data-quality${q}`))
+}
+
+export async function fetchIncomePayDays() {
+  return unwrap<{ incomePayDays: number[] }>(await getJson('/api/v1/planning/income-pay-days'))
+}
+
+export async function saveIncomePayDays(incomePayDays: number[]) {
+  return unwrap<{ incomePayDays: number[] }>(
+    await putJson('/api/v1/planning/income-pay-days', { incomePayDays }),
+  )
 }

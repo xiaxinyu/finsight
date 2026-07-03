@@ -10,5 +10,7 @@ public interface BillRepository {
 
     Bill save(Bill bill, String userId);
 
+    void softDelete(String billId, String userId);
+
     boolean hasAnyForUser(String userId);
 }

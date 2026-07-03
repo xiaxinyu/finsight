@@ -6,6 +6,7 @@ import { ArrowRightOutlined, BankOutlined, CreditCardOutlined, DownloadOutlined,
 import dayjs from 'dayjs'
 import { fetchDebtTrends } from '../../api/analytics'
 import type { CategoryYearMatrixRow, DebtTrendMover, DebtYoYCard } from '../../utils/debtTrends'
+import { EstimationMethodNote } from '../../components/EstimationMethodNote'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -353,6 +354,13 @@ export function DebtTrendsReport({ title, subtitle }: DebtTrendsReportProps) {
 
       {data && (
         <div className="fs-trend-layout">
+          <EstimationMethodNote
+            items={[
+              'Historical balance points are estimated by walking back from today\'s anchor using classified liability cash flows — not bank statement snapshots.',
+              'When loan ledger is active, outstanding debt uses fin_loan remaining principal plus credit card liabilities.',
+              'Repayment totals may include monthly-payment estimates when linked transactions are missing.',
+            ]}
+          />
           {data.compareMode === 'ytd_aligned' && (
             <Alert
               type="info"

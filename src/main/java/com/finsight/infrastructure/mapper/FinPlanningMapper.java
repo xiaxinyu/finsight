@@ -36,6 +36,8 @@ public interface FinPlanningMapper {
 
     int updateBill(@Param("bill") Bill bill);
 
+    int softDeleteBill(@Param("billId") String billId, @Param("userId") String userId);
+
     int countBillsForUser(@Param("userId") String userId);
 
     List<FinancialGoal> listGoals(@Param("userId") String userId);

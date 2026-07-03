@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { Button, Input, Modal, Popconfirm, Select, Space, Tooltip, message } from 'antd'
+import { Button, Input, Modal, Select, Space, message, Segmented } from 'antd'
 import {
-  DeleteOutlined, EditOutlined,
+  DeleteOutlined,
   SwapOutlined, ThunderboltOutlined, UnorderedListOutlined,
 } from '@ant-design/icons'
 import { createTransfer } from '../../api/finance'
-import { ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components'
+import { ProTable, type ActionType } from '@ant-design/pro-components'
 import dayjs from 'dayjs'
 import {
   deleteTransaction, expenseToIncome,
   fetchTransactionStats, incomeToExpense, listTransactions, updateTransaction,
-  type ReclassifyResult, type TransactionQuery, type TransactionRow,
+  type ReclassifyResult, type TransactionRow,
 } from '../../api/transaction'
 import {
   applyReclassification,
@@ -29,9 +29,6 @@ import { useFillTableHeight } from '../../hooks/useFillTableHeight'
 import { FilterToolbar } from '../../components/FilterToolbar'
 import { TransactionKpiStrip } from '../../components/TransactionKpiStrip'
 import { TransactionActiveFilters, type ActiveFilterChip } from '../../components/TransactionActiveFilters'
-import { TransactionLedgerCell } from '../../components/TransactionLedgerCell'
-import { TransactionAmountCell } from '../../components/TransactionAmountCell'
-import { TransactionCategoryCell } from '../../components/TransactionCategoryCell'
 import { TransactionSelectionBar } from '../../components/TransactionSelectionBar'
 import { ClassifyConfirmModal, type ClassifyEditRow } from '../../components/ClassifyConfirmModal'
 import { buildClassifyPreviewRows } from '../../utils/classifyPreview'
@@ -39,9 +36,6 @@ import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
 import { MoneyText } from '../../components/MoneyText'
 import { moneyTypeFromRow } from '../../utils/moneyType'
-import { TransactionCardCell } from '../../components/TransactionCardCell'
-import { TransactionMerchantCell } from '../../components/TransactionMerchantCell'
-import { TableHeader } from '../../components/TableHeader'
 import { formatDateMmDdYyyy } from '../../utils/format'
 import { cellText, formatTableDate } from '../../utils/cell'
 import { PeriodRangePicker } from '../../components/PeriodRangePicker'
@@ -56,63 +50,16 @@ import {
   reportingClassificationFilterSelectOptions,
 } from '../../utils/reportTaxonomy'
 import { useSemanticsCatalog } from '../../hooks/useSemanticsCatalog'
-
-type TxFilters = {
-  start: string
-  end: string
-  card: string
-  consume: string
-  keyword: string
-  unclassified: boolean
-  semanticFilter: string
-}
-
-function defaultTxFilters(): TxFilters {
-  return {
-    ...defaultPeriodStrings(),
-    card: '',
-    consume: '',
-    keyword: '',
-    unclassified: false,
-    semanticFilter: '',
-  }
-}
-
-function txFiltersDiffer(a: TxFilters, b: TxFilters): boolean {
-  return a.start !== b.start
-    || a.end !== b.end
-    || a.card !== b.card
-    || a.consume !== b.consume
-    || a.keyword.trim() !== b.keyword.trim()
-    || a.unclassified !== b.unclassified
-    || a.semanticFilter !== b.semanticFilter
-}
-
-function findTreeTitle(nodes: { title: string; value: string; children?: typeof nodes }[], value: string): string {
-  for (const n of nodes) {
-    if (n.value === value) return n.title
-    if (n.children) {
-      const t = findTreeTitle(n.children, value)
-      if (t) return t
-    }
-  }
-  return ''
-}
-
-type ClassifyPending =
-  | { mode: 'ids'; ids: string }
-  | { mode: 'unclassified'; filters: TransactionQuery }
-
-function findCardTitle(nodes: { id: string; text: string; children?: typeof nodes }[], id: string): string {
-  for (const n of nodes) {
-    if (n.id === id) return n.text
-    if (n.children) {
-      const t = findCardTitle(n.children, id)
-      if (t) return t
-    }
-  }
-  return ''
-}
+import {
+  type ClassifyPending,
+  TX_FILTER_PRESETS,
+  defaultTxFilters,
+  findCardTitle,
+  findTreeTitle,
+  txFiltersDiffer,
+  type TxFilters,
+} from './transactionFilters'
+import { useTransactionColumns } from './useTransactionColumns'
 
 export function TransactionsPage() {
   const actionRef = useRef<ActionType>(null)
@@ -390,95 +337,33 @@ export function TransactionsPage() {
 
   const selectionSummary = useMemo(() => summarizeSelection(selectedRows), [selectedRows])
 
-  const columns: ProColumns<TransactionRow>[] = useMemo(() => {
-    const base: ProColumns<TransactionRow>[] = [
-      {
-        title: <TableHeader name="Date" />,
-        dataIndex: 'transactionDate',
-        width: 84,
-        fixed: 'left',
-        sorter: true,
-        defaultSortOrder: 'descend',
-        render: (_, r) => <span className="fs-tx-date">{formatTableDate(r.transactionDate)}</span>,
-      },
-      {
-        title: <TableHeader name="Transaction" />,
-        dataIndex: 'transactionDesc',
-        className: 'fs-col-tx-desc',
-        width: 280,
-        fixed: 'left',
-        ellipsis: true,
-        render: (_, r) => <TransactionLedgerCell row={r} showTags={false} />,
-      },
-      {
-        title: <TableHeader name="Merchant" />,
-        dataIndex: 'opponentName',
-        width: 120,
-        ellipsis: true,
-        responsive: ['md'],
-        render: (_, r) => <TransactionMerchantCell row={r} />,
-      },
-      {
-        title: <TableHeader name="Category" />,
-        dataIndex: 'consumeName',
-        width: 168,
-        ellipsis: true,
-        render: (_, r) => <TransactionCategoryCell row={r} />,
-      },
-      {
-        title: <TableHeader name="Amount" unit="CNY" />,
-        dataIndex: 'editAmount',
-        width: 112,
-        align: 'right',
-        sorter: true,
-        render: (_, r) => <TransactionAmountCell row={r} pageMaxAmount={pageMaxAmount} />,
-      },
-      {
-        title: <TableHeader name="Card" />,
-        dataIndex: 'bankCode',
-        width: 108,
-        ellipsis: true,
-        editable: false,
-        sorter: true,
-        render: (_, r) => <TransactionCardCell row={r} />,
-      },
-      {
-        title: '',
-        valueType: 'option',
-        width: 64,
-        fixed: 'right',
-        className: 'fs-col-actions',
-        render: (_, record) => (
-          <div className="fs-inline-actions">
-            <Tooltip title="Edit">
-              <Button
-                type="text"
-                size="small"
-                icon={<EditOutlined />}
-                className="fs-row-action"
-                disabled={editingId != null}
-                onClick={() => startEdit(record)}
-              />
-            </Tooltip>
-            <Popconfirm
-              title="Delete this transaction?"
-              onConfirm={async () => {
-                await deleteTransaction(record.id)
-                message.success('Deleted')
-                await reload()
-              }}
-            >
-              <Tooltip title="Delete">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} className="fs-row-action"
-                  disabled={editingId != null} />
-              </Tooltip>
-            </Popconfirm>
-          </div>
-        ),
-      },
-    ]
-    return base
-  }, [editingId, startEdit, pageMaxAmount])
+  const columns = useTransactionColumns({
+    editingId,
+    pageMaxAmount,
+    startEdit,
+    reload,
+  })
+
+  const activePreset = useMemo(() => {
+    for (const preset of TX_FILTER_PRESETS) {
+      const merged = { ...defaultTxFilters(), ...preset.patch }
+      if (!txFiltersDiffer(applied, merged)) return preset.id
+    }
+    return ''
+  }, [applied])
+
+  const applyPreset = useCallback((presetId: string) => {
+    const preset = TX_FILTER_PRESETS.find((p) => p.id === presetId)
+    if (!preset) return
+    const next = { ...defaultTxFilters(), ...preset.patch }
+    patchBoth(next)
+    if (presetId === 'unclassified') {
+      syncUnclassifiedUrl(true)
+    } else {
+      syncUnclassifiedUrl(false)
+    }
+    void reload()
+  }, [patchBoth, reload, syncUnclassifiedUrl])
 
   const runBatch = async (fn: () => Promise<unknown>, okMsg: string) => {
     if (!selectedRowKeys.length) { message.warning('Select rows first'); return }
@@ -658,6 +543,13 @@ export function TransactionsPage() {
             chips={activeFilterChips}
             onClearAll={clearAllFilters}
             showClearAll={hasActiveFilters}
+          />
+          <Segmented
+            size="small"
+            className="fs-tx-filter-presets"
+            value={activePreset || undefined}
+            options={TX_FILTER_PRESETS.map((p) => ({ label: p.label, value: p.id }))}
+            onChange={(v) => applyPreset(String(v))}
           />
         </div>
       )}

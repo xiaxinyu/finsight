@@ -9,6 +9,7 @@ import com.finsight.application.card.BankCardService;
 import com.finsight.domain.model.BankCard;
 import com.finsight.common.exception.AppException;
 import com.finsight.common.exception.AppServiceException;
+import com.finsight.application.finance.AccountBalanceSnapshotService;
 import com.finsight.application.analytics.MetricRefreshTrigger;
 import com.finsight.application.transaction.ITransactionService;
 import com.finsight.application.transaction.TransactionAmountNormalizer;
@@ -61,6 +62,9 @@ public class TransactionServiceImpl implements ITransactionService {
 
     @Autowired
     IStatementService statementService;
+
+    @Autowired
+    AccountBalanceSnapshotService accountBalanceSnapshotService;
 
     @Override
     public void updateTransaction(Transaction transaction, String userName) throws AppServiceException {
@@ -332,6 +336,11 @@ public class TransactionServiceImpl implements ITransactionService {
                 log.error("Saving transaction has error: transaction={}", transaction, e);
             }
         }
+        try {
+            accountBalanceSnapshotService.recordFromTransactions(transactions, userName);
+        } catch (Exception e) {
+            log.warn("Balance snapshot capture failed after import: {}", e.getMessage());
+        }
         return success;
     }
 
@@ -354,6 +363,11 @@ public class TransactionServiceImpl implements ITransactionService {
             }
             invalidateHomeSummaryCache();
             metricRefreshTrigger.afterTransactionsChanged(dates, userName);
+            try {
+                accountBalanceSnapshotService.recordFromTransactions(transactions, userName);
+            } catch (Exception e) {
+                log.warn("Balance snapshot capture failed after strict import: {}", e.getMessage());
+            }
             return success;
         } catch (Exception e) {
             throw new AppServiceException(e);

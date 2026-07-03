@@ -20,6 +20,7 @@ import {
 import { listTransactions, type TransactionRow } from '../../api/transaction'
 import { formatMoney } from '../../utils/format'
 import { MIN_REPAYMENT_INSTALLMENT, formatDate, paidInstallmentCount } from './loanDisplay'
+import { LOAN_DATE_PRESETS, loanLinkCopy } from './loanLabels'
 
 type Props = {
   loan: LoanRow
@@ -27,13 +28,6 @@ type Props = {
 }
 
 type DatePreset = '3m' | '6m' | '1y' | 'all'
-
-const DATE_PRESETS: { label: string; value: DatePreset }[] = [
-  { label: '近3月', value: '3m' },
-  { label: '近6月', value: '6m' },
-  { label: '近1年', value: '1y' },
-  { label: '全部', value: 'all' },
-]
 
 function presetRange(preset: DatePreset): [Dayjs, Dayjs] {
   const end = dayjs()
@@ -101,12 +95,12 @@ function LinkTxnRow({
             </Tag>
           )}
           {linkRow?.linkType === 'REPAYMENT' && absAmt > 0 && absAmt <= MIN_REPAYMENT_INSTALLMENT && (
-            <Tooltip title={`金额 ≤ ¥${MIN_REPAYMENT_INSTALLMENT}，不计入已还期数`}>
-              <Tag className="fs-loan-txn-tag fs-loan-txn-tag--skip">不计期</Tag>
+            <Tooltip title={loanLinkCopy.skipInstallmentTip(MIN_REPAYMENT_INSTALLMENT)}>
+              <Tag className="fs-loan-txn-tag fs-loan-txn-tag--skip">{loanLinkCopy.skipInstallment}</Tag>
             </Tooltip>
           )}
           {linkRow?.linkType === 'REPAYMENT' && qualifiesInstallment(linkRow) && (
-            <Tag color="green" className="fs-loan-txn-tag">计 1 期</Tag>
+            <Tag color="green" className="fs-loan-txn-tag">{loanLinkCopy.countsAsInstallment}</Tag>
           )}
           <span className={`fs-loan-txn-amt ${positive ? 'fs-loan-txn-amt--in' : 'fs-loan-txn-amt--out'}`}>
             {amt == null ? '—' : formatMoney(amt)}
@@ -120,8 +114,8 @@ function LinkTxnRow({
         )}
       </div>
       {linked ? (
-        <Popconfirm title="解除关联？" onConfirm={onUnlink}>
-          <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label="解除关联" />
+        <Popconfirm title={loanLinkCopy.unlinkConfirm} onConfirm={onUnlink}>
+          <Button type="text" size="small" danger icon={<DeleteOutlined />} aria-label={loanLinkCopy.unlink} />
         </Popconfirm>
       ) : (
         <Button
@@ -132,7 +126,7 @@ function LinkTxnRow({
           loading={linking}
           onClick={onLink}
         >
-          关联
+          {loanLinkCopy.link}
         </Button>
       )}
     </li>
@@ -250,10 +244,10 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
     setLinkingId(txnId)
     try {
       await addLoanLink(loanId, txnId, linkType)
-      message.success('已关联')
+      message.success(loanLinkCopy.linkedOk)
       reload()
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '关联失败')
+      message.error(e instanceof Error ? e.message : loanLinkCopy.linkFailed)
     } finally {
       setLinkingId(undefined)
     }
@@ -262,10 +256,10 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
   const onUnlink = async (txnId: string) => {
     try {
       await removeLoanLink(loanId, txnId)
-      message.success('已解除关联')
+      message.success(loanLinkCopy.unlinkedOk)
       reload()
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '解除失败')
+      message.error(e instanceof Error ? e.message : loanLinkCopy.unlinkFailed)
     }
   }
 
@@ -276,53 +270,55 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
     <div className="fs-loan-link-panel">
       <div className="fs-loan-link-info-bar">
         <InfoCircleOutlined className="fs-loan-link-info-bar-icon" />
-        <span>关联流水用于追溯放款/还款；已还金额与期数由还款关联自动统计（单笔 &gt; ¥{MIN_REPAYMENT_INSTALLMENT} 计 1 期），不会修改剩余本金。</span>
+        <span>{loanLinkCopy.infoBar(MIN_REPAYMENT_INSTALLMENT)}</span>
       </div>
 
       {hasCard && (
         <div className="fs-loan-link-card-chip">
           <CreditCardOutlined />
           <span>
-            当前筛选：<strong>{activeCardLabel || activeCardId}</strong>
-            · {linkType === 'DISBURSEMENT' ? '放款卡' : '还款卡'}流水
+            {loanLinkCopy.filterChip(
+              activeCardLabel || activeCardId || '',
+              linkType === 'DISBURSEMENT' ? loanLinkCopy.disbursementCardRole : loanLinkCopy.repaymentCardRole,
+            )}
           </span>
         </div>
       )}
 
       <div className="fs-loan-link-dashboard">
         <div className="fs-loan-link-dash-card">
-          <span className="fs-loan-link-dash-label">已关联</span>
+          <span className="fs-loan-link-dash-label">{loanLinkCopy.linkedCount}</span>
           <strong className="fs-loan-link-dash-value">{linkSummary.count}</strong>
-          <span className="fs-loan-link-dash-sub">笔流水</span>
+          <span className="fs-loan-link-dash-sub">{loanLinkCopy.linkedSub}</span>
         </div>
         <div className="fs-loan-link-dash-card fs-loan-link-dash-card--period">
-          <span className="fs-loan-link-dash-label">有效还款期数</span>
+          <span className="fs-loan-link-dash-label">{loanLinkCopy.qualifyingPeriods}</span>
           <strong className="fs-loan-link-dash-value">{serverPaidPeriods}</strong>
           <span className="fs-loan-link-dash-sub">
             {linkSummary.repaymentCount > serverPaidPeriods
-              ? `${linkSummary.repaymentCount - serverPaidPeriods} 笔小额不计`
-              : '单笔 > ¥100'}
+              ? loanLinkCopy.smallSkipped(linkSummary.repaymentCount - serverPaidPeriods)
+              : loanLinkCopy.perInstallmentRule}
           </span>
         </div>
         <div className="fs-loan-link-dash-card fs-loan-link-dash-card--out">
-          <span className="fs-loan-link-dash-label">还款合计</span>
+          <span className="fs-loan-link-dash-label">{loanLinkCopy.repaymentTotal}</span>
           <strong className="fs-loan-link-dash-value">{formatMoney(linkSummary.repaymentQualifying)}</strong>
           <span className="fs-loan-link-dash-sub">
             {linkSummary.repaymentAll > linkSummary.repaymentQualifying
-              ? `全部 ${formatMoney(linkSummary.repaymentAll)}`
-              : `${linkSummary.repaymentCount} 笔`}
+              ? loanLinkCopy.allTotal(formatMoney(linkSummary.repaymentAll))
+              : loanLinkCopy.txnCount(linkSummary.repaymentCount)}
           </span>
         </div>
         {linkSummary.disbursement > 0 && (
           <div className="fs-loan-link-dash-card fs-loan-link-dash-card--in">
-            <span className="fs-loan-link-dash-label">放款</span>
+            <span className="fs-loan-link-dash-label">{loanLinkCopy.disbursement}</span>
             <strong className="fs-loan-link-dash-value">{formatMoney(linkSummary.disbursement)}</strong>
-            <span className="fs-loan-link-dash-sub">{linkSummary.disbursementCount} 笔</span>
+            <span className="fs-loan-link-dash-sub">{loanLinkCopy.txnCount(linkSummary.disbursementCount)}</span>
           </div>
         )}
         {linkSummary.interest > 0 && (
           <div className="fs-loan-link-dash-card">
-            <span className="fs-loan-link-dash-label">付息</span>
+            <span className="fs-loan-link-dash-label">{loanLinkCopy.interest}</span>
             <strong className="fs-loan-link-dash-value">{formatMoney(linkSummary.interest)}</strong>
           </div>
         )}
@@ -331,13 +327,13 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
       <div className="fs-loan-link-layout">
         <section className="fs-loan-link-col fs-loan-link-col--linked">
           <div className="fs-loan-link-section-head">
-            <Typography.Text strong>已关联流水</Typography.Text>
-            <Tag>{links.length} 笔</Tag>
+            <Typography.Text strong>{loanLinkCopy.linkedSection}</Typography.Text>
+            <Tag>{loanLinkCopy.txnCount(links.length)}</Tag>
           </div>
           {linksLoading ? (
             <div className="fs-loan-link-center"><Spin /></div>
           ) : links.length === 0 ? (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无关联" className="fs-loan-link-empty" />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={loanLinkCopy.noLinked} className="fs-loan-link-empty" />
           ) : (
             <ul className="fs-loan-txn-list fs-loan-txn-list--linked">
               {links.map((row) => (
@@ -354,12 +350,12 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
 
         <section className="fs-loan-link-col fs-loan-link-col--pick">
           <div className="fs-loan-link-section-head">
-            <Typography.Text strong>选择交易关联</Typography.Text>
-            <Tag color="processing">{filteredCandidates.length} 条可选</Tag>
+            <Typography.Text strong>{loanLinkCopy.pickSection}</Typography.Text>
+            <Tag color="processing">{loanLinkCopy.candidates(filteredCandidates.length)}</Tag>
           </div>
 
           {!hasCard && (
-            <Alert type="warning" showIcon message="请先在「详情」中设置放款卡，才能筛选对应流水。" />
+            <Alert type="warning" showIcon message={loanLinkCopy.setCardWarning} />
           )}
 
           <div className="fs-loan-link-toolbar">
@@ -376,12 +372,12 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
               <Segmented<DatePreset>
                 value={datePreset}
                 onChange={(v) => setDatePreset(v)}
-                options={DATE_PRESETS}
+                options={LOAN_DATE_PRESETS}
               />
               <Input
                 allowClear
                 prefix={<SearchOutlined />}
-                placeholder="搜索描述、卡名…"
+                placeholder={loanLinkCopy.searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="fs-loan-link-search"
@@ -390,13 +386,13 @@ export function LoanTxnLinkPanel({ loan, onLinksChanged }: Props) {
           </div>
 
           {txnLoading ? (
-            <div className="fs-loan-link-center"><Spin tip="加载交易…" /></div>
+            <div className="fs-loan-link-center"><Spin tip={loanLinkCopy.loadingTxns} /></div>
           ) : filteredCandidates.length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={hasCard
-                ? `「${activeCardLabel || activeCardId}」在该时间段内没有可关联的交易`
-                : '未设置放款卡'}
+                ? loanLinkCopy.noCandidates(activeCardLabel || activeCardId || '')
+                : loanLinkCopy.noCardSet}
               className="fs-loan-link-empty"
             />
           ) : (

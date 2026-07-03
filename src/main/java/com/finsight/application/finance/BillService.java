@@ -26,6 +26,10 @@ public class BillService {
         return planningGateway.saveBill(bill);
     }
 
+    public void delete(String billId) {
+        planningGateway.deleteBill(billId);
+    }
+
     public List<Map<String, Object>> calendarNext30Days() {
         List<Bill> bills = listEnabled();
         Calendar cal = Calendar.getInstance();

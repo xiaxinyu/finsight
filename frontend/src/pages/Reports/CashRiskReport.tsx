@@ -6,6 +6,7 @@ import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { fetchCashRiskCalendar } from '../../api/analytics'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags'
+import { EstimationMethodNote } from '../../components/EstimationMethodNote'
 import { ContentCard } from '../../components/ContentCard'
 import { DataPageLayout } from '../../components/DataPageLayout'
 import { EmptyState } from '../../components/EmptyState'
@@ -60,6 +61,17 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
   )
   const selectedKey = calendarSelectedKey(selectedDay, year)
   const selectedDetail: CashRiskDay | undefined = dayIndex.get(selectedKey)
+
+  const payDayNote = useMemo(() => {
+    const days = data?.incomePayDays?.length ? data.incomePayDays.join(', ') : '5, 20'
+    return `Monthly income is estimated on pay days ${days} (even split), not from actual salary transaction dates. Configure pay days under Planning.`
+  }, [data?.incomePayDays])
+
+  const estimationItems = useMemo(() => [
+    payDayNote,
+    'Bills use due-day calendar; goals are applied on the 1st of each month.',
+    'Risk levels compare projected inflows vs outflows within deficit months (high when net < 0 or < ¥500).',
+  ], [payDayNote])
 
   const handleYearChange = (nextYear: number) => {
     setYear(nextYear)
@@ -168,6 +180,10 @@ export function CashRiskReport({ title, subtitle }: CashRiskReportProps) {
           message="Failed to load cash risk calendar"
           description={error instanceof Error ? error.message : 'Try another scenario.'}
         />
+      )}
+
+      {flags.forecast && (
+        <EstimationMethodNote items={estimationItems} />
       )}
 
       {flags.forecast && (

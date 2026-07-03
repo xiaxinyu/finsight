@@ -11,6 +11,7 @@ import com.finsight.application.finance.FinancialPulseService;
 import com.finsight.application.finance.InsightService;
 import com.finsight.application.finance.ScenarioService;
 import com.finsight.application.finance.TransferService;
+import com.finsight.application.finance.UserFinancePreferencesService;
 import com.finsight.application.finance.WealthService;
 import com.finsight.domain.model.Bill;
 import com.finsight.domain.model.BudgetLine;
@@ -38,6 +39,7 @@ public class FinanceApiController {
     private final GoalAdviceService goalAdviceService;
     private final ScenarioService scenarioService;
     private final InsightService insightService;
+    private final UserFinancePreferencesService financePreferencesService;
 
     public FinanceApiController(FinancialAccountService accountService,
                                 TransferService transferService,
@@ -50,7 +52,8 @@ public class FinanceApiController {
                                 FinancialGoalService goalService,
                                 GoalAdviceService goalAdviceService,
                                 ScenarioService scenarioService,
-                                InsightService insightService) {
+                                InsightService insightService,
+                                UserFinancePreferencesService financePreferencesService) {
         this.accountService = accountService;
         this.transferService = transferService;
         this.dataQualityService = dataQualityService;
@@ -63,6 +66,7 @@ public class FinanceApiController {
         this.goalAdviceService = goalAdviceService;
         this.scenarioService = scenarioService;
         this.insightService = insightService;
+        this.financePreferencesService = financePreferencesService;
     }
 
     @GetMapping("/accounts")
@@ -149,6 +153,12 @@ public class FinanceApiController {
         return CommonResult.success(billService.save(bill));
     }
 
+    @org.springframework.web.bind.annotation.DeleteMapping("/bills/{id}")
+    public CommonResult deleteBill(@org.springframework.web.bind.annotation.PathVariable String id) {
+        billService.delete(id);
+        return CommonResult.success(null);
+    }
+
     @GetMapping("/bills/calendar")
     public CommonResult billCalendar() {
         return CommonResult.success(billService.calendarNext30Days());
@@ -187,6 +197,30 @@ public class FinanceApiController {
         double incomePct = num(body.get("incomeChangePct"));
         double bill = num(body.get("newMonthlyBill"));
         return CommonResult.success(scenarioService.simulate(lump, incomePct, bill));
+    }
+
+    @GetMapping("/planning/income-pay-days")
+    public CommonResult incomePayDays() {
+        return CommonResult.success(java.util.Map.of("incomePayDays", financePreferencesService.incomePayDaysList()));
+    }
+
+    @PutMapping("/planning/income-pay-days")
+    public CommonResult updateIncomePayDays(@RequestBody java.util.Map<String, Object> body)
+            throws com.finsight.common.exception.AppServiceException {
+        Object raw = body.get("incomePayDays");
+        if (!(raw instanceof java.util.List<?> list)) {
+            throw new com.finsight.common.exception.AppServiceException("incomePayDays array is required");
+        }
+        java.util.List<Integer> days = new java.util.ArrayList<>();
+        for (Object item : list) {
+            days.add(Integer.parseInt(String.valueOf(item)));
+        }
+        try {
+            return CommonResult.success(java.util.Map.of(
+                    "incomePayDays", financePreferencesService.updateIncomePayDays(days)));
+        } catch (IllegalArgumentException ex) {
+            throw new com.finsight.common.exception.AppServiceException(ex.getMessage());
+        }
     }
 
     @GetMapping("/insights/decision-cards")
